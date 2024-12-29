@@ -26,7 +26,7 @@ export default function ProductPage() {
   }, []);
 
   async function handleLogout() {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: "local" });
     if (!!error) console.log(error);
   }
 
