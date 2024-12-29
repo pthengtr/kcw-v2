@@ -45,6 +45,12 @@ export default function LoginForm() {
 
     if (!!error) console.log(error);
     if (!!data) console.log(data);
+
+    const { error: signOutError } = await supabase.auth.signOut({
+      scope: "others",
+    });
+
+    if (!!signOutError) console.log(signOutError);
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
