@@ -1,34 +1,37 @@
+"use client";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { ImagePlus } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { ProductType, productColumns } from "./ProductColumns";
-import { DataTable } from "../common/DataTable";
+import {
+  ProductType,
+  productColumns,
+} from "@/components/product/ProductColumns";
+import { DataTable } from "@/components/common/DataTable";
 
-export default function ProductPage() {
+export default function Product() {
   const [products, setProducts] = useState<ProductType[]>();
+  const [total, setTotal] = useState<number>();
+  const [selectedRow, setSelectedRow] = useState<ProductType>();
+
+  const supabase = createClient();
 
   useEffect(() => {
     async function getProduct() {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("products")
-        .select("*")
+        .select("*", { count: "exact" })
         .limit(100);
 
       if (error) console.log(error);
 
-      if (!!data) setProducts(data);
+      if (data) setProducts(data);
+      if (count) setTotal(count);
     }
 
     getProduct();
-  }, []);
-
-  async function handleLogout() {
-    const { error } = await supabase.auth.signOut({ scope: "local" });
-    if (!!error) console.log(error);
-  }
+  }, [supabase]);
 
   async function uploadFile(picture: File) {
     const { data, error } = await supabase.storage
@@ -51,10 +54,17 @@ export default function ProductPage() {
 
   return (
     <main className="flex flex-col gap-4">
-      <Button onClick={handleLogout}>Log out</Button>
-      <div>
+      <div className="grid place-content-center">
+        Current Selected {selectedRow?.BCODE}
+      </div>
+      <div className="h-full">
         {!!products && (
-          <DataTable columns={productColumns} data={products}></DataTable>
+          <DataTable
+            columns={productColumns}
+            data={products}
+            total={total}
+            setSelectedRow={setSelectedRow}
+          ></DataTable>
         )}
       </div>
       <div className="w-full grid place-content-center">

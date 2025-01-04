@@ -20,8 +20,6 @@ interface DataTableViewOptionsProps<TData> {
 export function DataTableViewOptions<TData>({
   table,
 }: DataTableViewOptionsProps<TData>) {
-  console.log(table.getHeaderGroups());
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -31,11 +29,11 @@ export function DataTableViewOptions<TData>({
           className="ml-auto hidden h-8 lg:flex"
         >
           <Settings2 />
-          View
+          แสดงผล
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[150px]">
-        <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+        <DropdownMenuLabel>เลือกคอลัมน์</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {table
           .getAllColumns()

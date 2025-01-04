@@ -12,18 +12,21 @@ export type ProductType = {
 };
 export const productColumns: ColumnDef<ProductType>[] = [
   {
+    id: "รหัสสินค้า",
     accessorKey: "BCODE",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="รหัสสินค้า" />
     ),
   },
   {
+    id: "ชื่อสินค้า",
     accessorKey: "DESCR",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="ชื่อสินค้า" />
     ),
   },
   {
+    id: "ราคา",
     accessorKey: "PRICE1",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="ราคา" />
