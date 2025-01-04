@@ -256,14 +256,13 @@ function DraggableTableHeader<TData>({
 
   return (
     <TableHead colSpan={header.colSpan} ref={setNodeRef} style={style}>
-      <div className="flex items-center">
-        {header.isPlaceholder
-          ? null
-          : flexRender(header.column.columnDef.header, header.getContext())}
-
+      <div className="flex items-center gap-4">
         <button {...attributes} {...listeners}>
           <GripVertical size={18} />
         </button>
+        {header.isPlaceholder
+          ? null
+          : flexRender(header.column.columnDef.header, header.getContext())}
       </div>
     </TableHead>
   );
