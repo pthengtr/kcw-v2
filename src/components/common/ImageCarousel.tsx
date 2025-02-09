@@ -1,7 +1,7 @@
 "use client";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import {
@@ -10,6 +10,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi,
 } from "@/components/ui/carousel";
 import {
   Dialog,
@@ -34,6 +35,9 @@ export default function ImageCarousel({
   imageFolder,
 }: imageCarouselProps) {
   const [imageArray, setImageArray] = useState<storageObjectType[]>();
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [count, setCount] = useState(0);
 
   function handleDropPicture(e: React.DragEvent) {
     e.preventDefault();
@@ -104,68 +108,91 @@ export default function ImageCarousel({
     getImageArray();
   }, [getImageArray]);
 
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    setCount(api.scrollSnapList().length);
+    setCurrent(api.selectedScrollSnap() + 1);
+
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap() + 1);
+    });
+  }, [api]);
+
   return (
-    <Carousel>
-      <CarouselContent className="w-48 h-48">
-        {imageArray?.map((image) => (
-          <CarouselItem key={image.id} className="flex justify-center">
-            <Dialog>
-              <DialogTrigger>
-                <Image
-                  className="w-auto"
-                  src={`https://jdzitzsucntqbjvwiwxm.supabase.co/storage/v1/object/public/pictures/public/${imageFolder}/${image.name}?id=${image.id}`}
-                  width={250}
-                  height={250}
-                  alt={image.name}
-                  quality={80}
-                />
-              </DialogTrigger>
-              <DialogContent className="grid place-content-center">
-                <DialogHeader className="hidden">
-                  <DialogTitle>Image of {image.name}</DialogTitle>
-                  <DialogDescription>
-                    KCW product image of {image.name}
-                  </DialogDescription>
-                </DialogHeader>
-                <Image
-                  className="w-auto rounded-md"
-                  src={`https://jdzitzsucntqbjvwiwxm.supabase.co/storage/v1/object/public/pictures/public/${imageFolder}/${image.name}?id=${image.id}`}
-                  width={500}
-                  height={500}
-                  alt={image.name}
-                  quality={80}
-                />
-                <Button onClick={() => deleteFile(image.name)}>
-                  Remove Image
-                </Button>
-              </DialogContent>
-            </Dialog>
-          </CarouselItem>
-        ))}
+    <>
+      <Carousel setApi={setApi}>
+        <CarouselContent>
+          {imageArray?.map((image) => (
+            <CarouselItem key={image.id} className="flex justify-center">
+              <Dialog>
+                <DialogTrigger>
+                  <Image
+                    className="w-auto"
+                    src={`https://jdzitzsucntqbjvwiwxm.supabase.co/storage/v1/object/public/pictures/public/${imageFolder}/${image.name}?id=${image.id}`}
+                    width={250}
+                    height={250}
+                    alt={image.name}
+                    quality={80}
+                  />
+                </DialogTrigger>
+                <DialogContent className="grid place-content-center">
+                  <DialogHeader className="hidden">
+                    <DialogTitle>Image of {image.name}</DialogTitle>
+                    <DialogDescription>
+                      KCW product image of {image.name}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Image
+                    className="w-auto rounded-md"
+                    src={`https://jdzitzsucntqbjvwiwxm.supabase.co/storage/v1/object/public/pictures/public/${imageFolder}/${image.name}?id=${image.id}`}
+                    width={500}
+                    height={500}
+                    alt={image.name}
+                    quality={80}
+                  />
+                  <Button onClick={() => deleteFile(image.name)}>
+                    <Trash2 />
+                  </Button>
+                </DialogContent>
+              </Dialog>
+            </CarouselItem>
+          ))}
 
-        <CarouselItem className="grid place-content-center">
-          <div>
-            <div
-              onDrop={handleDropPicture}
-              onDragOver={(e) => e.preventDefault()}
-              className="grid place-content-center border rounded-md"
-            >
-              <Label htmlFor="file" className="grid place-content-center">
-                <ImagePlus size={96} />
-              </Label>
+          <CarouselItem className="grid place-content-center">
+            <div>
+              <div
+                onDrop={handleDropPicture}
+                onDragOver={(e) => e.preventDefault()}
+                className="grid place-content-center "
+              >
+                <Label
+                  htmlFor="file"
+                  className="grid place-content-center hover:cursor-pointer"
+                >
+                  <ImagePlus size={96} strokeWidth={1.2} />
+                </Label>
+              </div>
+
+              <Input
+                id="file"
+                className="hidden"
+                type="file"
+                onChange={handleFileChange}
+              />
             </div>
-
-            <Input
-              id="file"
-              className="hidden"
-              type="file"
-              onChange={handleFileChange}
-            />
-          </div>
-        </CarouselItem>
-      </CarouselContent>
-      <CarouselPrevious />
-      <CarouselNext />
-    </Carousel>
+          </CarouselItem>
+        </CarouselContent>
+        <CarouselPrevious />
+        <CarouselNext />
+      </Carousel>
+      {count > 0 && (
+        <div className="py-2 text-center text-sm text-muted-foreground">
+          {current} / {count}
+        </div>
+      )}
+    </>
   );
 }
