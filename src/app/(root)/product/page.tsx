@@ -1,7 +1,4 @@
 "use client";
-import { Input } from "@/components/ui/input";
-import { ImagePlus } from "lucide-react";
-import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import {
@@ -33,25 +30,6 @@ export default function Product() {
     getProduct();
   }, [supabase]);
 
-  async function uploadFile(picture: File) {
-    const { data, error } = await supabase.storage
-      .from("pictures")
-      .upload(`public/${picture.name}`, picture);
-
-    if (!!error) console.log(error);
-    if (!!data) console.log(data);
-  }
-
-  function handleDropPicture(e: React.DragEvent) {
-    e.preventDefault();
-    console.log(e.dataTransfer.files[0]);
-    uploadFile(e.dataTransfer.files[0]);
-  }
-
-  function handleFileChange(e: React.ChangeEvent) {
-    console.log(e);
-  }
-
   return (
     <main className="flex flex-col gap-4">
       <div className="grid place-content-center">
@@ -67,23 +45,6 @@ export default function Product() {
           ></DataTable>
         )}
       </div>
-      <div className="w-full grid place-content-center">
-        <div
-          onDrop={handleDropPicture}
-          onDragOver={(e) => e.preventDefault()}
-          className="grid place-content-center border rounded-md"
-        >
-          <Label htmlFor="file" className="grid place-content-center">
-            <ImagePlus size={96} />
-          </Label>
-        </div>
-      </div>
-      <Input
-        id="file"
-        className="visible"
-        type="file"
-        onChange={handleFileChange}
-      />
     </main>
   );
 }

@@ -1,0 +1,171 @@
+"use client";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { ImagePlus } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useEffect, useState, useCallback } from "react";
+import { Button } from "../ui/button";
+
+type imageCarouselProps = {
+  imageId: string;
+  imageFolder: string;
+};
+
+type storageObjectType = { id: string; name: string };
+
+export default function ImageCarousel({
+  imageId,
+  imageFolder,
+}: imageCarouselProps) {
+  const [imageArray, setImageArray] = useState<storageObjectType[]>();
+
+  function handleDropPicture(e: React.DragEvent) {
+    e.preventDefault();
+    console.log(e.dataTransfer.files[0]);
+    uploadFile(e.dataTransfer.files[0]);
+  }
+
+  function handleFileChange(e: React.BaseSyntheticEvent) {
+    console.log(e.target.files[0]);
+    uploadFile(e.target.files[0]);
+  }
+
+  async function deleteFile(fileName: string) {
+    const supabase = createClient();
+
+    const { data, error } = await supabase.storage
+      .from("pictures")
+      .remove([`public/${imageFolder}/${fileName}`]);
+
+    if (!!error) console.log(error);
+    if (!!data) {
+      console.log(data);
+      getImageArray();
+    }
+  }
+
+  async function uploadFile(picture: File) {
+    const temp_imageFilename =
+      imageId +
+      "_" +
+      Math.random().toString().substring(4, 12) +
+      "." +
+      picture.name.split(".")[1];
+
+    const supabase = createClient();
+
+    const { data, error } = await supabase.storage
+      .from("pictures")
+      .upload(`public/${imageFolder}/${temp_imageFilename}`, picture);
+
+    if (!!error) console.log(error);
+    if (!!data) {
+      console.log(data);
+      getImageArray();
+    }
+  }
+
+  const getImageArray = useCallback(async () => {
+    const supabase = createClient();
+
+    const { data, error } = await supabase.storage
+      .from("pictures")
+      .list(`public/${imageFolder}`, {
+        limit: 100,
+        offset: 0,
+        search: imageId,
+        sortBy: { column: "updated_at", order: "asc" },
+      });
+
+    if (!!error) console.log(error);
+    if (!!data) {
+      console.log(data);
+      setImageArray(data);
+    }
+  }, [imageFolder, imageId]);
+
+  useEffect(() => {
+    getImageArray();
+  }, [getImageArray]);
+
+  return (
+    <Carousel>
+      <CarouselContent className="w-48 h-48">
+        {imageArray?.map((image) => (
+          <CarouselItem key={image.id} className="flex justify-center">
+            <Dialog>
+              <DialogTrigger>
+                <Image
+                  className="w-auto"
+                  src={`https://jdzitzsucntqbjvwiwxm.supabase.co/storage/v1/object/public/pictures/public/${imageFolder}/${image.name}?id=${image.id}`}
+                  width={250}
+                  height={250}
+                  alt={image.name}
+                  quality={80}
+                />
+              </DialogTrigger>
+              <DialogContent className="grid place-content-center">
+                <DialogHeader className="hidden">
+                  <DialogTitle>Image of {image.name}</DialogTitle>
+                  <DialogDescription>
+                    KCW product image of {image.name}
+                  </DialogDescription>
+                </DialogHeader>
+                <Image
+                  className="w-auto rounded-md"
+                  src={`https://jdzitzsucntqbjvwiwxm.supabase.co/storage/v1/object/public/pictures/public/${imageFolder}/${image.name}?id=${image.id}`}
+                  width={500}
+                  height={500}
+                  alt={image.name}
+                  quality={80}
+                />
+                <Button onClick={() => deleteFile(image.name)}>
+                  Remove Image
+                </Button>
+              </DialogContent>
+            </Dialog>
+          </CarouselItem>
+        ))}
+
+        <CarouselItem className="grid place-content-center">
+          <div>
+            <div
+              onDrop={handleDropPicture}
+              onDragOver={(e) => e.preventDefault()}
+              className="grid place-content-center border rounded-md"
+            >
+              <Label htmlFor="file" className="grid place-content-center">
+                <ImagePlus size={96} />
+              </Label>
+            </div>
+
+            <Input
+              id="file"
+              className="hidden"
+              type="file"
+              onChange={handleFileChange}
+            />
+          </div>
+        </CarouselItem>
+      </CarouselContent>
+      <CarouselPrevious />
+      <CarouselNext />
+    </Carousel>
+  );
+}
