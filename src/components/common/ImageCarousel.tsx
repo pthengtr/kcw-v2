@@ -123,75 +123,79 @@ export default function ImageCarousel({
 
   return (
     <>
-      <Carousel setApi={setApi}>
-        <CarouselContent>
-          {imageArray?.map((image) => (
-            <CarouselItem key={image.id} className="flex justify-center">
-              <Dialog>
-                <DialogTrigger>
-                  <Image
-                    className="w-auto"
-                    src={`https://jdzitzsucntqbjvwiwxm.supabase.co/storage/v1/object/public/pictures/public/${imageFolder}/${image.name}?id=${image.id}`}
-                    width={250}
-                    height={250}
-                    alt={image.name}
-                    quality={80}
-                  />
-                </DialogTrigger>
-                <DialogContent className="grid place-content-center">
-                  <DialogHeader className="hidden">
-                    <DialogTitle>Image of {image.name}</DialogTitle>
-                    <DialogDescription>
-                      KCW product image of {image.name}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Image
-                    className="w-auto rounded-md"
-                    src={`https://jdzitzsucntqbjvwiwxm.supabase.co/storage/v1/object/public/pictures/public/${imageFolder}/${image.name}?id=${image.id}`}
-                    width={500}
-                    height={500}
-                    alt={image.name}
-                    quality={80}
-                  />
-                  <Button onClick={() => deleteFile(image.name)}>
-                    <Trash2 />
-                  </Button>
-                </DialogContent>
-              </Dialog>
-            </CarouselItem>
-          ))}
+      {imageArray !== undefined && (
+        <>
+          <Carousel setApi={setApi}>
+            <CarouselContent>
+              {imageArray.map((image) => (
+                <CarouselItem key={image.id} className="flex justify-center">
+                  <Dialog>
+                    <DialogTrigger>
+                      <Image
+                        className="w-auto"
+                        src={`https://jdzitzsucntqbjvwiwxm.supabase.co/storage/v1/object/public/pictures/public/${imageFolder}/${image.name}?id=${image.id}`}
+                        width={250}
+                        height={250}
+                        alt={image.name}
+                        quality={80}
+                      />
+                    </DialogTrigger>
+                    <DialogContent className="grid place-content-center">
+                      <DialogHeader className="hidden">
+                        <DialogTitle>Image of {image.name}</DialogTitle>
+                        <DialogDescription>
+                          KCW product image of {image.name}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <Image
+                        className="w-auto rounded-md"
+                        src={`https://jdzitzsucntqbjvwiwxm.supabase.co/storage/v1/object/public/pictures/public/${imageFolder}/${image.name}?id=${image.id}`}
+                        width={500}
+                        height={500}
+                        alt={image.name}
+                        quality={80}
+                      />
+                      <Button onClick={() => deleteFile(image.name)}>
+                        <Trash2 />
+                      </Button>
+                    </DialogContent>
+                  </Dialog>
+                </CarouselItem>
+              ))}
 
-          <CarouselItem className="grid place-content-center">
-            <div>
-              <div
-                onDrop={handleDropPicture}
-                onDragOver={(e) => e.preventDefault()}
-                className="grid place-content-center "
-              >
-                <Label
-                  htmlFor="file"
-                  className="grid place-content-center hover:cursor-pointer"
-                >
-                  <ImagePlus size={96} strokeWidth={1.2} />
-                </Label>
-              </div>
+              <CarouselItem className="grid place-content-center">
+                <div>
+                  <div
+                    onDrop={handleDropPicture}
+                    onDragOver={(e) => e.preventDefault()}
+                    className="grid place-content-center "
+                  >
+                    <Label
+                      htmlFor="file"
+                      className="grid place-content-center hover:cursor-pointer"
+                    >
+                      <ImagePlus size={96} strokeWidth={1.2} />
+                    </Label>
+                  </div>
 
-              <Input
-                id="file"
-                className="hidden"
-                type="file"
-                onChange={handleFileChange}
-              />
+                  <Input
+                    id="file"
+                    className="hidden"
+                    type="file"
+                    onChange={handleFileChange}
+                  />
+                </div>
+              </CarouselItem>
+            </CarouselContent>
+            <CarouselPrevious />
+            <CarouselNext />
+          </Carousel>
+          {count > 0 && (
+            <div className="py-2 text-center text-sm text-muted-foreground">
+              {current} / {count}
             </div>
-          </CarouselItem>
-        </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
-      </Carousel>
-      {count > 0 && (
-        <div className="py-2 text-center text-sm text-muted-foreground">
-          {current} / {count}
-        </div>
+          )}
+        </>
       )}
     </>
   );

@@ -11,6 +11,7 @@ export default function UserDetail({ currentUser }: UserDetailProps) {
         <ImageCarousel imageId="35050098" imageFolder="product" />
         <ImageCarousel imageId="35050118" imageFolder="product" />
         <ImageCarousel imageId="35050121" imageFolder="product" />
+        <ImageCarousel imageId="35050127" imageFolder="product" />
       </div>
     </section>
   );
