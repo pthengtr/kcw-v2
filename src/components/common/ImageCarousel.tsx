@@ -41,12 +41,10 @@ export default function ImageCarousel({
 
   function handleDropPicture(e: React.DragEvent) {
     e.preventDefault();
-    console.log(e.dataTransfer.files[0]);
     uploadFile(e.dataTransfer.files[0]);
   }
 
   function handleFileChange(e: React.BaseSyntheticEvent) {
-    console.log(e.target.files[0]);
     uploadFile(e.target.files[0]);
   }
 
@@ -59,7 +57,6 @@ export default function ImageCarousel({
 
     if (!!error) console.log(error);
     if (!!data) {
-      console.log(data);
       getImageArray();
     }
   }
@@ -80,7 +77,6 @@ export default function ImageCarousel({
 
     if (!!error) console.log(error);
     if (!!data) {
-      console.log(data);
       getImageArray();
     }
   }
@@ -99,8 +95,8 @@ export default function ImageCarousel({
 
     if (!!error) console.log(error);
     if (!!data) {
-      console.log(data);
       setImageArray(data);
+      setCount(data.length + 1);
     }
   }, [imageFolder, imageId]);
 
@@ -113,7 +109,6 @@ export default function ImageCarousel({
       return;
     }
 
-    setCount(api.scrollSnapList().length);
     setCurrent(api.selectedScrollSnap() + 1);
 
     api.on("select", () => {
@@ -171,7 +166,7 @@ export default function ImageCarousel({
                     className="grid place-content-center "
                   >
                     <Label
-                      htmlFor="file"
+                      htmlFor={`file-${imageId}`}
                       className="grid place-content-center hover:cursor-pointer"
                     >
                       <ImagePlus size={96} strokeWidth={1.2} />
@@ -179,7 +174,7 @@ export default function ImageCarousel({
                   </div>
 
                   <Input
-                    id="file"
+                    id={`file-${imageId}`}
                     className="hidden"
                     type="file"
                     onChange={handleFileChange}
