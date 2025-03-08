@@ -95,6 +95,7 @@ export default function ImageCarousel({
 
     if (!!error) console.log(error);
     if (!!data) {
+      console.log(data);
       setImageArray(data);
       setCount(data.length + 1);
     }
