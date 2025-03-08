@@ -54,7 +54,7 @@ export default function UserHeader({ user, size }: UserAvatarProps) {
 
     const { data, error } = await supabase.storage
       .from("pictures")
-      .upload(`public/avatar/${temp_imageFilename}`, picture);
+      .update(`public/avatar/${temp_imageFilename}`, picture, { upsert: true });
 
     if (!!error) console.log(error);
     if (!!data) {
