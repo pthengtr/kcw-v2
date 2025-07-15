@@ -15,6 +15,9 @@ type MonthPickerInputProps = {
 export default function MonthPickerInput({ field }: MonthPickerInputProps) {
   const id = useId();
   const dateNow = new Date();
+  dateNow.setHours(0);
+  dateNow.setMinutes(0);
+  dateNow.setSeconds(0);
   dateNow.setDate(1);
   dateNow.setMonth(dateNow.getMonth() + 2);
 
