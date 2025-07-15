@@ -19,6 +19,10 @@ export type ReminderContextType = {
   setOpenUpdateDialog: (open: boolean) => void;
   submitError: string | undefined;
   setSubmitError: (error: string | undefined) => void;
+  reminders: ReminderType[] | undefined;
+  setReminders: (reminders: ReminderType[]) => void;
+  total: number | undefined;
+  setTotal: (total: number) => void;
 };
 
 export const ReminderContext = createContext<ReminderContextType | null>(null);
@@ -33,6 +37,8 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
+  const [reminders, setReminders] = useState<ReminderType[]>();
+  const [total, setTotal] = useState<number>();
 
   const value = {
     selectedRow,
@@ -45,6 +51,10 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setOpenUpdateDialog,
     submitError,
     setSubmitError,
+    reminders,
+    setReminders,
+    total,
+    setTotal,
   };
 
   return (

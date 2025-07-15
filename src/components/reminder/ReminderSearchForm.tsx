@@ -4,10 +4,12 @@ import { toast } from "sonner";
 
 import * as z from "zod";
 
-//import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 import Form from "../common/Form";
 import { FieldValues } from "react-hook-form";
+import { useContext } from "react";
+import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 
 const searchFormFieldLabel = {
   supplier_name: "บริษัท",
@@ -44,24 +46,46 @@ type ReminderSearchFormProps = {
 export default function ReminderSearchForm({
   defaultValues,
 }: ReminderSearchFormProps) {
+  const { setReminders, setTotal } = useContext(
+    ReminderContext
+  ) as ReminderContextType;
+
   async function searchReminder(formData: FormData) {
     // type-casting here for convenience
     // in practice, you should validate your inputs
-    const insertData = {
+    const searchData = {
       supplier_name: formData.get("supplier_name") as string,
       note_id: formData.get("note_id") as string,
       bill_month: formData.get("bill_month") as string,
       due_month: formData.get("due_month") as string,
     };
 
-    //const supabase = createClient();
+    const supabase = createClient();
 
-    console.log(insertData);
-    //const query = supabase.from("payment_reminder").select("*");
+    console.log(searchData);
+    let query = supabase
+      .from("payment_reminder")
+      .select("*", { count: "exact" })
+      .order("id", { ascending: false })
+      .limit(100);
 
-    // const { data, error } = await query;
+    if (searchData.supplier_name)
+      query = query.ilike("supplier_name", `%${searchData.supplier_name}%`);
 
-    // console.log(data, error);
+    if (searchData.note_id)
+      query = query.ilike("note_id", `%${searchData.note_id}%`);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    if (data) {
+      setReminders(data);
+    }
+    if (count) setTotal(count);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

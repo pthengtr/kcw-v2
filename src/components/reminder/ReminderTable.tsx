@@ -1,13 +1,12 @@
 "use client";
 
 import {
-  ReminderType,
   reminderColumns,
   reminderDefaultValue,
 } from "@/components/reminder/ReminderColumn";
 
 import { createClient } from "@/lib/supabase/client";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { DataTable } from "@/components/common/DataTable";
 
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
@@ -15,9 +14,6 @@ import ReminderSearchForm from "./ReminderSearchForm";
 import ReminderFormDialog from "./ReminderFormDialog";
 
 export default function ReminderTable() {
-  const [reminders, setReminders] = useState<ReminderType[]>();
-  const [total, setTotal] = useState<number>();
-
   const {
     openCreateDialog,
     setOpenCreateDialog,
@@ -26,6 +22,10 @@ export default function ReminderTable() {
     setColumnFilters,
     setSelectedRow,
     setSubmitError,
+    reminders,
+    setReminders,
+    total,
+    setTotal,
   } = useContext(ReminderContext) as ReminderContextType;
 
   const supabase = createClient();
@@ -38,7 +38,10 @@ export default function ReminderTable() {
         .order("id", { ascending: false })
         .limit(100);
 
-      if (error) console.log(error);
+      if (error) {
+        console.log(error);
+        return;
+      }
 
       if (data) {
         setReminders(data);
@@ -55,6 +58,7 @@ export default function ReminderTable() {
     setSelectedRow,
     setReminders,
     setSubmitError,
+    setTotal,
   ]);
   return (
     <div className="flex flex-col gap-2 p-2">
