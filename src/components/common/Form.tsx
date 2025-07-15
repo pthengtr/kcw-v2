@@ -11,20 +11,24 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { DatePickerInput } from "./DatePickerInput";
 
 interface FormProps<T extends FieldValues> {
   schema: z.ZodType<T>;
   defaultValues: T;
   onSubmit: (data: T) => Promise<{ success: boolean }>;
+  getFieldLabel: (field: FieldValues) => string;
 }
 
 export default function Form<T extends FieldValues>({
   schema,
   defaultValues,
   onSubmit,
+  getFieldLabel,
 }: FormProps<T>) {
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -32,6 +36,48 @@ export default function Form<T extends FieldValues>({
   });
 
   //const handleSubmit: SubmitHandler<T> = async () => {};
+
+  function getFormInput(field: FieldValues) {
+    switch (field.name) {
+      // mask input
+      case "password":
+        return <PasswordInput {...field} />;
+        break;
+
+      // number
+      case "bill_count":
+      case "total_amount":
+      case "discount":
+        return (
+          <Input
+            type="number"
+            //className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            {...field}
+            {...form.register(field.name, {
+              valueAsNumber: !field.value ? false : true,
+            })}
+          />
+        );
+        break;
+
+      //date picker
+      case "start_date":
+      case "end_date":
+      case "due_date":
+      case "payment_date":
+        return <DatePickerInput field={field} />;
+        break;
+
+      //date time picker
+      case "kbiz_datetime":
+        return <DatePickerInput field={field} timePicker />;
+        break;
+
+      //simple text
+      default:
+        return <Input type="text" {...field} />;
+    }
+  }
 
   return (
     <_Form {...form}>
@@ -46,14 +92,9 @@ export default function Form<T extends FieldValues>({
             name={field as Path<T>}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{field.name}</FormLabel>
-                <FormControl>
-                  {field.name === "password" ? (
-                    <PasswordInput {...field} />
-                  ) : (
-                    <Input type="text" {...field} />
-                  )}
-                </FormControl>
+                <FormLabel>{getFieldLabel(field as FieldValues)}</FormLabel>
+                <FormControl>{getFormInput(field as FieldValues)}</FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />

@@ -10,7 +10,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-  type CarouselApi,
+  //type CarouselApi,
 } from "@/components/ui/carousel";
 import {
   Dialog,
@@ -35,9 +35,11 @@ export default function ImageCarousel({
   imageFolder,
 }: imageCarouselProps) {
   const [imageArray, setImageArray] = useState<storageObjectType[]>();
-  const [api, setApi] = useState<CarouselApi>();
-  const [current, setCurrent] = useState(0);
-  const [count, setCount] = useState(0);
+  //const [api, setApi] = useState<CarouselApi>();
+  // const [current, setCurrent] = useState(0);
+  // const [count, setCount] = useState(0);
+
+  console.log(imageFolder);
 
   function handleDropPicture(e: React.DragEvent) {
     e.preventDefault();
@@ -62,6 +64,12 @@ export default function ImageCarousel({
   }
 
   async function uploadFile(picture: File) {
+    console.log(imageFolder);
+
+    if (!picture) {
+      return;
+    }
+
     const temp_imageFilename =
       imageId +
       "_" +
@@ -97,7 +105,7 @@ export default function ImageCarousel({
     if (!!data) {
       console.log(data);
       setImageArray(data);
-      setCount(data.length + 1);
+      //setCount(data.length + 1);
     }
   }, [imageFolder, imageId]);
 
@@ -105,23 +113,23 @@ export default function ImageCarousel({
     getImageArray();
   }, [getImageArray]);
 
-  useEffect(() => {
-    if (!api) {
-      return;
-    }
+  // useEffect(() => {
+  //   if (!api) {
+  //     return;
+  //   }
 
-    setCurrent(api.selectedScrollSnap() + 1);
+  //   setCurrent(api.selectedScrollSnap() + 1);
 
-    api.on("select", () => {
-      setCurrent(api.selectedScrollSnap() + 1);
-    });
-  }, [api]);
+  //   api.on("select", () => {
+  //     setCurrent(api.selectedScrollSnap() + 1);
+  //   });
+  // }, [api]);
 
   return (
     <>
       {imageArray !== undefined && (
         <>
-          <Carousel setApi={setApi}>
+          <Carousel /*setApi={setApi}*/>
             <CarouselContent>
               {imageArray.map((image) => (
                 <CarouselItem key={image.id} className="flex justify-center">
@@ -167,7 +175,7 @@ export default function ImageCarousel({
                     className="grid place-content-center "
                   >
                     <Label
-                      htmlFor={`file-${imageId}`}
+                      htmlFor={`file-${imageFolder}-${imageId}`}
                       className="grid place-content-center hover:cursor-pointer"
                     >
                       <ImagePlus size={96} strokeWidth={1.2} />
@@ -175,7 +183,7 @@ export default function ImageCarousel({
                   </div>
 
                   <Input
-                    id={`file-${imageId}`}
+                    id={`file-${imageFolder}-${imageId}`}
                     className="hidden"
                     type="file"
                     onChange={handleFileChange}
@@ -186,11 +194,11 @@ export default function ImageCarousel({
             <CarouselPrevious />
             <CarouselNext />
           </Carousel>
-          {count > 0 && (
+          {/* {count > 0 && (
             <div className="py-2 text-center text-sm text-muted-foreground">
               {current} / {count}
             </div>
-          )}
+          )} */}
         </>
       )}
     </>

@@ -17,7 +17,7 @@ export default function Navbar() {
               <NavigationMenuLink className="">หน้าแรก</NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
-          <NavigationMenuItem>
+          {/* <NavigationMenuItem>
             <Link href="/product" legacyBehavior passHref>
               <NavigationMenuLink className="">สินค้า</NavigationMenuLink>
             </Link>
@@ -25,6 +25,11 @@ export default function Navbar() {
           <NavigationMenuItem>
             <Link href="/user" legacyBehavior passHref>
               <NavigationMenuLink className="">พนักงาน</NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem> */}
+          <NavigationMenuItem>
+            <Link href="/reminder" legacyBehavior passHref>
+              <NavigationMenuLink className="">เตือนโอน</NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
