@@ -35,6 +35,7 @@ export default function ReminderTable() {
       const { data, error, count } = await supabase
         .from("payment_reminder")
         .select("*", { count: "exact" })
+        .order("id", { ascending: false })
         .limit(100);
 
       if (error) console.log(error);

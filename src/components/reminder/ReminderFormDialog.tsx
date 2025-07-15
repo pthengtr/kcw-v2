@@ -18,6 +18,7 @@ type ReminderFormDialogProps = {
   dialogTrigger: string;
   dialogHeader?: string;
   defaultValues: ReminderDefaultValueType;
+  update?: boolean;
 };
 
 export default function ReminderFormDialog({
@@ -26,13 +27,14 @@ export default function ReminderFormDialog({
   dialogTrigger,
   dialogHeader = dialogTrigger,
   defaultValues,
+  update = false,
 }: ReminderFormDialogProps) {
   const { submitError } = useContext(ReminderContext) as ReminderContextType;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button id="create-reminder">{dialogHeader}</Button>
+        <Button id="create-reminder">{dialogTrigger}</Button>
       </DialogTrigger>
       <DialogContent className="max-w-fit  h-5/6">
         <DialogHeader className="grid place-content-center py-4">
@@ -44,7 +46,7 @@ export default function ReminderFormDialog({
           </div>
         )}
         <div className="w-[60vw] h-full overflow-y-auto">
-          <ReminderForm defaultValues={defaultValues} />
+          <ReminderForm defaultValues={defaultValues} update={update} />
         </div>
       </DialogContent>
     </Dialog>

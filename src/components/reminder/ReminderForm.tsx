@@ -27,6 +27,8 @@ export const fieldLabel = {
   payment_date: "วันที่ชำระ",
   remark: "หมายเหตุ",
   last_modified: "แก้ไขล่าสุด",
+  bank_name: "ชื่อธนาคาร",
+  bank_account_number: "เลขบัญชี",
 };
 
 function getFieldLabel(field: FieldValues) {
@@ -49,6 +51,8 @@ const formSchema = z.object({
   due_date: z.date(),
   kbiz_datetime: z.date().nullable().optional(),
   payment_date: z.date().nullable().optional(),
+  bank_name: z.string(),
+  bank_account_number: z.string(),
   remark: z.string(),
 });
 
@@ -71,10 +75,22 @@ export default function ReminderForm({
   } = useContext(ReminderContext) as ReminderContextType;
 
   async function createUpdateReminder(formData: FormData) {
+    const supabase = createClient();
+
+    const {
+      data: { user },
+      error: errorUser,
+    } = await supabase.auth.getUser();
+
+    if (!user || errorUser) {
+      console.log("No user logged in or error:", errorUser);
+      return;
+    }
+
     // type-casting here for convenience
     // in practice, you should validate your inputs
     const insertData = {
-      created_at: new Date().toISOString(),
+      ...(update ? {} : { created_at: new Date().toISOString() }),
       supplier_name: formData.get("supplier_name") as string,
       note_id: formData.get("note_id") as string,
       bill_count: parseInt(formData.get("bill_count") as string) as number,
@@ -84,15 +100,15 @@ export default function ReminderForm({
         formData.get("total_amount") as string
       ) as number,
       discount: parseFloat(formData.get("discount") as string) as number,
-      user_id: "test user",
+      user_id: user.email,
       due_date: formData.get("due_date") as string,
       kbiz_datetime: formData.get("kbiz_datetime") as string,
       payment_date: formData.get("payment_date") as string,
       remark: formData.get("remark") as string,
       last_modified: new Date().toISOString(),
+      bank_name: formData.get("remark") as string,
+      bank_account_number: formData.get("remark") as string,
     };
-
-    const supabase = createClient();
 
     console.log(insertData);
     const query =
@@ -119,21 +135,23 @@ export default function ReminderForm({
     }
 
     if (data) {
+      // close dialog oon succss
       if (update) setOpenUpdateDialog(false);
       else setOpenCreateDialog(false);
 
+      // clear error messsage
       setSubmitError(undefined);
 
-      setColumnFilters([
-        {
-          id: fieldLabel["supplier_name"],
-          value: data[0].supplier_name,
-        },
-        {
-          id: fieldLabel["note_id"],
-          value: data[0].note_id,
-        },
-      ]);
+      // set filter to show last edit item
+      if (update) {
+        setColumnFilters([
+          {
+            id: fieldLabel["note_id"],
+            value: data[0].note_id,
+          },
+        ]);
+      }
+
       setSelectedRow(data[0]);
 
       toast.success("สร้างรายการสำเร็จ");
@@ -153,6 +171,8 @@ export default function ReminderForm({
         due_date,
         kbiz_datetime,
         payment_date,
+        bank_name,
+        bank_account_number,
         remark,
       } = values;
 
@@ -171,7 +191,8 @@ export default function ReminderForm({
       if (payment_date) {
         formData.append("payment_date", payment_date.toLocaleString("en-US"));
       }
-
+      formData.append("bank_name", bank_name);
+      formData.append("bank_account_number", bank_account_number);
       formData.append("remark", remark);
 
       createUpdateReminder(formData);

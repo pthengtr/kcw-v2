@@ -54,6 +54,7 @@ export default function ReminderDetail() {
         <div className="flex-1 flex justify-end">
           {selectedRow && (
             <ReminderFormDialog
+              update
               open={openUpdateDialog}
               setOpen={setOpenUpdateDialog}
               dialogTrigger="แก้ไขรายการนี้"
@@ -73,6 +74,8 @@ export default function ReminderDetail() {
                 payment_date: selectedRow.payment_date
                   ? new Date(selectedRow.payment_date)
                   : null,
+                bank_name: selectedRow.bank_name,
+                bank_account_number: selectedRow.bank_account_number,
                 remark: selectedRow.remark,
               }}
             />
