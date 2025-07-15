@@ -7,7 +7,6 @@ export default function Layout({
 }>) {
   return (
     <>
-      <h1>test provider</h1>
       <ReminderProvider>{children}</ReminderProvider>
     </>
   );

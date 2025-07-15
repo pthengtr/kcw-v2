@@ -32,6 +32,7 @@ export default function ReminderTable() {
     columnFilters,
     setColumnFilters,
     setSelectedRow,
+    setSubmitError,
   } = useContext(ReminderContext) as ReminderContextType;
 
   const supabase = createClient();
@@ -51,6 +52,7 @@ export default function ReminderTable() {
       if (count) setTotal(count);
     }
 
+    setSubmitError(undefined);
     getProduct();
   }, [
     supabase,
@@ -58,6 +60,7 @@ export default function ReminderTable() {
     openUpdateDialog,
     setSelectedRow,
     setReminders,
+    setSubmitError,
   ]);
   return (
     <div className="flex flex-col gap-2 p-2">
@@ -65,9 +68,6 @@ export default function ReminderTable() {
         <div className="flex-1"></div>
         <h2 className="text-xl">รายการเตือนชำระเงิน</h2>
         <div className="flex-1 flex justify-end">
-          {/* <Link href="/createnewreminder" legacyBehavior passHref>
-            <Button>เพิ่มรายการเตือนโอน</Button>
-          </Link> */}
           <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>
             <DialogTrigger asChild>
               <Button id="create-reminder">เพิ่มรายการเตือนโอน</Button>
@@ -83,6 +83,8 @@ export default function ReminderTable() {
           </Dialog>
         </div>
       </div>
+
+      <div></div>
 
       <div className="h-full">
         {!!reminders && (

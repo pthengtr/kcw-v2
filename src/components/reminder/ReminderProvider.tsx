@@ -17,6 +17,8 @@ export type ReminderContextType = {
   setOpenCreateDialog: (open: boolean) => void;
   openUpdateDialog: boolean;
   setOpenUpdateDialog: (open: boolean) => void;
+  submitError: string | undefined;
+  setSubmitError: (error: string | undefined) => void;
 };
 
 export const ReminderContext = createContext<ReminderContextType | null>(null);
@@ -30,6 +32,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
+  const [submitError, setSubmitError] = useState<string>();
 
   const value = {
     selectedRow,
@@ -40,6 +43,8 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setOpenCreateDialog,
     openUpdateDialog,
     setOpenUpdateDialog,
+    submitError,
+    setSubmitError,
   };
 
   return (

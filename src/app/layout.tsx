@@ -24,7 +24,7 @@ export default function Layout({
     <html lang="en" className="h-full">
       <body className={`${prompt.className} antialiased h-full`}>
         {children}
-        <Toaster />
+        <Toaster richColors />
       </body>
     </html>
   );

@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import * as z from "zod";
 
 import { createClient } from "@/lib/supabase/client";
-
 import Form from "../common/Form";
 import { FieldValues } from "react-hook-form";
 import { ReminderDefaultValueType } from "./ReminderColumn";
@@ -68,6 +67,8 @@ export default function ReminderForm({
     setOpenUpdateDialog,
     setColumnFilters,
     setSelectedRow,
+    submitError,
+    setSubmitError,
   } = useContext(ReminderContext) as ReminderContextType;
 
   async function createUpdateReminder(formData: FormData) {
@@ -108,9 +109,16 @@ export default function ReminderForm({
 
     console.log(data, error);
 
+    if (error) {
+      setSubmitError(error.message);
+      toast.error(error.message);
+    }
+
     if (data) {
       if (update) setOpenUpdateDialog(false);
       else setOpenCreateDialog(false);
+
+      setSubmitError(undefined);
 
       setColumnFilters([
         {
@@ -123,6 +131,8 @@ export default function ReminderForm({
         },
       ]);
       setSelectedRow(data[0]);
+
+      toast.success("สร้างรายการสำเร็จ");
     }
   }
 
@@ -171,11 +181,18 @@ export default function ReminderForm({
   }
 
   return (
-    <Form
-      schema={formSchema}
-      defaultValues={defaultValues}
-      onSubmit={onSubmit}
-      getFieldLabel={getFieldLabel}
-    />
+    <>
+      <Form
+        schema={formSchema}
+        defaultValues={defaultValues}
+        onSubmit={onSubmit}
+        getFieldLabel={getFieldLabel}
+      />
+      {submitError && (
+        <div className="grid place-content-center w-full text-red-600">
+          {submitError}
+        </div>
+      )}
+    </>
   );
 }
