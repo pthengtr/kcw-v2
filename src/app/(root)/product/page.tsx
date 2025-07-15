@@ -6,11 +6,13 @@ import {
   productColumns,
 } from "@/components/product/ProductColumns";
 import { DataTable } from "@/components/common/DataTable";
+import { ColumnFiltersState } from "@tanstack/react-table";
 
 export default function Product() {
   const [products, setProducts] = useState<ProductType[]>();
   const [total, setTotal] = useState<number>();
   const [selectedRow, setSelectedRow] = useState<ProductType>();
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   const supabase = createClient();
 
@@ -42,6 +44,8 @@ export default function Product() {
             data={products}
             total={total}
             setSelectedRow={setSelectedRow}
+            columnFilters={columnFilters}
+            setColumnFilters={setColumnFilters}
           ></DataTable>
         )}
       </div>
