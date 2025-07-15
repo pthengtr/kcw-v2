@@ -60,6 +60,19 @@ export const reminderColumns: ColumnDef<ReminderType>[] = [
   dateThai("end_date"),
   numberFloat("total_amount"),
   dateThai("due_date"),
+  {
+    id: "สถานะ",
+    accessorKey: "payment_date",
+    header: ({ column }: HeaderContext<ReminderType, unknown>) => (
+      <DataTableColumnHeader column={column} title="สถานะ" />
+    ),
+
+    cell: (row) => {
+      return (
+        <div className="text-right">{row.getValue() ? "จ่ายแล้ว" : "ค้าง"}</div>
+      );
+    },
+  },
 ];
 
 function simpleText(key: keyof ReminderType) {
