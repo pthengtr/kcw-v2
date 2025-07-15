@@ -22,6 +22,8 @@ interface FormProps<T extends FieldValues> {
   defaultValues: T;
   onSubmit: (data: T) => Promise<{ success: boolean }>;
   getFieldLabel: (field: FieldValues) => string;
+  className?: string;
+  submitLabel?: string;
 }
 
 export default function Form<T extends FieldValues>({
@@ -29,6 +31,8 @@ export default function Form<T extends FieldValues>({
   defaultValues,
   onSubmit,
   getFieldLabel,
+  className = "",
+  submitLabel = "Submit",
 }: FormProps<T>) {
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -84,7 +88,7 @@ export default function Form<T extends FieldValues>({
     <_Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-8 max-w-3xl mx-auto py-10"
+        className={`max-w-3xl mx-auto ${className}`}
       >
         {Object.keys(defaultValues).map((field) => (
           <FormField
@@ -103,7 +107,7 @@ export default function Form<T extends FieldValues>({
 
         <div className="grid place-content-center w-full">
           <Button disabled={form.formState.isSubmitting} type="submit">
-            Submit
+            {submitLabel}
           </Button>
         </div>
       </form>

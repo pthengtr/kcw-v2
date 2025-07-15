@@ -6,20 +6,13 @@ import {
   reminderDefaultValue,
 } from "@/components/reminder/ReminderColumn";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-
 import { createClient } from "@/lib/supabase/client";
 import { useContext, useEffect, useState } from "react";
 import { DataTable } from "@/components/common/DataTable";
-import ReminderForm from "./ReminderForm";
-import { Button } from "../ui/button";
+
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
+import ReminderSearchForm from "./ReminderSearchForm";
+import ReminderFormDialog from "./ReminderFormDialog";
 
 export default function ReminderTable() {
   const [reminders, setReminders] = useState<ReminderType[]>();
@@ -68,23 +61,20 @@ export default function ReminderTable() {
         <div className="flex-1"></div>
         <h2 className="text-xl">รายการเตือนชำระเงิน</h2>
         <div className="flex-1 flex justify-end">
-          <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>
-            <DialogTrigger asChild>
-              <Button id="create-reminder">เพิ่มรายการเตือนโอน</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-fit  h-5/6">
-              <DialogHeader className="grid place-content-center py-4">
-                <DialogTitle>เพิ่มรายการเตือนโอน</DialogTitle>
-              </DialogHeader>
-              <div className="w-[60vw] h-full overflow-y-auto">
-                <ReminderForm defaultValues={reminderDefaultValue} />
-              </div>
-            </DialogContent>
-          </Dialog>
+          <ReminderFormDialog
+            open={openCreateDialog}
+            setOpen={setOpenCreateDialog}
+            dialogTrigger="เพิ่มรายการเตือนโอน"
+            defaultValues={reminderDefaultValue}
+          />
         </div>
       </div>
 
-      <div></div>
+      <div>
+        <ReminderSearchForm
+          defaultValues={{ supplier_name: "", note_id: "" }}
+        />
+      </div>
 
       <div className="h-full">
         {!!reminders && (

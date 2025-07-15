@@ -8,9 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 
 import Form from "../common/Form";
 import { FieldValues } from "react-hook-form";
-import { ReminderDefaultValueType } from "./ReminderColumn";
-import { useContext } from "react";
-import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 
 function getFieldLabel(field: FieldValues) {
   return field.name;
@@ -21,35 +18,31 @@ const formSchema = z.object({
   note_id: z.string().nonempty("กรุณาใส่เลขที่ใบวางบิล"),
 });
 
-type ReminderFormProps = {
-  defaultValues: ReminderDefaultValueType;
+type ReminderSearchDefaultType = {
+  supplier_name: string;
+  note_id: string;
+};
+
+type ReminderSearchFormProps = {
+  defaultValues: ReminderSearchDefaultType;
   update?: boolean;
 };
 
-export default function ReminderForm({
+export default function ReminderSearchForm({
   defaultValues,
-  update = false,
-}: ReminderFormProps) {
-  const { selectedRow } = useContext(ReminderContext) as ReminderContextType;
-
+}: ReminderSearchFormProps) {
   async function searchReminder(formData: FormData) {
     // type-casting here for convenience
     // in practice, you should validate your inputs
     const insertData = {
       supplier_name: formData.get("supplier_name") as string,
+      note_id: formData.get("note_id") as string,
     };
 
     const supabase = createClient();
 
     console.log(insertData);
-    const query =
-      update && selectedRow
-        ? supabase
-            .from("payment_reminder")
-            .update([insertData])
-            .eq("id", selectedRow.id)
-            .select()
-        : supabase.from("payment_reminder").insert([insertData]).select();
+    const query = supabase.from("payment_reminder").select("*");
 
     const { data, error } = await query;
 
@@ -58,10 +51,11 @@ export default function ReminderForm({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const { supplier_name } = values;
+      const { supplier_name, note_id } = values;
 
       const formData = new FormData();
       formData.append("supplier_name", supplier_name);
+      formData.append("note_id", note_id);
 
       searchReminder(formData);
 
@@ -72,13 +66,13 @@ export default function ReminderForm({
       return Promise.resolve({ success: false });
     }
   }
-
   return (
     <Form
       schema={formSchema}
       defaultValues={defaultValues}
       onSubmit={onSubmit}
       getFieldLabel={getFieldLabel}
+      className="flex justify-center items-center gap-4"
     />
   );
 }

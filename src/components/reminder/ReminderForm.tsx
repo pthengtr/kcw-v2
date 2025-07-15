@@ -67,7 +67,6 @@ export default function ReminderForm({
     setOpenUpdateDialog,
     setColumnFilters,
     setSelectedRow,
-    submitError,
     setSubmitError,
   } = useContext(ReminderContext) as ReminderContextType;
 
@@ -110,8 +109,13 @@ export default function ReminderForm({
     console.log(data, error);
 
     if (error) {
-      setSubmitError(error.message);
-      toast.error(error.message);
+      setSubmitError(
+        "เกิดข้อผิดพลาด กรุณาตรวจสอบชื่อบริษัทกับเลขที่ใบวางบิลอีกครั้ง"
+      );
+      toast.error(
+        "เกิดข้อผิดพลาด กรุณาตรวจสอบชื่อบริษัทกับเลขที่ใบวางบิลอีกครั้ง"
+      );
+      return;
     }
 
     if (data) {
@@ -187,12 +191,9 @@ export default function ReminderForm({
         defaultValues={defaultValues}
         onSubmit={onSubmit}
         getFieldLabel={getFieldLabel}
+        className={"flex flex-col gap-8 py-10"}
+        submitLabel="บันทึก"
       />
-      {submitError && (
-        <div className="grid place-content-center w-full text-red-600">
-          {submitError}
-        </div>
-      )}
     </>
   );
 }

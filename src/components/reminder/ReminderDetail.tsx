@@ -1,16 +1,9 @@
-import ReminderForm, { fieldLabel } from "./ReminderForm";
+import { fieldLabel } from "./ReminderForm";
 import React, { useContext } from "react";
 import ImageCarousel from "../common/ImageCarousel";
-import { Button } from "../ui/button";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
+import ReminderFormDialog from "./ReminderFormDialog";
 
 export default function ReminderDetail() {
   const { selectedRow, openUpdateDialog, setOpenUpdateDialog } = useContext(
@@ -59,42 +52,31 @@ export default function ReminderDetail() {
         <div className="flex-1"></div>
         <h2 className="text-xl">{!!selectedRow && `${selectedRow.note_id}`}</h2>
         <div className="flex-1 flex justify-end">
-          <Dialog open={openUpdateDialog} onOpenChange={setOpenUpdateDialog}>
-            <DialogTrigger asChild>
-              <Button id="update-reminder">แก้ไขรายการนี้</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-fit  h-5/6">
-              <DialogHeader className="grid place-content-center py-4">
-                <DialogTitle>
-                  {selectedRow && `แก้ไขรายการ ${selectedRow.note_id}`}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="w-[60vw] h-full overflow-y-auto">
-                {selectedRow && (
-                  <ReminderForm
-                    update
-                    defaultValues={{
-                      supplier_name: selectedRow.supplier_name,
-                      note_id: selectedRow.note_id,
-                      bill_count: selectedRow.bill_count,
-                      start_date: new Date(selectedRow.start_date),
-                      end_date: new Date(selectedRow.end_date),
-                      total_amount: selectedRow.total_amount,
-                      discount: selectedRow.discount,
-                      due_date: new Date(selectedRow.due_date),
-                      kbiz_datetime: selectedRow.kbiz_datetime
-                        ? new Date(selectedRow.kbiz_datetime)
-                        : null,
-                      payment_date: selectedRow.payment_date
-                        ? new Date(selectedRow.payment_date)
-                        : null,
-                      remark: selectedRow.remark,
-                    }}
-                  />
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+          {selectedRow && (
+            <ReminderFormDialog
+              open={openUpdateDialog}
+              setOpen={setOpenUpdateDialog}
+              dialogTrigger="แก้ไขรายการนี้"
+              dialogHeader="แก้ไขรายการเตือนโอน"
+              defaultValues={{
+                supplier_name: selectedRow.supplier_name,
+                note_id: selectedRow.note_id,
+                bill_count: selectedRow.bill_count,
+                start_date: new Date(selectedRow.start_date),
+                end_date: new Date(selectedRow.end_date),
+                total_amount: selectedRow.total_amount,
+                discount: selectedRow.discount,
+                due_date: new Date(selectedRow.due_date),
+                kbiz_datetime: selectedRow.kbiz_datetime
+                  ? new Date(selectedRow.kbiz_datetime)
+                  : null,
+                payment_date: selectedRow.payment_date
+                  ? new Date(selectedRow.payment_date)
+                  : null,
+                remark: selectedRow.remark,
+              }}
+            />
+          )}
         </div>
       </div>
 
