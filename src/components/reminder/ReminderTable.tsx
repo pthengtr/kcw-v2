@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { DataTable } from "@/components/common/DataTable";
 import CreateReminderForm from "./CreateReminderForm";
+import { Button } from "../ui/button";
 
 type ReminderTableProps = {
   setSelectedRow: (selectedRow: ReminderType) => void;
@@ -52,12 +53,14 @@ export default function ReminderTable({ setSelectedRow }: ReminderTableProps) {
             <Button>เพิ่มรายการเตือนโอน</Button>
           </Link> */}
           <Dialog>
-            <DialogTrigger>เพิ่มรายการเตือนโอน</DialogTrigger>
-            <DialogContent className="max-w-fit overflow-y-auto h-5/6">
-              <DialogHeader className="grid place-content-center">
+            <DialogTrigger asChild>
+              <Button>เพิ่มรายการเตือนโอน</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-fit  h-5/6">
+              <DialogHeader className="grid place-content-center py-4">
                 <DialogTitle>เพิ่มรายการเตือนโอน</DialogTitle>
               </DialogHeader>
-              <div className="w-[60vw]">
+              <div className="w-[60vw] h-full overflow-y-auto">
                 <CreateReminderForm />
               </div>
             </DialogContent>

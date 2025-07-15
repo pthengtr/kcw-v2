@@ -15,17 +15,23 @@ export default function Reminder() {
   const [selectedRow, setSelectedRow] = useState<ReminderType>();
 
   return (
-    <ResizablePanelGroup
-      className="grid grid-cols-2 w-full"
-      direction="horizontal"
-    >
-      <ResizablePanel>
-        <ReminderTable setSelectedRow={setSelectedRow} />
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel defaultSize={30}>
-        {selectedRow && <ReminderDetail selectedRow={selectedRow} />}
-      </ResizablePanel>
-    </ResizablePanelGroup>
+    <section className="h-[90vh]">
+      <ResizablePanelGroup
+        className="grid grid-cols-2 w-full"
+        direction="horizontal"
+      >
+        <ResizablePanel>
+          <div className="h-full overflow-auto">
+            <ReminderTable setSelectedRow={setSelectedRow} />
+          </div>
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel className="overflow-y-auto" defaultSize={30}>
+          <div className="h-full overflow-auto">
+            {selectedRow && <ReminderDetail selectedRow={selectedRow} />}
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </section>
   );
 }

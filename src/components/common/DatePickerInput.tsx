@@ -36,7 +36,7 @@ export function DatePickerInput({
   return (
     <div className="flex gap-4">
       <div className="">
-        <Popover>
+        <Popover modal>
           <PopoverTrigger asChild>
             <FormControl>
               <Button
