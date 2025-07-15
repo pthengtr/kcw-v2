@@ -90,7 +90,7 @@ export default function ReminderForm({
     // type-casting here for convenience
     // in practice, you should validate your inputs
     const insertData = {
-      ...(update ? {} : { created_at: new Date().toISOString() }),
+      ...(update ? {} : { created_at: new Date().toLocaleString("en-US") }),
       supplier_name: formData.get("supplier_name") as string,
       note_id: formData.get("note_id") as string,
       bill_count: parseInt(formData.get("bill_count") as string) as number,
@@ -105,7 +105,7 @@ export default function ReminderForm({
       kbiz_datetime: formData.get("kbiz_datetime") as string,
       payment_date: formData.get("payment_date") as string,
       remark: formData.get("remark") as string,
-      last_modified: new Date().toISOString(),
+      last_modified: new Date().toLocaleString("en-US"),
       bank_name: formData.get("remark") as string,
       bank_account_number: formData.get("remark") as string,
     };
