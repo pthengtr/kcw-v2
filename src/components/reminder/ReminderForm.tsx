@@ -154,7 +154,7 @@ export default function ReminderForm({
 
       setSelectedRow(data[0]);
 
-      toast.success("สร้างรายการสำเร็จ");
+      toast.success(update ? "แก้ไขรายการสำเร็จ" : "สร้างรายการสำเร็จ");
     }
   }
 

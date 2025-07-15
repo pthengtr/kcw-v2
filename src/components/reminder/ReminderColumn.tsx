@@ -66,17 +66,22 @@ export const reminderColumns: ColumnDef<ReminderType>[] = [
   dateThai("end_date"),
   numberFloat("total_amount"),
   dateThai("due_date"),
+  dateThai("payment_date"),
   {
     id: "สถานะ",
     accessorKey: "payment_date",
     header: ({ column }: HeaderContext<ReminderType, unknown>) => (
       <DataTableColumnHeader column={column} title="สถานะ" />
     ),
-
     cell: (row) => {
       return (
         <div className="text-right">{row.getValue() ? "จ่ายแล้ว" : "ค้าง"}</div>
       );
+    },
+    filterFn: (row, columnId, filterValue) => {
+      return (
+        (row.getValue(columnId) as string) ? "จ่ายแล้ว" : "ค้าง"
+      ).includes(filterValue);
     },
   },
 ];
@@ -101,14 +106,15 @@ function dateThai(key: keyof ReminderType) {
     cell: (row: Row<ReminderType>) => {
       return (
         <div className="text-right">
-          {new Date(row.getValue(fieldLabel[key]) as string).toLocaleString(
-            "th-TH",
-            {
-              day: "2-digit",
-              month: "narrow",
-              year: "2-digit",
-            }
-          )}
+          {!!row.getValue(fieldLabel[key]) &&
+            new Date(row.getValue(fieldLabel[key]) as string).toLocaleString(
+              "th-TH",
+              {
+                day: "2-digit",
+                month: "narrow",
+                year: "2-digit",
+              }
+            )}
         </div>
       );
     },
