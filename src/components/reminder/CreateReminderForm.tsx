@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 
 import Form from "../common/Form";
 import { FieldValues } from "react-hook-form";
+import { ColumnFiltersState, OnChangeFn } from "@tanstack/react-table";
+import { ReminderType } from "./ReminderColumn";
 
 export const fieldLabel = {
   id: "รายการเลขที่",
@@ -50,7 +52,17 @@ const formSchema = z.object({
   remark: z.string(),
 });
 
-export default function CreateReminderForm() {
+type CreateReminderFormProps = {
+  setOpen: (open: boolean) => void;
+  setColumnFilters: OnChangeFn<ColumnFiltersState>;
+  setSelectedRow: (selectedRow: ReminderType) => void;
+};
+
+export default function CreateReminderForm({
+  setOpen,
+  setColumnFilters,
+  setSelectedRow,
+}: CreateReminderFormProps) {
   async function createReminder(formData: FormData) {
     // type-casting here for convenience
     // in practice, you should validate your inputs
@@ -83,6 +95,21 @@ export default function CreateReminderForm() {
       .select();
 
     console.log(data, error);
+
+    if (data) {
+      setOpen(false);
+      setColumnFilters([
+        {
+          id: fieldLabel["supplier_name"],
+          value: data[0].supplier_name,
+        },
+        {
+          id: fieldLabel["note_id"],
+          value: data[0].note_id,
+        },
+      ]);
+      setSelectedRow(data[0]);
+    }
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

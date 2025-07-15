@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { DataTable } from "@/components/common/DataTable";
 import CreateReminderForm from "./CreateReminderForm";
 import { Button } from "../ui/button";
+import { ColumnFiltersState } from "@tanstack/react-table";
 
 type ReminderTableProps = {
   setSelectedRow: (selectedRow: ReminderType) => void;
@@ -25,7 +26,10 @@ type ReminderTableProps = {
 
 export default function ReminderTable({ setSelectedRow }: ReminderTableProps) {
   const [reminders, setReminders] = useState<ReminderType[]>();
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [total, setTotal] = useState<number>();
+  const [open, setOpen] = useState(false);
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -37,12 +41,14 @@ export default function ReminderTable({ setSelectedRow }: ReminderTableProps) {
 
       if (error) console.log(error);
 
-      if (data) setReminders(data);
+      if (data) {
+        setReminders(data);
+      }
       if (count) setTotal(count);
     }
 
     getProduct();
-  }, [supabase]);
+  }, [supabase, open, setSelectedRow, setReminders]);
   return (
     <div className="flex flex-col gap-2 p-2">
       <div className="flex justify-between items-center px-4">
@@ -52,7 +58,7 @@ export default function ReminderTable({ setSelectedRow }: ReminderTableProps) {
           {/* <Link href="/createnewreminder" legacyBehavior passHref>
             <Button>เพิ่มรายการเตือนโอน</Button>
           </Link> */}
-          <Dialog>
+          <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button>เพิ่มรายการเตือนโอน</Button>
             </DialogTrigger>
@@ -61,7 +67,11 @@ export default function ReminderTable({ setSelectedRow }: ReminderTableProps) {
                 <DialogTitle>เพิ่มรายการเตือนโอน</DialogTitle>
               </DialogHeader>
               <div className="w-[60vw] h-full overflow-y-auto">
-                <CreateReminderForm />
+                <CreateReminderForm
+                  setOpen={setOpen}
+                  setColumnFilters={setColumnFilters}
+                  setSelectedRow={setSelectedRow}
+                />
               </div>
             </DialogContent>
           </Dialog>
@@ -75,6 +85,11 @@ export default function ReminderTable({ setSelectedRow }: ReminderTableProps) {
             data={reminders}
             total={total}
             setSelectedRow={setSelectedRow}
+            columnFilters={columnFilters}
+            setColumnFilters={setColumnFilters}
+            initialState={{
+              columnFilters: columnFilters,
+            }}
           ></DataTable>
         )}
       </div>

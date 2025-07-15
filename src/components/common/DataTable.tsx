@@ -24,6 +24,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import {
   ColumnDef,
+  ColumnFilter,
   ColumnFiltersState,
   InitialTableState,
   SortingState,
@@ -34,6 +35,7 @@ import {
   getSortedRowModel,
   useReactTable,
   Header,
+  OnChangeFn,
 } from "@tanstack/react-table";
 
 import {
@@ -57,6 +59,8 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   total?: number;
   setSelectedRow?: (row: TData) => void;
+  columnFilters: ColumnFilter[];
+  setColumnFilters: OnChangeFn<ColumnFiltersState>;
   initialState?: InitialTableState | undefined;
 }
 
@@ -66,10 +70,12 @@ export function DataTable<TData, TValue>({
   data,
   total,
   setSelectedRow,
+  columnFilters,
+  setColumnFilters,
   initialState,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
   const [rowSelection, setRowSelection] = useState({});
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
     columns.map((c) => c.id!)
