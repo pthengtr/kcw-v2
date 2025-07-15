@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { DatePickerInput } from "./DatePickerInput";
+import MonthPickerInput from "./MonthPickerInput";
 
 interface FormProps<T extends FieldValues> {
   schema: z.ZodType<T>;
@@ -78,6 +79,12 @@ export default function Form<T extends FieldValues>({
         return <DatePickerInput field={field} timePicker />;
         break;
 
+      //month picker
+      case "bill_month":
+      case "due_month":
+        return <MonthPickerInput field={field} />;
+        break;
+
       //simple text
       default:
         return <Input type="text" {...field} />;
@@ -88,7 +95,7 @@ export default function Form<T extends FieldValues>({
     <_Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={`max-w-3xl mx-auto ${className}`}
+        className={`mx-auto ${className}`}
       >
         {Object.keys(defaultValues).map((field) => (
           <FormField
@@ -105,7 +112,7 @@ export default function Form<T extends FieldValues>({
           />
         ))}
 
-        <div className="grid place-content-center w-full">
+        <div className="self-center">
           <Button disabled={form.formState.isSubmitting} type="submit">
             {submitLabel}
           </Button>

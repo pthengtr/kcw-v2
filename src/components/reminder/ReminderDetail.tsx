@@ -47,10 +47,12 @@ export default function ReminderDetail() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 p-2">
+    <div className="flex flex-col items-center gap-6 px-2 py-8">
       <div className="flex w-full">
         <div className="flex-1"></div>
-        <h2 className="text-xl">{!!selectedRow && `${selectedRow.note_id}`}</h2>
+        <h2 className="text-2xl">
+          {!!selectedRow && `${selectedRow.note_id}`}
+        </h2>
         <div className="flex-1 flex justify-end">
           {selectedRow && (
             <ReminderFormDialog
@@ -83,7 +85,7 @@ export default function ReminderDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 w-[80%]">
+      <div className="grid grid-cols-2 gap-y-1 w-[80%]">
         {selectedRow &&
           Object.keys(selectedRow).map((key) => (
             <React.Fragment key={key}>

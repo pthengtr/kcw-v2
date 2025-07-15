@@ -58,9 +58,21 @@ export default function ReminderTable() {
   ]);
   return (
     <div className="flex flex-col gap-2 p-2">
-      <div className="flex justify-between items-center px-4">
+      <h2 className="text-2xl font-bold self-center py-4">
+        รายการเตือนชำระเงิน
+      </h2>
+      <div className="flex justify-between items-center p-4 bg-slate-50">
         <div className="flex-1"></div>
-        <h2 className="text-xl">รายการเตือนชำระเงิน</h2>
+        <div>
+          <ReminderSearchForm
+            defaultValues={{
+              supplier_name: "",
+              note_id: "",
+              bill_month: "all",
+              due_month: "all",
+            }}
+          />
+        </div>
         <div className="flex-1 flex justify-end">
           <ReminderFormDialog
             open={openCreateDialog}
@@ -69,12 +81,6 @@ export default function ReminderTable() {
             defaultValues={reminderDefaultValue}
           />
         </div>
-      </div>
-
-      <div>
-        <ReminderSearchForm
-          defaultValues={{ supplier_name: "", note_id: "" }}
-        />
       </div>
 
       <div className="h-full">

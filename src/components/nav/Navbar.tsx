@@ -9,9 +9,9 @@ import LogoutButton from "../auth/LogoutButton";
 
 export default function Navbar() {
   return (
-    <nav className="flex justify-end w-full px-6 py-2">
+    <nav className="flex justify-end w-full px-6 py-2 bg-slate-50">
       <NavigationMenu>
-        <NavigationMenuList className="flex gap-4">
+        <NavigationMenuList className="flex gap-4 ">
           <NavigationMenuItem>
             <Link href="/" legacyBehavior passHref>
               <NavigationMenuLink className="">หน้าแรก</NavigationMenuLink>
