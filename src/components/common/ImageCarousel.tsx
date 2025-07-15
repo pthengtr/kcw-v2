@@ -39,8 +39,6 @@ export default function ImageCarousel({
   // const [current, setCurrent] = useState(0);
   // const [count, setCount] = useState(0);
 
-  console.log(imageFolder);
-
   function handleDropPicture(e: React.DragEvent) {
     e.preventDefault();
     uploadFile(e.dataTransfer.files[0]);
@@ -64,8 +62,6 @@ export default function ImageCarousel({
   }
 
   async function uploadFile(picture: File) {
-    console.log(imageFolder);
-
     if (!picture) {
       return;
     }
@@ -103,7 +99,6 @@ export default function ImageCarousel({
 
     if (!!error) console.log(error);
     if (!!data) {
-      console.log(data);
       setImageArray(data);
       //setCount(data.length + 1);
     }

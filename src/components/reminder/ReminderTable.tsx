@@ -3,6 +3,7 @@
 import {
   ReminderType,
   reminderColumns,
+  reminderDefaultValue,
 } from "@/components/reminder/ReminderColumn";
 
 import {
@@ -14,21 +15,24 @@ import {
 } from "@/components/ui/dialog";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { DataTable } from "@/components/common/DataTable";
-import CreateReminderForm from "./CreateReminderForm";
+import ReminderForm from "./ReminderForm";
 import { Button } from "../ui/button";
-import { ColumnFiltersState } from "@tanstack/react-table";
+import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 
-type ReminderTableProps = {
-  setSelectedRow: (selectedRow: ReminderType) => void;
-};
-
-export default function ReminderTable({ setSelectedRow }: ReminderTableProps) {
+export default function ReminderTable() {
   const [reminders, setReminders] = useState<ReminderType[]>();
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [total, setTotal] = useState<number>();
-  const [open, setOpen] = useState(false);
+
+  const {
+    openCreateDialog,
+    setOpenCreateDialog,
+    openUpdateDialog,
+    columnFilters,
+    setColumnFilters,
+    setSelectedRow,
+  } = useContext(ReminderContext) as ReminderContextType;
 
   const supabase = createClient();
 
@@ -48,7 +52,13 @@ export default function ReminderTable({ setSelectedRow }: ReminderTableProps) {
     }
 
     getProduct();
-  }, [supabase, open, setSelectedRow, setReminders]);
+  }, [
+    supabase,
+    openCreateDialog,
+    openUpdateDialog,
+    setSelectedRow,
+    setReminders,
+  ]);
   return (
     <div className="flex flex-col gap-2 p-2">
       <div className="flex justify-between items-center px-4">
@@ -58,20 +68,16 @@ export default function ReminderTable({ setSelectedRow }: ReminderTableProps) {
           {/* <Link href="/createnewreminder" legacyBehavior passHref>
             <Button>เพิ่มรายการเตือนโอน</Button>
           </Link> */}
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>
             <DialogTrigger asChild>
-              <Button>เพิ่มรายการเตือนโอน</Button>
+              <Button id="create-reminder">เพิ่มรายการเตือนโอน</Button>
             </DialogTrigger>
             <DialogContent className="max-w-fit  h-5/6">
               <DialogHeader className="grid place-content-center py-4">
                 <DialogTitle>เพิ่มรายการเตือนโอน</DialogTitle>
               </DialogHeader>
               <div className="w-[60vw] h-full overflow-y-auto">
-                <CreateReminderForm
-                  setOpen={setOpen}
-                  setColumnFilters={setColumnFilters}
-                  setSelectedRow={setSelectedRow}
-                />
+                <ReminderForm defaultValues={reminderDefaultValue} />
               </div>
             </DialogContent>
           </Dialog>

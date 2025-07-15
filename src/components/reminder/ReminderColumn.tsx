@@ -2,7 +2,7 @@
 
 import { ColumnDef, HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../common/DataTableColumnHeader";
-import { fieldLabel } from "./CreateReminderForm";
+import { fieldLabel } from "./ReminderForm";
 import { Row } from "@tanstack/react-table";
 
 // This type is used to define the shape of our data.
@@ -24,6 +24,35 @@ export type ReminderType = {
   remark: string;
   last_modified: string;
 };
+
+export type ReminderDefaultValueType = {
+  supplier_name: string;
+  note_id: string;
+  bill_count: number;
+  start_date: Date;
+  end_date: Date;
+  total_amount: number;
+  discount: number;
+  due_date: Date;
+  kbiz_datetime: Date | null;
+  payment_date: Date | null;
+  remark: string;
+};
+
+export const reminderDefaultValue: ReminderDefaultValueType = {
+  supplier_name: "",
+  note_id: "",
+  bill_count: 1,
+  start_date: new Date(),
+  end_date: new Date(),
+  total_amount: 0,
+  discount: 0,
+  due_date: new Date(),
+  kbiz_datetime: null,
+  payment_date: null,
+  remark: "",
+};
+
 export const reminderColumns: ColumnDef<ReminderType>[] = [
   simpleText("supplier_name"),
   simpleText("note_id"),
@@ -91,10 +120,6 @@ function numberFloat(key: keyof ReminderType) {
       columnId: string,
       filterValue: string
     ) => {
-      console.log(
-        (row.getValue(fieldLabel[key]) as number).toString(),
-        filterValue
-      );
       return (row.getValue(fieldLabel[key]) as number)
         .toString()
         .includes(filterValue);
@@ -107,14 +132,6 @@ function dateFilterFn(
   columnId: string,
   filterValue: string
 ) {
-  console.log(
-    new Date(row.getValue(columnId) as string).toLocaleString("th-TH", {
-      day: "2-digit",
-      month: "narrow",
-      year: "2-digit",
-    }),
-    filterValue
-  );
   return new Date(row.getValue(columnId) as string)
     .toLocaleString("th-TH", {
       day: "2-digit",

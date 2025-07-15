@@ -6,13 +6,16 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 
-import { useState } from "react";
-import { ReminderType } from "@/components/reminder/ReminderColumn";
+import { useContext } from "react";
 import ReminderTable from "@/components/reminder/ReminderTable";
 import ReminderDetail from "@/components/reminder/ReminderDetail";
+import {
+  ReminderContext,
+  ReminderContextType,
+} from "@/components/reminder/ReminderProvider";
 
 export default function Reminder() {
-  const [selectedRow, setSelectedRow] = useState<ReminderType>();
+  const { selectedRow } = useContext(ReminderContext) as ReminderContextType;
 
   return (
     <section className="h-[90vh]">
@@ -22,13 +25,13 @@ export default function Reminder() {
       >
         <ResizablePanel>
           <div className="h-full overflow-auto">
-            <ReminderTable setSelectedRow={setSelectedRow} />
+            <ReminderTable />
           </div>
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel className="overflow-y-auto" defaultSize={30}>
           <div className="h-full overflow-auto">
-            {selectedRow && <ReminderDetail selectedRow={selectedRow} />}
+            {selectedRow && <ReminderDetail />}
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

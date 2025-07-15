@@ -42,7 +42,6 @@ export const productColumns: ColumnDef<ProductType>[] = [
       );
     },
     filterFn: (row, columnId, filterValue) => {
-      console.log(row.getValue(columnId), filterValue);
       return row.getValue(columnId) === parseFloat(filterValue);
     },
   },

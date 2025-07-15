@@ -34,7 +34,6 @@ export const userColumns: ColumnDef<UserType>[] = [
       <DataTableColumnHeader column={column} title="รหัสพนักงาน" />
     ),
     filterFn: (row, columnId, filterValue) => {
-      console.log(row.getValue(columnId), filterValue);
       return (row.getValue(columnId) as number)
         .toString()
         .includes(filterValue);

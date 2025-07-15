@@ -1,14 +1,22 @@
-import { ReminderType } from "./ReminderColumn";
-import { fieldLabel } from "./CreateReminderForm";
-import React from "react";
+import ReminderForm, { fieldLabel } from "./ReminderForm";
+import React, { useContext } from "react";
 import ImageCarousel from "../common/ImageCarousel";
 import { Button } from "../ui/button";
 
-type ReminderDetailProps = {
-  selectedRow: ReminderType;
-};
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 
-export default function ReminderDetail({ selectedRow }: ReminderDetailProps) {
+export default function ReminderDetail() {
+  const { selectedRow, openUpdateDialog, setOpenUpdateDialog } = useContext(
+    ReminderContext
+  ) as ReminderContextType;
+
   function getKeyValue(key: string) {
     switch (key) {
       case "start_date":
@@ -17,7 +25,7 @@ export default function ReminderDetail({ selectedRow }: ReminderDetailProps) {
       case "payment_date":
       case "created_at":
       case "last_modified":
-        return !!selectedRow[key as keyof typeof selectedRow]
+        return selectedRow && !!selectedRow[key as keyof typeof selectedRow]
           ? new Date(
               selectedRow[key as keyof typeof selectedRow]
             ).toLocaleDateString("th-TH", {
@@ -28,7 +36,7 @@ export default function ReminderDetail({ selectedRow }: ReminderDetailProps) {
           : "";
         break;
       case "kbiz_datetime":
-        return !!selectedRow[key as keyof typeof selectedRow]
+        return selectedRow && !!selectedRow[key as keyof typeof selectedRow]
           ? new Date(
               selectedRow[key as keyof typeof selectedRow]
             ).toLocaleDateString("th-TH", {
@@ -41,45 +49,84 @@ export default function ReminderDetail({ selectedRow }: ReminderDetailProps) {
           : "";
         break;
       default:
-        return selectedRow[key as keyof typeof selectedRow];
+        return selectedRow && selectedRow[key as keyof typeof selectedRow];
     }
   }
 
-  console.log(selectedRow);
   return (
     <div className="flex flex-col items-center gap-6 p-2">
       <div className="flex w-full">
         <div className="flex-1"></div>
         <h2 className="text-xl">{!!selectedRow && `${selectedRow.note_id}`}</h2>
         <div className="flex-1 flex justify-end">
-          <Button>Test message</Button>
+          <Dialog open={openUpdateDialog} onOpenChange={setOpenUpdateDialog}>
+            <DialogTrigger asChild>
+              <Button id="update-reminder">แก้ไขรายการนี้</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-fit  h-5/6">
+              <DialogHeader className="grid place-content-center py-4">
+                <DialogTitle>
+                  {selectedRow && `แก้ไขรายการ ${selectedRow.note_id}`}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="w-[60vw] h-full overflow-y-auto">
+                {selectedRow && (
+                  <ReminderForm
+                    update
+                    defaultValues={{
+                      supplier_name: selectedRow.supplier_name,
+                      note_id: selectedRow.note_id,
+                      bill_count: selectedRow.bill_count,
+                      start_date: new Date(selectedRow.start_date),
+                      end_date: new Date(selectedRow.end_date),
+                      total_amount: selectedRow.total_amount,
+                      discount: selectedRow.discount,
+                      due_date: new Date(selectedRow.due_date),
+                      kbiz_datetime: selectedRow.kbiz_datetime
+                        ? new Date(selectedRow.kbiz_datetime)
+                        : null,
+                      payment_date: selectedRow.payment_date
+                        ? new Date(selectedRow.payment_date)
+                        : null,
+                      remark: selectedRow.remark,
+                    }}
+                  />
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
       <div className="grid grid-cols-2 w-[80%]">
-        {Object.keys(selectedRow).map((key) => (
-          <React.Fragment key={key}>
-            <span>{fieldLabel[key as keyof typeof selectedRow]}</span>
-            <span>{getKeyValue(key)}</span>
-          </React.Fragment>
-        ))}
+        {selectedRow &&
+          Object.keys(selectedRow).map((key) => (
+            <React.Fragment key={key}>
+              <span>{fieldLabel[key as keyof typeof selectedRow]}</span>
+              <span>{getKeyValue(key)}</span>
+            </React.Fragment>
+          ))}
       </div>
       <div className="flex flex-col items-center gap-3">
         <h3>รูปบิล/ใบวางบิล</h3>
         <div className="w-96">
-          <ImageCarousel
-            imageFolder="reminder_bill"
-            imageId={`${selectedRow.supplier_name.toString()}_${selectedRow.note_id.toString()}_${selectedRow.id.toString()}`}
-          />
+          {selectedRow && (
+            <ImageCarousel
+              imageFolder="reminder_bill"
+              imageId={`${selectedRow.supplier_name.toString()}_${selectedRow.note_id.toString()}_${selectedRow.id.toString()}`}
+            />
+          )}
         </div>
       </div>
       <div className="flex flex-col items-center gap-3">
         <h3>รูปหลักฐานการชำระเงิน</h3>
         <div className="w-96">
-          <ImageCarousel
-            imageFolder="reminder_payment"
-            imageId={`${selectedRow.supplier_name.toString()}_${selectedRow.note_id.toString()}_${selectedRow.id.toString()}`}
-          />
+          {selectedRow && (
+            <ImageCarousel
+              imageFolder="reminder_payment"
+              imageId={`${selectedRow.supplier_name.toString()}_${selectedRow.note_id.toString()}_${selectedRow.id.toString()}`}
+            />
+          )}
         </div>
       </div>
     </div>

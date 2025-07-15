@@ -8,8 +8,9 @@ import { createClient } from "@/lib/supabase/client";
 
 import Form from "../common/Form";
 import { FieldValues } from "react-hook-form";
-import { ColumnFiltersState, OnChangeFn } from "@tanstack/react-table";
-import { ReminderType } from "./ReminderColumn";
+import { ReminderDefaultValueType } from "./ReminderColumn";
+import { useContext } from "react";
+import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 
 export const fieldLabel = {
   id: "รายการเลขที่",
@@ -52,18 +53,24 @@ const formSchema = z.object({
   remark: z.string(),
 });
 
-type CreateReminderFormProps = {
-  setOpen: (open: boolean) => void;
-  setColumnFilters: OnChangeFn<ColumnFiltersState>;
-  setSelectedRow: (selectedRow: ReminderType) => void;
+type ReminderFormProps = {
+  defaultValues: ReminderDefaultValueType;
+  update?: boolean;
 };
 
-export default function CreateReminderForm({
-  setOpen,
-  setColumnFilters,
-  setSelectedRow,
-}: CreateReminderFormProps) {
-  async function createReminder(formData: FormData) {
+export default function ReminderForm({
+  defaultValues,
+  update = false,
+}: ReminderFormProps) {
+  const {
+    selectedRow,
+    setOpenCreateDialog,
+    setOpenUpdateDialog,
+    setColumnFilters,
+    setSelectedRow,
+  } = useContext(ReminderContext) as ReminderContextType;
+
+  async function createUpdateReminder(formData: FormData) {
     // type-casting here for convenience
     // in practice, you should validate your inputs
     const insertData = {
@@ -76,7 +83,7 @@ export default function CreateReminderForm({
       total_amount: parseFloat(
         formData.get("total_amount") as string
       ) as number,
-      discount: parseFloat(formData.get("total_amount") as string) as number,
+      discount: parseFloat(formData.get("discount") as string) as number,
       user_id: "test user",
       due_date: formData.get("due_date") as string,
       kbiz_datetime: formData.get("kbiz_datetime") as string,
@@ -85,19 +92,26 @@ export default function CreateReminderForm({
       last_modified: new Date().toISOString(),
     };
 
-    console.log(insertData);
-
     const supabase = createClient();
 
-    const { data, error } = await supabase
-      .from("payment_reminder")
-      .insert([insertData])
-      .select();
+    console.log(insertData);
+    const query =
+      update && selectedRow
+        ? supabase
+            .from("payment_reminder")
+            .update([insertData])
+            .eq("id", selectedRow.id)
+            .select()
+        : supabase.from("payment_reminder").insert([insertData]).select();
+
+    const { data, error } = await query;
 
     console.log(data, error);
 
     if (data) {
-      setOpen(false);
+      if (update) setOpenUpdateDialog(false);
+      else setOpenCreateDialog(false);
+
       setColumnFilters([
         {
           id: fieldLabel["supplier_name"],
@@ -118,6 +132,7 @@ export default function CreateReminderForm({
         supplier_name,
         bill_count,
         start_date,
+        end_date,
         note_id,
         total_amount,
         discount,
@@ -131,22 +146,21 @@ export default function CreateReminderForm({
       formData.append("supplier_name", supplier_name);
       formData.append("note_id", note_id);
       formData.append("bill_count", bill_count.toString());
-      formData.append("start_date", start_date.toISOString());
-      formData.append("end_date", start_date.toISOString());
+      formData.append("start_date", start_date.toLocaleString("en-US"));
+      formData.append("end_date", end_date.toLocaleString("en-US"));
       formData.append("total_amount", total_amount.toString());
       formData.append("discount", discount.toString());
-      formData.append("due_date", due_date.toISOString());
+      formData.append("due_date", due_date.toLocaleString("en-US"));
       if (kbiz_datetime) {
-        console.log(kbiz_datetime);
-        formData.append("kbiz_datetime", kbiz_datetime.toISOString());
+        formData.append("kbiz_datetime", kbiz_datetime.toLocaleString("en-US"));
       }
       if (payment_date) {
-        formData.append("payment_date", payment_date.toISOString());
+        formData.append("payment_date", payment_date.toLocaleString("en-US"));
       }
 
       formData.append("remark", remark);
 
-      createReminder(formData);
+      createUpdateReminder(formData);
 
       return Promise.resolve({ success: true });
     } catch (error) {
@@ -159,19 +173,7 @@ export default function CreateReminderForm({
   return (
     <Form
       schema={formSchema}
-      defaultValues={{
-        supplier_name: "",
-        note_id: "",
-        bill_count: 1,
-        start_date: new Date(),
-        end_date: new Date(),
-        total_amount: 0,
-        discount: 0,
-        due_date: new Date(),
-        kbiz_datetime: null,
-        payment_date: null,
-        remark: "",
-      }}
+      defaultValues={defaultValues}
       onSubmit={onSubmit}
       getFieldLabel={getFieldLabel}
     />

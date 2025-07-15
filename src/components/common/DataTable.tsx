@@ -59,7 +59,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   total?: number;
   setSelectedRow?: (row: TData) => void;
-  columnFilters: ColumnFilter[];
+  columnFilters: ColumnFilter[] | undefined;
   setColumnFilters: OnChangeFn<ColumnFiltersState>;
   initialState?: InitialTableState | undefined;
 }
