@@ -6,11 +6,20 @@ import * as z from "zod";
 
 import { login } from "@/app/(auth)/action";
 import Form from "../common/Form";
+import { FieldValues } from "react-hook-form";
 
 const formSchema = z.object({
   email: z.string().email(),
   password: z.string(),
 });
+
+const fieldLabel = {};
+
+function getFieldLabel(field: FieldValues) {
+  return fieldLabel[field.name as keyof typeof fieldLabel]
+    ? fieldLabel[field.name as keyof typeof fieldLabel]
+    : field.name;
+}
 
 export default function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -36,6 +45,7 @@ export default function LoginForm() {
       schema={formSchema}
       defaultValues={{ email: "", password: "" }}
       onSubmit={onSubmit}
+      getFieldLabel={getFieldLabel}
     />
   );
 }
