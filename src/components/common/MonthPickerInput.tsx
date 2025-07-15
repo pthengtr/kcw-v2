@@ -37,10 +37,7 @@ export default function MonthPickerInput({ field }: MonthPickerInputProps) {
         {[...Array(12).keys()].map((month) => {
           dateNow.setMonth(dateNow.getMonth() - 1);
           return (
-            <SelectItem
-              key={`${id}-${month}`}
-              value={dateNow.toLocaleString("en-US")}
-            >
+            <SelectItem key={`${id}-${month}`} value={dateNow.toString()}>
               {dateNow.toLocaleDateString("th-TH", {
                 month: "long",
                 year: "2-digit",

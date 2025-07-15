@@ -75,6 +75,28 @@ export default function ReminderSearchForm({
     if (searchData.note_id)
       query = query.ilike("note_id", `%${searchData.note_id}%`);
 
+    let bill_start;
+    let bill_end;
+    if (searchData.bill_month !== "all") {
+      bill_start = new Date(searchData.bill_month).toLocaleString("en-US");
+      bill_end = new Date(searchData.bill_month);
+      bill_end.setMonth(bill_end.getMonth() + 1);
+      bill_end = bill_end.toLocaleString("en-US");
+
+      query = query.gte("start_date", bill_start).lt("start_date", bill_end);
+    }
+
+    let due_start;
+    let due_end;
+    if (searchData.due_month !== "all") {
+      due_start = new Date(searchData.due_month).toLocaleString("en-US");
+      due_end = new Date(searchData.due_month);
+      due_end.setMonth(due_end.getMonth() + 1);
+      due_end = due_end.toLocaleString("en-US");
+
+      query = query.gte("due_date", due_start).lt("due_date", due_end);
+    }
+
     const { data, error, count } = await query;
 
     if (error) {
