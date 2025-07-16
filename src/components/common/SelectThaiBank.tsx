@@ -10,21 +10,21 @@ import { Button } from "../ui/button";
 import { Trash } from "lucide-react";
 
 const thaiBanks = [
-  { value: "scb", label: "ธนาคารไทยพาณิชย์" },
-  { value: "ktb", label: "ธนาคารกรุงไทย" },
-  { value: "bbl", label: "ธนาคารกรุงเทพ" },
-  { value: "gsb", label: "ธนาคารออมสิน" },
-  { value: "tmb", label: "ธนาคารทหารไทย" },
-  { value: "uob", label: "UOB Bank (Thailand)" },
+  { value: "scb", label: "ไทยพาณิชย์" }, // 1. SCB
+  { value: "ktb", label: "กรุงไทย" }, // 2. KTB
+  { value: "bbl", label: "กรุงเทพ" }, // 3. BBL
+  { value: "kbank", label: "กสิกรไทย" }, // 4. KBank
+  { value: "tmb", label: "ทหารไทย" }, // 5. TMB
+  { value: "uob", label: "UOB Bank (Thailand)" }, // 6. UOB
+  { value: "gsb", label: "ออมสิน" }, // 7. GSB
+  { value: "citi", label: "ซิตี้แบงก์" }, // 8. Citi
+  { value: "cimb", label: "ซีไอเอ็มบี ไทย" }, // 9. CIMB
+  { value: "icbc", label: "ไอซีบีซีไทย" }, // 10. ICBC
+  { value: "afb", label: "อาคารสงเคราะห์" }, // 11. Bank of GHT
+  { value: "kcc", label: "เกียรตินาคิน" }, // 12. Kiatnakin
+  { value: "lh", label: "แลนด์ แอนด์ เฮาส์" }, // 13. LH Bank
+  { value: "tisco", label: "ทิสโก้" }, // 14. Tisco
   { value: "baac", label: "ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร" },
-  { value: "citi", label: "ซิตี้แบงก์" },
-  { value: "kcc", label: "ธนาคารเกียรตินาคิน" },
-  { value: "kbank", label: "ธนาคารกสิกรไทย" },
-  { value: "lh", label: "ธนาคารแลนด์ แอนด์ เฮาส์" },
-  { value: "tisco", label: "ธนาคารทิสโก้" },
-  { value: "icbc", label: "ธนาคารไอซีบีซีไทย" },
-  { value: "cimb", label: "ธนาคารซีไอเอ็มบี ไทย" },
-  { value: "afb", label: "ธนาคารอาคารสงเคราะห์" },
   // Add more if needed
 ];
 
