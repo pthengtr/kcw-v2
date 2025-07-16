@@ -112,7 +112,13 @@ export default function ReminderDetail() {
           {selectedRow && (
             <ImageCarousel
               imageFolder="reminder_payment"
-              imageId={`${selectedRow.supplier_name.toString()}_${selectedRow.note_id.toString()}_${selectedRow.id.toString()}`}
+              imageId={`${selectedRow.supplier_name
+                .toString()
+                .replace(/[^A-Za-z0-9\s]/g, "")}_${selectedRow.note_id
+                .toString()
+                .replace(/[^A-Za-z0-9\s]/g, "")}_${selectedRow.id
+                .toString()
+                .replace(/[^A-Za-z0-9\s]/g, "")}`}
             />
           )}
         </div>
