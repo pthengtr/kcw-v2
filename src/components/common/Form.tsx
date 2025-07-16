@@ -18,6 +18,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { DatePickerInput } from "./DatePickerInput";
 import MonthPickerInput from "./MonthPickerInput";
 import SelectThaiBank from "./SelectThaiBank";
+import ImageDropableForm from "./ImageDropableForm";
 
 interface FormProps<T extends FieldValues> {
   schema: z.ZodType<T>;
@@ -40,8 +41,6 @@ export default function Form<T extends FieldValues>({
     resolver: zodResolver(schema),
     defaultValues: defaultValues as DefaultValues<T>,
   });
-
-  //const handleSubmit: SubmitHandler<T> = async () => {};
 
   function getFormInput(field: FieldValues) {
     switch (field.name) {
@@ -91,6 +90,11 @@ export default function Form<T extends FieldValues>({
 
       case "bank_name":
         return <SelectThaiBank field={field} />;
+        break;
+
+      case "bill_pictures":
+      case "payment_pictures":
+        return <ImageDropableForm field={field} />;
         break;
 
       //simple text

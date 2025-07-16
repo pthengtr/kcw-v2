@@ -42,6 +42,8 @@ export type ReminderDefaultValueType = {
   bank_name: string;
   bank_account_name: string;
   bank_account_number: string;
+  bill_pictures: File[];
+  payment_pictures: File[];
   remark: string;
 };
 
@@ -59,6 +61,8 @@ export const reminderDefaultValue: ReminderDefaultValueType = {
   bank_name: "",
   bank_account_name: "",
   bank_account_number: "",
+  bill_pictures: [],
+  payment_pictures: [],
   remark: "",
 };
 

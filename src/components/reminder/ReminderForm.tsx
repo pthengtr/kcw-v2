@@ -10,6 +10,7 @@ import { FieldValues } from "react-hook-form";
 import { ReminderDefaultValueType } from "./ReminderColumn";
 import { useContext } from "react";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
+import { commonUploadFile } from "@/lib/utils";
 
 export const fieldLabel = {
   id: "รายการเลขที่",
@@ -30,6 +31,8 @@ export const fieldLabel = {
   bank_name: "ชื่อธนาคาร",
   bank_account_name: "ชื่อบัญชี",
   bank_account_number: "เลขบัญชี",
+  bill_pictures: "เพิ่มรูปบิล/ใบวางบิล",
+  payment_pictures: "เพิ่มรูปหลักฐานการขำระเงิน",
 };
 
 function getFieldLabel(field: FieldValues) {
@@ -55,6 +58,8 @@ const formSchema = z.object({
   bank_name: z.string(),
   bank_account_name: z.string(),
   bank_account_number: z.string(),
+  bill_pictures: z.array(z.custom<File>((file) => file instanceof File)),
+  payment_pictures: z.array(z.custom<File>((file) => file instanceof File)),
   remark: z.string(),
 });
 
@@ -113,7 +118,6 @@ export default function ReminderForm({
       bank_account_number: formData.get("bank_account_number") as string,
     };
 
-    console.log(insertData);
     const query =
       update && selectedRow
         ? supabase
@@ -138,6 +142,22 @@ export default function ReminderForm({
     }
 
     if (data) {
+      const imageId = `${insertData.supplier_name
+        .toString()
+        .replace(/[^A-Za-z0-9\s]/g, "")}_${insertData.note_id
+        .toString()
+        .replace(/[^A-Za-z0-9\s]/g, "")}`;
+
+      const bill_pictures = formData.getAll("bill_pictures[]") as File[];
+      bill_pictures.forEach((item) =>
+        commonUploadFile(item, imageId, "reminder_bill")
+      );
+
+      const payment_pictures = formData.getAll("payment_pictures[]") as File[];
+      payment_pictures.forEach((item) =>
+        commonUploadFile(item, imageId, "reminder_payment")
+      );
+
       // close dialog oon succss
       if (update) setOpenUpdateDialog(false);
       else setOpenCreateDialog(false);
@@ -155,7 +175,7 @@ export default function ReminderForm({
         ]);
       }
 
-      setSelectedRow(data[0]);
+      setSelectedRow(undefined);
 
       toast.success(update ? "แก้ไขรายการสำเร็จ" : "สร้างรายการสำเร็จ");
     }
@@ -177,6 +197,8 @@ export default function ReminderForm({
         bank_name,
         bank_account_name,
         bank_account_number,
+        bill_pictures,
+        payment_pictures,
         remark,
       } = values;
 
@@ -199,6 +221,14 @@ export default function ReminderForm({
       formData.append("bank_account_name", bank_account_name);
       formData.append("bank_account_number", bank_account_number);
       formData.append("remark", remark);
+
+      bill_pictures.forEach((item) => {
+        formData.append("bill_pictures[]", item);
+      });
+
+      payment_pictures.forEach((item) => {
+        formData.append("payment_pictures[]", item);
+      });
 
       createUpdateReminder(formData);
 

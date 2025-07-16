@@ -79,6 +79,8 @@ export default function ReminderDetail() {
                 bank_name: selectedRow.bank_name,
                 bank_account_name: selectedRow.bank_account_name,
                 bank_account_number: selectedRow.bank_account_number,
+                bill_pictures: [],
+                payment_pictures: [],
                 remark: selectedRow.remark,
               }}
             />
@@ -105,8 +107,6 @@ export default function ReminderDetail() {
                 .toString()
                 .replace(/[^A-Za-z0-9\s]/g, "")}_${selectedRow.note_id
                 .toString()
-                .replace(/[^A-Za-z0-9\s]/g, "")}_${selectedRow.id
-                .toString()
                 .replace(/[^A-Za-z0-9\s]/g, "")}`}
             />
           )}
@@ -121,8 +121,6 @@ export default function ReminderDetail() {
               imageId={`${selectedRow.supplier_name
                 .toString()
                 .replace(/[^A-Za-z0-9\s]/g, "")}_${selectedRow.note_id
-                .toString()
-                .replace(/[^A-Za-z0-9\s]/g, "")}_${selectedRow.id
                 .toString()
                 .replace(/[^A-Za-z0-9\s]/g, "")}`}
             />

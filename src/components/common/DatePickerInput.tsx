@@ -45,7 +45,6 @@ export function DatePickerInput({
     setMinutes("0");
   }
 
-  console.log(field.value);
   return (
     <div className="flex gap-4">
       <div className="">

@@ -1,7 +1,5 @@
 "use client";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { ImagePlus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import {
@@ -22,6 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "../ui/button";
+import ImageDropable from "./ImageDropable";
+import { commonUploadFile } from "@/lib/utils";
 
 type imageCarouselProps = {
   imageId: string;
@@ -66,20 +66,8 @@ export default function ImageCarousel({
       return;
     }
 
-    const temp_imageFilename =
-      imageId +
-      "_" +
-      Math.random().toString().substring(4, 12) +
-      "." +
-      picture.name.split(".")[1];
+    const { data } = await commonUploadFile(picture, imageId, imageFolder);
 
-    const supabase = createClient();
-
-    const { data, error } = await supabase.storage
-      .from("pictures")
-      .upload(`public/${imageFolder}/${temp_imageFilename}`, picture);
-
-    if (!!error) console.log(error);
     if (!!data) {
       getImageArray();
     }
@@ -163,27 +151,10 @@ export default function ImageCarousel({
               ))}
 
               <CarouselItem className="grid place-content-center">
-                <div>
-                  <div
-                    onDrop={handleDropPicture}
-                    onDragOver={(e) => e.preventDefault()}
-                    className="grid place-content-center "
-                  >
-                    <Label
-                      htmlFor={`file-${imageFolder}-${imageId}`}
-                      className="grid place-content-center hover:cursor-pointer"
-                    >
-                      <ImagePlus size={96} strokeWidth={1.2} />
-                    </Label>
-                  </div>
-
-                  <Input
-                    id={`file-${imageFolder}-${imageId}`}
-                    className="hidden"
-                    type="file"
-                    onChange={handleFileChange}
-                  />
-                </div>
+                <ImageDropable
+                  handleDropPicture={handleDropPicture}
+                  handleFileChange={handleFileChange}
+                />
               </CarouselItem>
             </CarouselContent>
             <CarouselPrevious />

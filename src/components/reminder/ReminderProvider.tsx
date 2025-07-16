@@ -10,7 +10,7 @@ import { ReminderType } from "./ReminderColumn";
 
 export type ReminderContextType = {
   selectedRow: ReminderType | undefined;
-  setSelectedRow: (selectedRow: ReminderType) => void;
+  setSelectedRow: (selectedRow: ReminderType | undefined) => void;
   columnFilters: ColumnFilter[] | undefined;
   setColumnFilters: OnChangeFn<ColumnFiltersState>;
   openCreateDialog: boolean;

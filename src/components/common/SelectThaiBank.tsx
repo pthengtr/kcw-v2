@@ -33,8 +33,6 @@ type SelectThaiBankProps = {
 };
 
 export default function SelectThaiBank({ field }: SelectThaiBankProps) {
-  console.log(field.value);
-
   return (
     <div className="flex gap-3">
       <Select value={field.value} onValueChange={field.onChange}>
