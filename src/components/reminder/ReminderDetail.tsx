@@ -105,9 +105,9 @@ export default function ReminderDetail() {
               imageFolder="reminder_bill"
               imageId={`${selectedRow.supplier_name
                 .toString()
-                .replace(/[^A-Za-z0-9\s]/g, "")}_${selectedRow.note_id
+                .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
                 .toString()
-                .replace(/[^A-Za-z0-9\s]/g, "")}`}
+                .replace(/[^A-Za-z0-9]/g, "")}`}
             />
           )}
         </div>
@@ -120,9 +120,9 @@ export default function ReminderDetail() {
               imageFolder="reminder_payment"
               imageId={`${selectedRow.supplier_name
                 .toString()
-                .replace(/[^A-Za-z0-9\s]/g, "")}_${selectedRow.note_id
+                .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
                 .toString()
-                .replace(/[^A-Za-z0-9\s]/g, "")}`}
+                .replace(/[^A-Za-z0-9]/g, "")}`}
             />
           )}
         </div>

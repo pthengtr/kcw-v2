@@ -66,7 +66,7 @@ export default function ImageCarousel({
       return;
     }
 
-    const { data } = await commonUploadFile(picture, imageId, imageFolder);
+    const { data } = await commonUploadFile({ picture, imageId, imageFolder });
 
     if (!!data) {
       getImageArray();

@@ -7,11 +7,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export async function commonUploadFile(
-  picture: File,
-  imageId: string,
-  imageFolder: string
-): Promise<
+type commonUploadFileProps = {
+  picture: File;
+  imageId: string;
+  imageFolder: string;
+};
+
+type commonUploadFileReturn = Promise<
   | {
       data: {
         id: string;
@@ -22,13 +24,38 @@ export async function commonUploadFile(
   | {
       data: null;
     }
-> {
+>;
+
+function sanitizeFilename(filename: string) {
+  const lastDotIndex = filename.lastIndexOf(".");
+
+  if (lastDotIndex === -1) {
+    // No extension found, remove all non-alphanumeric characters
+    return filename.replace(/[^A-Za-z0-9]/g, "");
+  } else {
+    // Split into name and extension
+    const namePart = filename.substring(0, lastDotIndex);
+    const extension = filename.substring(lastDotIndex); // includes the dot
+
+    // Clean filename part
+    const cleanedName = namePart.replace(/[^A-Za-z0-9]/g, "");
+
+    // Return combined filename
+    return cleanedName + extension;
+  }
+}
+
+export async function commonUploadFile({
+  picture,
+  imageId,
+  imageFolder,
+}: commonUploadFileProps): commonUploadFileReturn {
   const temp_imageFilename =
     imageId +
     "_" +
     Math.random().toString().substring(4, 12) +
     "." +
-    picture.name.split(".")[1];
+    sanitizeFilename(picture.name).split(".")[1];
 
   const supabase = createClient();
 

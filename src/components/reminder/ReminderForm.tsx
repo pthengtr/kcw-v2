@@ -144,18 +144,26 @@ export default function ReminderForm({
     if (data) {
       const imageId = `${insertData.supplier_name
         .toString()
-        .replace(/[^A-Za-z0-9\s]/g, "")}_${insertData.note_id
+        .replace(/[^A-Za-z0-9]/g, "")}_${insertData.note_id
         .toString()
-        .replace(/[^A-Za-z0-9\s]/g, "")}`;
+        .replace(/[^A-Za-z0-9]/g, "")}`;
 
       const bill_pictures = formData.getAll("bill_pictures[]") as File[];
       bill_pictures.forEach((item) =>
-        commonUploadFile(item, imageId, "reminder_bill")
+        commonUploadFile({
+          picture: item,
+          imageId,
+          imageFolder: "reminder_bill",
+        })
       );
 
       const payment_pictures = formData.getAll("payment_pictures[]") as File[];
       payment_pictures.forEach((item) =>
-        commonUploadFile(item, imageId, "reminder_payment")
+        commonUploadFile({
+          picture: item,
+          imageId,
+          imageFolder: "reminder_payment",
+        })
       );
 
       // close dialog oon succss
