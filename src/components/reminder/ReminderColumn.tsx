@@ -69,6 +69,7 @@ export const reminderColumns: ColumnDef<ReminderType>[] = [
   dateThai("end_date"),
   numberFloat("total_amount"),
   dateThai("due_date"),
+  dateThai("kbiz_datetime", true),
   dateThai("payment_date"),
   {
     id: "สถานะ",
@@ -99,7 +100,7 @@ function simpleText(key: keyof ReminderType) {
   };
 }
 
-function dateThai(key: keyof ReminderType) {
+function dateThai(key: keyof ReminderType, withTime: boolean = false) {
   return {
     id: fieldLabel[key],
     accessorKey: key,
@@ -116,6 +117,7 @@ function dateThai(key: keyof ReminderType) {
                 day: "2-digit",
                 month: "narrow",
                 year: "2-digit",
+                ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
               }
             )}
         </div>
