@@ -71,13 +71,16 @@ export default function Form<T extends FieldValues>({
       case "start_date":
       case "end_date":
       case "due_date":
-      case "payment_date":
         return <DatePickerInput field={field} />;
+        break;
+
+      case "payment_date":
+        return <DatePickerInput field={field} optional />;
         break;
 
       //date time picker
       case "kbiz_datetime":
-        return <DatePickerInput field={field} timePicker />;
+        return <DatePickerInput field={field} timePicker optional />;
         break;
 
       //month picker

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Trash } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -24,15 +24,28 @@ import {
 type DatePickerInputProps = {
   field: FieldValues;
   timePicker?: boolean;
+  optional?: boolean;
 };
 
 export function DatePickerInput({
   field,
   timePicker = false,
+  optional = false,
 }: DatePickerInputProps) {
-  const [hours, setHours] = React.useState("0");
-  const [minutes, setMinutes] = React.useState("0");
+  const [hours, setHours] = React.useState(
+    field.value ? field.value.getHours().toString() : "0"
+  );
+  const [minutes, setMinutes] = React.useState(
+    field.value ? field.value.getMinutes().toString() : "0"
+  );
 
+  function handleClearSelect() {
+    field.onChange("");
+    setHours("0");
+    setMinutes("0");
+  }
+
+  console.log(field.value);
   return (
     <div className="flex gap-4">
       <div className="">
@@ -140,6 +153,11 @@ export function DatePickerInput({
             </SelectContent>
           </Select>
         </div>
+      )}
+      {optional && (
+        <Button type="reset" onClick={handleClearSelect}>
+          <Trash />
+        </Button>
       )}
     </div>
   );

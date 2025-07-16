@@ -77,6 +77,7 @@ export default function ReminderDetail() {
                   ? new Date(selectedRow.payment_date)
                   : null,
                 bank_name: selectedRow.bank_name,
+                bank_account_name: selectedRow.bank_account_name,
                 bank_account_number: selectedRow.bank_account_number,
                 remark: selectedRow.remark,
               }}

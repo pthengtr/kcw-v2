@@ -28,6 +28,7 @@ export const fieldLabel = {
   remark: "หมายเหตุ",
   last_modified: "แก้ไขล่าสุด",
   bank_name: "ชื่อธนาคาร",
+  bank_account_name: "ชื่อบัญชี",
   bank_account_number: "เลขบัญชี",
 };
 
@@ -49,9 +50,10 @@ const formSchema = z.object({
   total_amount: z.number(),
   discount: z.number(),
   due_date: z.date(),
-  kbiz_datetime: z.date().nullable().optional(),
-  payment_date: z.date().nullable().optional(),
+  kbiz_datetime: z.union([z.date().nullable().optional(), z.literal("")]),
+  payment_date: z.union([z.date().nullable().optional(), z.literal("")]),
   bank_name: z.string(),
+  bank_account_name: z.string(),
   bank_account_number: z.string(),
   remark: z.string(),
 });
@@ -107,6 +109,7 @@ export default function ReminderForm({
       remark: formData.get("remark") as string,
       last_modified: new Date().toLocaleString("en-US"),
       bank_name: formData.get("bank_name") as string,
+      bank_account_name: formData.get("bank_account_name") as string,
       bank_account_number: formData.get("bank_account_number") as string,
     };
 
@@ -172,6 +175,7 @@ export default function ReminderForm({
         kbiz_datetime,
         payment_date,
         bank_name,
+        bank_account_name,
         bank_account_number,
         remark,
       } = values;
@@ -192,6 +196,7 @@ export default function ReminderForm({
         formData.append("payment_date", payment_date.toLocaleString("en-US"));
       }
       formData.append("bank_name", bank_name);
+      formData.append("bank_account_name", bank_account_name);
       formData.append("bank_account_number", bank_account_number);
       formData.append("remark", remark);
 

@@ -6,6 +6,8 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { FieldValues } from "react-hook-form";
+import { Button } from "../ui/button";
+import { Trash } from "lucide-react";
 
 const thaiBanks = [
   { value: "scb", label: "ธนาคารไทยพาณิชย์" },
@@ -32,18 +34,24 @@ type SelectThaiBankProps = {
 
 export default function SelectThaiBank({ field }: SelectThaiBankProps) {
   console.log(field.value);
+
   return (
-    <Select value={field.value} onValueChange={field.onChange}>
-      <SelectTrigger className="w-[250px]">
-        <SelectValue placeholder="เลือกธนาคาร" />
-      </SelectTrigger>
-      <SelectContent>
-        {thaiBanks.map((bank) => (
-          <SelectItem key={bank.value} value={bank.label}>
-            {bank.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="flex gap-3">
+      <Select value={field.value} onValueChange={field.onChange}>
+        <SelectTrigger className="w-[250px]">
+          <SelectValue placeholder="เลือกธนาคาร" />
+        </SelectTrigger>
+        <SelectContent>
+          {thaiBanks.map((bank) => (
+            <SelectItem key={bank.value} value={bank.label}>
+              {bank.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button type="reset" onClick={() => field.onChange("")}>
+        <Trash />
+      </Button>
+    </div>
   );
 }

@@ -23,6 +23,7 @@ export type ReminderType = {
   payment_date: string;
   remark: string;
   bank_name: string;
+  bank_account_name: string;
   bank_account_number: string;
   last_modified: string;
 };
@@ -39,6 +40,7 @@ export type ReminderDefaultValueType = {
   kbiz_datetime: Date | null;
   payment_date: Date | null;
   bank_name: string;
+  bank_account_name: string;
   bank_account_number: string;
   remark: string;
 };
@@ -55,6 +57,7 @@ export const reminderDefaultValue: ReminderDefaultValueType = {
   kbiz_datetime: null,
   payment_date: null,
   bank_name: "",
+  bank_account_name: "",
   bank_account_number: "",
   remark: "",
 };
