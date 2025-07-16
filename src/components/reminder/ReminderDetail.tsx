@@ -12,6 +12,18 @@ export default function ReminderDetail() {
 
   function getKeyValue(key: string) {
     switch (key) {
+      // number
+      case "total_amount":
+      case "discount":
+        return (
+          selectedRow &&
+          selectedRow[key as keyof typeof selectedRow].toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        );
+        break;
+      // date
       case "start_date":
       case "end_date":
       case "due_date":
@@ -28,6 +40,8 @@ export default function ReminderDetail() {
             })
           : "";
         break;
+
+      // date time
       case "kbiz_datetime":
         return selectedRow && !!selectedRow[key as keyof typeof selectedRow]
           ? new Date(
