@@ -14,7 +14,6 @@ import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 const searchFormFieldLabel = {
   supplier_name: "บริษัท",
   note_id: "เลขที่ใบวางบิล",
-  bill_month: "บิลเดือน",
   due_month: "กำหนดชำระเดือน",
 };
 
@@ -27,14 +26,12 @@ function getFieldLabel(field: FieldValues) {
 const formSchema = z.object({
   supplier_name: z.string(),
   note_id: z.string(),
-  bill_month: z.string(),
   due_month: z.string(),
 });
 
 type ReminderSearchDefaultType = {
   supplier_name: string;
   note_id: string;
-  bill_month: string;
   due_month: string;
 };
 
@@ -56,7 +53,6 @@ export default function ReminderSearchForm({
     const searchData = {
       supplier_name: formData.get("supplier_name") as string,
       note_id: formData.get("note_id") as string,
-      bill_month: formData.get("bill_month") as string,
       due_month: formData.get("due_month") as string,
     };
 
@@ -74,17 +70,6 @@ export default function ReminderSearchForm({
 
     if (searchData.note_id)
       query = query.ilike("note_id", `%${searchData.note_id}%`);
-
-    let bill_start;
-    let bill_end;
-    if (searchData.bill_month !== "all") {
-      bill_start = new Date(searchData.bill_month).toLocaleString("en-US");
-      bill_end = new Date(searchData.bill_month);
-      bill_end.setMonth(bill_end.getMonth() + 1);
-      bill_end = bill_end.toLocaleString("en-US");
-
-      query = query.gte("start_date", bill_start).lt("start_date", bill_end);
-    }
 
     let due_start;
     let due_end;
@@ -112,12 +97,11 @@ export default function ReminderSearchForm({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const { supplier_name, note_id, bill_month, due_month } = values;
+      const { supplier_name, note_id, due_month } = values;
 
       const formData = new FormData();
       formData.append("supplier_name", supplier_name);
       formData.append("note_id", note_id);
-      formData.append("bill_month", bill_month);
       formData.append("due_month", due_month);
 
       searchReminder(formData);

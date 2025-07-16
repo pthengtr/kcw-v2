@@ -72,7 +72,6 @@ export default function ReminderTable() {
             defaultValues={{
               supplier_name: "",
               note_id: "",
-              bill_month: "all",
               due_month: "all",
             }}
           />
