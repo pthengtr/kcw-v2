@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { DatePickerInput } from "./DatePickerInput";
 import MonthPickerInput from "./MonthPickerInput";
+import SelectThaiBank from "./SelectThaiBank";
 
 interface FormProps<T extends FieldValues> {
   schema: z.ZodType<T>;
@@ -83,6 +84,10 @@ export default function Form<T extends FieldValues>({
       case "bill_month":
       case "due_month":
         return <MonthPickerInput field={field} />;
+        break;
+
+      case "bank_name":
+        return <SelectThaiBank field={field} />;
         break;
 
       //simple text

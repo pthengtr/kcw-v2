@@ -106,8 +106,8 @@ export default function ReminderForm({
       payment_date: formData.get("payment_date") as string,
       remark: formData.get("remark") as string,
       last_modified: new Date().toLocaleString("en-US"),
-      bank_name: formData.get("remark") as string,
-      bank_account_number: formData.get("remark") as string,
+      bank_name: formData.get("bank_name") as string,
+      bank_account_number: formData.get("bank_account_number") as string,
     };
 
     console.log(insertData);
