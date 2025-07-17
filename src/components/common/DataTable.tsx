@@ -130,7 +130,7 @@ export function DataTable<TData, TValue>({
   );
 
   return (
-    <div className="rounded-md border p-4 flex flex-col gap-2 h-full">
+    <div className="rounded-md border p-4 flex flex-col gap-2 h-[75vh]">
       <div className="w-full flex gap-4 items-center justify-end bg-slate-50 p-4">
         {children}
         {totalAmountKey && (
@@ -151,7 +151,7 @@ export function DataTable<TData, TValue>({
         sensors={sensors}
       >
         <Table className="overflow-scroll relative">
-          <TableHeader className="sticky top-0 bg-white [&_tr]:border-b-0">
+          <TableHeader className="sticky top-0 bg-white [&_tr]:border-b-0 z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 <SortableContext

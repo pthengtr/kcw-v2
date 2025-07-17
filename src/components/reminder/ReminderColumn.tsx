@@ -68,8 +68,8 @@ export const reminderDefaultValue: ReminderDefaultValueType = {
 
 export const reminderColumns: ColumnDef<ReminderType>[] = [
   numberInt("id"),
-  dateThai("created_at"),
-  dateThai("last_modified"),
+  dateThai("created_at", true),
+  dateThai("last_modified", true),
   simpleText("supplier_name"),
   simpleText("note_id"),
   numberInt("bill_count"),
@@ -126,7 +126,7 @@ function dateThai(key: keyof ReminderType, withTime: boolean = false) {
               "th-TH",
               {
                 day: "2-digit",
-                month: "narrow",
+                month: "2-digit",
                 year: "2-digit",
                 ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
               }
@@ -202,7 +202,7 @@ function dateFilterFn(
   return new Date(row.getValue(columnId) as string)
     .toLocaleString("th-TH", {
       day: "2-digit",
-      month: "narrow",
+      month: "2-digit",
       year: "2-digit",
     })
     .includes(filterValue);
