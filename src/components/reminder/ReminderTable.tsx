@@ -73,6 +73,7 @@ export default function ReminderTable() {
               supplier_name: "",
               note_id: "",
               due_month: "all",
+              payment_month: "all",
             }}
           />
         </div>
@@ -98,6 +99,7 @@ export default function ReminderTable() {
             initialState={{
               columnFilters: columnFilters,
             }}
+            totalAmountKey="จำนวนเงิน"
           ></DataTable>
         )}
       </div>

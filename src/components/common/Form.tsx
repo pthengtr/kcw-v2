@@ -83,7 +83,7 @@ export default function Form<T extends FieldValues>({
         break;
 
       //month picker
-      case "bill_month":
+      case "payment_month":
       case "due_month":
         return <MonthPickerInput field={field} />;
         break;

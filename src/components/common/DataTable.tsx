@@ -62,6 +62,7 @@ interface DataTableProps<TData, TValue> {
   columnFilters: ColumnFilter[] | undefined;
   setColumnFilters: OnChangeFn<ColumnFiltersState>;
   initialState?: InitialTableState | undefined;
+  totalAmountKey?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -73,6 +74,7 @@ export function DataTable<TData, TValue>({
   columnFilters,
   setColumnFilters,
   initialState,
+  totalAmountKey,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -114,6 +116,13 @@ export function DataTable<TData, TValue>({
     }
   }
 
+  function totalAmount(key: string) {
+    return table.getRowModel().rows.reduce((sum, row) => {
+      const value = row.getValue(key);
+      return typeof value === "number" ? sum + (value || 0) : 0;
+    }, 0);
+  }
+
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
     useSensor(TouchSensor, {}),
@@ -122,8 +131,16 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="rounded-md border p-4 flex flex-col gap-2 h-full">
-      <div className="w-full flex">
+      <div className="w-full flex gap-4 items-center justify-end">
         {children}
+        {totalAmountKey && (
+          <div className="">{`รวม${totalAmountKey}: ${totalAmount(
+            totalAmountKey
+          ).toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}`}</div>
+        )}
         <DataTableViewOptions table={table} />
       </div>
 

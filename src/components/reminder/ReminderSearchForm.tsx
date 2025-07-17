@@ -15,6 +15,7 @@ const searchFormFieldLabel = {
   supplier_name: "บริษัท",
   note_id: "เลขที่ใบวางบิล",
   due_month: "กำหนดชำระเดือน",
+  payment_month: "ชำระแล้วเดือน",
 };
 
 function getFieldLabel(field: FieldValues) {
@@ -27,12 +28,14 @@ const formSchema = z.object({
   supplier_name: z.string(),
   note_id: z.string(),
   due_month: z.string(),
+  payment_month: z.string(),
 });
 
 type ReminderSearchDefaultType = {
   supplier_name: string;
   note_id: string;
   due_month: string;
+  payment_month: string;
 };
 
 type ReminderSearchFormProps = {
@@ -54,6 +57,7 @@ export default function ReminderSearchForm({
       supplier_name: formData.get("supplier_name") as string,
       note_id: formData.get("note_id") as string,
       due_month: formData.get("due_month") as string,
+      payment_month: formData.get("payment_month") as string,
     };
 
     const supabase = createClient();
@@ -82,6 +86,21 @@ export default function ReminderSearchForm({
       query = query.gte("due_date", due_start).lt("due_date", due_end);
     }
 
+    let payment_start;
+    let payment_end;
+    if (searchData.payment_month !== "all") {
+      payment_start = new Date(searchData.payment_month).toLocaleString(
+        "en-US"
+      );
+      payment_end = new Date(searchData.payment_month);
+      payment_end.setMonth(payment_end.getMonth() + 1);
+      payment_end = payment_end.toLocaleString("en-US");
+
+      query = query
+        .gte("payment_date", payment_start)
+        .lt("payment_date", payment_end);
+    }
+
     const { data, error, count } = await query;
 
     if (error) {
@@ -97,12 +116,13 @@ export default function ReminderSearchForm({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const { supplier_name, note_id, due_month } = values;
+      const { supplier_name, note_id, due_month, payment_month } = values;
 
       const formData = new FormData();
       formData.append("supplier_name", supplier_name);
       formData.append("note_id", note_id);
       formData.append("due_month", due_month);
+      formData.append("payment_month", payment_month);
 
       searchReminder(formData);
 
