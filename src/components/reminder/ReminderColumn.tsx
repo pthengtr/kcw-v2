@@ -67,14 +67,21 @@ export const reminderDefaultValue: ReminderDefaultValueType = {
 };
 
 export const reminderColumns: ColumnDef<ReminderType>[] = [
+  numberInt("id"),
+  dateThai("created_at"),
+  dateThai("last_modified"),
   simpleText("supplier_name"),
   simpleText("note_id"),
+  numberInt("bill_count"),
   dateThai("start_date"),
   dateThai("end_date"),
   numberFloat("total_amount"),
+  numberFloat("discount"),
+  simpleText("user_id"),
   dateThai("due_date"),
   dateThai("kbiz_datetime", true),
   dateThai("payment_date"),
+  simpleText("remark"),
   {
     id: "สถานะ",
     accessorKey: "payment_date",
@@ -146,6 +153,32 @@ function numberFloat(key: keyof ReminderType) {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}
+        </div>
+      );
+    },
+    filterFn: (
+      row: Row<ReminderType>,
+      columnId: string,
+      filterValue: string
+    ) => {
+      return (row.getValue(fieldLabel[key]) as number)
+        .toString()
+        .includes(filterValue);
+    },
+  };
+}
+
+function numberInt(key: keyof ReminderType) {
+  return {
+    id: fieldLabel[key],
+    accessorKey: key,
+    header: ({ column }: HeaderContext<ReminderType, unknown>) => (
+      <DataTableColumnHeader column={column} title={fieldLabel[key]} />
+    ),
+    cell: (row: Row<ReminderType>) => {
+      return (
+        <div className="text-right">
+          {(row.getValue(fieldLabel[key]) as number).toLocaleString("th-TH")}
         </div>
       );
     },

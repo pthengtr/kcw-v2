@@ -131,7 +131,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="rounded-md border p-4 flex flex-col gap-2 h-full">
-      <div className="w-full flex gap-4 items-center justify-end">
+      <div className="w-full flex gap-4 items-center justify-end bg-slate-50 p-4">
         {children}
         {totalAmountKey && (
           <div className="">{`รวม${totalAmountKey}: ${totalAmount(
