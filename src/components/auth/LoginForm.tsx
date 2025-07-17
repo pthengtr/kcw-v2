@@ -42,10 +42,12 @@ export default function LoginForm() {
 
   return (
     <Form
+      className="flex flex-col gap-8"
       schema={formSchema}
       defaultValues={{ email: "", password: "" }}
       onSubmit={onSubmit}
       getFieldLabel={getFieldLabel}
+      submitLabel="เข้าสู่ระบบ"
     />
   );
 }
