@@ -19,6 +19,8 @@ import { DatePickerInput } from "./DatePickerInput";
 import MonthPickerInput from "./MonthPickerInput";
 import SelectThaiBank from "./SelectThaiBank";
 import ImageDropableForm from "./ImageDropableForm";
+import { Checkbox } from "../ui/checkbox";
+import { Label } from "../ui/label";
 
 interface FormProps<T extends FieldValues> {
   schema: z.ZodType<T>;
@@ -96,6 +98,14 @@ export default function Form<T extends FieldValues>({
       case "payment_pictures":
         return <ImageDropableForm field={field} />;
         break;
+
+      case "agree":
+        return (
+          <Label className="flex gap-4 items-center just">
+            <Checkbox onCheckedChange={field.onChange} />
+            <span>ยืนยันว่าข้อมูลถูกต้องแล้ว</span>
+          </Label>
+        );
 
       //simple text
       default:

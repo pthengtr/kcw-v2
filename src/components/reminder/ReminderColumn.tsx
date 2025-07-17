@@ -45,6 +45,7 @@ export type ReminderDefaultValueType = {
   bill_pictures: File[];
   payment_pictures: File[];
   remark: string;
+  agree: boolean;
 };
 
 export const reminderDefaultValue: ReminderDefaultValueType = {
@@ -64,6 +65,7 @@ export const reminderDefaultValue: ReminderDefaultValueType = {
   bill_pictures: [],
   payment_pictures: [],
   remark: "",
+  agree: false,
 };
 
 export const reminderColumns: ColumnDef<ReminderType>[] = [

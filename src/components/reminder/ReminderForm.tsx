@@ -33,6 +33,7 @@ export const fieldLabel = {
   bank_account_number: "เลขบัญชี",
   bill_pictures: "เพิ่มรูปบิล/ใบวางบิล",
   payment_pictures: "เพิ่มรูปหลักฐานการขำระเงิน",
+  agree: " ",
 };
 
 function getFieldLabel(field: FieldValues) {
@@ -61,6 +62,9 @@ const formSchema = z.object({
   bill_pictures: z.array(z.custom<File>((file) => file instanceof File)),
   payment_pictures: z.array(z.custom<File>((file) => file instanceof File)),
   remark: z.string(),
+  agree: z.boolean().refine((val) => val === true, {
+    message: "กรุณาตรวจสอบข้อมูลก่อนบันทึก",
+  }),
 });
 
 type ReminderFormProps = {
