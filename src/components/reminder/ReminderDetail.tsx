@@ -96,6 +96,7 @@ export default function ReminderDetail() {
                 bill_pictures: [],
                 payment_pictures: [],
                 remark: selectedRow.remark,
+                agree: false,
               }}
             />
           )}
