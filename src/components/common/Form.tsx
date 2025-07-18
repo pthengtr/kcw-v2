@@ -140,9 +140,9 @@ export default function Form<T extends FieldValues>({
             className={`${form.formState.isSubmitting && "bg-blue-300"}`}
             type="submit"
           >
-            {form.formState.isSubmitting ? "กำลัง" : submitLabel}
+            {form.formState.isSubmitting ? "กำลัง" : ""}
             {submitLabel}
-            {form.formState.isSubmitting && "..."}
+            {form.formState.isSubmitting ? "..." : ""}
           </Button>
         </div>
       </form>
