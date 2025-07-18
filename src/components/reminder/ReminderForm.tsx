@@ -242,7 +242,7 @@ export default function ReminderForm({
         formData.append("payment_pictures[]", item);
       });
 
-      createUpdateReminder(formData);
+      await new Promise(() => createUpdateReminder(formData));
 
       return Promise.resolve({ success: true });
     } catch (error) {

@@ -1,7 +1,5 @@
-"use client";
-
-import LoginForm from "@/components/auth/LoginForm";
-
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 export default function ErrorPage() {
   return (
     <main className="h-full grid place-content-center">
@@ -10,7 +8,13 @@ export default function ErrorPage() {
         <p className="text-xs text-gray-600">เกียรติชัยอะไหล์ยนต์</p>
       </header>
 
-      <LoginForm withErrorMessage />
+      <div className="text-red-600 p-8 text-sm text-center">
+        ชื่อบัญชีและรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง
+      </div>
+
+      <Link href="/" legacyBehavior passHref>
+        <Button className="w-fit justify-self-center">เข้าสู่ระบบ</Button>
+      </Link>
     </main>
   );
 }

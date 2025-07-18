@@ -51,67 +51,75 @@ export default function ReminderSearchForm({
   ) as ReminderContextType;
 
   async function searchReminder(formData: FormData) {
-    // type-casting here for convenience
-    // in practice, you should validate your inputs
-    const searchData = {
-      supplier_name: formData.get("supplier_name") as string,
-      note_id: formData.get("note_id") as string,
-      due_month: formData.get("due_month") as string,
-      payment_month: formData.get("payment_month") as string,
-    };
+    try {
+      // type-casting here for convenience
+      // in practice, you should validate your inputs
+      const searchData = {
+        supplier_name: formData.get("supplier_name") as string,
+        note_id: formData.get("note_id") as string,
+        due_month: formData.get("due_month") as string,
+        payment_month: formData.get("payment_month") as string,
+      };
 
-    const supabase = createClient();
+      const supabase = createClient();
 
-    console.log(searchData);
-    let query = supabase
-      .from("payment_reminder")
-      .select("*", { count: "exact" })
-      .order("id", { ascending: false })
-      .limit(500);
+      console.log(searchData);
+      let query = supabase
+        .from("payment_reminder")
+        .select("*", { count: "exact" })
+        .order("id", { ascending: false })
+        .limit(500);
 
-    if (searchData.supplier_name)
-      query = query.ilike("supplier_name", `%${searchData.supplier_name}%`);
+      if (searchData.supplier_name)
+        query = query.ilike("supplier_name", `%${searchData.supplier_name}%`);
 
-    if (searchData.note_id)
-      query = query.ilike("note_id", `%${searchData.note_id}%`);
+      if (searchData.note_id)
+        query = query.ilike("note_id", `%${searchData.note_id}%`);
 
-    let due_start;
-    let due_end;
-    if (searchData.due_month !== "all") {
-      due_start = new Date(searchData.due_month).toLocaleString("en-US");
-      due_end = new Date(searchData.due_month);
-      due_end.setMonth(due_end.getMonth() + 1);
-      due_end = due_end.toLocaleString("en-US");
+      let due_start;
+      let due_end;
+      if (searchData.due_month !== "all") {
+        due_start = new Date(searchData.due_month).toLocaleString("en-US");
+        due_end = new Date(searchData.due_month);
+        due_end.setMonth(due_end.getMonth() + 1);
+        due_end = due_end.toLocaleString("en-US");
 
-      query = query.gte("due_date", due_start).lt("due_date", due_end);
+        query = query.gte("due_date", due_start).lt("due_date", due_end);
+      }
+
+      let payment_start;
+      let payment_end;
+      if (searchData.payment_month !== "all") {
+        payment_start = new Date(searchData.payment_month).toLocaleString(
+          "en-US"
+        );
+        payment_end = new Date(searchData.payment_month);
+        payment_end.setMonth(payment_end.getMonth() + 1);
+        payment_end = payment_end.toLocaleString("en-US");
+
+        query = query
+          .gte("payment_date", payment_start)
+          .lt("payment_date", payment_end);
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.log(error);
+        return;
+      }
+
+      if (data) {
+        setReminders(data);
+      }
+      if (count) setTotal(count);
+
+      return Promise.resolve({ success: true });
+    } catch (error) {
+      console.error("Form submission error", error);
+      toast.error("Failed to submit the form. Please try again.");
+      return Promise.resolve({ success: false });
     }
-
-    let payment_start;
-    let payment_end;
-    if (searchData.payment_month !== "all") {
-      payment_start = new Date(searchData.payment_month).toLocaleString(
-        "en-US"
-      );
-      payment_end = new Date(searchData.payment_month);
-      payment_end.setMonth(payment_end.getMonth() + 1);
-      payment_end = payment_end.toLocaleString("en-US");
-
-      query = query
-        .gte("payment_date", payment_start)
-        .lt("payment_date", payment_end);
-    }
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.log(error);
-      return;
-    }
-
-    if (data) {
-      setReminders(data);
-    }
-    if (count) setTotal(count);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -124,7 +132,7 @@ export default function ReminderSearchForm({
       formData.append("due_month", due_month);
       formData.append("payment_month", payment_month);
 
-      searchReminder(formData);
+      await new Promise(() => searchReminder(formData));
 
       return Promise.resolve({ success: true });
     } catch (error) {

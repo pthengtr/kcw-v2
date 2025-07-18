@@ -21,11 +21,7 @@ function getFieldLabel(field: FieldValues) {
     : field.name;
 }
 
-export default function LoginForm({
-  withErrorMessage = false,
-}: {
-  withErrorMessage?: boolean;
-}) {
+export default function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       console.log(values);
@@ -34,7 +30,7 @@ export default function LoginForm({
       const formData = new FormData();
       formData.append("email", email);
       formData.append("password", password);
-      login(formData);
+      await new Promise(() => login(formData));
 
       return Promise.resolve({ success: true });
     } catch (error) {
@@ -54,11 +50,6 @@ export default function LoginForm({
         getFieldLabel={getFieldLabel}
         submitLabel="เข้าสู่ระบบ"
       />
-      {withErrorMessage && (
-        <div className="text-red-600 p-8 text-sm text-center">
-          ชื่อบัญชีและรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง
-        </div>
-      )}
     </>
   );
 }
