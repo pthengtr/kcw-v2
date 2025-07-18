@@ -14,6 +14,7 @@ const thaiBanks = [
   { value: "ktb", label: "กรุงไทย" }, // 2. KTB
   { value: "bbl", label: "กรุงเทพ" }, // 3. BBL
   { value: "kbank", label: "กสิกรไทย" }, // 4. KBank
+  { value: "krungsri", label: "กรุงศรีอยุธยา" },
   { value: "tmb", label: "ทหารไทย" }, // 5. TMB
   { value: "uob", label: "UOB Bank (Thailand)" }, // 6. UOB
   { value: "gsb", label: "ออมสิน" }, // 7. GSB
