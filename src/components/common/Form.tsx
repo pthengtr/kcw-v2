@@ -135,8 +135,13 @@ export default function Form<T extends FieldValues>({
         ))}
 
         <div className="self-center">
-          <Button disabled={form.formState.isSubmitting} type="submit">
-            {submitLabel}
+          <Button
+            disabled={form.formState.isSubmitting}
+            className={`${form.formState.isSubmitting && "bg-blue-300"}`}
+            type="submit"
+          >
+            {form.formState.isSubmitting ? "กำลัง" : submitLabel}
+            {/* {submitLabel}{form.formState.isSubmitting && "..."} */}
           </Button>
         </div>
       </form>

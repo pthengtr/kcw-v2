@@ -67,7 +67,7 @@ export default function ReminderSearchForm({
       .from("payment_reminder")
       .select("*", { count: "exact" })
       .order("id", { ascending: false })
-      .limit(100);
+      .limit(500);
 
     if (searchData.supplier_name)
       query = query.ilike("supplier_name", `%${searchData.supplier_name}%`);

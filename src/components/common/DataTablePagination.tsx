@@ -24,7 +24,7 @@ export function DataTablePagination<TData>({
   table,
   total,
 }: DataTablePaginationProps<TData>) {
-  const filteredPageSize = [10, 20, 30, 40, 50].filter(
+  const filteredPageSize = [10, 20, 40, 100, 200, 500].filter(
     (size) => size / 10 < table.getFilteredRowModel().rows.length / 10 + 1
   );
 

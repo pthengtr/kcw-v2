@@ -13,7 +13,7 @@ const formSchema = z.object({
   password: z.string(),
 });
 
-const fieldLabel = {};
+const fieldLabel = { email: "ชื่อบัญชี", password: "รหัสผ่าน" };
 
 function getFieldLabel(field: FieldValues) {
   return fieldLabel[field.name as keyof typeof fieldLabel]
@@ -21,7 +21,11 @@ function getFieldLabel(field: FieldValues) {
     : field.name;
 }
 
-export default function LoginForm() {
+export default function LoginForm({
+  withErrorMessage = false,
+}: {
+  withErrorMessage?: boolean;
+}) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       console.log(values);
@@ -41,13 +45,20 @@ export default function LoginForm() {
   }
 
   return (
-    <Form
-      className="flex flex-col gap-8"
-      schema={formSchema}
-      defaultValues={{ email: "", password: "" }}
-      onSubmit={onSubmit}
-      getFieldLabel={getFieldLabel}
-      submitLabel="เข้าสู่ระบบ"
-    />
+    <>
+      <Form
+        className="flex flex-col gap-8"
+        schema={formSchema}
+        defaultValues={{ email: "", password: "" }}
+        onSubmit={onSubmit}
+        getFieldLabel={getFieldLabel}
+        submitLabel="เข้าสู่ระบบ"
+      />
+      {withErrorMessage && (
+        <div className="text-red-600 p-8 text-sm text-center">
+          ชื่อบัญชีและรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง
+        </div>
+      )}
+    </>
   );
 }

@@ -60,7 +60,7 @@ export default function ReminderTable() {
         .from("payment_reminder")
         .select("*", { count: "exact" })
         .order("id", { ascending: false })
-        .limit(100);
+        .limit(500);
 
       if (error) {
         console.log(error);
