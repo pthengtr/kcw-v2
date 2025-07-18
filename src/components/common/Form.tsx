@@ -141,7 +141,8 @@ export default function Form<T extends FieldValues>({
             type="submit"
           >
             {form.formState.isSubmitting ? "กำลัง" : submitLabel}
-            {/* {submitLabel}{form.formState.isSubmitting && "..."} */}
+            {submitLabel}
+            {form.formState.isSubmitting && "..."}
           </Button>
         </div>
       </form>
