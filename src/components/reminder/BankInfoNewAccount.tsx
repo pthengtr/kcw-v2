@@ -40,7 +40,7 @@ export default function BankInfoNewAccount() {
           checked={saveBankInfo}
           onCheckedChange={(value) => setSaveBankInfo(value)}
         />
-        <span>บันทึกบัญชีไว้ใช้ครั้งต่อไป</span>
+        <span className="text-sm">บันทึกบัญชีไว้ใช้ครั้งต่อไป</span>
       </Label>
     </div>
   );
