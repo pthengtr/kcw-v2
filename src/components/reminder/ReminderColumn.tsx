@@ -7,6 +7,15 @@ import { Row } from "@tanstack/react-table";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
+
+export type BankInfoType = {
+  id: number;
+  supplier_name: string;
+  bank_name: string;
+  bank_account_name: string;
+  bank_account_number: string;
+};
+
 export type ReminderType = {
   id: number;
   created_at: string;
@@ -39,11 +48,9 @@ export type ReminderDefaultValueType = {
   due_date: Date;
   kbiz_datetime: Date | null;
   payment_date: Date | null;
-  bank_name: string;
-  bank_account_name: string;
-  bank_account_number: string;
   bill_pictures: File[];
   payment_pictures: File[];
+  bank_info: BankInfoType | null;
   remark: string;
   agree: boolean;
 };
@@ -59,11 +66,9 @@ export const reminderDefaultValue: ReminderDefaultValueType = {
   due_date: new Date(),
   kbiz_datetime: null,
   payment_date: null,
-  bank_name: "",
-  bank_account_name: "",
-  bank_account_number: "",
   bill_pictures: [],
   payment_pictures: [],
+  bank_info: null,
   remark: "",
   agree: false,
 };

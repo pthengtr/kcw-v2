@@ -62,7 +62,7 @@ interface DataTableProps<TData, TValue> {
   columnFilters: ColumnFilter[] | undefined;
   setColumnFilters: OnChangeFn<ColumnFiltersState>;
   initialState?: InitialTableState | undefined;
-  totalAmountKey?: string;
+  totalAmountKey?: string[];
 }
 
 export function DataTable<TData, TValue>({
@@ -74,7 +74,7 @@ export function DataTable<TData, TValue>({
   columnFilters,
   setColumnFilters,
   initialState,
-  totalAmountKey,
+  totalAmountKey = [],
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -133,14 +133,15 @@ export function DataTable<TData, TValue>({
     <div className="rounded-md border p-4 flex flex-col gap-2 h-[75vh]">
       <div className="w-full flex gap-4 items-center justify-end bg-slate-50 p-4">
         {children}
-        {totalAmountKey && (
-          <div className="">{`รวม${totalAmountKey}: ${totalAmount(
-            totalAmountKey
-          ).toLocaleString("th-TH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`}</div>
-        )}
+        {totalAmountKey.length > 0 &&
+          totalAmountKey.map((key) => (
+            <div key={`total-${key}`} className="">{`รวม${key}: ${totalAmount(
+              key
+            ).toLocaleString("th-TH", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`}</div>
+          ))}
         <DataTableViewOptions table={table} />
       </div>
 

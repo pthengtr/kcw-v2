@@ -5,9 +5,13 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { FieldValues } from "react-hook-form";
 import { Button } from "../ui/button";
 import { Trash } from "lucide-react";
+import {
+  ReminderContext,
+  ReminderContextType,
+} from "../reminder/ReminderProvider";
+import { useContext } from "react";
 
 const thaiBanks = [
   { value: "scb", label: "ไทยพาณิชย์" }, // 1. SCB
@@ -25,32 +29,35 @@ const thaiBanks = [
   { value: "kcc", label: "เกียรตินาคิน" }, // 12. Kiatnakin
   { value: "lh", label: "แลนด์ แอนด์ เฮาส์" }, // 13. LH Bank
   { value: "tisco", label: "ทิสโก้" }, // 14. Tisco
-  { value: "baac", label: "ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร" },
+  { value: "baac", label: "ธ.ก.ส." },
   // Add more if needed
 ];
 
-type SelectThaiBankProps = {
-  field: FieldValues;
-};
+export default function SelectThaiBank() {
+  const { bankName, setBankName } = useContext(
+    ReminderContext
+  ) as ReminderContextType;
 
-export default function SelectThaiBank({ field }: SelectThaiBankProps) {
   return (
-    <div className="flex gap-3">
-      <Select value={field.value} onValueChange={field.onChange}>
-        <SelectTrigger className="w-[250px]">
-          <SelectValue placeholder="เลือกธนาคาร" />
-        </SelectTrigger>
-        <SelectContent>
-          {thaiBanks.map((bank) => (
-            <SelectItem key={bank.value} value={bank.label}>
-              {bank.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button type="reset" onClick={() => field.onChange("")}>
-        <Trash />
-      </Button>
-    </div>
+    <>
+      <span className="text-sm">ธนาคาร</span>
+      <div className="flex gap-3">
+        <Select value={bankName} onValueChange={setBankName}>
+          <SelectTrigger className="w-[250px]">
+            <SelectValue placeholder="เลือกธนาคาร" />
+          </SelectTrigger>
+          <SelectContent>
+            {thaiBanks.map((bank) => (
+              <SelectItem key={bank.value} value={bank.label}>
+                {bank.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="reset" onClick={() => setBankName("")}>
+          <Trash />
+        </Button>
+      </div>
+    </>
   );
 }

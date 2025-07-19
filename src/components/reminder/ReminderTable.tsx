@@ -44,12 +44,12 @@ export default function ReminderTable() {
     openUpdateDialog,
     columnFilters,
     setColumnFilters,
-    setSelectedRow,
     setSubmitError,
     reminders,
     setReminders,
     total,
     setTotal,
+    handleSelectedRow,
   } = useContext(ReminderContext) as ReminderContextType;
 
   const supabase = createClient();
@@ -79,7 +79,6 @@ export default function ReminderTable() {
     supabase,
     openCreateDialog,
     openUpdateDialog,
-    setSelectedRow,
     setReminders,
     setSubmitError,
     setTotal,
@@ -114,14 +113,14 @@ export default function ReminderTable() {
             columns={reminderColumns}
             data={reminders}
             total={total}
-            setSelectedRow={setSelectedRow}
+            setSelectedRow={handleSelectedRow}
             columnFilters={columnFilters}
             setColumnFilters={setColumnFilters}
             initialState={{
               columnFilters: columnFilters,
               columnVisibility: defaultColumnVisibility,
             }}
-            totalAmountKey="จำนวนเงิน"
+            totalAmountKey={["จำนวนเงิน", "ส่วนลด"]}
           >
             <h2 className="text-2xl font-bold flex-1 px-8">
               รายการเตือนชำระเงิน

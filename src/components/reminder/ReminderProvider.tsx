@@ -6,7 +6,8 @@ import {
   ColumnFiltersState,
   OnChangeFn,
 } from "@tanstack/react-table";
-import { ReminderType } from "./ReminderColumn";
+import { BankInfoType, ReminderType } from "./ReminderColumn";
+import { CheckedState } from "@radix-ui/react-checkbox";
 
 export type ReminderContextType = {
   selectedRow: ReminderType | undefined;
@@ -23,6 +24,19 @@ export type ReminderContextType = {
   setReminders: (reminders: ReminderType[]) => void;
   total: number | undefined;
   setTotal: (total: number) => void;
+  bankName: string;
+  setBankName: (bankName: string) => void;
+  bankAccountName: string;
+  setBankAccountName: (bankAccountName: string) => void;
+  bankAccountNumber: string;
+  setBankAccountNumber: (bankAccountNumber: string) => void;
+  handleSelectedRow: (row: ReminderType) => void;
+  saveBankInfo: CheckedState;
+  setSaveBankInfo: (saveBankInfo: CheckedState) => void;
+  selectedBankInfo: BankInfoType | undefined;
+  setSelectBankInfo: (selectedBankInfo: BankInfoType | undefined) => void;
+  supplierName: string;
+  setSupplierName: (supplierName: string) => void;
 };
 
 export const ReminderContext = createContext<ReminderContextType | null>(null);
@@ -39,6 +53,20 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [submitError, setSubmitError] = useState<string>();
   const [reminders, setReminders] = useState<ReminderType[]>();
   const [total, setTotal] = useState<number>();
+  const [bankName, setBankName] = useState<string>("");
+  const [bankAccountName, setBankAccountName] = useState<string>("");
+  const [bankAccountNumber, setBankAccountNumber] = useState<string>("");
+  const [saveBankInfo, setSaveBankInfo] = useState<CheckedState>(false);
+  const [selectedBankInfo, setSelectBankInfo] = useState<BankInfoType>();
+  const [supplierName, setSupplierName] = useState("");
+
+  function handleSelectedRow(row: ReminderType) {
+    setSelectedRow(row);
+    setSupplierName(row.supplier_name);
+    setBankName(row.bank_name);
+    setBankAccountName(row.bank_account_name);
+    setBankAccountNumber(row.bank_account_number);
+  }
 
   const value = {
     selectedRow,
@@ -55,6 +83,19 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setReminders,
     total,
     setTotal,
+    bankName,
+    setBankName,
+    bankAccountName,
+    setBankAccountName,
+    bankAccountNumber,
+    setBankAccountNumber,
+    handleSelectedRow,
+    saveBankInfo,
+    setSaveBankInfo,
+    selectedBankInfo,
+    setSelectBankInfo,
+    supplierName,
+    setSupplierName,
   };
 
   return (

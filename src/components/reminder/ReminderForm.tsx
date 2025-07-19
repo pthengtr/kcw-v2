@@ -28,6 +28,7 @@ export const fieldLabel = {
   payment_date: "วันที่ชำระ",
   remark: "หมายเหตุ",
   last_modified: "แก้ไขล่าสุด",
+  bank_info: "รายละเอียดการชำระเงิน",
   bank_name: "ชื่อธนาคาร",
   bank_account_name: "ชื่อบัญชี",
   bank_account_number: "เลขบัญชี",
@@ -56,11 +57,15 @@ const formSchema = z.object({
   due_date: z.date(),
   kbiz_datetime: z.union([z.date().nullable().optional(), z.literal("")]),
   payment_date: z.union([z.date().nullable().optional(), z.literal("")]),
-  bank_name: z.string(),
-  bank_account_name: z.string(),
-  bank_account_number: z.string(),
   bill_pictures: z.array(z.custom<File>((file) => file instanceof File)),
   payment_pictures: z.array(z.custom<File>((file) => file instanceof File)),
+  bank_info: z
+    .object({
+      bank_name: z.string(),
+      bank_account_name: z.string(),
+      bank_account_number: z.string(),
+    })
+    .nullable(),
   remark: z.string(),
   agree: z.boolean().refine((val) => val === true, {
     message: "กรุณาตรวจสอบข้อมูลก่อนบันทึก",
@@ -83,6 +88,11 @@ export default function ReminderForm({
     setColumnFilters,
     setSelectedRow,
     setSubmitError,
+    bankName,
+    bankAccountName,
+    bankAccountNumber,
+    selectedBankInfo,
+    saveBankInfo,
   } = useContext(ReminderContext) as ReminderContextType;
 
   async function createUpdateReminder(formData: FormData) {
@@ -117,11 +127,16 @@ export default function ReminderForm({
       payment_date: formData.get("payment_date") as string,
       remark: formData.get("remark") as string,
       last_modified: new Date().toLocaleString("en-US"),
-      bank_name: formData.get("bank_name") as string,
-      bank_account_name: formData.get("bank_account_name") as string,
-      bank_account_number: formData.get("bank_account_number") as string,
+      bank_name: selectedBankInfo ? selectedBankInfo.bank_name : bankName,
+      bank_account_name: selectedBankInfo
+        ? selectedBankInfo.bank_account_name
+        : bankAccountName,
+      bank_account_number: selectedBankInfo
+        ? selectedBankInfo.bank_account_number
+        : bankAccountNumber,
     };
 
+    //update or insert new data
     const query =
       update && selectedRow
         ? supabase
@@ -191,6 +206,25 @@ export default function ReminderForm({
 
       toast.success(update ? "แก้ไขรายการสำเร็จ" : "สร้างรายการสำเร็จ");
     }
+
+    //save bank info
+    if (saveBankInfo) {
+      const { data: dataBankInfo, error: errorBankInfo } = await supabase
+        .from("supplier_bank_info")
+        .insert([
+          {
+            supplier_name: insertData.supplier_name,
+            bank_name: insertData.bank_name,
+            bank_account_name: insertData.bank_account_name,
+            bank_account_number: insertData.bank_account_number,
+          },
+        ])
+        .select();
+
+      console.log(dataBankInfo, errorBankInfo);
+      if (dataBankInfo) toast.success("เพิ่มข้อมูลบัญชีธนาคารใหม่สำเร็จ");
+      if (errorBankInfo) toast.error("เพิ่มข้อมูลบัญชีธนาคารใหม่ไม่สำเร็จ");
+    }
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -206,9 +240,6 @@ export default function ReminderForm({
         due_date,
         kbiz_datetime,
         payment_date,
-        bank_name,
-        bank_account_name,
-        bank_account_number,
         bill_pictures,
         payment_pictures,
         remark,
@@ -229,9 +260,6 @@ export default function ReminderForm({
       if (payment_date) {
         formData.append("payment_date", payment_date.toLocaleString("en-US"));
       }
-      formData.append("bank_name", bank_name);
-      formData.append("bank_account_name", bank_account_name);
-      formData.append("bank_account_number", bank_account_number);
       formData.append("remark", remark);
 
       bill_pictures.forEach((item) => {

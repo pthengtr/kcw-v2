@@ -90,11 +90,9 @@ export default function ReminderDetail() {
                 payment_date: selectedRow.payment_date
                   ? new Date(selectedRow.payment_date)
                   : null,
-                bank_name: selectedRow.bank_name,
-                bank_account_name: selectedRow.bank_account_name,
-                bank_account_number: selectedRow.bank_account_number,
                 bill_pictures: [],
                 payment_pictures: [],
+                bank_info: null,
                 remark: selectedRow.remark,
                 agree: false,
               }}

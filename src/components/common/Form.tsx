@@ -17,10 +17,11 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { DatePickerInput } from "./DatePickerInput";
 import MonthPickerInput from "./MonthPickerInput";
-import SelectThaiBank from "./SelectThaiBank";
 import ImageDropableForm from "./ImageDropableForm";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
+import BankInfoInput from "../reminder/BankInfoInput";
+import SupplierNameInput from "../reminder/SupplierNameInput";
 
 interface FormProps<T extends FieldValues> {
   schema: z.ZodType<T>;
@@ -90,8 +91,11 @@ export default function Form<T extends FieldValues>({
         return <MonthPickerInput field={field} />;
         break;
 
-      case "bank_name":
-        return <SelectThaiBank field={field} />;
+      case "supplier_name":
+        return <SupplierNameInput field={field} />;
+        break;
+      case "bank_info":
+        return <BankInfoInput />;
         break;
 
       case "bill_pictures":
