@@ -81,8 +81,8 @@ export default function ReminderDetail() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 px-2 py-8">
-      <div className="flex w-full">
+    <div className="flex flex-col items-center gap-6 relative overflow-scroll h-[90vh]">
+      <div className="flex w-full sticky top-0 py-4 shadow-sm bg-white">
         <div className="flex-1"></div>
         <h2 className="text-2xl">
           {!!selectedRow && `${selectedRow.note_id}`}

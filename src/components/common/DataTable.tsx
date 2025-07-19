@@ -152,7 +152,7 @@ export function DataTable<TData, TValue>({
         sensors={sensors}
       >
         <Table className="overflow-scroll relative">
-          <TableHeader className="sticky top-0 bg-white [&_tr]:border-b-0 z-10">
+          <TableHeader className="sticky top-0 bg-white [&_tr]:border-b-0 z-10 shadow-sm">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 <SortableContext
