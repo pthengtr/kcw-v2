@@ -4,11 +4,31 @@ import ImageCarousel from "../common/ImageCarousel";
 
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import ReminderFormDialog from "./ReminderFormDialog";
+import { Separator } from "../ui/separator";
 
 export default function ReminderDetail() {
   const { selectedRow, openUpdateDialog, setOpenUpdateDialog } = useContext(
     ReminderContext
   ) as ReminderContextType;
+
+  const section1 = ["id", "user_id", "created_at", "last_modified"];
+  const section2 = [
+    "supplier_name",
+    "note_id",
+    "bill_count",
+    "start_date",
+    "end_date",
+    "discount",
+    "total_amount",
+  ];
+  const section3 = [
+    "due_date",
+    "kbiz_datetime",
+    "bank_name",
+    "bank_account_name",
+    "bank_account_number",
+    "payment_date",
+  ];
 
   function getKeyValue(key: string) {
     switch (key) {
@@ -28,28 +48,28 @@ export default function ReminderDetail() {
       case "end_date":
       case "due_date":
       case "payment_date":
-      case "created_at":
-      case "last_modified":
         return selectedRow && !!selectedRow[key as keyof typeof selectedRow]
           ? new Date(
               selectedRow[key as keyof typeof selectedRow]
             ).toLocaleDateString("th-TH", {
               day: "2-digit",
-              month: "long",
-              year: "numeric",
+              month: "2-digit",
+              year: "2-digit",
             })
           : "";
         break;
 
       // date time
+      case "created_at":
+      case "last_modified":
       case "kbiz_datetime":
         return selectedRow && !!selectedRow[key as keyof typeof selectedRow]
           ? new Date(
               selectedRow[key as keyof typeof selectedRow]
             ).toLocaleDateString("th-TH", {
               day: "2-digit",
-              month: "long",
-              year: "numeric",
+              month: "2-digit",
+              year: "2-digit",
               hour: "2-digit",
               minute: "2-digit",
             })
@@ -103,13 +123,34 @@ export default function ReminderDetail() {
 
       <div className="grid grid-cols-2 gap-y-1 w-[80%]">
         {selectedRow &&
-          Object.keys(selectedRow).map((key) => (
+          section1.map((key) => (
             <React.Fragment key={key}>
               <span>{fieldLabel[key as keyof typeof selectedRow]}</span>
               <span>{getKeyValue(key)}</span>
             </React.Fragment>
           ))}
       </div>
+      <Separator />
+      <div className="grid grid-cols-2 gap-y-1 w-[80%]">
+        {selectedRow &&
+          section2.map((key) => (
+            <React.Fragment key={key}>
+              <span>{fieldLabel[key as keyof typeof selectedRow]}</span>
+              <span>{getKeyValue(key)}</span>
+            </React.Fragment>
+          ))}
+      </div>
+      <Separator />
+      <div className="grid grid-cols-2 gap-y-1 w-[80%]">
+        {selectedRow &&
+          section3.map((key) => (
+            <React.Fragment key={key}>
+              <span>{fieldLabel[key as keyof typeof selectedRow]}</span>
+              <span>{getKeyValue(key)}</span>
+            </React.Fragment>
+          ))}
+      </div>
+      <Separator />
       <div className="flex flex-col items-center gap-3">
         <h3>รูปบิล/ใบวางบิล</h3>
         <div className="w-96">
@@ -125,6 +166,7 @@ export default function ReminderDetail() {
           )}
         </div>
       </div>
+      <Separator />
       <div className="flex flex-col items-center gap-3">
         <h3>รูปหลักฐานการชำระเงิน</h3>
         <div className="w-96">
