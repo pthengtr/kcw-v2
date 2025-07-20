@@ -44,8 +44,8 @@ export default function ReminderDetail() {
     selectedRow,
     setBillImageArray,
     setPaymentImageArray,
-    billImageArray,
-    paymentImageArray,
+    //billImageArray,
+    //paymentImageArray,
   ]);
 
   const section1 = ["id", "user_id", "created_at", "last_modified"];
