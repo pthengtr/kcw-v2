@@ -90,7 +90,7 @@ export default function ReminderTable() {
         <div>
           <ReminderSearchForm
             defaultValues={{
-              supplier_name: "",
+              search_supplier_name: "",
               note_id: "",
               due_month: "all",
               payment_month: "all",

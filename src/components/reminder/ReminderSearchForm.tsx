@@ -10,7 +10,7 @@ import { useContext } from "react";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 
 const searchFormFieldLabel = {
-  supplier_name: "บริษัท",
+  search_supplier_name: "บริษัท",
   note_id: "เลขที่ใบวางบิล",
   due_month: "กำหนดชำระเดือน",
   payment_month: "ชำระแล้วเดือน",
@@ -23,14 +23,14 @@ function getFieldLabel(field: FieldValues) {
 }
 
 const formSchema = z.object({
-  supplier_name: z.string(),
+  search_supplier_name: z.string(),
   note_id: z.string(),
   due_month: z.string(),
   payment_month: z.string(),
 });
 
 type ReminderSearchDefaultType = {
-  supplier_name: string;
+  search_supplier_name: string;
   note_id: string;
   due_month: string;
   payment_month: string;
@@ -113,10 +113,10 @@ export default function ReminderSearchForm({
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const { supplier_name, note_id, due_month, payment_month } = values;
+    const { search_supplier_name, note_id, due_month, payment_month } = values;
 
     const formData = new FormData();
-    formData.append("supplier_name", supplier_name);
+    formData.append("supplier_name", search_supplier_name);
     formData.append("note_id", note_id);
     formData.append("due_month", due_month);
     formData.append("payment_month", payment_month);
