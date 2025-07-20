@@ -22,6 +22,7 @@ export default function BankInfoInput() {
     openUpdateDialog,
     supplierName,
     setSupplierName,
+    setSelectedRow,
   } = useContext(ReminderContext) as ReminderContextType;
 
   const [bankInfoList, setBankInfoList] = useState<
@@ -52,21 +53,23 @@ export default function BankInfoInput() {
   const [tab, setTab] = useState("new_account");
 
   useEffect(() => {
-    if (!openUpdateDialog) {
+    if (openCreateDialog) {
       console.log("clear data");
       setBankName("");
       setBankAccountName("");
       setBankAccountNumber("");
       setSupplierName("");
+      setSelectedRow(undefined);
     }
     setSelectBankInfo(undefined);
   }, [
-    openUpdateDialog,
     openCreateDialog,
+    openUpdateDialog,
     setBankAccountName,
     setBankAccountNumber,
     setBankName,
     setSelectBankInfo,
+    setSelectedRow,
     setSupplierName,
   ]);
 

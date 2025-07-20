@@ -85,13 +85,12 @@ export default function ReminderForm({
     selectedRow,
     setOpenCreateDialog,
     setOpenUpdateDialog,
-    setColumnFilters,
-    setSelectedRow,
     setSubmitError,
     bankName,
     bankAccountName,
     bankAccountNumber,
     selectedBankInfo,
+    setSelectedRow,
     saveBankInfo,
   } = useContext(ReminderContext) as ReminderContextType;
 
@@ -192,17 +191,7 @@ export default function ReminderForm({
       // clear error messsage
       setSubmitError(undefined);
 
-      // set filter to show last edit item
-      if (update) {
-        setColumnFilters([
-          {
-            id: fieldLabel["note_id"],
-            value: data[0].note_id,
-          },
-        ]);
-      }
-
-      setSelectedRow(undefined);
+      setSelectedRow(data[0]);
 
       toast.success(update ? "แก้ไขรายการสำเร็จ" : "สร้างรายการสำเร็จ");
     }
