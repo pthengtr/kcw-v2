@@ -11,6 +11,7 @@ import { ReminderDefaultValueType } from "./ReminderColumn";
 import { useContext } from "react";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import { commonUploadFile } from "@/lib/utils";
+import { getImageArray } from "../common/ImageCarousel";
 
 export const fieldLabel = {
   id: "รายการเลขที่",
@@ -92,6 +93,8 @@ export default function ReminderForm({
     selectedBankInfo,
     setSelectedRow,
     saveBankInfo,
+    setBillImageArray,
+    setPaymentImageArray,
   } = useContext(ReminderContext) as ReminderContextType;
 
   async function createUpdateReminder(formData: FormData) {
@@ -192,6 +195,26 @@ export default function ReminderForm({
       setSubmitError(undefined);
 
       setSelectedRow(data[0]);
+
+      getImageArray(
+        "reminder_bill",
+        `${data[0].supplier_name
+          .toString()
+          .replace(/[^A-Za-z0-9]/g, "")}_${data[0].note_id
+          .toString()
+          .replace(/[^A-Za-z0-9]/g, "")}`,
+        setBillImageArray
+      );
+
+      getImageArray(
+        "reminder_payment",
+        `${data[0].supplier_name
+          .toString()
+          .replace(/[^A-Za-z0-9]/g, "")}_${data[0].note_id
+          .toString()
+          .replace(/[^A-Za-z0-9]/g, "")}`,
+        setPaymentImageArray
+      );
 
       toast.success(update ? "แก้ไขรายการสำเร็จ" : "สร้างรายการสำเร็จ");
     }

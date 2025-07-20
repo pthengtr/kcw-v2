@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { BankInfoType, ReminderType } from "./ReminderColumn";
 import { CheckedState } from "@radix-ui/react-checkbox";
+import { storageObjectType } from "../common/ImageCarousel";
 
 export type ReminderContextType = {
   selectedRow: ReminderType | undefined;
@@ -37,6 +38,12 @@ export type ReminderContextType = {
   setSelectBankInfo: (selectedBankInfo: BankInfoType | undefined) => void;
   supplierName: string;
   setSupplierName: (supplierName: string) => void;
+  billImageArray: storageObjectType[] | undefined;
+  setBillImageArray: (billImageArray: storageObjectType[] | undefined) => void;
+  paymentImageArray: storageObjectType[] | undefined;
+  setPaymentImageArray: (
+    paymentImageArray: storageObjectType[] | undefined
+  ) => void;
 };
 
 export const ReminderContext = createContext<ReminderContextType | null>(null);
@@ -59,6 +66,9 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [saveBankInfo, setSaveBankInfo] = useState<CheckedState>(false);
   const [selectedBankInfo, setSelectBankInfo] = useState<BankInfoType>();
   const [supplierName, setSupplierName] = useState("");
+  const [billImageArray, setBillImageArray] = useState<storageObjectType[]>();
+  const [paymentImageArray, setPaymentImageArray] =
+    useState<storageObjectType[]>();
 
   function handleSelectedRow(row: ReminderType) {
     setSelectedRow(row);
@@ -96,6 +106,10 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setSelectBankInfo,
     supplierName,
     setSupplierName,
+    billImageArray,
+    setBillImageArray,
+    paymentImageArray,
+    setPaymentImageArray,
   };
 
   return (

@@ -1,6 +1,6 @@
 import { fieldLabel } from "./ReminderForm";
-import React, { useContext } from "react";
-import ImageCarousel from "../common/ImageCarousel";
+import React, { useContext, useEffect } from "react";
+import ImageCarousel, { getImageArray } from "../common/ImageCarousel";
 
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import ReminderFormDialog from "./ReminderFormDialog";
@@ -8,9 +8,45 @@ import { Separator } from "../ui/separator";
 import { Pencil } from "lucide-react";
 
 export default function ReminderDetail() {
-  const { selectedRow, openUpdateDialog, setOpenUpdateDialog } = useContext(
-    ReminderContext
-  ) as ReminderContextType;
+  const {
+    selectedRow,
+    openUpdateDialog,
+    setOpenUpdateDialog,
+    billImageArray,
+    setBillImageArray,
+    paymentImageArray,
+    setPaymentImageArray,
+  } = useContext(ReminderContext) as ReminderContextType;
+
+  useEffect(() => {
+    if (selectedRow) {
+      getImageArray(
+        "reminder_bill",
+        `${selectedRow.supplier_name
+          .toString()
+          .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
+          .toString()
+          .replace(/[^A-Za-z0-9]/g, "")}`,
+        setBillImageArray
+      );
+
+      getImageArray(
+        "reminder_payment",
+        `${selectedRow.supplier_name
+          .toString()
+          .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
+          .toString()
+          .replace(/[^A-Za-z0-9]/g, "")}`,
+        setPaymentImageArray
+      );
+    }
+  }, [
+    selectedRow,
+    setBillImageArray,
+    setPaymentImageArray,
+    billImageArray,
+    paymentImageArray,
+  ]);
 
   const section1 = ["id", "user_id", "created_at", "last_modified"];
   const section2 = [
@@ -163,6 +199,8 @@ export default function ReminderDetail() {
                 .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
                 .toString()
                 .replace(/[^A-Za-z0-9]/g, "")}`}
+              imageArray={billImageArray}
+              setImageArray={setBillImageArray}
             />
           )}
         </div>
@@ -179,6 +217,8 @@ export default function ReminderDetail() {
                 .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
                 .toString()
                 .replace(/[^A-Za-z0-9]/g, "")}`}
+              imageArray={paymentImageArray}
+              setImageArray={setPaymentImageArray}
             />
           )}
         </div>

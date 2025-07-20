@@ -18,7 +18,6 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useEffect, useState, useCallback } from "react";
 import { Button } from "../ui/button";
 import ImageDropable from "./ImageDropable";
 import { commonUploadFile } from "@/lib/utils";
@@ -26,15 +25,41 @@ import { commonUploadFile } from "@/lib/utils";
 type imageCarouselProps = {
   imageId: string;
   imageFolder: string;
+  imageArray: storageObjectType[] | undefined;
+  setImageArray: (imageArray: storageObjectType[]) => void;
 };
 
-type storageObjectType = { id: string; name: string };
+export type storageObjectType = { id: string; name: string };
+
+export async function getImageArray(
+  imageFolder: string,
+  imageId: string,
+  setImageArray: (imageArray: storageObjectType[]) => void
+) {
+  const supabase = createClient();
+
+  const { data, error } = await supabase.storage
+    .from("pictures")
+    .list(`public/${imageFolder}`, {
+      limit: 100,
+      offset: 0,
+      search: imageId,
+      sortBy: { column: "updated_at", order: "asc" },
+    });
+
+  if (!!error) console.log(error);
+  if (!!data) {
+    setImageArray(data);
+    //setCount(data.length + 1);
+  }
+}
 
 export default function ImageCarousel({
   imageId,
   imageFolder,
+  imageArray,
+  setImageArray,
 }: imageCarouselProps) {
-  const [imageArray, setImageArray] = useState<storageObjectType[]>();
   //const [api, setApi] = useState<CarouselApi>();
   // const [current, setCurrent] = useState(0);
   // const [count, setCount] = useState(0);
@@ -57,7 +82,7 @@ export default function ImageCarousel({
 
     if (!!error) console.log(error);
     if (!!data) {
-      getImageArray();
+      getImageArray(imageFolder, imageId, setImageArray);
     }
   }
 
@@ -69,32 +94,35 @@ export default function ImageCarousel({
     const { data } = await commonUploadFile({ picture, imageId, imageFolder });
 
     if (!!data) {
-      getImageArray();
+      getImageArray(imageFolder, imageId, setImageArray);
     }
   }
 
-  const getImageArray = useCallback(async () => {
-    const supabase = createClient();
+  // const getImageArray = useCallback(
+  //   async function () {
+  //     const supabase = createClient();
 
-    const { data, error } = await supabase.storage
-      .from("pictures")
-      .list(`public/${imageFolder}`, {
-        limit: 100,
-        offset: 0,
-        search: imageId,
-        sortBy: { column: "updated_at", order: "asc" },
-      });
+  //     const { data, error } = await supabase.storage
+  //       .from("pictures")
+  //       .list(`public/${imageFolder}`, {
+  //         limit: 100,
+  //         offset: 0,
+  //         search: imageId,
+  //         sortBy: { column: "updated_at", order: "asc" },
+  //       });
 
-    if (!!error) console.log(error);
-    if (!!data) {
-      setImageArray(data);
-      //setCount(data.length + 1);
-    }
-  }, [imageFolder, imageId]);
+  //     if (!!error) console.log(error);
+  //     if (!!data) {
+  //       setImageArray(data);
+  //       //setCount(data.length + 1);
+  //     }
+  //   },
+  //   [imageFolder, imageId, setImageArray]
+  // );
 
-  useEffect(() => {
-    getImageArray();
-  }, [getImageArray]);
+  // useEffect(() => {
+  //   getImageArray(imageFolder, imageId, setImageArray);
+  // }, [imageFolder, imageId, setImageArray]);
 
   // useEffect(() => {
   //   if (!api) {
