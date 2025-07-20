@@ -26,7 +26,7 @@ import SupplierNameInput from "../reminder/SupplierNameInput";
 interface FormProps<T extends FieldValues> {
   schema: z.ZodType<T>;
   defaultValues: T;
-  onSubmit: (data: T) => Promise<{ success: boolean }>;
+  onSubmit: (data: T) => void;
   getFieldLabel: (field: FieldValues) => string;
   className?: string;
   submitLabel?: string;
