@@ -8,6 +8,7 @@ import Form from "../common/Form";
 import { FieldValues } from "react-hook-form";
 import { useContext } from "react";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
+import { Search } from "lucide-react";
 
 const searchFormFieldLabel = {
   search_supplier_name: "บริษัท",
@@ -130,7 +131,7 @@ export default function ReminderSearchForm({
       onSubmit={onSubmit}
       getFieldLabel={getFieldLabel}
       className="flex justify-center items-center gap-4 pxs-12"
-      submitLabel="ค้นหา"
+      submitLabel={<Search />}
     />
   );
 }

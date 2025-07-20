@@ -5,6 +5,7 @@ import ImageCarousel from "../common/ImageCarousel";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import ReminderFormDialog from "./ReminderFormDialog";
 import { Separator } from "../ui/separator";
+import { Pencil } from "lucide-react";
 
 export default function ReminderDetail() {
   const { selectedRow, openUpdateDialog, setOpenUpdateDialog } = useContext(
@@ -93,7 +94,7 @@ export default function ReminderDetail() {
               update
               open={openUpdateDialog}
               setOpen={setOpenUpdateDialog}
-              dialogTrigger="แก้ไขรายการนี้"
+              dialogTrigger={<Pencil />}
               dialogHeader="แก้ไขรายการเตือนโอน"
               defaultValues={{
                 supplier_name: selectedRow.supplier_name,

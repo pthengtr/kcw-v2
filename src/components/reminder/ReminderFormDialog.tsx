@@ -15,8 +15,8 @@ import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 type ReminderFormDialogProps = {
   open: boolean;
   setOpen: (open: boolean) => void;
-  dialogTrigger: string;
-  dialogHeader?: string;
+  dialogTrigger: string | React.ReactNode;
+  dialogHeader?: string | React.ReactNode;
   defaultValues: ReminderDefaultValueType;
   update?: boolean;
 };

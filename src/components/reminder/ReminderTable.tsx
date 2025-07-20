@@ -13,6 +13,8 @@ import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import ReminderSearchForm from "./ReminderSearchForm";
 import ReminderFormDialog from "./ReminderFormDialog";
 
+import { Plus } from "lucide-react";
+
 const defaultColumnVisibility = {
   รายการเลขที่: false,
   สร้าง: false,
@@ -85,8 +87,7 @@ export default function ReminderTable() {
   ]);
   return (
     <div className="flex flex-col gap-2 p-2">
-      <div className="flex justify-between items-center p-4">
-        <div className="flex-1"></div>
+      <div className="flex justify-center items-center p-4 gap-4">
         <div>
           <ReminderSearchForm
             defaultValues={{
@@ -97,11 +98,11 @@ export default function ReminderTable() {
             }}
           />
         </div>
-        <div className="flex-1 flex justify-end">
+        <div className="flex justify-end">
           <ReminderFormDialog
             open={openCreateDialog}
             setOpen={setOpenCreateDialog}
-            dialogTrigger="เพิ่มรายการเตือนโอน"
+            dialogTrigger={<Plus />}
             defaultValues={reminderDefaultValue}
           />
         </div>

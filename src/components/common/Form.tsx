@@ -29,7 +29,7 @@ interface FormProps<T extends FieldValues> {
   onSubmit: (data: T) => void;
   getFieldLabel: (field: FieldValues) => string;
   className?: string;
-  submitLabel?: string;
+  submitLabel?: string | React.ReactNode;
 }
 
 export default function Form<T extends FieldValues>({
@@ -144,7 +144,6 @@ export default function Form<T extends FieldValues>({
             className={`${form.formState.isSubmitting && "bg-blue-300"}`}
             type="submit"
           >
-            {form.formState.isSubmitting ? "กำลัง" : ""}
             {submitLabel}
             {form.formState.isSubmitting ? "..." : ""}
           </Button>
