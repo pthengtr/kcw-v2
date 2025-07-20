@@ -140,6 +140,7 @@ export default function ReminderTable({
             open={openCreateDialog}
             setOpen={setOpenCreateDialog}
             dialogTrigger={<Plus />}
+            dialogHeader="เพิ่มรายการเตือนโอน"
             defaultValues={reminderDefaultValue}
           />
         </div>
