@@ -14,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useEffect } from "react";
+import { setMyCookie } from "@/app/(root)/action";
 
 interface DataTablePaginationProps<TData> {
   table: Table<TData>;
@@ -24,6 +26,15 @@ export function DataTablePagination<TData>({
   table,
   total,
 }: DataTablePaginationProps<TData>) {
+  useEffect(() => {
+    //console.log(table.getState().columnVisibility);
+    setMyCookie(
+      "paginationPageSize",
+      JSON.stringify(table.getState().pagination.pageSize)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table, table.getState().pagination.pageSize]);
+
   const numberOfRowsArray = [10, 20, 50, 100, 200, 500];
   // Find index of the first element >= inputValue
   const index = numberOfRowsArray.findIndex(

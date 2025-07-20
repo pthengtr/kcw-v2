@@ -48,10 +48,11 @@ import {
 } from "@/components/ui/table";
 
 import { Input } from "../ui/input";
-import { useState, CSSProperties } from "react";
+import { useState, CSSProperties, useEffect } from "react";
 import { DataTablePagination } from "./DataTablePagination";
 import { DataTableViewOptions } from "./DataTableViewOptions";
 import { GripVertical } from "lucide-react";
+import { setMyCookie } from "@/app/(root)/action";
 
 interface DataTableProps<TData, TValue> {
   children?: React.ReactNode;
@@ -103,6 +104,15 @@ export function DataTable<TData, TValue>({
     },
     initialState: initialState,
   });
+
+  useEffect(() => {
+    //console.log(table.getState().columnVisibility);
+    setMyCookie(
+      "columnVisibility",
+      JSON.stringify(table.getState().columnVisibility)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table, table.getState().columnVisibility]);
 
   // reorder columns after drag & drop
   function handleDragEnd(event: DragEndEvent) {

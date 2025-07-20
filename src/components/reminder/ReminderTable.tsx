@@ -6,16 +6,26 @@ import {
 } from "@/components/reminder/ReminderColumn";
 
 import { createClient } from "@/lib/supabase/client";
-import { useContext, useEffect } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { DataTable } from "@/components/common/DataTable";
 
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import ReminderSearchForm from "./ReminderSearchForm";
 import ReminderFormDialog from "./ReminderFormDialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { Plus } from "lucide-react";
+import { EllipsisVertical, Plus } from "lucide-react";
+import { Button } from "../ui/button";
+import { clearMyCookie } from "@/app/(root)/action";
 
-const defaultColumnVisibility = {
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+export const defaultColumnVisibility = {
   รายการเลขที่: false,
   สร้าง: false,
   บริษัท: true,
@@ -39,7 +49,17 @@ const defaultColumnVisibility = {
   // เพิ่มรูปหลักฐานการขำระเงิน: true,
 };
 
-export default function ReminderTable() {
+type ReminderTableProps = {
+  columnVisibility: typeof defaultColumnVisibility | undefined;
+  paginationPageSize: number | undefined;
+};
+
+export default function ReminderTable({
+  columnVisibility,
+  paginationPageSize,
+}: ReminderTableProps) {
+  const [status, setStatus] = useState("all");
+
   const {
     openCreateDialog,
     setOpenCreateDialog,
@@ -56,13 +76,18 @@ export default function ReminderTable() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    async function getProduct() {
-      const { data, error, count } = await supabase
+  const getReminder = useCallback(
+    async function () {
+      let query = supabase
         .from("payment_reminder")
         .select("*", { count: "exact" })
         .order("id", { ascending: false })
         .limit(500);
+
+      if (status === "paid") query = query.not("payment_date", "is", "null");
+      else if (status === "unpaid") query = query.is("payment_date", null);
+
+      const { data, error, count } = await query;
 
       if (error) {
         console.log(error);
@@ -73,10 +98,13 @@ export default function ReminderTable() {
         setReminders(data);
       }
       if (count) setTotal(count);
-    }
+    },
+    [setReminders, setTotal, status, supabase]
+  );
 
+  useEffect(() => {
     setSubmitError(undefined);
-    getProduct();
+    getReminder();
   }, [
     supabase,
     openCreateDialog,
@@ -84,7 +112,16 @@ export default function ReminderTable() {
     setReminders,
     setSubmitError,
     setTotal,
+    status,
+    getReminder,
   ]);
+
+  function handleResetView() {
+    clearMyCookie("columnVisibility");
+    clearMyCookie("paginationPageSize");
+    getReminder();
+  }
+
   return (
     <div className="flex flex-col gap-2 p-2">
       <div className="flex justify-center items-center p-4 gap-4">
@@ -119,13 +156,37 @@ export default function ReminderTable() {
             setColumnFilters={setColumnFilters}
             initialState={{
               columnFilters: columnFilters,
-              columnVisibility: defaultColumnVisibility,
+              columnVisibility: columnVisibility,
+              pagination: { pageIndex: 0, pageSize: paginationPageSize },
             }}
             totalAmountKey={["จำนวนเงิน", "ส่วนลด"]}
           >
-            <h2 className="text-2xl font-bold flex-1 px-8">
-              รายการเตือนชำระเงิน
-            </h2>
+            <div className="flex gap-4 mr-auto px-8">
+              <h2 className="text-2xl font-bold flex-1">รายการเตือนชำระเงิน</h2>
+              <Tabs value={status} onValueChange={setStatus} className="">
+                <TabsList>
+                  <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
+                  <TabsTrigger value="unpaid">ค้างชำระ</TabsTrigger>
+                  <TabsTrigger value="paid">จ่ายแล้ว</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hidden h-8 lg:flex"
+                  >
+                    <EllipsisVertical />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={handleResetView}>
+                    ลบความจำรูปแบบตาราง ใช้ค่าเริ่มต้นในครั้งต่อไป
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </DataTable>
         )}
       </div>

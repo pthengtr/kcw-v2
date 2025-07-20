@@ -187,16 +187,12 @@ export default function ReminderForm({
         })
       );
 
-      // close dialog oon succss
-      if (update) setOpenUpdateDialog(false);
-      else setOpenCreateDialog(false);
-
       // clear error messsage
       setSubmitError(undefined);
 
       setSelectedRow(data[0]);
 
-      getImageArray(
+      await getImageArray(
         "reminder_bill",
         `${data[0].supplier_name
           .toString()
@@ -206,7 +202,7 @@ export default function ReminderForm({
         setBillImageArray
       );
 
-      getImageArray(
+      await getImageArray(
         "reminder_payment",
         `${data[0].supplier_name
           .toString()
@@ -215,6 +211,10 @@ export default function ReminderForm({
           .replace(/[^A-Za-z0-9]/g, "")}`,
         setPaymentImageArray
       );
+
+      // close dialog oon succss
+      if (update) setOpenUpdateDialog(false);
+      else setOpenCreateDialog(false);
 
       toast.success(update ? "แก้ไขรายการสำเร็จ" : "สร้างรายการสำเร็จ");
     }

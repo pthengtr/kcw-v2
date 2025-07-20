@@ -12,11 +12,13 @@ export default function ReminderDetail() {
     selectedRow,
     openUpdateDialog,
     setOpenUpdateDialog,
-    billImageArray,
     setBillImageArray,
-    paymentImageArray,
     setPaymentImageArray,
+    billImageArray,
+    paymentImageArray,
   } = useContext(ReminderContext) as ReminderContextType;
+
+  console.log(billImageArray);
 
   useEffect(() => {
     if (selectedRow) {
@@ -29,7 +31,6 @@ export default function ReminderDetail() {
           .replace(/[^A-Za-z0-9]/g, "")}`,
         setBillImageArray
       );
-
       getImageArray(
         "reminder_payment",
         `${selectedRow.supplier_name
@@ -40,13 +41,7 @@ export default function ReminderDetail() {
         setPaymentImageArray
       );
     }
-  }, [
-    selectedRow,
-    setBillImageArray,
-    setPaymentImageArray,
-    //billImageArray,
-    //paymentImageArray,
-  ]);
+  }, [selectedRow, setBillImageArray, setPaymentImageArray, openUpdateDialog]);
 
   const section1 = ["id", "user_id", "created_at", "last_modified"];
   const section2 = [
