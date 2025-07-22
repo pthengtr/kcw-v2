@@ -2,7 +2,7 @@
 
 import { ColumnDef, HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../common/DataTableColumnHeader";
-import { fieldLabel } from "./ReminderForm";
+import { reminderFieldLabel } from "./ReminderForm";
 import { Row } from "@tanstack/react-table";
 
 // This type is used to define the shape of our data.
@@ -110,34 +110,33 @@ export const reminderColumns: ColumnDef<ReminderType>[] = [
 
 function simpleText(key: keyof ReminderType) {
   return {
-    id: fieldLabel[key],
+    id: reminderFieldLabel[key],
     accessorKey: key,
     header: ({ column }: HeaderContext<ReminderType, unknown>) => (
-      <DataTableColumnHeader column={column} title={fieldLabel[key]} />
+      <DataTableColumnHeader column={column} title={reminderFieldLabel[key]} />
     ),
   };
 }
 
 function dateThai(key: keyof ReminderType, withTime: boolean = false) {
   return {
-    id: fieldLabel[key],
+    id: reminderFieldLabel[key],
     accessorKey: key,
     header: ({ column }: HeaderContext<ReminderType, unknown>) => (
-      <DataTableColumnHeader column={column} title={fieldLabel[key]} />
+      <DataTableColumnHeader column={column} title={reminderFieldLabel[key]} />
     ),
     cell: (row: Row<ReminderType>) => {
       return (
         <div className="text-right">
-          {!!row.getValue(fieldLabel[key]) &&
-            new Date(row.getValue(fieldLabel[key]) as string).toLocaleString(
-              "th-TH",
-              {
-                day: "2-digit",
-                month: "2-digit",
-                year: "2-digit",
-                ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
-              }
-            )}
+          {!!row.getValue(reminderFieldLabel[key]) &&
+            new Date(
+              row.getValue(reminderFieldLabel[key]) as string
+            ).toLocaleString("th-TH", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "2-digit",
+              ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+            })}
         </div>
       );
     },
@@ -148,18 +147,21 @@ function dateThai(key: keyof ReminderType, withTime: boolean = false) {
 
 function numberFloat(key: keyof ReminderType) {
   return {
-    id: fieldLabel[key],
+    id: reminderFieldLabel[key],
     accessorKey: key,
     header: ({ column }: HeaderContext<ReminderType, unknown>) => (
-      <DataTableColumnHeader column={column} title={fieldLabel[key]} />
+      <DataTableColumnHeader column={column} title={reminderFieldLabel[key]} />
     ),
     cell: (row: Row<ReminderType>) => {
       return (
         <div className="text-right">
-          {(row.getValue(fieldLabel[key]) as number).toLocaleString("th-TH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
+          {(row.getValue(reminderFieldLabel[key]) as number).toLocaleString(
+            "th-TH",
+            {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }
+          )}
         </div>
       );
     },
@@ -168,7 +170,7 @@ function numberFloat(key: keyof ReminderType) {
       columnId: string,
       filterValue: string
     ) => {
-      return (row.getValue(fieldLabel[key]) as number)
+      return (row.getValue(reminderFieldLabel[key]) as number)
         .toString()
         .includes(filterValue);
     },
@@ -177,15 +179,17 @@ function numberFloat(key: keyof ReminderType) {
 
 function numberInt(key: keyof ReminderType) {
   return {
-    id: fieldLabel[key],
+    id: reminderFieldLabel[key],
     accessorKey: key,
     header: ({ column }: HeaderContext<ReminderType, unknown>) => (
-      <DataTableColumnHeader column={column} title={fieldLabel[key]} />
+      <DataTableColumnHeader column={column} title={reminderFieldLabel[key]} />
     ),
     cell: (row: Row<ReminderType>) => {
       return (
         <div className="text-right">
-          {(row.getValue(fieldLabel[key]) as number).toLocaleString("th-TH")}
+          {(row.getValue(reminderFieldLabel[key]) as number).toLocaleString(
+            "th-TH"
+          )}
         </div>
       );
     },
@@ -194,7 +198,7 @@ function numberInt(key: keyof ReminderType) {
       columnId: string,
       filterValue: string
     ) => {
-      return (row.getValue(fieldLabel[key]) as number)
+      return (row.getValue(reminderFieldLabel[key]) as number)
         .toString()
         .includes(filterValue);
     },

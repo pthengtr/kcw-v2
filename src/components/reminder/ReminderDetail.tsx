@@ -1,4 +1,4 @@
-import { fieldLabel } from "./ReminderForm";
+import { reminderFieldLabel } from "./ReminderForm";
 import React, { useContext, useEffect } from "react";
 import ImageCarousel, { getImageArray } from "../common/ImageCarousel";
 
@@ -157,7 +157,7 @@ export default function ReminderDetail() {
         {selectedRow &&
           section1.map((key) => (
             <React.Fragment key={key}>
-              <span>{fieldLabel[key as keyof typeof selectedRow]}</span>
+              <span>{reminderFieldLabel[key as keyof typeof selectedRow]}</span>
               <span>{getKeyValue(key)}</span>
             </React.Fragment>
           ))}
@@ -167,7 +167,7 @@ export default function ReminderDetail() {
         {selectedRow &&
           section2.map((key) => (
             <React.Fragment key={key}>
-              <span>{fieldLabel[key as keyof typeof selectedRow]}</span>
+              <span>{reminderFieldLabel[key as keyof typeof selectedRow]}</span>
               <span>{getKeyValue(key)}</span>
             </React.Fragment>
           ))}
@@ -177,7 +177,7 @@ export default function ReminderDetail() {
         {selectedRow &&
           section3.map((key) => (
             <React.Fragment key={key}>
-              <span>{fieldLabel[key as keyof typeof selectedRow]}</span>
+              <span>{reminderFieldLabel[key as keyof typeof selectedRow]}</span>
               <span>{getKeyValue(key)}</span>
             </React.Fragment>
           ))}

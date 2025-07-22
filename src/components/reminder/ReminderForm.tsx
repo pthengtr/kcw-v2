@@ -13,7 +13,7 @@ import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import { commonUploadFile } from "@/lib/utils";
 import { getImageArray } from "../common/ImageCarousel";
 
-export const fieldLabel = {
+export const reminderFieldLabel = {
   id: "รายการเลขที่",
   created_at: "สร้าง",
   supplier_name: "บริษัท",
@@ -39,8 +39,8 @@ export const fieldLabel = {
 };
 
 function getFieldLabel(field: FieldValues) {
-  return fieldLabel[field.name as keyof typeof fieldLabel]
-    ? fieldLabel[field.name as keyof typeof fieldLabel]
+  return reminderFieldLabel[field.name as keyof typeof reminderFieldLabel]
+    ? reminderFieldLabel[field.name as keyof typeof reminderFieldLabel]
     : field.name;
 }
 
@@ -282,7 +282,7 @@ export default function ReminderForm({
         formData.append("payment_pictures[]", item);
       });
 
-      await new Promise(() => createUpdateReminder(formData));
+      await createUpdateReminder(formData);
 
       return Promise.resolve({ success: true });
     } catch (error) {

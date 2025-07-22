@@ -33,6 +33,11 @@ export default function Navbar() {
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
+            <Link href="/expense" legacyBehavior passHref>
+              <NavigationMenuLink className="">ค่าใช้จ่าย</NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
             <LogoutButton />
           </NavigationMenuItem>
         </NavigationMenuList>
