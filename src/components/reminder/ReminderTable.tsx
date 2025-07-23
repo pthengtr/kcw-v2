@@ -33,7 +33,7 @@ export const defaultColumnVisibility = {
   จำนวนบิล: false,
   บิลวันที่: true,
   ถีง: true,
-  จำนวนเงิน: true,
+  "จำนวนเงินสุทธิ (หักส่วนลดแล้ว)": true,
   ส่วนลด: false,
   พนักงาน: false,
   กำหนดชำระ: true,
@@ -160,7 +160,7 @@ export default function ReminderTable({
               columnVisibility: columnVisibility,
               pagination: { pageIndex: 0, pageSize: paginationPageSize },
             }}
-            totalAmountKey={["จำนวนเงิน", "ส่วนลด"]}
+            totalAmountKey={["จำนวนเงินสุทธิ (หักส่วนลดแล้ว)", "ส่วนลด"]}
           >
             <div className="flex gap-4 mr-auto px-8">
               <h2 className="text-2xl font-bold flex-1">รายการเตือนชำระเงิน</h2>
