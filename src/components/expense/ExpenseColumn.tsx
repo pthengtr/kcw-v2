@@ -4,6 +4,16 @@ import { ColumnDef, HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../common/DataTableColumnHeader";
 import { expenseFieldLabel } from "./ExpenseForm";
 import { Row } from "@tanstack/react-table";
+import { ImageIcon } from "lucide-react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
@@ -38,6 +48,32 @@ export const expenseColumn: ColumnDef<ExpenseType>[] = [
   simpleText("payment_mode"),
   simpleText("branch_name"),
   simpleText("remark"),
+  {
+    id: "รูปใบเสร็จรับเงิน",
+    accessorKey: "total_amount",
+    header: ({ column }: HeaderContext<ExpenseType, unknown>) => (
+      <DataTableColumnHeader column={column} title={"รูปใบเสร็จรับเงิน"} />
+    ),
+    cell: () => {
+      return (
+        <div className="flex justify-center">
+          <Dialog>
+            <DialogTrigger>
+              <ImageIcon />
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>รูปใบเสร็จรับเงิน</DialogTitle>
+                <DialogDescription>
+                  <span>Place holder add image</span>
+                </DialogDescription>
+              </DialogHeader>
+            </DialogContent>
+          </Dialog>
+        </div>
+      );
+    },
+  },
 ];
 
 function simpleText(key: keyof ExpenseType) {

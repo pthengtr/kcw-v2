@@ -16,8 +16,8 @@ import { useParams } from "next/navigation";
 
 export const branchLabel = {
   all: "ทั้งหมด",
-  main: "สำนักงานใหญ่",
-  pattana: "สี่แยกพัฒนา",
+  main: "สาขาสำนักงานใหญ่",
+  pattana: "สาขาสี่แยกพัฒนา",
 };
 
 export const expenseFieldLabel = {

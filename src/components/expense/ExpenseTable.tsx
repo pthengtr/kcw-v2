@@ -126,7 +126,7 @@ export default function ExpenseTable({
             totalAmountKey={["จำนวนเงิน"]}
           >
             <div className="flex gap-4 mr-auto px-8">
-              <h2 className="text-2xl font-bold flex-1">{`รายการค่าใช้จ่าย สาขา${
+              <h2 className="text-2xl font-bold flex-1">{`รายการค่าใช้จ่าย ${
                 branchLabel[branch] as keyof typeof branchLabel
               }`}</h2>
             </div>
