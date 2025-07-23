@@ -28,7 +28,7 @@ export const expenseFieldLabel = {
   receipt_number: "เลขที่ใบเสร็จรับเงิน",
   expense_group: "ประเภทบัญชี",
   detail: "รายละเอียด",
-  total_amount: "จำนวนเงิน (หักส่วนลดแล้ว)",
+  total_amount: "จำนวนเงิน",
   payment_date: "วันที่ชำระ",
   payment_mode: "วิธีการชำระ",
   branch_name: "สาขา",
@@ -48,10 +48,13 @@ const formSchema = z.object({
   invoice_number: z.string().nonempty("กรุณาใส่เลขที่ใบกำกับ/ใบแจ้งหนี้"),
   receipt_number: z.string(),
   expense_group: z.string(),
-  detail: z.string(),
+  detail: z.string().nonempty("กรุณาใส่รายละเอียดค่าใช้จ่าย"),
   total_amount: z.number(),
-  payment_date: z.union([z.date().nullable().optional(), z.literal("")]),
+  payment_date: z.date(),
   payment_mode: z.string(),
+  agree: z.boolean().refine((val) => val === true, {
+    message: "กรุณาตรวจสอบข้อมูลก่อนบันทึก",
+  }),
 });
 
 export type ExpenseFormDefaultValueType = {
@@ -61,7 +64,7 @@ export type ExpenseFormDefaultValueType = {
   expense_group: string;
   detail: string;
   total_amount: number;
-  payment_date: Date | null;
+  payment_date: Date;
   payment_mode: string;
   remark: string;
   agree: boolean;
@@ -74,7 +77,7 @@ export const expenseFormDefaultValue = {
   expense_group: "",
   detail: "",
   total_amount: 0,
-  payment_date: null,
+  payment_date: new Date(),
   payment_mode: "",
   remark: "",
   agree: false,
@@ -107,7 +110,7 @@ function getFormInput(
 
     //date time picker
     case "payment_date":
-      return <DatePickerInput field={field} timePicker optional />;
+      return <DatePickerInput field={field} />;
       break;
 
     case "bill_pictures":

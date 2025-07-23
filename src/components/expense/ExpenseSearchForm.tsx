@@ -7,16 +7,14 @@ import { createClient } from "@/lib/supabase/client";
 import Form from "../common/Form";
 import { FieldValues, UseFormReturn } from "react-hook-form";
 import { useContext } from "react";
-import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import { Search } from "lucide-react";
 import { Input } from "../ui/input";
 import MonthPickerInput from "../common/MonthPickerInput";
+import { ExpenseContext, ExpenseContextType } from "./ExpenseProvider";
 
 const searchFormFieldLabel = {
-  search_supplier_name: "บริษัท",
-  note_id: "เลขที่ใบวางบิล",
-  due_month: "กำหนดชำระเดือน",
-  payment_month: "ชำระแล้วเดือน",
+  company_name: "ชื่อร้าน/บริษัท",
+  payment_month: "ค่าใช้จ่ายเดือน",
 };
 
 function getFieldLabel(field: FieldValues) {
@@ -33,7 +31,6 @@ function getFormInput(
   switch (field.name) {
     //month picker
     case "payment_month":
-    case "due_month":
       return <MonthPickerInput field={field} />;
       break;
 
@@ -44,37 +41,31 @@ function getFormInput(
 }
 
 const formSchema = z.object({
-  search_supplier_name: z.string(),
-  note_id: z.string(),
-  due_month: z.string(),
+  company_name: z.string(),
   payment_month: z.string(),
 });
 
-type ReminderSearchDefaultType = {
-  search_supplier_name: string;
-  note_id: string;
-  due_month: string;
+type ExpenseSearchDefaultType = {
+  company_name: string;
   payment_month: string;
 };
 
-type ReminderSearchFormProps = {
-  defaultValues: ReminderSearchDefaultType;
+type ExpenseSearchFormProps = {
+  defaultValues: ExpenseSearchDefaultType;
 };
 
-export default function ReminderSearchForm({
+export default function ExpenseSearchForm({
   defaultValues,
-}: ReminderSearchFormProps) {
-  const { setReminders, setTotal } = useContext(
-    ReminderContext
-  ) as ReminderContextType;
+}: ExpenseSearchFormProps) {
+  const { setExpenses, setTotal } = useContext(
+    ExpenseContext
+  ) as ExpenseContextType;
 
   async function searchReminder(formData: FormData) {
     // type-casting here for convenience
     // in practice, you should validate your inputs
     const searchData = {
-      supplier_name: formData.get("supplier_name") as string,
-      note_id: formData.get("note_id") as string,
-      due_month: formData.get("due_month") as string,
+      company_name: formData.get("company_name") as string,
       payment_month: formData.get("payment_month") as string,
     };
 
@@ -82,27 +73,13 @@ export default function ReminderSearchForm({
 
     console.log(searchData);
     let query = supabase
-      .from("payment_reminder")
+      .from("expense")
       .select("*", { count: "exact" })
       .order("id", { ascending: false })
       .limit(500);
 
-    if (searchData.supplier_name)
-      query = query.ilike("supplier_name", `%${searchData.supplier_name}%`);
-
-    if (searchData.note_id)
-      query = query.ilike("note_id", `%${searchData.note_id}%`);
-
-    let due_start;
-    let due_end;
-    if (searchData.due_month !== "all") {
-      due_start = new Date(searchData.due_month).toLocaleString("en-US");
-      due_end = new Date(searchData.due_month);
-      due_end.setMonth(due_end.getMonth() + 1);
-      due_end = due_end.toLocaleString("en-US");
-
-      query = query.gte("due_date", due_start).lt("due_date", due_end);
-    }
+    if (searchData.company_name)
+      query = query.ilike("company_name", `%${searchData.company_name}%`);
 
     let payment_start;
     let payment_end;
@@ -127,18 +104,17 @@ export default function ReminderSearchForm({
     }
 
     if (data) {
-      setReminders(data);
+      setExpenses(data);
     }
     if (count) setTotal(count);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const { search_supplier_name, note_id, due_month, payment_month } = values;
+    const { company_name, payment_month } = values;
 
     const formData = new FormData();
-    formData.append("supplier_name", search_supplier_name);
-    formData.append("note_id", note_id);
-    formData.append("due_month", due_month);
+
+    formData.append("company_name", company_name);
     formData.append("payment_month", payment_month);
 
     await searchReminder(formData);

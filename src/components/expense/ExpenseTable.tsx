@@ -9,6 +9,7 @@ import { DataTable } from "../common/DataTable";
 import { expenseColumn } from "./ExpenseColumn";
 import { createClient } from "@/lib/supabase/client";
 import { ExpenseContext, ExpenseContextType } from "./ExpenseProvider";
+import ExpenseSearchForm from "./ExpenseSearchForm";
 
 export const defaultColumnVisibility = {
   รายการเลขที่: false,
@@ -89,16 +90,14 @@ export default function ExpenseTable({
   return (
     <div className="flex flex-col gap-2 p-2">
       <div className="flex justify-center items-center p-4 gap-4">
-        {/* <div>
-            <ReminderSearchForm
-              defaultValues={{
-                search_supplier_name: "",
-                note_id: "",
-                due_month: "all",
-                payment_month: "all",
-              }}
-            />
-          </div> */}
+        <div>
+          <ExpenseSearchForm
+            defaultValues={{
+              company_name: "",
+              payment_month: "all",
+            }}
+          />
+        </div>
         <div className="flex justify-end">
           <ExpenseFormDialog
             open={openCreateDialog}
@@ -124,7 +123,7 @@ export default function ExpenseTable({
               columnVisibility: columnVisibility,
               pagination: { pageIndex: 0, pageSize: paginationPageSize },
             }}
-            totalAmountKey={[]}
+            totalAmountKey={["จำนวนเงิน"]}
           >
             <div className="flex gap-4 mr-auto px-8">
               <h2 className="text-2xl font-bold flex-1">{`รายการค่าใช้จ่าย สาขา${

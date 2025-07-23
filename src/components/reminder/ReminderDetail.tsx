@@ -133,8 +133,8 @@ export default function ReminderDetail() {
                 bill_count: selectedRow.bill_count,
                 start_date: new Date(selectedRow.start_date),
                 end_date: new Date(selectedRow.end_date),
-                total_amount: selectedRow.total_amount,
-                discount: selectedRow.discount,
+                total_amount: Math.round(selectedRow.total_amount * 100) / 100,
+                discount: Math.round(selectedRow.discount * 100) / 100,
                 due_date: new Date(selectedRow.due_date),
                 kbiz_datetime: selectedRow.kbiz_datetime
                   ? new Date(selectedRow.kbiz_datetime)
