@@ -28,7 +28,7 @@ export const reminderFieldLabel = {
   bill_count: "จำนวนบิล",
   start_date: "บิลวันที่",
   end_date: "ถีง",
-  total_amount: "จำนวนเงิน",
+  total_amount: "จำนวนเงินสุทธิ (หักส่วนลดแล้ว)",
   discount: "ส่วนลด",
   user_id: "พนักงาน",
   due_date: "กำหนดชำระ",
