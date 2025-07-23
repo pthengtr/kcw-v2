@@ -6,7 +6,12 @@ import * as z from "zod";
 
 import { createClient } from "@/lib/supabase/client";
 import Form from "../common/Form";
-import { FieldValues } from "react-hook-form";
+import { FieldValues, UseFormReturn } from "react-hook-form";
+import { Input } from "../ui/input";
+import { DatePickerInput } from "../common/DatePickerInput";
+import ImageDropableForm from "../common/ImageDropableForm";
+import { Label } from "../ui/label";
+import { Checkbox } from "../ui/checkbox";
 
 export const expenseFieldLabel = {
   id: "รายการเลขที่",
@@ -19,6 +24,7 @@ export const expenseFieldLabel = {
   total_amount: "จำนวนเงิน",
   payment_date: "วันที่ชำระ",
   payment_mode: "วิธีการชำระ",
+  agree: " ",
 };
 
 export function getFieldLabel(field: FieldValues) {
@@ -47,6 +53,7 @@ export type ExpenseFormDefaultValueType = {
   total_amount: number;
   payment_date: Date | null;
   payment_mode: string;
+  agree: boolean;
 };
 
 export const expenseFormDefaultValue = {
@@ -58,12 +65,58 @@ export const expenseFormDefaultValue = {
   total_amount: 0,
   payment_date: null,
   payment_mode: "",
+  agree: false,
 };
 
 type ExpenseFormProps = {
   defaultValues: ExpenseFormDefaultValueType;
   update?: boolean;
 };
+
+function getFormInput(
+  field: FieldValues,
+  form: UseFormReturn<z.infer<typeof formSchema>>
+) {
+  switch (field.name) {
+    // number
+    case "bill_count":
+    case "total_amount":
+    case "discount":
+      return (
+        <Input
+          type="number"
+          //className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          {...field}
+          {...form.register(field.name, {
+            valueAsNumber:
+              !field.value?.toString() === undefined ? false : true,
+          })}
+        />
+      );
+      break;
+
+    //date time picker
+    case "payment_date":
+      return <DatePickerInput field={field} timePicker optional />;
+      break;
+
+    case "bill_pictures":
+      return <ImageDropableForm field={field} />;
+      break;
+
+    case "agree":
+      return (
+        <Label className="flex gap-4 items-center just">
+          <Checkbox onCheckedChange={field.onChange} />
+          <span>ยืนยันว่าข้อมูลถูกต้องแล้ว</span>
+        </Label>
+      );
+
+    //simple text
+    default:
+      return <Input type="text" {...field} />;
+  }
+}
 
 export default function ExpenseForm({
   defaultValues,
@@ -168,6 +221,7 @@ export default function ExpenseForm({
         defaultValues={defaultValues}
         onSubmit={onSubmit}
         getFieldLabel={getFieldLabel}
+        getFormInput={getFormInput}
         className={"flex flex-col gap-8 p-10 max-w-3xl"}
         submitLabel="บันทึก"
       />

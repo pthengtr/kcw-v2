@@ -6,12 +6,19 @@ import * as z from "zod";
 
 import { createClient } from "@/lib/supabase/client";
 import Form from "../common/Form";
-import { FieldValues } from "react-hook-form";
+import { FieldValues, UseFormReturn } from "react-hook-form";
 import { ReminderDefaultValueType } from "./ReminderColumn";
 import { useContext } from "react";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import { commonUploadFile } from "@/lib/utils";
 import { getImageArray } from "../common/ImageCarousel";
+import { Checkbox } from "../ui/checkbox";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { DatePickerInput } from "../common/DatePickerInput";
+import ImageDropableForm from "../common/ImageDropableForm";
+import BankInfoInput from "./BankInfoInput";
+import SupplierNameInput from "./SupplierNameInput";
 
 export const reminderFieldLabel = {
   id: "รายการเลขที่",
@@ -42,6 +49,68 @@ function getFieldLabel(field: FieldValues) {
   return reminderFieldLabel[field.name as keyof typeof reminderFieldLabel]
     ? reminderFieldLabel[field.name as keyof typeof reminderFieldLabel]
     : field.name;
+}
+
+function getFormInput(
+  field: FieldValues,
+  form: UseFormReturn<z.infer<typeof formSchema>>
+) {
+  switch (field.name) {
+    // number
+    case "bill_count":
+    case "total_amount":
+    case "discount":
+      return (
+        <Input
+          type="number"
+          //className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          {...field}
+          {...form.register(field.name, {
+            valueAsNumber:
+              !field.value?.toString() === undefined ? false : true,
+          })}
+        />
+      );
+      break;
+
+    //date picker
+    case "start_date":
+    case "end_date":
+    case "due_date":
+      return <DatePickerInput field={field} />;
+      break;
+
+    //date time picker
+    case "payment_date":
+    case "kbiz_datetime":
+      return <DatePickerInput field={field} timePicker optional />;
+      break;
+
+    case "supplier_name":
+      return <SupplierNameInput field={field} />;
+      break;
+
+    case "bank_info":
+      return <BankInfoInput />;
+      break;
+
+    case "bill_pictures":
+    case "payment_pictures":
+      return <ImageDropableForm field={field} />;
+      break;
+
+    case "agree":
+      return (
+        <Label className="flex gap-4 items-center just">
+          <Checkbox onCheckedChange={field.onChange} />
+          <span>ยืนยันว่าข้อมูลถูกต้องแล้ว</span>
+        </Label>
+      );
+
+    //simple text
+    default:
+      return <Input type="text" {...field} />;
+  }
 }
 
 const formSchema = z.object({
@@ -299,6 +368,7 @@ export default function ReminderForm({
         defaultValues={defaultValues}
         onSubmit={onSubmit}
         getFieldLabel={getFieldLabel}
+        getFormInput={getFormInput}
         className={"flex flex-col gap-8 p-10 max-w-3xl"}
         submitLabel="บันทึก"
       />

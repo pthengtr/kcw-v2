@@ -5,10 +5,12 @@ import * as z from "zod";
 import { createClient } from "@/lib/supabase/client";
 
 import Form from "../common/Form";
-import { FieldValues } from "react-hook-form";
+import { FieldValues, UseFormReturn } from "react-hook-form";
 import { useContext } from "react";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import { Search } from "lucide-react";
+import { Input } from "../ui/input";
+import MonthPickerInput from "../common/MonthPickerInput";
 
 const searchFormFieldLabel = {
   search_supplier_name: "บริษัท",
@@ -21,6 +23,24 @@ function getFieldLabel(field: FieldValues) {
   return searchFormFieldLabel[field.name as keyof typeof searchFormFieldLabel]
     ? searchFormFieldLabel[field.name as keyof typeof searchFormFieldLabel]
     : field.name;
+}
+
+function getFormInput(
+  field: FieldValues,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  form: UseFormReturn<z.infer<typeof formSchema>>
+) {
+  switch (field.name) {
+    //month picker
+    case "payment_month":
+    case "due_month":
+      return <MonthPickerInput field={field} />;
+      break;
+
+    //simple text
+    default:
+      return <Input type="text" {...field} />;
+  }
 }
 
 const formSchema = z.object({
@@ -130,6 +150,7 @@ export default function ReminderSearchForm({
       defaultValues={defaultValues}
       onSubmit={onSubmit}
       getFieldLabel={getFieldLabel}
+      getFormInput={getFormInput}
       className="flex justify-center items-center gap-4 pxs-12"
       submitLabel={<Search />}
     />
