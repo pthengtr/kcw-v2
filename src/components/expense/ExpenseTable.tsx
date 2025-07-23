@@ -1,26 +1,50 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect } from "react";
 import ExpenseFormDialog from "./ExpenseFormDialog";
 import { branchLabel, expenseFormDefaultValue } from "./ExpenseForm";
 import { Plus } from "lucide-react";
 import { useParams } from "next/navigation";
 import { DataTable } from "../common/DataTable";
-import { expenseColumn, ExpenseType } from "./ExpenseColumn";
-import { VisibilityState } from "@tanstack/react-table";
+import { expenseColumn } from "./ExpenseColumn";
 import { createClient } from "@/lib/supabase/client";
+import { ExpenseContext, ExpenseContextType } from "./ExpenseProvider";
 
-export default function ExpenseTable() {
-  const [open, setOpen] = useState(false);
-  const [expenses, setExpenses] = useState<ExpenseType[] | undefined>([]);
-  const [total, setTotal] = useState<number | undefined>();
+export const defaultColumnVisibility = {
+  รายการเลขที่: false,
+  สร้าง: false,
+  "ชื่อร้าน/บริษัท": true,
+  "เลขที่ใบกำกับ/ใบแจ้งหนี้": true,
+  เลขที่ใบเสร็จรับเงิน: true,
+  ประเภทบัญชี: true,
+  รายละเอียด: true,
+  "จำนวนเงิน (หักส่วนลดแล้ว)": true,
+  วันที่ชำระ: true,
+  วิธีการชำระ: true,
+  สาขา: false,
+  หมายเหตุ: false,
+  แก้ไขล่าสุด: false,
+  " ": false,
+};
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [paginationPageSize, setPaginationPageSize] = useState<number>(10);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [submitError, setSubmitError] = useState<string | undefined>();
+type ExpenseTableProps = {
+  columnVisibility: typeof defaultColumnVisibility | undefined;
+  paginationPageSize: number | undefined;
+};
+
+export default function ExpenseTable({
+  columnVisibility,
+  paginationPageSize,
+}: ExpenseTableProps) {
+  const {
+    expenses,
+    setExpenses,
+    setSubmitError,
+    total,
+    setTotal,
+    openCreateDialog,
+    setOpenCreateDialog,
+  } = useContext(ExpenseContext) as ExpenseContextType;
 
   function handleSelectedRow() {}
 
@@ -42,6 +66,8 @@ export default function ExpenseTable() {
 
       const { data, error, count } = await query;
 
+      console.log(data);
+
       if (error) {
         console.log(error);
         return;
@@ -52,13 +78,13 @@ export default function ExpenseTable() {
       }
       if (count) setTotal(count);
     },
-    [branch, supabase]
+    [branch, setExpenses, setTotal, supabase]
   );
 
   useEffect(() => {
     setSubmitError(undefined);
     getReminder();
-  }, [getReminder]);
+  }, [getReminder, setSubmitError]);
 
   return (
     <div className="flex flex-col gap-2 p-2">
@@ -75,8 +101,8 @@ export default function ExpenseTable() {
           </div> */}
         <div className="flex justify-end">
           <ExpenseFormDialog
-            open={open}
-            setOpen={setOpen}
+            open={openCreateDialog}
+            setOpen={setOpenCreateDialog}
             dialogTrigger={<Plus />}
             dialogHeader={`เพิ่มรายการค่าใช้จ่าย สาขา${
               branchLabel[branch] as keyof typeof branchLabel
@@ -89,6 +115,7 @@ export default function ExpenseTable() {
       <div className="h-full">
         {!!expenses && (
           <DataTable
+            tableName="expense"
             columns={expenseColumn}
             data={expenses}
             total={total}

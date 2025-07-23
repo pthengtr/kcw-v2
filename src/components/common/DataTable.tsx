@@ -54,6 +54,7 @@ import { setMyCookie } from "@/app/(root)/action";
 
 interface DataTableProps<TData, TValue> {
   children?: React.ReactNode;
+  tableName?: string;
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   total?: number;
@@ -64,6 +65,7 @@ interface DataTableProps<TData, TValue> {
 
 export function DataTable<TData, TValue>({
   children,
+  tableName = "",
   columns,
   data,
   total,
@@ -102,7 +104,7 @@ export function DataTable<TData, TValue>({
   useEffect(() => {
     //console.log(table.getState().columnVisibility);
     setMyCookie(
-      "columnVisibility",
+      `${tableName}ColumnVisibility`,
       JSON.stringify(table.getState().columnVisibility)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -254,7 +256,11 @@ export function DataTable<TData, TValue>({
 
       {/* Pagination button */}
       <div className="flex-1 flex flex-col justify-end">
-        <DataTablePagination table={table} total={total} />
+        <DataTablePagination
+          table={table}
+          total={total}
+          tableName={tableName}
+        />
       </div>
     </div>
   );

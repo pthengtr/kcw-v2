@@ -29,13 +29,13 @@ export default function Reminder() {
 
   useEffect(() => {
     async function getCookieColumnVisibility() {
-      const data = await getMyCookie("columnVisibility");
+      const data = await getMyCookie("reminderColumnVisibility");
       if (data) setColumnVisibility(JSON.parse(data));
       else setColumnVisibility(defaultColumnVisibility);
     }
 
     async function getPaginationPageSize() {
-      const data = await getMyCookie("paginationPageSize");
+      const data = await getMyCookie("reminderPaginationPageSize");
       if (data) setPaginationPageSize(parseInt(data));
       else setPaginationPageSize(10);
     }

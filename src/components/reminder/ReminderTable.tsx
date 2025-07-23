@@ -115,8 +115,8 @@ export default function ReminderTable({
   ]);
 
   function handleResetView() {
-    clearMyCookie("columnVisibility");
-    clearMyCookie("paginationPageSize");
+    clearMyCookie("reminderColumnVisibility");
+    clearMyCookie("reminderPaginationPageSize");
     getReminder();
   }
 
@@ -147,6 +147,7 @@ export default function ReminderTable({
       <div className="h-full">
         {!!reminders && (
           <DataTable
+            tableName="reminder"
             columns={reminderColumns}
             data={reminders}
             total={total}

@@ -20,16 +20,18 @@ import { setMyCookie } from "@/app/(root)/action";
 interface DataTablePaginationProps<TData> {
   table: Table<TData>;
   total?: number;
+  tableName?: string;
 }
 
 export function DataTablePagination<TData>({
   table,
   total,
+  tableName = "",
 }: DataTablePaginationProps<TData>) {
   useEffect(() => {
     //console.log(table.getState().columnVisibility);
     setMyCookie(
-      "paginationPageSize",
+      `${tableName}PaginationPageSize`,
       JSON.stringify(table.getState().pagination.pageSize)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
