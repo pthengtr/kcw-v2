@@ -12,6 +12,13 @@ import { DatePickerInput } from "../common/DatePickerInput";
 import ImageDropableForm from "../common/ImageDropableForm";
 import { Label } from "../ui/label";
 import { Checkbox } from "../ui/checkbox";
+import { useParams } from "next/navigation";
+
+export const branchLabel = {
+  all: "ทั้งหมด",
+  main: "สำนักงานใหญ่",
+  pattana: "สี่แยกพัฒนา",
+};
 
 export const expenseFieldLabel = {
   id: "รายการเลขที่",
@@ -21,9 +28,12 @@ export const expenseFieldLabel = {
   receipt_number: "เลขที่ใบเสร็จรับเงิน",
   expense_group: "ประเภทบัญชี",
   detail: "รายละเอียด",
-  total_amount: "จำนวนเงิน",
+  total_amount: "จำนวนเงิน (หักส่วนลดแล้ว)",
   payment_date: "วันที่ชำระ",
   payment_mode: "วิธีการชำระ",
+  branch_name: "สาขา",
+  remark: "หมายเหตุ",
+  last_modified: "แก้ไขล่าสุด",
   agree: " ",
 };
 
@@ -53,6 +63,7 @@ export type ExpenseFormDefaultValueType = {
   total_amount: number;
   payment_date: Date | null;
   payment_mode: string;
+  remark: string;
   agree: boolean;
 };
 
@@ -65,6 +76,7 @@ export const expenseFormDefaultValue = {
   total_amount: 0,
   payment_date: null,
   payment_mode: "",
+  remark: "",
   agree: false,
 };
 
@@ -79,9 +91,7 @@ function getFormInput(
 ) {
   switch (field.name) {
     // number
-    case "bill_count":
     case "total_amount":
-    case "discount":
       return (
         <Input
           type="number"
@@ -122,6 +132,10 @@ export default function ExpenseForm({
   defaultValues,
   update = false,
 }: ExpenseFormProps) {
+  const { branch } = useParams();
+
+  console.log(branch);
+
   async function createUpdateExpense(formData: FormData) {
     const supabase = createClient();
 
@@ -140,6 +154,7 @@ export default function ExpenseForm({
     const insertData = {
       ...(update ? {} : { created_at: new Date().toLocaleString("en-US") }),
 
+      branch_name: branch,
       company_name: formData.get("company_name") as string,
       invoice_number: formData.get("invoice_number") as string,
       receipt_number: formData.get("receipt_number") as string,

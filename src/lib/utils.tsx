@@ -2,6 +2,8 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { HeaderContext } from "@tanstack/react-table";
+import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -69,4 +71,15 @@ export async function commonUploadFile({
   }
 
   return { data };
+}
+
+export function simpleText(fieldLabel: Record<string, string>, key: string) {
+  const id = fieldLabel[key] ?? key;
+  return {
+    id: id,
+    accessorKey: key,
+    header: ({ column }: HeaderContext<Record<string, string>, undefined>) => (
+      <DataTableColumnHeader column={column} title={id} />
+    ),
+  };
 }

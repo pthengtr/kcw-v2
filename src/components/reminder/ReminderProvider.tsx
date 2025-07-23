@@ -1,11 +1,6 @@
 "use client";
 import { createContext, useState } from "react";
 import React from "react";
-import {
-  ColumnFilter,
-  ColumnFiltersState,
-  OnChangeFn,
-} from "@tanstack/react-table";
 import { BankInfoType, ReminderType } from "./ReminderColumn";
 import { CheckedState } from "@radix-ui/react-checkbox";
 import { storageObjectType } from "../common/ImageCarousel";
@@ -13,8 +8,6 @@ import { storageObjectType } from "../common/ImageCarousel";
 export type ReminderContextType = {
   selectedRow: ReminderType | undefined;
   setSelectedRow: (selectedRow: ReminderType | undefined) => void;
-  columnFilters: ColumnFilter[] | undefined;
-  setColumnFilters: OnChangeFn<ColumnFiltersState>;
   openCreateDialog: boolean;
   setOpenCreateDialog: (open: boolean) => void;
   openUpdateDialog: boolean;
@@ -54,7 +47,6 @@ type ReminderProvider = {
 
 export default function ReminderProvider({ children }: ReminderProvider) {
   const [selectedRow, setSelectedRow] = useState<ReminderType>();
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
@@ -81,8 +73,6 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const value = {
     selectedRow,
     setSelectedRow,
-    columnFilters,
-    setColumnFilters,
     openCreateDialog,
     setOpenCreateDialog,
     openUpdateDialog,

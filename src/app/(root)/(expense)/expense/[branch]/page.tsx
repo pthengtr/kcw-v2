@@ -1,13 +1,14 @@
+"use client";
+import ExpenseTable from "@/components/expense/ExpenseTable";
+
 type BranchExpenseProps = {
   params: Promise<{ branch: string }>;
 };
 
-export default async function BranchExpense({ params }: BranchExpenseProps) {
-  const { branch } = await params;
-
+export default function BranchExpense({}: BranchExpenseProps) {
   return (
     <div>
-      <h1>Parameter: {branch}</h1>
+      <ExpenseTable />
     </div>
   );
 }

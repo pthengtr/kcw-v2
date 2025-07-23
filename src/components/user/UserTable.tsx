@@ -4,14 +4,12 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { DataTable } from "../common/DataTable";
 import { userColumns, userInitialVisibility, UserType } from "./UserColumns";
-import { ColumnFiltersState } from "@tanstack/react-table";
 
 type UserTableType = { setSelectedUser: (user: UserType) => void };
 
 export default function UserTable({ setSelectedUser }: UserTableType) {
   const [users, setUsers] = useState<UserType[]>();
   const [total, setTotal] = useState<number>();
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   useEffect(() => {
     async function getUsers() {
@@ -38,8 +36,6 @@ export default function UserTable({ setSelectedUser }: UserTableType) {
           data={users}
           total={total}
           setSelectedRow={setSelectedUser}
-          columnFilters={columnFilters}
-          setColumnFilters={setColumnFilters}
           initialState={{ columnVisibility: userInitialVisibility }}
         ></DataTable>
       )}

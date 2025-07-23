@@ -33,7 +33,7 @@ export const defaultColumnVisibility = {
   จำนวนบิล: false,
   บิลวันที่: true,
   ถีง: true,
-  "จำนวนเงินสุทธิ (หักส่วนลดแล้ว)": true,
+  "จำนวนเงิน (หักส่วนลดแล้ว)": true,
   ส่วนลด: false,
   พนักงาน: false,
   กำหนดชำระ: true,
@@ -64,8 +64,6 @@ export default function ReminderTable({
     openCreateDialog,
     setOpenCreateDialog,
     openUpdateDialog,
-    columnFilters,
-    setColumnFilters,
     setSubmitError,
     reminders,
     setReminders,
@@ -153,14 +151,11 @@ export default function ReminderTable({
             data={reminders}
             total={total}
             setSelectedRow={handleSelectedRow}
-            columnFilters={columnFilters}
-            setColumnFilters={setColumnFilters}
             initialState={{
-              columnFilters: columnFilters,
               columnVisibility: columnVisibility,
               pagination: { pageIndex: 0, pageSize: paginationPageSize },
             }}
-            totalAmountKey={["จำนวนเงินสุทธิ (หักส่วนลดแล้ว)", "ส่วนลด"]}
+            totalAmountKey={["จำนวนเงิน (หักส่วนลดแล้ว)", "ส่วนลด"]}
           >
             <div className="flex gap-4 mr-auto px-8">
               <h2 className="text-2xl font-bold flex-1">รายการเตือนชำระเงิน</h2>
