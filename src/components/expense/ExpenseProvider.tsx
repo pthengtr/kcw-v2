@@ -7,8 +7,10 @@ import { ExpenseType } from "./ExpenseColumn";
 export type ExpenseContextType = {
   selectedRow: ExpenseType | undefined;
   setSelectedRow: (selectedRow: ExpenseType | undefined) => void;
-  openCreateDialog: boolean;
-  setOpenCreateDialog: (open: boolean) => void;
+  openCreateNoVatDialog: boolean;
+  setOpenCreateNoVatDialog: (open: boolean) => void;
+  openCreateVatDialog: boolean;
+  setOpenCreateVatDialog: (open: boolean) => void;
   openUpdateDialog: boolean;
   setOpenUpdateDialog: (open: boolean) => void;
   submitError: string | undefined;
@@ -32,7 +34,8 @@ type ExpenseProviderProps = {
 
 export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [selectedRow, setSelectedRow] = useState<ExpenseType>();
-  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [openCreateVatDialog, setOpenCreateVatDialog] = useState(false);
+  const [openCreateNoVatDialog, setOpenCreateNoVatDialog] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
   const [expenses, setExpenses] = useState<ExpenseType[]>();
@@ -47,8 +50,10 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const value = {
     selectedRow,
     setSelectedRow,
-    openCreateDialog,
-    setOpenCreateDialog,
+    openCreateVatDialog,
+    setOpenCreateVatDialog,
+    openCreateNoVatDialog,
+    setOpenCreateNoVatDialog,
     openUpdateDialog,
     setOpenUpdateDialog,
     submitError,

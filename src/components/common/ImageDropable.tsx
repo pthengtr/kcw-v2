@@ -25,7 +25,7 @@ export default function ImageDropable({
           htmlFor={`${id}-input-image`}
           className="grid place-content-center hover:cursor-pointer"
         >
-          <ImagePlus size={96} strokeWidth={1.2} />
+          <ImagePlus size={96} strokeWidth={1} />
         </Label>
       </div>
 

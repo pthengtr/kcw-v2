@@ -2,7 +2,11 @@
 
 import { useCallback, useContext, useEffect } from "react";
 import ExpenseFormDialog from "./ExpenseFormDialog";
-import { branchLabel, expenseFormDefaultValue } from "./ExpenseForm";
+import {
+  branchLabel,
+  expenseFormDefaultValue,
+  expenseFormNoVatDefaultValue,
+} from "./ExpenseForm";
 import { Plus } from "lucide-react";
 import { useParams } from "next/navigation";
 import { DataTable } from "../common/DataTable";
@@ -10,6 +14,8 @@ import { expenseColumn } from "./ExpenseColumn";
 import { createClient } from "@/lib/supabase/client";
 import { ExpenseContext, ExpenseContextType } from "./ExpenseProvider";
 import ExpenseSearchForm from "./ExpenseSearchForm";
+import { Button } from "../ui/button";
+import ExpenseUpdateFormDialog from "./ExpenseUpdateFormDialog";
 
 export const defaultColumnVisibility = {
   รายการเลขที่: false,
@@ -43,11 +49,12 @@ export default function ExpenseTable({
     setSubmitError,
     total,
     setTotal,
-    openCreateDialog,
-    setOpenCreateDialog,
+    openCreateVatDialog,
+    setOpenCreateVatDialog,
+    openCreateNoVatDialog,
+    setOpenCreateNoVatDialog,
+    setSelectedRow,
   } = useContext(ExpenseContext) as ExpenseContextType;
-
-  function handleSelectedRow() {}
 
   const { branch }: { branch: keyof typeof branchLabel } = useParams();
 
@@ -62,12 +69,10 @@ export default function ExpenseTable({
         .limit(500);
 
       if (branch !== "all") {
-        query = query.ilike("branch_name", branch);
+        query = query.ilike("branch_name", branchLabel[branch]);
       }
 
       const { data, error, count } = await query;
-
-      console.log(data);
 
       if (error) {
         console.log(error);
@@ -98,17 +103,37 @@ export default function ExpenseTable({
             }}
           />
         </div>
-        <div className="flex justify-end">
-          <ExpenseFormDialog
-            open={openCreateDialog}
-            setOpen={setOpenCreateDialog}
-            dialogTrigger={<Plus />}
-            dialogHeader={`เพิ่มรายการค่าใช้จ่าย สาขา${
-              branchLabel[branch] as keyof typeof branchLabel
-            }`}
-            defaultValues={expenseFormDefaultValue}
-          />
-        </div>
+        {branch !== "all" && (
+          <div className="flex justify-end gap-4">
+            <ExpenseFormDialog
+              open={openCreateNoVatDialog}
+              setOpen={setOpenCreateNoVatDialog}
+              dialogTrigger={
+                <Button id="create-expense-novat">
+                  <Plus /> ทั่วไป
+                </Button>
+              }
+              dialogHeader={`เพิ่มรายการค่าใช้จ่ายทั่วไป ${
+                branchLabel[branch] as keyof typeof branchLabel
+              }`}
+              defaultValues={expenseFormNoVatDefaultValue}
+            />
+            <ExpenseFormDialog
+              open={openCreateVatDialog}
+              setOpen={setOpenCreateVatDialog}
+              dialogTrigger={
+                <Button id="create-expense-vat">
+                  <Plus /> บริษัท
+                </Button>
+              }
+              dialogHeader={`เพิ่มรายการค่าใช้จ่ายบริษัท ${
+                branchLabel[branch] as keyof typeof branchLabel
+              }`}
+              defaultValues={expenseFormDefaultValue}
+            />
+            <ExpenseUpdateFormDialog />
+          </div>
+        )}
       </div>
 
       <div className="h-full">
@@ -118,7 +143,7 @@ export default function ExpenseTable({
             columns={expenseColumn}
             data={expenses}
             total={total}
-            setSelectedRow={handleSelectedRow}
+            setSelectedRow={setSelectedRow}
             initialState={{
               columnVisibility: columnVisibility,
               pagination: { pageIndex: 0, pageSize: paginationPageSize },

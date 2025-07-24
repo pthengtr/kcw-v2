@@ -4,16 +4,7 @@ import { ColumnDef, HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../common/DataTableColumnHeader";
 import { expenseFieldLabel } from "./ExpenseForm";
 import { Row } from "@tanstack/react-table";
-import { ImageIcon } from "lucide-react";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import ExpenseImageDialog from "./ExpenseImageDialog";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
@@ -21,9 +12,11 @@ import {
 export type ExpenseType = {
   id: number;
   created_at: string;
+  last_modified: string;
   company_name: string;
+  invoice_date: string;
   invoice_number: string;
-  receipt_number: number;
+  receipt_number: string;
   expense_group: string;
   detail: string;
   total_amount: number;
@@ -31,45 +24,33 @@ export type ExpenseType = {
   payment_mode: string;
   branch_name: string;
   remark: string;
-  last_modified: string;
+  user_id: string;
 };
 
 export const expenseColumn: ColumnDef<ExpenseType>[] = [
   numberInt("id"),
   dateThai("created_at", true),
   dateThai("last_modified", true),
-  dateThai("payment_date"),
   simpleText("company_name"),
   simpleText("invoice_number"),
   simpleText("receipt_number"),
   simpleText("expense_group"),
   simpleText("detail"),
   numberFloat("total_amount"),
+  dateThai("payment_date"),
   simpleText("payment_mode"),
   simpleText("branch_name"),
   simpleText("remark"),
   {
     id: "รูปใบเสร็จรับเงิน",
-    accessorKey: "total_amount",
+    accessorKey: "",
     header: ({ column }: HeaderContext<ExpenseType, unknown>) => (
       <DataTableColumnHeader column={column} title={"รูปใบเสร็จรับเงิน"} />
     ),
-    cell: () => {
+    cell: (info) => {
       return (
         <div className="flex justify-center">
-          <Dialog>
-            <DialogTrigger>
-              <ImageIcon />
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>รูปใบเสร็จรับเงิน</DialogTitle>
-                <DialogDescription>
-                  <span>Place holder add image</span>
-                </DialogDescription>
-              </DialogHeader>
-            </DialogContent>
-          </Dialog>
+          <ExpenseImageDialog info={info} />
         </div>
       );
     },
