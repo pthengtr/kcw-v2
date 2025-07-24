@@ -32,6 +32,7 @@ export const expenseColumn: ColumnDef<ExpenseType>[] = [
   dateThai("created_at", true),
   dateThai("last_modified", true),
   simpleText("company_name"),
+  dateThai("invoice_date", true),
   simpleText("invoice_number"),
   simpleText("receipt_number"),
   simpleText("expense_group"),
@@ -41,6 +42,7 @@ export const expenseColumn: ColumnDef<ExpenseType>[] = [
   simpleText("payment_mode"),
   simpleText("branch_name"),
   simpleText("remark"),
+  simpleText("user_id"),
   {
     id: "รูปใบเสร็จรับเงิน",
     accessorKey: "",

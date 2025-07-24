@@ -7,7 +7,7 @@ import {
   expenseFormDefaultValue,
   expenseFormNoVatDefaultValue,
 } from "./ExpenseForm";
-import { Plus } from "lucide-react";
+import { EllipsisVertical, Plus } from "lucide-react";
 import { useParams } from "next/navigation";
 import { DataTable } from "../common/DataTable";
 import { expenseColumn } from "./ExpenseColumn";
@@ -16,22 +16,31 @@ import { ExpenseContext, ExpenseContextType } from "./ExpenseProvider";
 import ExpenseSearchForm from "./ExpenseSearchForm";
 import { Button } from "../ui/button";
 import ExpenseUpdateFormDialog from "./ExpenseUpdateFormDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { clearMyCookie } from "@/app/(root)/action";
 
 export const defaultColumnVisibility = {
   รายการเลขที่: false,
   สร้าง: false,
   "ชื่อร้าน/บริษัท": true,
+  "วันที่ใบกำกับ/ใบแจ้งหนี้": false,
   "เลขที่ใบกำกับ/ใบแจ้งหนี้": true,
   เลขที่ใบเสร็จรับเงิน: true,
   ประเภทบัญชี: true,
   รายละเอียด: true,
-  "จำนวนเงิน (หักส่วนลดแล้ว)": true,
+  จำนวนเงิน: true,
   วันที่ชำระ: true,
   วิธีการชำระ: true,
   สาขา: false,
   หมายเหตุ: false,
   แก้ไขล่าสุด: false,
   " ": false,
+  พนักงาน: false,
 };
 
 type ExpenseTableProps = {
@@ -60,7 +69,7 @@ export default function ExpenseTable({
 
   const supabase = createClient();
 
-  const getReminder = useCallback(
+  const getExpense = useCallback(
     async function () {
       let query = supabase
         .from("expense")
@@ -87,10 +96,16 @@ export default function ExpenseTable({
     [branch, setExpenses, setTotal, supabase]
   );
 
+  function handleResetView() {
+    clearMyCookie("expenseColumnVisibility");
+    clearMyCookie("expensePaginationPageSize");
+    getExpense();
+  }
+
   useEffect(() => {
     setSubmitError(undefined);
-    getReminder();
-  }, [getReminder, setSubmitError]);
+    getExpense();
+  }, [getExpense, setSubmitError]);
 
   return (
     <div className="flex flex-col gap-2 p-2">
@@ -154,6 +169,23 @@ export default function ExpenseTable({
               <h2 className="text-2xl font-bold flex-1">{`รายการค่าใช้จ่าย ${
                 branchLabel[branch] as keyof typeof branchLabel
               }`}</h2>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hidden h-8 lg:flex"
+                  >
+                    <EllipsisVertical />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={handleResetView}>
+                    ลบความจำรูปแบบตาราง ใช้ค่าเริ่มต้นในครั้งต่อไป
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </DataTable>
         )}
