@@ -12,8 +12,8 @@ export default function ErrorPage() {
         ชื่อบัญชีและรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง
       </div>
 
-      <Link href="/" legacyBehavior passHref>
-        <Button className="w-fit justify-self-center">เข้าสู่ระบบ</Button>
+      <Link href="/" passHref className="w-fit justify-self-center">
+        <Button>เข้าสู่ระบบ</Button>
       </Link>
     </main>
   );
