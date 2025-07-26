@@ -1,8 +1,6 @@
-import { ClipboardList, FilePlus2 } from "lucide-react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import CardIconMenu from "@/components/common/CardIconMenu";
-import { iconStyle, linkStyle, textStyle } from "@/lib/utils";
+import CardIcon from "@/components/common/CardIcon";
 
 type BranchExpenseProps = { params: Promise<{ branch: string }> };
 
@@ -30,14 +28,16 @@ export default async function BranchExpense({ params }: BranchExpenseProps) {
         {branches && branches[0].branch_name}
       </h1>
       <CardIconMenu>
-        <Link href={`/expense/${branch}/summary`} className={linkStyle}>
-          <ClipboardList strokeWidth={1} className={iconStyle} />
-          <h2 className={textStyle}>รายงานค่าใช้จ่าย</h2>
-        </Link>
-        <Link href={`/expense/${branch}/create`} className={linkStyle}>
-          <FilePlus2 strokeWidth={1} className={iconStyle} />
-          <h2 className={textStyle}>สร้าง</h2>
-        </Link>
+        <CardIcon
+          path={`/expense/${branch}/summary`}
+          description="รายงานค่าใช้จ่าย"
+          icon="ClipboardList"
+        />
+        <CardIcon
+          path={`/expense/${branch}/create`}
+          description="สร้าง"
+          icon="FilePlus2"
+        />
       </CardIconMenu>
     </>
   );

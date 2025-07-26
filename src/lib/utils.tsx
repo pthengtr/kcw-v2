@@ -5,11 +5,6 @@ import { toast } from "sonner";
 import { HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
 
-export const linkStyle =
-  "flex flex-col gap-4 items-center py-8 px-12 rounded-lg border-solid border-2 border-slate-800";
-export const iconStyle = "w-24 h-24";
-export const textStyle = "text-3xl";
-
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

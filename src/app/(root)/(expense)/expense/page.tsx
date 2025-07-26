@@ -1,8 +1,6 @@
+import CardIcon from "@/components/common/CardIcon";
 import CardIconMenu from "@/components/common/CardIconMenu";
 import { createClient } from "@/lib/supabase/client";
-import { iconStyle, linkStyle, textStyle } from "@/lib/utils";
-import { Store } from "lucide-react";
-import Link from "next/link";
 
 export type BranchType = {
   branch_id: number;
@@ -30,14 +28,12 @@ export default async function Branch() {
       <CardIconMenu>
         {branches &&
           branches?.map((branch) => (
-            <Link
+            <CardIcon
               key={branch.branch_name}
-              href={`/expense/${branch.branch_id}`}
-              className={linkStyle}
-            >
-              <Store strokeWidth={1} className={iconStyle} />
-              <h2 className={textStyle}>{branch.branch_name}</h2>
-            </Link>
+              path={`/expense/${branch.branch_id}`}
+              description={branch.branch_name}
+              icon="Store"
+            />
           ))}
       </CardIconMenu>
     </>
