@@ -1,47 +1,45 @@
-"use client";
-import { getMyCookie } from "@/app/(root)/action";
-import ExpenseTable, {
-  defaultColumnVisibility,
-} from "@/components/expense/ExpenseTable";
-import { useEffect, useState } from "react";
+import { ClipboardList, FilePlus2 } from "lucide-react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
-type BranchExpenseProps = {
-  params: Promise<{ branch: string }>;
-};
+const linkStyle =
+  "flex flex-col gap-4 items-center py-8 px-12 rounded-lg border-solid border-2 border-slate-800 w-80";
+const iconStyle = "w-24 h-24";
+const textStyle = "text-2xl";
 
-export default function BranchExpense({}: BranchExpenseProps) {
-  const [paginationPageSize, setPaginationPageSize] = useState<
-    number | undefined
-  >();
-  const [columnVisibility, setColumnVisibility] = useState<
-    typeof defaultColumnVisibility | undefined
-  >();
+type BranchExpenseProps = { params: { branch: Promise<string> } };
 
-  useEffect(() => {
-    async function getCookieColumnVisibility() {
-      const data = await getMyCookie("expenseColumnVisibility");
-      if (data) setColumnVisibility(JSON.parse(data));
-      else setColumnVisibility(defaultColumnVisibility);
-    }
+export default async function BranchExpense({ params }: BranchExpenseProps) {
+  const { branch } = await params;
 
-    async function getPaginationPageSize() {
-      const data = await getMyCookie("expensePaginationPageSize");
-      if (data) setPaginationPageSize(parseInt(data));
-      else setPaginationPageSize(10);
-    }
+  const supabase = createClient();
 
-    getCookieColumnVisibility();
-    getPaginationPageSize();
-  }, []);
+  const query = supabase
+    .from("branch")
+    .select("*")
+    .eq("branch_id", branch)
+    .limit(500);
+
+  const { data: branches, error } = await query;
+
+  if (error) {
+    console.log(error);
+    return;
+  }
 
   return (
-    <div>
-      {columnVisibility && paginationPageSize && (
-        <ExpenseTable
-          columnVisibility={columnVisibility}
-          paginationPageSize={paginationPageSize}
-        />
-      )}
-    </div>
+    <section className="flex flex-col items-center h-[90vh]">
+      <h1 className="text-6xl p-12">{branches && branches[0].branch_name}</h1>
+      <div className="grid grid-cols-4 justify-items-center items-center w-full">
+        <Link href={`/expense/${branch}/summary`} className={linkStyle}>
+          <ClipboardList strokeWidth={1} className={iconStyle} />
+          <h2 className={textStyle}>รายงานค่าใช้จ่าย</h2>
+        </Link>
+        <Link href={`/expense/${branch}/create`} className={linkStyle}>
+          <FilePlus2 strokeWidth={1} className={iconStyle} />
+          <h2 className={textStyle}>สร้าง</h2>
+        </Link>
+      </div>
+    </section>
   );
 }

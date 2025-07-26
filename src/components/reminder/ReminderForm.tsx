@@ -192,7 +192,7 @@ export default function ReminderForm({
         formData.get("total_amount") as string
       ) as number,
       discount: parseFloat(formData.get("discount") as string) as number,
-      user_id: user.email,
+      ...(update ? {} : { user_id: user.email }),
       due_date: formData.get("due_date") as string,
       kbiz_datetime: formData.get("kbiz_datetime") as string,
       payment_date: formData.get("payment_date") as string,
