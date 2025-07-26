@@ -46,7 +46,6 @@ export default function BankInfoInput() {
 
     if (data) {
       setBankInfoList(data);
-      console.log(data);
     }
   }
 
@@ -54,7 +53,6 @@ export default function BankInfoInput() {
 
   useEffect(() => {
     if (openCreateDialog) {
-      console.log("clear data");
       setBankName("");
       setBankAccountName("");
       setBankAccountNumber("");
@@ -81,8 +79,6 @@ export default function BankInfoInput() {
     }
     setTab(tab);
   }
-
-  console.log(bankInfoList);
 
   return (
     <>

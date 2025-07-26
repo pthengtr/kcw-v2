@@ -47,7 +47,7 @@ export type ReminderDefaultValueType = {
   discount: number;
   due_date: Date;
   kbiz_datetime: Date | null;
-  payment_date: Date | null;
+  payment_date?: Date | null;
   bill_pictures: File[];
   payment_pictures: File[];
   bank_info: BankInfoType | null;

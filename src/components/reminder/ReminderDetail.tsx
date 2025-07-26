@@ -6,6 +6,7 @@ import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import ReminderFormDialog from "./ReminderFormDialog";
 import { Separator } from "../ui/separator";
 import { Pencil } from "lucide-react";
+import { reminderDefaultValue } from "./ReminderColumn";
 
 export default function ReminderDetail() {
   const {
@@ -16,9 +17,8 @@ export default function ReminderDetail() {
     setPaymentImageArray,
     billImageArray,
     paymentImageArray,
+    isAdmin,
   } = useContext(ReminderContext) as ReminderContextType;
-
-  console.log(billImageArray);
 
   useEffect(() => {
     if (selectedRow) {
@@ -112,6 +112,34 @@ export default function ReminderDetail() {
     }
   }
 
+  const updateDefaultValues = selectedRow
+    ? {
+        supplier_name: selectedRow.supplier_name,
+        note_id: selectedRow.note_id,
+        bill_count: selectedRow.bill_count,
+        start_date: new Date(selectedRow.start_date),
+        end_date: new Date(selectedRow.end_date),
+        total_amount: Math.round(selectedRow.total_amount * 100) / 100,
+        discount: Math.round(selectedRow.discount * 100) / 100,
+        due_date: new Date(selectedRow.due_date),
+        kbiz_datetime: selectedRow.kbiz_datetime
+          ? new Date(selectedRow.kbiz_datetime)
+          : null,
+        payment_date: selectedRow.payment_date
+          ? new Date(selectedRow.payment_date)
+          : null,
+        bill_pictures: [],
+        payment_pictures: [],
+        bank_info: null,
+        remark: selectedRow.remark,
+        agree: false,
+      }
+    : reminderDefaultValue;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { payment_date, ...nonAdminDefaultValue } = updateDefaultValues;
+  const defaultValues = isAdmin ? reminderDefaultValue : nonAdminDefaultValue;
+
   return (
     <div className="flex flex-col items-center gap-6 relative overflow-scroll h-[90vh]">
       <div className="flex w-full sticky top-0 py-4 px-8 shadow-sm bg-white">
@@ -127,27 +155,7 @@ export default function ReminderDetail() {
               setOpen={setOpenUpdateDialog}
               dialogTrigger={<Pencil />}
               dialogHeader="แก้ไขรายการเตือนโอน"
-              defaultValues={{
-                supplier_name: selectedRow.supplier_name,
-                note_id: selectedRow.note_id,
-                bill_count: selectedRow.bill_count,
-                start_date: new Date(selectedRow.start_date),
-                end_date: new Date(selectedRow.end_date),
-                total_amount: Math.round(selectedRow.total_amount * 100) / 100,
-                discount: Math.round(selectedRow.discount * 100) / 100,
-                due_date: new Date(selectedRow.due_date),
-                kbiz_datetime: selectedRow.kbiz_datetime
-                  ? new Date(selectedRow.kbiz_datetime)
-                  : null,
-                payment_date: selectedRow.payment_date
-                  ? new Date(selectedRow.payment_date)
-                  : null,
-                bill_pictures: [],
-                payment_pictures: [],
-                bank_info: null,
-                remark: selectedRow.remark,
-                agree: false,
-              }}
+              defaultValues={defaultValues}
             />
           )}
         </div>

@@ -37,6 +37,8 @@ export type ReminderContextType = {
   setPaymentImageArray: (
     paymentImageArray: storageObjectType[] | undefined
   ) => void;
+  isAdmin: boolean;
+  setIsAdmin: (open: boolean) => void;
 };
 
 export const ReminderContext = createContext<ReminderContextType | null>(null);
@@ -61,6 +63,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [billImageArray, setBillImageArray] = useState<storageObjectType[]>();
   const [paymentImageArray, setPaymentImageArray] =
     useState<storageObjectType[]>();
+  const [isAdmin, setIsAdmin] = useState(false);
 
   function handleSelectedRow(row: ReminderType) {
     setSelectedRow(row);
@@ -100,6 +103,8 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setBillImageArray,
     paymentImageArray,
     setPaymentImageArray,
+    isAdmin,
+    setIsAdmin,
   };
 
   return (

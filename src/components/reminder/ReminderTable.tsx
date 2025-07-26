@@ -70,6 +70,7 @@ export default function ReminderTable({
     total,
     setTotal,
     handleSelectedRow,
+    isAdmin,
   } = useContext(ReminderContext) as ReminderContextType;
 
   const supabase = createClient();
@@ -120,6 +121,10 @@ export default function ReminderTable({
     getReminder();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { payment_date, ...nonAdminDefaultValue } = reminderDefaultValue;
+  const defaultValues = isAdmin ? reminderDefaultValue : nonAdminDefaultValue;
+
   return (
     <div className="flex flex-col gap-2 p-2">
       <div className="flex justify-center items-center p-4 gap-4">
@@ -139,7 +144,7 @@ export default function ReminderTable({
             setOpen={setOpenCreateDialog}
             dialogTrigger={<Plus />}
             dialogHeader="เพิ่มรายการเตือนโอน"
-            defaultValues={reminderDefaultValue}
+            defaultValues={defaultValues}
           />
         </div>
       </div>
