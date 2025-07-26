@@ -24,7 +24,7 @@ export default function ReminderDetail() {
     if (selectedRow) {
       getImageArray(
         "reminder_bill",
-        `${selectedRow.supplier_name
+        `${selectedRow.supplier_code
           .toString()
           .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
           .toString()
@@ -33,7 +33,7 @@ export default function ReminderDetail() {
       );
       getImageArray(
         "reminder_payment",
-        `${selectedRow.supplier_name
+        `${selectedRow.supplier_code
           .toString()
           .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
           .toString()
@@ -45,7 +45,7 @@ export default function ReminderDetail() {
 
   const section1 = ["id", "user_id", "created_at", "last_modified"];
   const section2 = [
-    "supplier_name",
+    "supplier_code",
     "note_id",
     "bill_count",
     "start_date",
@@ -114,7 +114,7 @@ export default function ReminderDetail() {
 
   const updateDefaultValues = selectedRow
     ? {
-        supplier_name: selectedRow.supplier_name,
+        supplier_code: selectedRow.supplier_code,
         note_id: selectedRow.note_id,
         bill_count: selectedRow.bill_count,
         start_date: new Date(selectedRow.start_date),
@@ -197,7 +197,7 @@ export default function ReminderDetail() {
           {selectedRow && (
             <ImageCarousel
               imageFolder="reminder_bill"
-              imageId={`${selectedRow.supplier_name
+              imageId={`${selectedRow.supplier_code
                 .toString()
                 .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
                 .toString()
@@ -215,7 +215,7 @@ export default function ReminderDetail() {
           {selectedRow && (
             <ImageCarousel
               imageFolder="reminder_payment"
-              imageId={`${selectedRow.supplier_name
+              imageId={`${selectedRow.supplier_code
                 .toString()
                 .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
                 .toString()

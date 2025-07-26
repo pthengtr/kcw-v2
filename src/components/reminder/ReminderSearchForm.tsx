@@ -72,7 +72,7 @@ export default function ReminderSearchForm({
     // type-casting here for convenience
     // in practice, you should validate your inputs
     const searchData = {
-      supplier_name: formData.get("supplier_name") as string,
+      supplier_code: formData.get("supplier_code") as string,
       note_id: formData.get("note_id") as string,
       due_month: formData.get("due_month") as string,
       payment_month: formData.get("payment_month") as string,
@@ -87,8 +87,8 @@ export default function ReminderSearchForm({
       .order("id", { ascending: false })
       .limit(500);
 
-    if (searchData.supplier_name)
-      query = query.ilike("supplier_name", `%${searchData.supplier_name}%`);
+    if (searchData.supplier_code)
+      query = query.ilike("supplier_code", `%${searchData.supplier_code}%`);
 
     if (searchData.note_id)
       query = query.ilike("note_id", `%${searchData.note_id}%`);
@@ -136,7 +136,7 @@ export default function ReminderSearchForm({
     const { search_supplier_name, note_id, due_month, payment_month } = values;
 
     const formData = new FormData();
-    formData.append("supplier_name", search_supplier_name);
+    formData.append("supplier_code", search_supplier_name);
     formData.append("note_id", note_id);
     formData.append("due_month", due_month);
     formData.append("payment_month", payment_month);

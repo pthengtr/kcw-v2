@@ -23,7 +23,7 @@ import SupplierNameInput from "./SupplierNameInput";
 export const reminderFieldLabel = {
   id: "รายการเลขที่",
   created_at: "สร้าง",
-  supplier_name: "บริษัท",
+  supplier_code: "บริษัท",
   note_id: "เลขที่ใบวางบิล",
   bill_count: "จำนวนบิล",
   start_date: "บิลวันที่",
@@ -86,7 +86,7 @@ function getFormInput(
       return <DatePickerInput field={field} timePicker optional />;
       break;
 
-    case "supplier_name":
+    case "supplier_code":
       return <SupplierNameInput field={field} />;
       break;
 
@@ -114,7 +114,7 @@ function getFormInput(
 }
 
 const formSchema = z.object({
-  supplier_name: z.string().nonempty("กรุณาใส่ชื่อบริษัท"),
+  supplier_code: z.string().nonempty("กรุณาใส่ชื่อบริษัท"),
   note_id: z.string().nonempty("กรุณาใส่เลขที่ใบวางบิล"),
   bill_count: z
     .number({ message: "เฉพาะตัวเลขจำนวนเต็มเท่านั้น" })
@@ -183,7 +183,7 @@ export default function ReminderForm({
     // in practice, you should validate your inputs
     const insertData = {
       ...(update ? {} : { created_at: new Date().toLocaleString("en-US") }),
-      supplier_name: formData.get("supplier_name") as string,
+      supplier_code: formData.get("supplier_code") as string,
       note_id: formData.get("note_id") as string,
       bill_count: parseInt(formData.get("bill_count") as string) as number,
       start_date: formData.get("start_date") as string,
@@ -232,7 +232,7 @@ export default function ReminderForm({
     }
 
     if (data) {
-      const imageId = `${insertData.supplier_name
+      const imageId = `${insertData.supplier_code
         .toString()
         .replace(/[^A-Za-z0-9]/g, "")}_${insertData.note_id
         .toString()
@@ -263,7 +263,7 @@ export default function ReminderForm({
 
       await getImageArray(
         "reminder_bill",
-        `${data[0].supplier_name
+        `${data[0].supplier_code
           .toString()
           .replace(/[^A-Za-z0-9]/g, "")}_${data[0].note_id
           .toString()
@@ -273,7 +273,7 @@ export default function ReminderForm({
 
       await getImageArray(
         "reminder_payment",
-        `${data[0].supplier_name
+        `${data[0].supplier_code
           .toString()
           .replace(/[^A-Za-z0-9]/g, "")}_${data[0].note_id
           .toString()
@@ -294,7 +294,7 @@ export default function ReminderForm({
         .from("supplier_bank_info")
         .insert([
           {
-            supplier_name: insertData.supplier_name,
+            supplier_code: insertData.supplier_code,
             bank_name: insertData.bank_name,
             bank_account_name: insertData.bank_account_name,
             bank_account_number: insertData.bank_account_number,
@@ -311,7 +311,7 @@ export default function ReminderForm({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       const {
-        supplier_name,
+        supplier_code,
         bill_count,
         start_date,
         end_date,
@@ -327,7 +327,7 @@ export default function ReminderForm({
       } = values;
 
       const formData = new FormData();
-      formData.append("supplier_name", supplier_name);
+      formData.append("supplier_code", supplier_code);
       formData.append("note_id", note_id);
       formData.append("bill_count", bill_count.toString());
       formData.append("start_date", start_date.toLocaleString("en-US"));

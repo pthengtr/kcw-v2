@@ -10,7 +10,7 @@ import { Row } from "@tanstack/react-table";
 
 export type BankInfoType = {
   id: number;
-  supplier_name: string;
+  supplier_code: string;
   bank_name: string;
   bank_account_name: string;
   bank_account_number: string;
@@ -19,7 +19,7 @@ export type BankInfoType = {
 export type ReminderType = {
   id: number;
   created_at: string;
-  supplier_name: string;
+  supplier_code: string;
   note_id: string;
   bill_count: number;
   start_date: string;
@@ -38,7 +38,7 @@ export type ReminderType = {
 };
 
 export type ReminderDefaultValueType = {
-  supplier_name: string;
+  supplier_code: string;
   note_id: string;
   bill_count: number;
   start_date: Date;
@@ -56,7 +56,7 @@ export type ReminderDefaultValueType = {
 };
 
 export const reminderDefaultValue: ReminderDefaultValueType = {
-  supplier_name: "",
+  supplier_code: "",
   note_id: "",
   bill_count: 1,
   start_date: new Date(),
@@ -77,7 +77,7 @@ export const reminderColumns: ColumnDef<ReminderType>[] = [
   numberInt("id"),
   dateThai("created_at", true),
   dateThai("last_modified", true),
-  simpleText("supplier_name"),
+  simpleText("supplier_code"),
   simpleText("note_id"),
   numberInt("bill_count"),
   dateThai("start_date"),

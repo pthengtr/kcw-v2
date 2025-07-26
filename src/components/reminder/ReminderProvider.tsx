@@ -67,7 +67,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
 
   function handleSelectedRow(row: ReminderType) {
     setSelectedRow(row);
-    setSupplierName(row.supplier_name);
+    setSupplierName(row.supplier_code);
     setBankName(row.bank_name);
     setBankAccountName(row.bank_account_name);
     setBankAccountNumber(row.bank_account_number);

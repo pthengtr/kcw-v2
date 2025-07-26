@@ -40,7 +40,7 @@ export default function BankInfoSavedAccount({
     const { data, error: errorGetBankInfo } = await supabase
       .from("supplier_bank_info")
       .select("*", { count: "exact" })
-      .ilike("supplier_name", supplierName)
+      .ilike("supplier_code", supplierName)
       .order("id", { ascending: false })
       .limit(500);
 
