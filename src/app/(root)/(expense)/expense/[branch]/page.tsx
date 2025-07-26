@@ -2,7 +2,7 @@ import { ClipboardList, FilePlus2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import CardIconMenu from "@/components/common/CardIconMenu";
-import { iconStyle, linkStyle, textStyle } from "@/app/(root)/page";
+import { iconStyle, linkStyle, textStyle } from "@/lib/utils";
 
 type BranchExpenseProps = { params: Promise<{ branch: string }> };
 

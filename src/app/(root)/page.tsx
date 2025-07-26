@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { MessageCircleWarning, Banknote } from "lucide-react";
 import CardIconMenu from "@/components/common/CardIconMenu";
-
-export const linkStyle =
-  "flex flex-col gap-4 items-center py-8 px-12 rounded-lg border-solid border-2 border-slate-800";
-export const iconStyle = "w-24 h-24";
-export const textStyle = "text-3xl";
+import { iconStyle, linkStyle, textStyle } from "@/lib/utils";
 
 export default function Home() {
   return (

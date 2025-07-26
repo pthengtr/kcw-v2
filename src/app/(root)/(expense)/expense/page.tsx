@@ -1,8 +1,8 @@
 import CardIconMenu from "@/components/common/CardIconMenu";
 import { createClient } from "@/lib/supabase/client";
+import { iconStyle, linkStyle, textStyle } from "@/lib/utils";
 import { Store } from "lucide-react";
 import Link from "next/link";
-import { iconStyle, linkStyle, textStyle } from "../../page";
 
 export type BranchType = {
   branch_id: number;
