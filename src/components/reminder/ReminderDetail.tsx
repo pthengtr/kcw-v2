@@ -160,7 +160,6 @@ export default function ReminderDetail() {
           )}
         </div>
       </div>
-
       <div className="grid grid-cols-2 gap-y-1 w-[80%]">
         {selectedRow &&
           section1.map((key) => (

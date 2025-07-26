@@ -1,7 +1,6 @@
 import {
   NavigationMenu,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
 } from "@/components/ui/navigation-menu";
 import Link from "next/link";
@@ -13,28 +12,18 @@ export default function Navbar() {
       <NavigationMenu>
         <NavigationMenuList className="flex gap-4 ">
           <NavigationMenuItem>
-            <Link href="/" legacyBehavior passHref>
-              <NavigationMenuLink className="">หน้าแรก</NavigationMenuLink>
-            </Link>
-          </NavigationMenuItem>
-          {/* <NavigationMenuItem>
-            <Link href="/product" legacyBehavior passHref>
-              <NavigationMenuLink className="">สินค้า</NavigationMenuLink>
+            <Link href="/" passHref>
+              หน้าแรก
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link href="/user" legacyBehavior passHref>
-              <NavigationMenuLink className="">พนักงาน</NavigationMenuLink>
-            </Link>
-          </NavigationMenuItem> */}
-          <NavigationMenuItem>
-            <Link href="/reminder" legacyBehavior passHref>
-              <NavigationMenuLink className="">เตือนโอน</NavigationMenuLink>
+            <Link href="/reminder" passHref>
+              เตือนโอน
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link href="/expense" legacyBehavior passHref>
-              <NavigationMenuLink className="">ค่าใช้จ่าย</NavigationMenuLink>
+            <Link href="/expense" passHref>
+              ค่าใช้จ่าย
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>

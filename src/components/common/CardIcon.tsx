@@ -42,8 +42,10 @@ export default function CardIcon({ path, description, icon }: CardIconProps) {
   }
   return (
     <Link href={path} className={linkStyle}>
-      {getIcon(icon)}
-      <h2 className={textStyle}>{description}</h2>
+      <>
+        {getIcon(icon)}
+        <h2 className={textStyle}>{description}</h2>
+      </>
     </Link>
   );
 }
