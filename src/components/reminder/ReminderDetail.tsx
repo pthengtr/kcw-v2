@@ -136,9 +136,12 @@ export default function ReminderDetail() {
       }
     : reminderDefaultValue;
 
+  console.log(selectedRow);
+  console.log(updateDefaultValues);
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { payment_date, ...nonAdminDefaultValue } = updateDefaultValues;
-  const defaultValues = isAdmin ? reminderDefaultValue : nonAdminDefaultValue;
+  const defaultValues = isAdmin ? updateDefaultValues : nonAdminDefaultValue;
 
   return (
     <div className="flex flex-col items-center gap-6 relative overflow-scroll h-[90vh]">
