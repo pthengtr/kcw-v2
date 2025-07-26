@@ -7,7 +7,7 @@ const linkStyle =
 const iconStyle = "w-24 h-24";
 const textStyle = "text-2xl";
 
-type BranchExpenseProps = { params: { branch: Promise<string> } };
+type BranchExpenseProps = { params: Promise<{ branch: string }> };
 
 export default async function BranchExpense({ params }: BranchExpenseProps) {
   const { branch } = await params;
