@@ -150,7 +150,7 @@ export default function ReminderSearchForm({
       onSubmit={onSubmit}
       getFieldLabel={getFieldLabel}
       getFormInput={getFormInput}
-      className="flex justify-center items-center gap-4 pxs-12"
+      className="flex justify-center items-end gap-4 pxs-12"
       submitLabel={<Search />}
     />
   );

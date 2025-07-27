@@ -59,7 +59,7 @@ export default function Form<T extends FieldValues>({
             control={form.control}
             name={field as Path<T>}
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="w-full">
                 <FormLabel>{getFieldLabel(field as FieldValues)}</FormLabel>
                 <FormControl>
                   {getFormInput(field as FieldValues, form)}
@@ -70,7 +70,7 @@ export default function Form<T extends FieldValues>({
           />
         ))}
 
-        <div className="self-center">
+        <div className="">
           <Button
             disabled={form.formState.isSubmitting}
             className={`${form.formState.isSubmitting && "bg-blue-300"}`}

@@ -7,9 +7,19 @@ import { createClient } from "@/lib/supabase/client";
 import Form from "../common/Form";
 import { FieldValues, UseFormReturn } from "react-hook-form";
 import { useContext } from "react";
-import { Search } from "lucide-react";
 import { Input } from "../ui/input";
 import { SupplierContext, SupplierContextType } from "./SupplierProvider";
+import { toast } from "sonner";
+
+export type SupplierFormDefaultType = {
+  supplier_code: string;
+  supplier_name: string;
+};
+
+export const supplierFormDefaultValues: SupplierFormDefaultType = {
+  supplier_code: "",
+  supplier_name: "",
+};
 
 const searchFormFieldLabel = {
   supplier_code: "ชื่อย่อบริษัท",
@@ -39,13 +49,8 @@ const formSchema = z.object({
   supplier_name: z.string(),
 });
 
-type SupplierDefaultType = {
-  supplier_code: string;
-  supplier_name: string;
-};
-
 type SupplierFormProps = {
-  defaultValues: SupplierDefaultType;
+  defaultValues: SupplierFormDefaultType;
   update?: boolean;
 };
 
@@ -53,9 +58,13 @@ export default function SupplierForm({
   defaultValues,
   update = false,
 }: SupplierFormProps) {
-  const { setSuppliers, setTotal, selectedRow } = useContext(
-    SupplierContext
-  ) as SupplierContextType;
+  const {
+    setTotal,
+    selectedRow,
+    setOpenCreateDialog,
+    setOpenUpdateDialog,
+    setSubmitError,
+  } = useContext(SupplierContext) as SupplierContextType;
 
   async function createUpdateSupplier(formData: FormData) {
     // type-casting here for convenience
@@ -70,7 +79,7 @@ export default function SupplierForm({
     const query =
       update && selectedRow
         ? supabase
-            .from("payment_reminder")
+            .from("supplier")
             .update([supplierFormData])
             .eq("supplier_id", selectedRow.supplier_id)
             .select()
@@ -79,14 +88,20 @@ export default function SupplierForm({
     const { data, error, count } = await query;
 
     if (error) {
-      console.log(error);
-      return;
+      setSubmitError(error.message);
+      toast.error("เกิดข้อผิดพลาด ไม่สามารถบันทึกข้อมูลได้");
     }
 
     if (data) {
-      setSuppliers(data);
+      setSubmitError(undefined);
+      if (update) toast.success("แก้ไขข้อมูลสำเร็จ");
+      else toast.success("สร้างข้อมูลใหม่สำเร็จ");
     }
+
     if (count) setTotal(count);
+
+    setOpenUpdateDialog(false);
+    setOpenCreateDialog(false);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -106,8 +121,8 @@ export default function SupplierForm({
       onSubmit={onSubmit}
       getFieldLabel={getFieldLabel}
       getFormInput={getFormInput}
-      className="flex justify-center items-center gap-4 pxs-12"
-      submitLabel={<Search />}
+      className="flex flex-col justify-center items-center gap-4"
+      submitLabel="บันทึก"
     />
   );
 }

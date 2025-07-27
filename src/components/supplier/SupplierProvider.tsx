@@ -8,6 +8,12 @@ export type SupplierContextType = {
   setSuppliers: (suppliers: SupplierType[] | undefined) => void;
   selectedRow: SupplierType | undefined;
   setSelectedRow: (selectedRow: SupplierType | undefined) => void;
+  openCreateDialog: boolean;
+  setOpenCreateDialog: (open: boolean) => void;
+  openUpdateDialog: boolean;
+  setOpenUpdateDialog: (open: boolean) => void;
+  openDeleteDialog: boolean;
+  setOpenDeleteDialog: (open: boolean) => void;
   submitError: string | undefined;
   setSubmitError: (error: string | undefined) => void;
   total: number | undefined;
@@ -22,6 +28,9 @@ type ExpenseProviderProps = {
 
 export default function SupplierProvider({ children }: ExpenseProviderProps) {
   const [selectedRow, setSelectedRow] = useState<SupplierType>();
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [suppliers, setSuppliers] = useState<SupplierType[]>();
   const [submitError, setSubmitError] = useState<string>();
   const [total, setTotal] = useState<number>();
@@ -33,6 +42,12 @@ export default function SupplierProvider({ children }: ExpenseProviderProps) {
     setSelectedRow,
     submitError,
     setSubmitError,
+    openCreateDialog,
+    setOpenCreateDialog,
+    openUpdateDialog,
+    setOpenUpdateDialog,
+    openDeleteDialog,
+    setOpenDeleteDialog,
     total,
     setTotal,
   };

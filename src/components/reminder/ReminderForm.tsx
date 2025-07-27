@@ -369,7 +369,7 @@ export default function ReminderForm({
         onSubmit={onSubmit}
         getFieldLabel={getFieldLabel}
         getFormInput={getFormInput}
-        className={"flex flex-col gap-8 p-10 max-w-3xl"}
+        className={"flex flex-col items-center gap-8 p-10 max-w-3xl"}
         submitLabel="บันทึก"
       />
     </>

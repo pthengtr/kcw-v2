@@ -27,6 +27,11 @@ export default function Navbar() {
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
+            <Link href="/supplier" passHref>
+              รายชื่อบริษัท
+            </Link>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
             <LogoutButton />
           </NavigationMenuItem>
         </NavigationMenuList>

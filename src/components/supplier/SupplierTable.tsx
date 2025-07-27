@@ -6,6 +6,11 @@ import SupplierSearchForm from "./SupplierSearchForm";
 import { DataTable } from "../common/DataTable";
 import { supplierColumn } from "./SupplierColumn";
 import { createClient } from "@/lib/supabase/client";
+import SupplierFormDialog from "./SupplierFormDialog";
+import { Pencil, Plus } from "lucide-react";
+import { Button } from "../ui/button";
+import { supplierFormDefaultValues } from "./SupplierForm";
+import SupplierDeleteDialog from "./SupplierDeleteDialog";
 
 export default function SupplierTable() {
   const {
@@ -13,8 +18,14 @@ export default function SupplierTable() {
     setSuppliers,
     total,
     setTotal,
+    selectedRow,
     setSelectedRow,
     setSubmitError,
+    openCreateDialog,
+    setOpenCreateDialog,
+    openUpdateDialog,
+    setOpenUpdateDialog,
+    openDeleteDialog,
   } = useContext(SupplierContext) as SupplierContextType;
 
   const supabase = createClient();
@@ -24,7 +35,7 @@ export default function SupplierTable() {
       const query = supabase
         .from("supplier")
         .select("*", { count: "exact" })
-        .order("supplier_id", { ascending: true })
+        .order("supplier_id", { ascending: false })
         .limit(500);
 
       const { data, error, count } = await query;
@@ -45,19 +56,54 @@ export default function SupplierTable() {
   useEffect(() => {
     setSubmitError(undefined);
     getSuppliers();
-  }, [getSuppliers, setSubmitError]);
+  }, [
+    getSuppliers,
+    setSubmitError,
+    openCreateDialog,
+    openUpdateDialog,
+    openDeleteDialog,
+  ]);
 
   return (
-    <div className="flex flex-col gap-2 p-2 w-fit">
-      <div className="flex justify-center items-center p-4 gap-4">
-        <div>
-          <SupplierSearchForm
-            defaultValues={{
-              supplier_code: "",
-              supplier_name: "",
-            }}
-          />
-        </div>
+    <div className="flex flex-col items-center gap-4 p-2">
+      <div className="flex gap-4 items-end">
+        <SupplierSearchForm
+          defaultValues={{
+            supplier_code: "",
+            supplier_name: "",
+          }}
+        />
+        <SupplierFormDialog
+          open={openCreateDialog}
+          setOpen={setOpenCreateDialog}
+          dialogTrigger={
+            <Button id="create-expense-novat">
+              <Plus />
+            </Button>
+          }
+          dialogHeader={`เพิ่มรายชื่อบริษัท`}
+          defaultValues={supplierFormDefaultValues}
+        />
+        {selectedRow && (
+          <>
+            <SupplierFormDialog
+              update
+              open={openUpdateDialog}
+              setOpen={setOpenUpdateDialog}
+              dialogTrigger={
+                <Button id="create-expense-novat">
+                  <Pencil />
+                </Button>
+              }
+              dialogHeader={`แก้ไขรายชื่อบริษัท`}
+              defaultValues={{
+                supplier_code: selectedRow.supplier_code,
+                supplier_name: selectedRow.supplier_name,
+              }}
+            />
+            <SupplierDeleteDialog />
+          </>
+        )}
       </div>
 
       <div className="h-full">
