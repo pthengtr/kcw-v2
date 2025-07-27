@@ -64,6 +64,7 @@ export default function SupplierForm({
     setOpenCreateDialog,
     setOpenUpdateDialog,
     setSubmitError,
+    setSuppliers,
   } = useContext(SupplierContext) as SupplierContextType;
 
   async function createUpdateSupplier(formData: FormData) {
@@ -94,8 +95,12 @@ export default function SupplierForm({
 
     if (data) {
       setSubmitError(undefined);
-      if (update) toast.success("แก้ไขข้อมูลสำเร็จ");
-      else toast.success("สร้างข้อมูลใหม่สำเร็จ");
+      if (update) {
+        setSuppliers(data);
+        toast.success("แก้ไขข้อมูลสำเร็จ");
+      } else {
+        toast.success("สร้างข้อมูลใหม่สำเร็จ");
+      }
     }
 
     if (count) setTotal(count);

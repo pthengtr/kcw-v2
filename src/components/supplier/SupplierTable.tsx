@@ -56,13 +56,7 @@ export default function SupplierTable() {
   useEffect(() => {
     setSubmitError(undefined);
     getSuppliers();
-  }, [
-    getSuppliers,
-    setSubmitError,
-    openCreateDialog,
-    openUpdateDialog,
-    openDeleteDialog,
-  ]);
+  }, [getSuppliers, setSubmitError, openCreateDialog, openDeleteDialog]);
 
   return (
     <div className="flex flex-col items-center gap-4 p-2">
