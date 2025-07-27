@@ -1,7 +1,9 @@
+import SupplierProvider from "@/components/supplier/SupplierProvider";
+
 export default function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <>{children}</>;
+  return <SupplierProvider>{children}</SupplierProvider>;
 }

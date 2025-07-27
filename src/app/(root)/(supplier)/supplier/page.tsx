@@ -1,3 +1,9 @@
+import SupplierTable from "@/components/supplier/SupplierTable";
+
 export default function SupplierPage() {
-  return <h1>Supplier Page</h1>;
+  return (
+    <section className="h-[90vh] flex justify-center">
+      <SupplierTable />
+    </section>
+  );
 }

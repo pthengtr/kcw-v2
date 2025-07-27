@@ -61,7 +61,7 @@ export default function ExpenseSearchForm({
     ExpenseContext
   ) as ExpenseContextType;
 
-  async function searchReminder(formData: FormData) {
+  async function searchExpense(formData: FormData) {
     // type-casting here for convenience
     // in practice, you should validate your inputs
     const searchData = {
@@ -117,7 +117,7 @@ export default function ExpenseSearchForm({
     formData.append("company_name", company_name);
     formData.append("payment_month", payment_month);
 
-    await searchReminder(formData);
+    await searchExpense(formData);
   }
   return (
     <Form
