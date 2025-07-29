@@ -136,9 +136,6 @@ export default function ReminderDetail() {
       }
     : reminderDefaultValue;
 
-  console.log(selectedRow);
-  console.log(updateDefaultValues);
-
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { payment_date, ...nonAdminDefaultValue } = updateDefaultValues;
   const defaultValues = isAdmin ? updateDefaultValues : nonAdminDefaultValue;

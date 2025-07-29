@@ -1,7 +1,14 @@
 "use client";
-import { useParams } from "next/navigation";
+
+import ExpenseItemTable from "@/components/expense/create/ExpenseItemTable";
 
 export default function Create() {
-  const { branch } = useParams();
-  return <div>Create: {branch}</div>;
+  return (
+    <div className="grid grid-cols-3">
+      <div className="col-span-2">
+        <ExpenseItemTable />
+      </div>
+      <div className=""></div>
+    </div>
+  );
 }

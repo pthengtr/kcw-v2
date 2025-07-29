@@ -2,28 +2,42 @@
 import { createContext, useState } from "react";
 import React from "react";
 import { storageObjectType } from "../common/ImageCarousel";
-import { ExpenseType } from "./ExpenseColumn";
+import { ExpenseReceiptType } from "./summary/ExpenseReceiptColumn";
+import { ExpenseEntryType } from "./summary/ExpenseEntryColumn";
+import { ExpenseItemType } from "./create/ExpenseItemColumn";
 
 export type ExpenseContextType = {
-  selectedRow: ExpenseType | undefined;
-  setSelectedRow: (selectedRow: ExpenseType | undefined) => void;
-  openCreateNoVatDialog: boolean;
-  setOpenCreateNoVatDialog: (open: boolean) => void;
-  openCreateVatDialog: boolean;
-  setOpenCreateVatDialog: (open: boolean) => void;
-  openUpdateDialog: boolean;
-  setOpenUpdateDialog: (open: boolean) => void;
   submitError: string | undefined;
   setSubmitError: (error: string | undefined) => void;
-  expenses: ExpenseType[] | undefined;
-  setExpenses: (expenses: ExpenseType[]) => void;
-  total: number | undefined;
-  setTotal: (total: number) => void;
-  handleSelectedRow: (row: ExpenseType) => void;
+  handleSelectedReceipt: (row: ExpenseReceiptType) => void;
   receiptImageArray: storageObjectType[] | undefined;
   setReceiptImageArray: (
     receiptImageArray: storageObjectType[] | undefined
   ) => void;
+
+  // set selected group
+  selectedReceipt: ExpenseReceiptType | undefined;
+  setSelectedReceipt: (selectedRow: ExpenseReceiptType | undefined) => void;
+  selectedEntry: ExpenseEntryType | undefined;
+  setSelectedEntry: (selectedRow: ExpenseEntryType | undefined) => void;
+  selectedItem: ExpenseItemType | undefined;
+  setSelectedItem: (selectedRow: ExpenseItemType | undefined) => void;
+
+  // array group
+  expenseReceipts: ExpenseReceiptType[] | undefined;
+  setExpenseReceipts: (expenses: ExpenseReceiptType[]) => void;
+  receiptEntries: ExpenseEntryType[] | undefined;
+  setReceiptEntries: (receiptEntries: ExpenseEntryType[] | undefined) => void;
+  expenseItems: ExpenseItemType[] | undefined;
+  setExpenseItems: (expenseItems: ExpenseItemType[] | undefined) => void;
+
+  // total group
+  totalReceipt: number | undefined;
+  setTotalReceipt: (total: number) => void;
+  totalEntry: number | undefined;
+  setTotalEntry: (total: number) => void;
+  totalItem: number | undefined;
+  setTotalItem: (total: number) => void;
 };
 
 export const ExpenseContext = createContext<ExpenseContextType | null>(null);
@@ -33,38 +47,52 @@ type ExpenseProviderProps = {
 };
 
 export default function ExpenseProvider({ children }: ExpenseProviderProps) {
-  const [selectedRow, setSelectedRow] = useState<ExpenseType>();
-  const [openCreateVatDialog, setOpenCreateVatDialog] = useState(false);
-  const [openCreateNoVatDialog, setOpenCreateNoVatDialog] = useState(false);
-  const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
-  const [expenses, setExpenses] = useState<ExpenseType[]>();
-  const [total, setTotal] = useState<number>();
+  // select group
+  const [selectedReceipt, setSelectedReceipt] = useState<ExpenseReceiptType>();
+  const [selectedEntry, setSelectedEntry] = useState<ExpenseEntryType>();
+  const [selectedItem, setSelectedItem] = useState<ExpenseItemType>();
+  // array group
+  const [expenseItems, setExpenseItems] = useState<ExpenseItemType[]>();
+  const [expenseReceipts, setExpenseReceipts] =
+    useState<ExpenseReceiptType[]>();
+  const [receiptEntries, setReceiptEntries] = useState<ExpenseEntryType[]>();
+  // total group
+  const [totalReceipt, setTotalReceipt] = useState<number>();
+  const [totalEntry, setTotalEntry] = useState<number>();
+  const [totalItem, setTotalItem] = useState<number>();
+  // image
   const [receiptImageArray, setReceiptImageArray] =
     useState<storageObjectType[]>();
 
-  function handleSelectedRow(row: ExpenseType) {
-    setSelectedRow(row);
+  function handleSelectedReceipt(row: ExpenseReceiptType) {
+    setSelectedReceipt(row);
   }
 
   const value = {
-    selectedRow,
-    setSelectedRow,
-    openCreateVatDialog,
-    setOpenCreateVatDialog,
-    openCreateNoVatDialog,
-    setOpenCreateNoVatDialog,
-    openUpdateDialog,
-    setOpenUpdateDialog,
+    selectedReceipt,
+    setSelectedReceipt,
+    selectedEntry,
+    setSelectedEntry,
+    selectedItem,
+    setSelectedItem,
     submitError,
     setSubmitError,
-    expenses,
-    setExpenses,
-    total,
-    setTotal,
+    expenseReceipts,
+    setExpenseReceipts,
+    receiptEntries,
+    setReceiptEntries,
+    expenseItems,
+    setExpenseItems,
+    totalReceipt,
+    setTotalReceipt,
+    totalItem,
+    setTotalItem,
+    totalEntry,
+    setTotalEntry,
     receiptImageArray,
     setReceiptImageArray,
-    handleSelectedRow,
+    handleSelectedReceipt,
   };
 
   return (
