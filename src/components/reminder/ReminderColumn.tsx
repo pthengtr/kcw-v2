@@ -4,6 +4,7 @@ import { ColumnDef, HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../common/DataTableColumnHeader";
 import { reminderFieldLabel } from "./ReminderForm";
 import { Row } from "@tanstack/react-table";
+import { Check } from "lucide-react";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
@@ -35,6 +36,7 @@ export type ReminderType = {
   bank_account_name: string;
   bank_account_number: string;
   last_modified: string;
+  proof_of_payment: boolean;
 };
 
 export type ReminderDefaultValueType = {
@@ -53,6 +55,7 @@ export type ReminderDefaultValueType = {
   bank_info: BankInfoType | null;
   remark: string;
   agree: boolean;
+  proof_of_payment: boolean;
 };
 
 export const reminderDefaultValue: ReminderDefaultValueType = {
@@ -71,6 +74,7 @@ export const reminderDefaultValue: ReminderDefaultValueType = {
   bank_info: null,
   remark: "",
   agree: false,
+  proof_of_payment: false,
 };
 
 export const reminderColumns: ColumnDef<ReminderType>[] = [
@@ -104,6 +108,26 @@ export const reminderColumns: ColumnDef<ReminderType>[] = [
       return (
         (row.getValue(columnId) as string) ? "จ่ายแล้ว" : "ค้าง"
       ).includes(filterValue);
+    },
+  },
+  {
+    id: "หลักฐานการจ่าย",
+    accessorKey: "proof_of_payment",
+    header: ({ column }: HeaderContext<ReminderType, unknown>) => (
+      <DataTableColumnHeader column={column} title="หลักฐานการจ่าย" />
+    ),
+    cell: (row) => {
+      return (
+        <div className="text-right">
+          {row.getValue() ? (
+            <div className="flex justify-center">
+              <Check />
+            </div>
+          ) : (
+            ""
+          )}
+        </div>
+      );
     },
   },
 ];

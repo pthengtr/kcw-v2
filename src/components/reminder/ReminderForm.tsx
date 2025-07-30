@@ -10,7 +10,7 @@ import { FieldValues, UseFormReturn } from "react-hook-form";
 import { ReminderDefaultValueType } from "./ReminderColumn";
 import { useContext } from "react";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
-import { commonUploadFile } from "@/lib/utils";
+import { commonUploadFile, imageRegex } from "@/lib/utils";
 import { getImageArray } from "../common/ImageCarousel";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
@@ -43,6 +43,7 @@ export const reminderFieldLabel = {
   bill_pictures: "เพิ่มรูปบิล/ใบวางบิล",
   payment_pictures: "เพิ่มรูปหลักฐานการขำระเงิน",
   agree: " ",
+  proof_of_payment: " ",
 };
 
 function getFieldLabel(field: FieldValues) {
@@ -107,6 +108,14 @@ function getFormInput(
         </Label>
       );
 
+    case "proof_of_payment":
+      return (
+        <Label className="flex gap-4 items-center just">
+          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+          <span>มีหลักฐานการชำระแล้ว</span>
+        </Label>
+      );
+
     //simple text
     default:
       return <Input type="text" {...field} />;
@@ -140,6 +149,7 @@ const formSchema = z.object({
   agree: z.boolean().refine((val) => val === true, {
     message: "กรุณาตรวจสอบข้อมูลก่อนบันทึก",
   }),
+  proof_of_payment: z.boolean(),
 });
 
 type ReminderFormProps = {
@@ -164,6 +174,7 @@ export default function ReminderForm({
     saveBankInfo,
     setBillImageArray,
     setPaymentImageArray,
+    isAdmin,
   } = useContext(ReminderContext) as ReminderContextType;
 
   async function createUpdateReminder(formData: FormData) {
@@ -195,7 +206,9 @@ export default function ReminderForm({
       ...(update ? {} : { user_id: user.email }),
       due_date: formData.get("due_date") as string,
       kbiz_datetime: formData.get("kbiz_datetime") as string,
-      payment_date: formData.get("payment_date") as string,
+      ...(isAdmin
+        ? { payment_date: formData.get("payment_date") as string }
+        : {}),
       remark: formData.get("remark") as string,
       last_modified: new Date().toLocaleString("en-US"),
       bank_name: selectedBankInfo ? selectedBankInfo.bank_name : bankName,
@@ -205,6 +218,7 @@ export default function ReminderForm({
       bank_account_number: selectedBankInfo
         ? selectedBankInfo.bank_account_number
         : bankAccountNumber,
+      proof_of_payment: formData.get("proof_of_payment") as string,
     };
 
     //update or insert new data
@@ -234,9 +248,9 @@ export default function ReminderForm({
     if (data) {
       const imageId = `${insertData.supplier_code
         .toString()
-        .replace(/[^A-Za-z0-9]/g, "")}_${insertData.note_id
+        .replace(imageRegex, "")}_${insertData.note_id
         .toString()
-        .replace(/[^A-Za-z0-9]/g, "")}`;
+        .replace(imageRegex, "")}`;
 
       const bill_pictures = formData.getAll("bill_pictures[]") as File[];
       bill_pictures.forEach((item) =>
@@ -265,9 +279,9 @@ export default function ReminderForm({
         "reminder_bill",
         `${data[0].supplier_code
           .toString()
-          .replace(/[^A-Za-z0-9]/g, "")}_${data[0].note_id
+          .replace(imageRegex, "")}_${data[0].note_id
           .toString()
-          .replace(/[^A-Za-z0-9]/g, "")}`,
+          .replace(imageRegex, "")}`,
         setBillImageArray
       );
 
@@ -275,9 +289,9 @@ export default function ReminderForm({
         "reminder_payment",
         `${data[0].supplier_code
           .toString()
-          .replace(/[^A-Za-z0-9]/g, "")}_${data[0].note_id
+          .replace(imageRegex, "")}_${data[0].note_id
           .toString()
-          .replace(/[^A-Za-z0-9]/g, "")}`,
+          .replace(imageRegex, "")}`,
         setPaymentImageArray
       );
 
@@ -324,6 +338,7 @@ export default function ReminderForm({
         bill_pictures,
         payment_pictures,
         remark,
+        proof_of_payment,
       } = values;
 
       const formData = new FormData();
@@ -350,6 +365,7 @@ export default function ReminderForm({
       payment_pictures.forEach((item) => {
         formData.append("payment_pictures[]", item);
       });
+      formData.append("proof_of_payment", proof_of_payment.toString());
 
       await createUpdateReminder(formData);
 

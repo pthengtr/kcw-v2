@@ -94,6 +94,7 @@ export default function ReminderTable({
       }
 
       if (data) {
+        console.log(data);
         setReminders(data);
       }
       if (count) setTotal(count);

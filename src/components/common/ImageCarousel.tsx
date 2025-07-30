@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "../ui/button";
 import ImageDropable from "./ImageDropable";
-import { commonUploadFile } from "@/lib/utils";
+import { commonUploadFile, transliterateThaiConsonants } from "@/lib/utils";
 
 type imageCarouselProps = {
   imageId: string;
@@ -39,6 +39,8 @@ export async function getImageArray(
   imageId: string,
   setImageArray: (imageArray: storageObjectType[]) => void
 ) {
+  const safeImageId = transliterateThaiConsonants(imageId);
+
   const supabase = createClient();
 
   const { data, error } = await supabase.storage
@@ -46,7 +48,7 @@ export async function getImageArray(
     .list(`public/${imageFolder}`, {
       limit: 100,
       offset: 0,
-      search: imageId,
+      search: safeImageId,
       sortBy: { column: "updated_at", order: "asc" },
     });
 

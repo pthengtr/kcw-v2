@@ -7,6 +7,7 @@ import ReminderFormDialog from "./ReminderFormDialog";
 import { Separator } from "../ui/separator";
 import { Pencil } from "lucide-react";
 import { reminderDefaultValue } from "./ReminderColumn";
+import { imageRegex } from "@/lib/utils";
 
 export default function ReminderDetail() {
   const {
@@ -26,18 +27,18 @@ export default function ReminderDetail() {
         "reminder_bill",
         `${selectedRow.supplier_code
           .toString()
-          .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
+          .replace(imageRegex, "")}_${selectedRow.note_id
           .toString()
-          .replace(/[^A-Za-z0-9]/g, "")}`,
+          .replace(imageRegex, "")}`,
         setBillImageArray
       );
       getImageArray(
         "reminder_payment",
         `${selectedRow.supplier_code
           .toString()
-          .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
+          .replace(imageRegex, "")}_${selectedRow.note_id
           .toString()
-          .replace(/[^A-Za-z0-9]/g, "")}`,
+          .replace(imageRegex, "")}`,
         setPaymentImageArray
       );
     }
@@ -82,7 +83,7 @@ export default function ReminderDetail() {
       case "payment_date":
         return selectedRow && !!selectedRow[key as keyof typeof selectedRow]
           ? new Date(
-              selectedRow[key as keyof typeof selectedRow]
+              selectedRow[key as keyof typeof selectedRow] as string
             ).toLocaleDateString("th-TH", {
               day: "2-digit",
               month: "2-digit",
@@ -97,7 +98,7 @@ export default function ReminderDetail() {
       case "kbiz_datetime":
         return selectedRow && !!selectedRow[key as keyof typeof selectedRow]
           ? new Date(
-              selectedRow[key as keyof typeof selectedRow]
+              selectedRow[key as keyof typeof selectedRow] as string
             ).toLocaleDateString("th-TH", {
               day: "2-digit",
               month: "2-digit",
@@ -132,6 +133,7 @@ export default function ReminderDetail() {
         payment_pictures: [],
         bank_info: null,
         remark: selectedRow.remark,
+        proof_of_payment: selectedRow.proof_of_payment,
         agree: false,
       }
     : reminderDefaultValue;
@@ -198,9 +200,9 @@ export default function ReminderDetail() {
               imageFolder="reminder_bill"
               imageId={`${selectedRow.supplier_code
                 .toString()
-                .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
+                .replace(imageRegex, "")}_${selectedRow.note_id
                 .toString()
-                .replace(/[^A-Za-z0-9]/g, "")}`}
+                .replace(imageRegex, "")}`}
               imageArray={billImageArray}
               setImageArray={setBillImageArray}
             />
@@ -216,9 +218,9 @@ export default function ReminderDetail() {
               imageFolder="reminder_payment"
               imageId={`${selectedRow.supplier_code
                 .toString()
-                .replace(/[^A-Za-z0-9]/g, "")}_${selectedRow.note_id
+                .replace(imageRegex, "")}_${selectedRow.note_id
                 .toString()
-                .replace(/[^A-Za-z0-9]/g, "")}`}
+                .replace(imageRegex, "")}`}
               imageArray={paymentImageArray}
               setImageArray={setPaymentImageArray}
             />

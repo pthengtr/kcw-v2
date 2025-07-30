@@ -5,6 +5,65 @@ import { toast } from "sonner";
 import { HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
 
+export const imageRegex = /[^A-Za-z0-9ก-ฮ]/g;
+
+export const thaiConsonantRegex = /[ก-ฮ]/g;
+
+export const thaiConsonantMap = {
+  ก: "k",
+  ข: "kh",
+  ฃ: "kh",
+  ค: "kh",
+  ฅ: "kh",
+  ฆ: "kh",
+  ง: "ng",
+  จ: "ch",
+  ฉ: "ch",
+  ช: "ch",
+  ซ: "s",
+  ฌ: "ch",
+  ญ: "y",
+  ฎ: "d",
+  ฏ: "t",
+  ฐ: "th",
+  ฑ: "th",
+  ฒ: "th",
+  ณ: "n",
+  ด: "d",
+  ต: "t",
+  ถ: "th",
+  ท: "th",
+  ธ: "th",
+  น: "n",
+  บ: "b",
+  ป: "p",
+  ผ: "ph",
+  ฝ: "f",
+  พ: "ph",
+  ฟ: "f",
+  ภ: "ph",
+  ม: "m",
+  ย: "y",
+  ร: "r",
+  ล: "l",
+  ว: "w",
+  ศ: "s",
+  ษ: "s",
+  ส: "s",
+  ห: "h",
+  ฬ: "l",
+  อ: "o",
+  ฮ: "h",
+};
+
+// Replace function
+export function transliterateThaiConsonants(text: string) {
+  return text.replace(
+    thaiConsonantRegex,
+    (char) => thaiConsonantMap[char as keyof typeof thaiConsonantMap] || char
+  );
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -52,8 +111,10 @@ export async function commonUploadFile({
   imageId,
   imageFolder,
 }: commonUploadFileProps): commonUploadFileReturn {
+  const safeImageId = transliterateThaiConsonants(imageId);
+
   const temp_imageFilename =
-    imageId +
+    safeImageId +
     "_" +
     Math.random().toString().substring(4, 12) +
     "." +
@@ -82,4 +143,25 @@ export function simpleText(fieldLabel: Record<string, string>, key: string) {
       <DataTableColumnHeader column={column} title={id} />
     ),
   };
+}
+
+export async function checkImageExist(imageFolder: string, imageId: string) {
+  const safeImageId = transliterateThaiConsonants(imageId);
+
+  const supabase = createClient();
+
+  const { data, error } = await supabase.storage
+    .from("pictures")
+    .list(`public/${imageFolder}`, {
+      limit: 100,
+      offset: 0,
+      search: safeImageId,
+      sortBy: { column: "updated_at", order: "asc" },
+    });
+
+  if (!!error) console.log(error);
+  if (!!data) {
+    return data.length > 0;
+  }
+  return false;
 }
