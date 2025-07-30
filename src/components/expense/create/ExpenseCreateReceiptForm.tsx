@@ -13,6 +13,7 @@ import { ExpenseReceiptType } from "../summary/ExpenseReceiptColumn";
 import { createClient } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
 import { PaymentMethodSelectInput } from "@/components/common/PaymentMethodSelectInput";
+import CommonSupplierNameInput from "@/components/common/CommonSupplierNameInput";
 
 export type ExpenseCreateReceiptFormDefaultType = {
   vendor_name: string;
@@ -72,6 +73,9 @@ function getFormInput(
     case "receipt_date":
       return <DatePickerInput field={field} />;
       break;
+
+    case "vendor_name":
+      return <CommonSupplierNameInput field={field} />;
 
     case "payment_method":
       return <PaymentMethodSelectInput field={field} />;

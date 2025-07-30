@@ -38,8 +38,6 @@ export default function ExpenseCreateReceiptFormDialog({
     tax_invoice_date,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     receipt_number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    receipt_date,
     ...noVatDefaultValues
   } = expenseCreateReceiptFormDefaultValues;
 
@@ -59,13 +57,15 @@ export default function ExpenseCreateReceiptFormDialog({
           <Plus /> {vat ? "บริษัท" : "ทั่วไป"}
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader className="flex flex-col gap-4">
-          <DialogTitle>{`สร้างบิลค่าใช้จ่าย$${
+      <DialogContent className="max-w-fit h-5/6">
+        <DialogHeader className="grid place-content-center py-4">
+          <DialogTitle>{`สร้างบิลค่าใช้จ่าย${
             vat ? "บริษัท" : "ทั่วไป"
           }`}</DialogTitle>
-          <ExpenseCreateReceiptForm defaultValues={defaultValues} />
         </DialogHeader>
+        <div className="h-full w-[40vw] p-4 overflow-y-auto">
+          <ExpenseCreateReceiptForm defaultValues={defaultValues} />
+        </div>
       </DialogContent>
     </Dialog>
   );

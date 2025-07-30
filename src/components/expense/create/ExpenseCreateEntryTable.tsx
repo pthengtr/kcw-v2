@@ -15,6 +15,8 @@ export const defaultCreateEntryColumnVisibility = {
   จำนวน: true,
   รายละเอียด: true,
   ราคารวม: true,
+  ประเภทค่าใช้จ่าย: true,
+  หมวด: false,
 };
 
 type ExpenseEntryTableProps = {
