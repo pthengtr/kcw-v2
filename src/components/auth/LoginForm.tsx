@@ -51,7 +51,7 @@ export default function LoginForm() {
   return (
     <>
       <Form
-        className="flex flex-col gap-8"
+        className="flex flex-col gap-8 items-center"
         schema={formSchema}
         defaultValues={{ email: "", password: "" }}
         onSubmit={onSubmit}

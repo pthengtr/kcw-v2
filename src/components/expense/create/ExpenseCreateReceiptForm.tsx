@@ -140,7 +140,18 @@ export default function ExpenseCreateReceiptForm({
       user_id: user.email,
     };
 
-    console.log(createReceiptFormData);
+    console.log(JSON.stringify(createReceiptFormData));
+    console.log(JSON.stringify(createEntries));
+
+    const rpcFunction = "fn_create_new_expense_receipt";
+
+    const { data: dataRpc, error: errorRpc } = await supabase.rpc(rpcFunction, {
+      new_receipt: JSON.stringify(createReceiptFormData),
+      new_receipt_entries: JSON.stringify(createEntries),
+    });
+
+    if (errorRpc) console.log(errorRpc.message);
+    if (dataRpc) console.log(dataRpc);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

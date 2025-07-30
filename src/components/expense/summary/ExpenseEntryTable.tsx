@@ -62,8 +62,8 @@ export default function ExpenseEntryTable({
   );
 
   useEffect(() => {
-    getExpenseEntry();
-  }, [getExpenseEntry]);
+    if (selectedReceipt) getExpenseEntry();
+  }, [getExpenseEntry, selectedReceipt]);
 
   return (
     <div className="flex flex-col gap-2 p-2">
