@@ -18,7 +18,7 @@ export type ExpenseReceiptType = {
   total_amount: number;
   payment_method: string;
   remark: string;
-  branch_id: string;
+  branch_id: number;
   user_id: string;
 };
 

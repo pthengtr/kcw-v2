@@ -2,6 +2,7 @@
 
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
 import { ColumnDef, HeaderContext, Row } from "@tanstack/react-table";
+import { ExpenseItemType } from "../create/ExpenseItemColumn";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
@@ -14,6 +15,7 @@ export type ExpenseEntryType = {
   quantity: number;
   entry_detail: string;
   entry_amount: number;
+  expense_item: ExpenseItemType;
 };
 
 export const expenseEntryFieldLabel = {
@@ -23,7 +25,9 @@ export const expenseEntryFieldLabel = {
   unit_price: "ราคาต่อหน่วย",
   quantity: "จำนวน",
   entry_detail: "รายละเอียด",
-  entry_amount: "จำนวนรวม",
+  entry_amount: "ราคารวม",
+  "expense_item.description": "ประเภทค่าใช้จ่าย",
+  "expense_item.category": "หมวด",
 };
 
 export const expenseEntryColumn: ColumnDef<ExpenseEntryType>[] = [
@@ -31,12 +35,14 @@ export const expenseEntryColumn: ColumnDef<ExpenseEntryType>[] = [
   numberInt("receipt_id"),
   numberInt("item_id"),
   simpleText("entry_detail"),
+  simpleText("expense_item.description"),
+  simpleText("expense_item.category"),
   numberFloat("unit_price"),
   numberFloat("quantity"),
   numberFloat("entry_amount"),
 ];
 
-function simpleText(key: keyof ExpenseEntryType) {
+function simpleText(key: keyof typeof expenseEntryFieldLabel) {
   return {
     id: expenseEntryFieldLabel[key],
     accessorKey: key,
@@ -49,7 +55,7 @@ function simpleText(key: keyof ExpenseEntryType) {
   };
 }
 
-function numberFloat(key: keyof ExpenseEntryType) {
+function numberFloat(key: keyof typeof expenseEntryFieldLabel) {
   return {
     id: expenseEntryFieldLabel[key],
     accessorKey: key,
@@ -84,7 +90,7 @@ function numberFloat(key: keyof ExpenseEntryType) {
   };
 }
 
-function numberInt(key: keyof ExpenseEntryType) {
+function numberInt(key: keyof typeof expenseEntryFieldLabel) {
   return {
     id: expenseEntryFieldLabel[key],
     accessorKey: key,

@@ -40,7 +40,7 @@ export default function ExpenseEntryTable({
     async function () {
       const query = supabase
         .from("expense_entry")
-        .select("*", { count: "exact" })
+        .select("*, expense_item(*)", { count: "exact" })
         .eq("receipt_id", selectedReceipt?.receipt_id)
         .order("entry_id", { ascending: true })
         .limit(500);
@@ -52,6 +52,7 @@ export default function ExpenseEntryTable({
         return;
       }
 
+      console.log(data);
       if (data) {
         setReceiptEntries(data);
       }
@@ -78,7 +79,7 @@ export default function ExpenseEntryTable({
               columnVisibility: columnVisibility,
               pagination: { pageIndex: 0, pageSize: paginationPageSize },
             }}
-            totalAmountKey={["จำนวนรวม"]}
+            totalAmountKey={["ราคารวม"]}
           >
             <div className="flex gap-4 mr-auto px-8">
               <h2 className="text-2xl font-bold flex-1">
