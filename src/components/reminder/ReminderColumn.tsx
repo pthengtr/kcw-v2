@@ -73,8 +73,8 @@ export const reminderDefaultValue: ReminderDefaultValueType = {
   payment_pictures: [],
   bank_info: null,
   remark: "",
-  agree: false,
   proof_of_payment: false,
+  agree: false,
 };
 
 export const reminderColumns: ColumnDef<ReminderType>[] = [
