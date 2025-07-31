@@ -140,7 +140,6 @@ export default function ReminderDetail() {
         payment_pictures: [],
         bank_info: null,
         remark: selectedRow.remark,
-        proof_of_payment: selectedRow.proof_of_payment,
         agree: false,
       }
     : reminderDefaultValue;
