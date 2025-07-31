@@ -35,6 +35,11 @@ export default async function Branch() {
               icon="Store"
             />
           ))}
+        <CardIcon
+          path="/expense/item"
+          description="ประเภทค่าใช้จ่าย"
+          icon="SquareMenu"
+        />
       </CardIconMenu>
     </>
   );

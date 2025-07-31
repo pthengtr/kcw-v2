@@ -4,7 +4,7 @@ import React from "react";
 import { storageObjectType } from "../common/ImageCarousel";
 import { ExpenseReceiptType } from "./summary/ExpenseReceiptColumn";
 import { ExpenseEntryType } from "./summary/ExpenseEntryColumn";
-import { ExpenseItemType } from "./create/ExpenseItemColumn";
+import { ExpenseItemType } from "./item/ExpenseItemColumn";
 
 export type ExpenseContextType = {
   openAddEntryDialog: boolean;

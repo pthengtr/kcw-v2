@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/common/DataTable";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { expenseItemColumn } from "./ExpenseItemColumn";
-import ExpenseAddEntryFormDialog from "./ExpenseAddEntryFormDialog";
 
 export default function ExpenseItemTable() {
   const {
@@ -14,7 +13,6 @@ export default function ExpenseItemTable() {
     totalItem,
     setTotalItem,
     setSelectedItem,
-    selectedItem,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const supabase = createClient();
@@ -47,25 +45,20 @@ export default function ExpenseItemTable() {
   }, [getItems]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex justify-center">
-        {selectedItem && <ExpenseAddEntryFormDialog />}
-      </div>
-      <div className="h-full">
-        {!!expenseItems && (
-          <DataTable
-            tableName="supplier"
-            columns={expenseItemColumn}
-            data={expenseItems}
-            total={totalItem}
-            setSelectedRow={setSelectedItem}
-          >
-            <div className="flex gap-4 mr-auto px-8">
-              <h2 className="text-2xl font-bold flex-1">{``}</h2>
-            </div>
-          </DataTable>
-        )}
-      </div>
+    <div className="h-full">
+      {!!expenseItems && (
+        <DataTable
+          tableName="supplier"
+          columns={expenseItemColumn}
+          data={expenseItems}
+          total={totalItem}
+          setSelectedRow={setSelectedItem}
+        >
+          <div className="flex gap-4 mr-auto px-8">
+            <h2 className="text-2xl font-bold flex-1">{``}</h2>
+          </div>
+        </DataTable>
+      )}
     </div>
   );
 }

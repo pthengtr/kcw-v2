@@ -5,6 +5,7 @@ import {
   ClipboardList,
   FilePlus2,
   Truck,
+  SquareMenu,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -19,7 +20,8 @@ type iconType =
   | "Store"
   | "ClipboardList"
   | "FilePlus2"
-  | "Truck";
+  | "Truck"
+  | "SquareMenu";
 
 type CardIconProps = {
   path: string;
@@ -42,6 +44,8 @@ export default function CardIcon({ path, description, icon }: CardIconProps) {
         return <FilePlus2 strokeWidth={1} className={iconStyle} />;
       case "Truck":
         return <Truck strokeWidth={1} className={iconStyle} />;
+      case "SquareMenu":
+        return <SquareMenu strokeWidth={1} className={iconStyle} />;
     }
   }
   return (

@@ -2,7 +2,7 @@
 
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
 import { ColumnDef, HeaderContext, Row } from "@tanstack/react-table";
-import { ExpenseItemType } from "../create/ExpenseItemColumn";
+import { ExpenseItemType } from "../item/ExpenseItemColumn";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
