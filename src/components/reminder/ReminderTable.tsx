@@ -5,8 +5,7 @@ import {
   reminderDefaultValue,
 } from "@/components/reminder/ReminderColumn";
 
-import { createClient } from "@/lib/supabase/client";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { DataTable } from "@/components/common/DataTable";
 
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
@@ -58,63 +57,24 @@ export default function ReminderTable({
   columnVisibility,
   paginationPageSize,
 }: ReminderTableProps) {
-  const [status, setStatus] = useState("all");
-
   const {
     openCreateDialog,
     setOpenCreateDialog,
     openUpdateDialog,
     setSubmitError,
     reminders,
-    setReminders,
     total,
-    setTotal,
     handleSelectedRow,
     isAdmin,
+    status,
+    setStatus,
+    getReminder,
   } = useContext(ReminderContext) as ReminderContextType;
-
-  const supabase = createClient();
-
-  const getReminder = useCallback(
-    async function () {
-      let query = supabase
-        .from("payment_reminder")
-        .select("*", { count: "exact" })
-        .order("id", { ascending: false })
-        .limit(500);
-
-      if (status === "paid") query = query.not("payment_date", "is", "null");
-      else if (status === "unpaid") query = query.is("payment_date", null);
-
-      const { data, error, count } = await query;
-
-      if (error) {
-        console.log(error);
-        return;
-      }
-
-      if (data) {
-        console.log(data);
-        setReminders(data);
-      }
-      if (count) setTotal(count);
-    },
-    [setReminders, setTotal, status, supabase]
-  );
 
   useEffect(() => {
     setSubmitError(undefined);
     getReminder();
-  }, [
-    supabase,
-    openCreateDialog,
-    openUpdateDialog,
-    setReminders,
-    setSubmitError,
-    setTotal,
-    status,
-    getReminder,
-  ]);
+  }, [getReminder, openCreateDialog, openUpdateDialog, setSubmitError, status]);
 
   function handleResetView() {
     clearMyCookie("reminderColumnVisibility");

@@ -20,7 +20,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "../ui/button";
 import ImageDropable from "./ImageDropable";
-import { commonUploadFile, transliterateThaiConsonants } from "@/lib/utils";
+import {
+  commonUploadFile,
+  commonUploadFileProps,
+  commonUploadFileReturn,
+  getImageArray,
+} from "@/lib/utils";
 
 type imageCarouselProps = {
   imageId: string;
@@ -30,34 +35,19 @@ type imageCarouselProps = {
   disableDialog?: boolean;
   triggerSize?: number;
   dialogSize?: number;
+  _commonUploadFile?: ({
+    picture,
+    imageId,
+    imageFolder,
+  }: commonUploadFileProps) => commonUploadFileReturn;
+  _getImageArray?: (
+    imageFolder: string,
+    imageId: string,
+    setImageArray: (imageArray: storageObjectType[]) => void
+  ) => void;
 };
 
 export type storageObjectType = { id: string; name: string };
-
-export async function getImageArray(
-  imageFolder: string,
-  imageId: string,
-  setImageArray: (imageArray: storageObjectType[]) => void
-) {
-  const safeImageId = transliterateThaiConsonants(imageId);
-
-  const supabase = createClient();
-
-  const { data, error } = await supabase.storage
-    .from("pictures")
-    .list(`public/${imageFolder}`, {
-      limit: 100,
-      offset: 0,
-      search: safeImageId,
-      sortBy: { column: "updated_at", order: "asc" },
-    });
-
-  if (!!error) console.log(error);
-  if (!!data) {
-    setImageArray(data);
-    //setCount(data.length + 1);
-  }
-}
 
 export default function ImageCarousel({
   imageId,
@@ -67,6 +57,8 @@ export default function ImageCarousel({
   triggerSize = 250,
   dialogSize = 500,
   disableDialog = false,
+  _commonUploadFile = commonUploadFile,
+  _getImageArray = getImageArray,
 }: imageCarouselProps) {
   //const [api, setApi] = useState<CarouselApi>();
   // const [current, setCurrent] = useState(0);
@@ -90,7 +82,7 @@ export default function ImageCarousel({
 
     if (!!error) console.log(error);
     if (!!data) {
-      getImageArray(imageFolder, imageId, setImageArray);
+      _getImageArray(imageFolder, imageId, setImageArray);
     }
   }
 
@@ -99,10 +91,10 @@ export default function ImageCarousel({
       return;
     }
 
-    const { data } = await commonUploadFile({ picture, imageId, imageFolder });
+    const { data } = await _commonUploadFile({ picture, imageId, imageFolder });
 
     if (!!data) {
-      getImageArray(imageFolder, imageId, setImageArray);
+      _getImageArray(imageFolder, imageId, setImageArray);
     }
   }
 

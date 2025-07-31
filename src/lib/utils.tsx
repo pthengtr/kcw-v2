@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
+import { storageObjectType } from "@/components/common/ImageCarousel";
 
 export const imageRegex = /[^A-Za-z0-9ก-ฮ]/g;
 
@@ -68,13 +69,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-type commonUploadFileProps = {
+export type commonUploadFileProps = {
   picture: File;
   imageId: string;
   imageFolder: string;
 };
 
-type commonUploadFileReturn = Promise<
+export type commonUploadFileReturn = Promise<
   | {
       data: {
         id: string;
@@ -87,7 +88,7 @@ type commonUploadFileReturn = Promise<
     }
 >;
 
-function sanitizeFilename(filename: string) {
+export function sanitizeFilename(filename: string) {
   const lastDotIndex = filename.lastIndexOf(".");
 
   if (lastDotIndex === -1) {
@@ -132,6 +133,31 @@ export async function commonUploadFile({
   }
 
   return { data };
+}
+
+export async function getImageArray(
+  imageFolder: string,
+  imageId: string,
+  setImageArray: (imageArray: storageObjectType[]) => void
+) {
+  const safeImageId = transliterateThaiConsonants(imageId);
+
+  const supabase = createClient();
+
+  const { data, error } = await supabase.storage
+    .from("pictures")
+    .list(`public/${imageFolder}`, {
+      limit: 100,
+      offset: 0,
+      search: safeImageId,
+      sortBy: { column: "updated_at", order: "asc" },
+    });
+
+  if (!!error) console.log(error);
+  if (!!data) {
+    setImageArray(data);
+    //setCount(data.length + 1);
+  }
 }
 
 export function simpleText(fieldLabel: Record<string, string>, key: string) {

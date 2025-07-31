@@ -1,9 +1,17 @@
 "use client";
-import { createContext, useState } from "react";
+import { createContext, useCallback, useState } from "react";
 import React from "react";
 import { BankInfoType, ReminderType } from "./ReminderColumn";
 import { CheckedState } from "@radix-ui/react-checkbox";
 import { storageObjectType } from "../common/ImageCarousel";
+import {
+  commonUploadFileProps,
+  commonUploadFileReturn,
+  sanitizeFilename,
+  transliterateThaiConsonants,
+} from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export type ReminderContextType = {
   selectedRow: ReminderType | undefined;
@@ -39,6 +47,19 @@ export type ReminderContextType = {
   ) => void;
   isAdmin: boolean;
   setIsAdmin: (open: boolean) => void;
+  reminderUploadFile: ({
+    picture,
+    imageId,
+    imageFolder,
+  }: commonUploadFileProps) => commonUploadFileReturn;
+  getReminder: () => void;
+  reminderGetImageArray: (
+    imageFolder: string,
+    imageId: string,
+    setImageArray: (imageArray: storageObjectType[]) => void
+  ) => void;
+  status: string;
+  setStatus: (status: string) => void;
 };
 
 export const ReminderContext = createContext<ReminderContextType | null>(null);
@@ -64,6 +85,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [paymentImageArray, setPaymentImageArray] =
     useState<storageObjectType[]>();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [status, setStatus] = useState("all");
 
   function handleSelectedRow(row: ReminderType) {
     setSelectedRow(row);
@@ -72,6 +94,121 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setBankAccountName(row.bank_account_name);
     setBankAccountNumber(row.bank_account_number);
   }
+
+  const getReminder = useCallback(
+    async function () {
+      const supabase = createClient();
+      let query = supabase
+        .from("payment_reminder")
+        .select("*", { count: "exact" })
+        .order("id", { ascending: false })
+        .limit(500);
+
+      if (status === "paid") query = query.not("payment_date", "is", "null");
+      else if (status === "unpaid") query = query.is("payment_date", null);
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.log(error);
+        return;
+      }
+
+      if (data) {
+        console.log(data);
+        setReminders(data);
+      }
+      if (count) setTotal(count);
+    },
+    [status]
+  );
+
+  async function reminderUploadFile({
+    picture,
+    imageId,
+    imageFolder,
+  }: commonUploadFileProps): commonUploadFileReturn {
+    const safeImageId = transliterateThaiConsonants(imageId);
+
+    const temp_imageFilename =
+      safeImageId +
+      "_" +
+      Math.random().toString().substring(4, 12) +
+      "." +
+      sanitizeFilename(picture.name).split(".")[1];
+
+    const supabase = createClient();
+
+    const { data, error } = await supabase.storage
+      .from("pictures")
+      .upload(`public/${imageFolder}/${temp_imageFilename}`, picture);
+
+    if (!!error) {
+      console.log(error);
+      toast.error(`เกิดข้อผิดพลาด ไม่สามารถอัพโหลด ${picture.name}`);
+    }
+
+    if (!!data && imageFolder === "reminder_payment" && selectedRow) {
+      const { data: dataUpdate, error: errorUpdate } = await supabase
+        .from("payment_reminder")
+        .update({ proof_of_payment: true })
+        .eq("id", selectedRow.id)
+        .select();
+
+      if (errorUpdate) console.log(errorUpdate);
+      if (dataUpdate) {
+        console.log(dataUpdate);
+        getReminder();
+      }
+    }
+
+    return { data };
+  }
+
+  const reminderGetImageArray = useCallback(
+    async function (
+      imageFolder: string,
+      imageId: string,
+      setImageArray: (imageArray: storageObjectType[]) => void
+    ) {
+      const safeImageId = transliterateThaiConsonants(imageId);
+
+      const supabase = createClient();
+
+      const { data, error } = await supabase.storage
+        .from("pictures")
+        .list(`public/${imageFolder}`, {
+          limit: 100,
+          offset: 0,
+          search: safeImageId,
+          sortBy: { column: "updated_at", order: "asc" },
+        });
+
+      if (!!error) console.log(error);
+      if (!!data) {
+        if (
+          data.length === 0 &&
+          imageFolder === "reminder_payment" &&
+          selectedRow
+        ) {
+          const { data: dataUpdate, error: errorUpdate } = await supabase
+            .from("payment_reminder")
+            .update({ proof_of_payment: false })
+            .eq("id", selectedRow.id)
+            .select();
+
+          if (errorUpdate) console.log(errorUpdate);
+          if (dataUpdate) {
+            console.log(dataUpdate);
+            getReminder();
+          }
+        }
+        setImageArray(data);
+        //setCount(data.length + 1);
+      }
+    },
+    [getReminder, selectedRow]
+  );
 
   const value = {
     selectedRow,
@@ -105,6 +242,11 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setPaymentImageArray,
     isAdmin,
     setIsAdmin,
+    reminderUploadFile,
+    getReminder,
+    setStatus,
+    status,
+    reminderGetImageArray,
   };
 
   return (

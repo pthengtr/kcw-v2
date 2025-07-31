@@ -10,8 +10,7 @@ import { FieldValues, UseFormReturn } from "react-hook-form";
 import { ReminderDefaultValueType } from "./ReminderColumn";
 import { useContext } from "react";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
-import { commonUploadFile, imageRegex } from "@/lib/utils";
-import { getImageArray } from "../common/ImageCarousel";
+import { imageRegex } from "@/lib/utils";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -149,7 +148,6 @@ const formSchema = z.object({
   agree: z.boolean().refine((val) => val === true, {
     message: "กรุณาตรวจสอบข้อมูลก่อนบันทึก",
   }),
-  proof_of_payment: z.boolean(),
 });
 
 type ReminderFormProps = {
@@ -175,6 +173,8 @@ export default function ReminderForm({
     setBillImageArray,
     setPaymentImageArray,
     isAdmin,
+    reminderUploadFile,
+    reminderGetImageArray,
   } = useContext(ReminderContext) as ReminderContextType;
 
   async function createUpdateReminder(formData: FormData) {
@@ -218,7 +218,6 @@ export default function ReminderForm({
       bank_account_number: selectedBankInfo
         ? selectedBankInfo.bank_account_number
         : bankAccountNumber,
-      proof_of_payment: formData.get("proof_of_payment") as string,
     };
 
     //update or insert new data
@@ -254,7 +253,7 @@ export default function ReminderForm({
 
       const bill_pictures = formData.getAll("bill_pictures[]") as File[];
       bill_pictures.forEach((item) =>
-        commonUploadFile({
+        reminderUploadFile({
           picture: item,
           imageId,
           imageFolder: "reminder_bill",
@@ -263,7 +262,7 @@ export default function ReminderForm({
 
       const payment_pictures = formData.getAll("payment_pictures[]") as File[];
       payment_pictures.forEach((item) =>
-        commonUploadFile({
+        reminderUploadFile({
           picture: item,
           imageId,
           imageFolder: "reminder_payment",
@@ -275,7 +274,7 @@ export default function ReminderForm({
 
       setSelectedRow(data[0]);
 
-      await getImageArray(
+      await reminderGetImageArray(
         "reminder_bill",
         `${data[0].supplier_code
           .toString()
@@ -285,7 +284,7 @@ export default function ReminderForm({
         setBillImageArray
       );
 
-      await getImageArray(
+      await reminderGetImageArray(
         "reminder_payment",
         `${data[0].supplier_code
           .toString()
@@ -338,7 +337,6 @@ export default function ReminderForm({
         bill_pictures,
         payment_pictures,
         remark,
-        proof_of_payment,
       } = values;
 
       const formData = new FormData();
@@ -365,7 +363,6 @@ export default function ReminderForm({
       payment_pictures.forEach((item) => {
         formData.append("payment_pictures[]", item);
       });
-      formData.append("proof_of_payment", proof_of_payment.toString());
 
       await createUpdateReminder(formData);
 

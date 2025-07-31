@@ -55,7 +55,6 @@ export type ReminderDefaultValueType = {
   bank_info: BankInfoType | null;
   remark: string;
   agree: boolean;
-  proof_of_payment: boolean;
 };
 
 export const reminderDefaultValue: ReminderDefaultValueType = {
@@ -73,7 +72,6 @@ export const reminderDefaultValue: ReminderDefaultValueType = {
   payment_pictures: [],
   bank_info: null,
   remark: "",
-  proof_of_payment: false,
   agree: false,
 };
 

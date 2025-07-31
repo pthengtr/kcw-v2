@@ -1,7 +1,6 @@
 import { reminderFieldLabel } from "./ReminderForm";
 import React, { useContext, useEffect } from "react";
-import ImageCarousel, { getImageArray } from "../common/ImageCarousel";
-
+import ImageCarousel from "../common/ImageCarousel";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import ReminderFormDialog from "./ReminderFormDialog";
 import { Separator } from "../ui/separator";
@@ -19,11 +18,13 @@ export default function ReminderDetail() {
     billImageArray,
     paymentImageArray,
     isAdmin,
+    reminderUploadFile,
+    reminderGetImageArray,
   } = useContext(ReminderContext) as ReminderContextType;
 
   useEffect(() => {
     if (selectedRow) {
-      getImageArray(
+      reminderGetImageArray(
         "reminder_bill",
         `${selectedRow.supplier_code
           .toString()
@@ -32,7 +33,7 @@ export default function ReminderDetail() {
           .replace(imageRegex, "")}`,
         setBillImageArray
       );
-      getImageArray(
+      reminderGetImageArray(
         "reminder_payment",
         `${selectedRow.supplier_code
           .toString()
@@ -42,7 +43,13 @@ export default function ReminderDetail() {
         setPaymentImageArray
       );
     }
-  }, [selectedRow, setBillImageArray, setPaymentImageArray, openUpdateDialog]);
+  }, [
+    selectedRow,
+    setBillImageArray,
+    setPaymentImageArray,
+    openUpdateDialog,
+    reminderGetImageArray,
+  ]);
 
   const section1 = ["id", "user_id", "created_at", "last_modified"];
   const section2 = [
@@ -205,6 +212,8 @@ export default function ReminderDetail() {
                 .replace(imageRegex, "")}`}
               imageArray={billImageArray}
               setImageArray={setBillImageArray}
+              _commonUploadFile={reminderUploadFile}
+              _getImageArray={reminderGetImageArray}
             />
           )}
         </div>
@@ -223,6 +232,8 @@ export default function ReminderDetail() {
                 .replace(imageRegex, "")}`}
               imageArray={paymentImageArray}
               setImageArray={setPaymentImageArray}
+              _commonUploadFile={reminderUploadFile}
+              _getImageArray={reminderGetImageArray}
             />
           )}
         </div>
