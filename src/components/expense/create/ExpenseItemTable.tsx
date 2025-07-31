@@ -23,7 +23,7 @@ export default function ExpenseItemTable() {
     async function () {
       const query = supabase
         .from("expense_item")
-        .select("*", { count: "exact" })
+        .select("*, expense_category(*)", { count: "exact" })
         .order("item_id", { ascending: true })
         .limit(500);
 

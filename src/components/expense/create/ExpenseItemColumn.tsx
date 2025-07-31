@@ -7,23 +7,28 @@ import { ColumnDef, HeaderContext } from "@tanstack/react-table";
 // You can use a Zod schema here if you want.
 export type ExpenseItemType = {
   item_id: number;
-  description: string;
-  category: string;
+  item_name: string;
+  expense_category: ExpenseCategoryType;
+};
+
+export type ExpenseCategoryType = {
+  category_id: number;
+  category_name: string;
 };
 
 export const expenseItemFieldLabel = {
   item_id: "รหัส",
-  description: "ประเภทค่าใช้จ่าย",
-  category: "หมวด",
+  item_name: "ประเภทค่าใช้จ่าย",
+  "expense_category.category_name": "หมวด",
 };
 
 export const expenseItemColumn: ColumnDef<ExpenseItemType>[] = [
   simpleText("item_id"),
-  simpleText("description"),
-  simpleText("category"),
+  simpleText("item_name"),
+  simpleText("expense_category.category_name"),
 ];
 
-function simpleText(key: keyof ExpenseItemType) {
+function simpleText(key: keyof typeof expenseItemFieldLabel) {
   return {
     id: expenseItemFieldLabel[key],
     accessorKey: key,
