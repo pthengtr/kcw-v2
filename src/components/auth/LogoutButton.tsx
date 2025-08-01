@@ -5,7 +5,7 @@ import { LogOutIcon } from "lucide-react";
 export default function LogoutButton() {
   return (
     <>
-      <Button onClick={logout}>
+      <Button variant="ghost" onClick={logout}>
         <LogOutIcon />
       </Button>
     </>
