@@ -12,7 +12,7 @@ import {
 import ExpenseItemTable from "@/components/expense/item/ExpenseItemTable";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { FilePlus2 } from "lucide-react";
+import { ClipboardList, Store } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
@@ -44,12 +44,20 @@ export default function ExpenseCreatePage() {
   return (
     <section className="flex flex-col items-center p-2">
       <div className="flex w-full px-2">
-        <Link className="flex-1" href={`/expense/${branch}/summary`} passHref>
-          <Button variant="default">
-            <FilePlus2 />
-            รายงานบิลค่าใช้จ่าย
-          </Button>
-        </Link>
+        <div className="flex-1 flex gap-2">
+          <Link className="" href={`/expense/${branch}/summary`} passHref>
+            <Button variant="default">
+              <ClipboardList />
+              รายงานบิลค่าใช้จ่าย
+            </Button>
+          </Link>
+          <Link className="" href={`/expense`} passHref>
+            <Button variant="default">
+              <Store />
+              เลือกสาขา
+            </Button>
+          </Link>
+        </div>
         <h1 className="text-2xl font-bold tracking-wider">{`สร้างบิลค่าใช้จ่าย ${branchName}`}</h1>
         <div className="flex-1"></div>
       </div>
