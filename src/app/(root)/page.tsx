@@ -1,19 +1,12 @@
-import CardIconMenu from "@/components/common/CardIconMenu";
-import CardIcon from "@/components/common/CardIcon";
+import { redirect } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 export default function Home() {
+  redirect("/home");
+
   return (
-    <>
-      <h1 className="text-6xl p-12 text-center tracking-widest">เมนูหลัก</h1>
-      <CardIconMenu>
-        <CardIcon
-          path="/reminder"
-          description="เตือนโอน"
-          icon="MessageCircleWarning"
-        />
-        <CardIcon path="/expense" description="ค่าใช้จ่าย" icon="Banknote" />
-        <CardIcon path="/supplier" description="รายชื่อบริษัท" icon="Truck" />
-      </CardIconMenu>
-    </>
+    <div className="flex h-screen items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
   );
 }
