@@ -1,62 +1,50 @@
 "use client";
 
-import { useCallback, useContext, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/common/DataTable";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { expenseItemColumn } from "./ExpenseItemColumn";
+import { useContext, useEffect } from "react";
 
-export default function ExpenseItemTable() {
+type ExpenseItemTableProps = { children?: React.ReactNode };
+
+export const defaultColumnVisibility = {
+  รหัส: false,
+};
+
+export default function ExpenseItemTable({ children }: ExpenseItemTableProps) {
   const {
     expenseItems,
-    setExpenseItems,
     totalItem,
-    setTotalItem,
     setSelectedItem,
+    getItems,
+    openAddItemDialog,
+    openUpdateItemDialog,
+    columnFilters,
+    setColumnFilters,
+    setSubmitError,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
-  const supabase = createClient();
-
-  const getItems = useCallback(
-    async function () {
-      const query = supabase
-        .from("expense_item")
-        .select("*, expense_category(*)", { count: "exact" })
-        .order("item_id", { ascending: true })
-        .limit(500);
-
-      const { data, error, count } = await query;
-
-      if (error) {
-        console.log(error);
-        return;
-      }
-
-      if (data) {
-        setExpenseItems(data);
-      }
-      if (count) setTotalItem(count);
-    },
-    [setExpenseItems, setTotalItem, supabase]
-  );
-
   useEffect(() => {
-    getItems();
-  }, [getItems]);
+    if (!openAddItemDialog && !openUpdateItemDialog) {
+      getItems();
+    }
+    setSubmitError(undefined);
+  }, [getItems, openAddItemDialog, openUpdateItemDialog, setSubmitError]);
 
   return (
     <div className="h-full">
       {!!expenseItems && (
         <DataTable
-          tableName="supplier"
+          tableName="item"
           columns={expenseItemColumn}
           data={expenseItems}
           total={totalItem}
           setSelectedRow={setSelectedItem}
+          customColumnFilters={columnFilters}
+          setCustomColumnFilters={setColumnFilters}
+          initialState={{ columnVisibility: defaultColumnVisibility }}
         >
-          <div className="flex gap-4 mr-auto px-8">
-            <h2 className="text-2xl font-bold flex-1">{``}</h2>
-          </div>
+          {children}
         </DataTable>
       )}
     </div>

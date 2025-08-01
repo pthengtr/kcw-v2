@@ -1,9 +1,5 @@
-import ExpenseItemTable from "@/components/expense/item/ExpenseItemTable";
+import ExpenseItemPage from "@/components/expense/item/ExpenseItemPage";
 
 export default function ItemPage() {
-  return (
-    <section className="h-[90vh] flex justify-center">
-      <ExpenseItemTable />
-    </section>
-  );
+  return <ExpenseItemPage />;
 }

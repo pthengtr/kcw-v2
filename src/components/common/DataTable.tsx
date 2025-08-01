@@ -46,7 +46,13 @@ import {
 } from "@/components/ui/table";
 
 import { Input } from "../ui/input";
-import { useState, CSSProperties, useEffect } from "react";
+import {
+  useState,
+  CSSProperties,
+  useEffect,
+  Dispatch,
+  SetStateAction,
+} from "react";
 import { DataTablePagination } from "./DataTablePagination";
 import { DataTableViewOptions } from "./DataTableViewOptions";
 import { GripVertical } from "lucide-react";
@@ -61,6 +67,8 @@ interface DataTableProps<TData, TValue> {
   setSelectedRow?: (row: TData) => void;
   initialState?: InitialTableState | undefined;
   totalAmountKey?: string[];
+  customColumnFilters?: ColumnFiltersState;
+  setCustomColumnFilters?: Dispatch<SetStateAction<ColumnFiltersState>>;
 }
 
 export function DataTable<TData, TValue>({
@@ -72,13 +80,26 @@ export function DataTable<TData, TValue>({
   setSelectedRow,
   initialState,
   totalAmountKey = [],
+  customColumnFilters,
+  setCustomColumnFilters,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [_columnFilters, _setColumnFilters] = useState<ColumnFiltersState>(
+    initialState?.columnFilters ? initialState?.columnFilters : []
+  );
   const [rowSelection, setRowSelection] = useState({});
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
     columns.map((c) => c.id!)
   );
+
+  let columnFilters, setColumnFilters;
+  if (customColumnFilters && setCustomColumnFilters) {
+    columnFilters = customColumnFilters;
+    setColumnFilters = setCustomColumnFilters;
+  } else {
+    columnFilters = _columnFilters;
+    setColumnFilters = _setColumnFilters;
+  }
 
   const table = useReactTable({
     data,
