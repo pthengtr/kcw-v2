@@ -24,7 +24,7 @@ export default async function Branch() {
 
   return (
     <>
-      <h1 className="text-6xl p-12 text-center">เลือกสาขา</h1>
+      <h1 className="text-6xl p-12 text-center tracking-widest">ค่าใช้จ่าย</h1>
       <CardIconMenu>
         {branches &&
           branches?.map((branch) => (

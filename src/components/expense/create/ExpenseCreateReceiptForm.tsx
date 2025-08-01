@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
 import { PaymentMethodSelectInput } from "@/components/common/PaymentMethodSelectInput";
 import CommonSupplierNameInput from "@/components/common/CommonSupplierNameInput";
+import { toast } from "sonner";
 
 export type ExpenseCreateReceiptFormDefaultType = {
   vendor_name: string;
@@ -106,7 +107,13 @@ type ExpenseCreateReceiptFormProps = {
 export default function ExpenseCreateReceiptForm({
   defaultValues,
 }: ExpenseCreateReceiptFormProps) {
-  const { createEntries } = useContext(ExpenseContext) as ExpenseContextType;
+  const {
+    createEntries,
+    setCreateEntries,
+    setSubmitError,
+    setOpenCreateNoVatReceiptDialog,
+    setOpenCreateVatReceiptDialog,
+  } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
 
@@ -154,8 +161,17 @@ export default function ExpenseCreateReceiptForm({
       new_receipt_entries: JSON.stringify(createEntries),
     });
 
-    if (errorRpc) console.log(errorRpc.message);
-    if (dataRpc) console.log(dataRpc);
+    if (errorRpc) {
+      setSubmitError(errorRpc.message);
+      toast.error(errorRpc.message);
+      return;
+    }
+    if (dataRpc) {
+      setCreateEntries([]);
+      setOpenCreateNoVatReceiptDialog(false);
+      setOpenCreateVatReceiptDialog(false);
+      toast.success("สร้างบิลค่าใช้จ่ายใหม่สำเร็จ");
+    }
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

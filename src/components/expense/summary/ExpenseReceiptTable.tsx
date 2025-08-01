@@ -93,9 +93,7 @@ export default function ExpenseReceiptTable({
             }}
             totalAmountKey={["จำนวนเงิน"]}
           >
-            <div className="flex gap-4 mr-auto px-8">
-              <h2 className="text-2xl font-bold flex-1">{`รายการค่าใช้จ่าย`}</h2>
-            </div>
+            <h2 className="text-2xl font-bold flex-1">{`รายการบิลค่าใช้จ่าย`}</h2>
           </DataTable>
         )}
       </div>

@@ -3,7 +3,8 @@ import CardIcon from "@/components/common/CardIcon";
 
 export default function Home() {
   return (
-    <main>
+    <>
+      <h1 className="text-6xl p-12 text-center tracking-widest">เมนูหลัก</h1>
       <CardIconMenu>
         <CardIcon
           path="/reminder"
@@ -13,6 +14,6 @@ export default function Home() {
         <CardIcon path="/expense" description="ค่าใช้จ่าย" icon="Banknote" />
         <CardIcon path="/supplier" description="รายชื่อบริษัท" icon="Truck" />
       </CardIconMenu>
-    </main>
+    </>
   );
 }

@@ -18,11 +18,13 @@ export const defaultCreateEntryColumnVisibility = {
 };
 
 type ExpenseEntryTableProps = {
+  children?: React.ReactNode;
   columnVisibility: typeof defaultCreateEntryColumnVisibility | undefined;
   paginationPageSize: number | undefined;
 };
 
 export default function ExpenseCreateEntryTable({
+  children,
   columnVisibility,
   paginationPageSize,
 }: ExpenseEntryTableProps) {
@@ -45,9 +47,7 @@ export default function ExpenseCreateEntryTable({
           }}
           totalAmountKey={["ราคารวม"]}
         >
-          <div className="flex gap-4 mr-auto px-8">
-            <h2 className="text-2xl font-bold flex-1"></h2>
-          </div>
+          {children}
         </DataTable>
       )}
     </div>

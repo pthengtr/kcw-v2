@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Pencil, Plus } from "lucide-react";
+import { FilePlus2, Pencil } from "lucide-react";
 import { useContext } from "react";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import ExpenseAddEntryForm, {
@@ -47,11 +47,11 @@ export default function ExpenseAddEntryFormDialog({
         <Button>
           {update ? (
             <>
-              <Pencil /> แก้ไข
+              <Pencil />
             </>
           ) : (
             <>
-              <Plus /> เพิ่ม
+              <FilePlus2 /> เพิ่มรายการในบิล
             </>
           )}
         </Button>

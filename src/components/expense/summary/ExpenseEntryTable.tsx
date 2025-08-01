@@ -81,11 +81,9 @@ export default function ExpenseEntryTable({
             }}
             totalAmountKey={["ราคารวม"]}
           >
-            <div className="flex gap-4 mr-auto px-8">
-              <h2 className="text-2xl font-bold flex-1">
-                {selectedReceipt?.invoice_number}
-              </h2>
-            </div>
+            <h2 className="text-2xl font-bold flex-1">
+              รายละเอียดค่าใช้จ่าย {selectedReceipt?.invoice_number}
+            </h2>
           </DataTable>
         )}
       </div>
