@@ -78,25 +78,23 @@ export default function ExpenseReceiptTable({
   }, [getExpense, setSubmitError]);
 
   return (
-    <div className="flex flex-col gap-2 p-2">
-      <div className="h-full">
-        {!!expenseReceipts && (
-          <DataTable
-            tableName="expenseReceipt"
-            columns={expenseReceiptColumn}
-            data={expenseReceipts}
-            total={totalReceipt}
-            setSelectedRow={setSelectedReceipt}
-            initialState={{
-              columnVisibility: columnVisibility,
-              pagination: { pageIndex: 0, pageSize: paginationPageSize },
-            }}
-            totalAmountKey={["จำนวนเงิน"]}
-          >
-            <h2 className="text-2xl font-bold flex-1">{`รายการบิลค่าใช้จ่าย`}</h2>
-          </DataTable>
-        )}
-      </div>
+    <div className="h-full">
+      {!!expenseReceipts && (
+        <DataTable
+          tableName="expenseReceipt"
+          columns={expenseReceiptColumn}
+          data={expenseReceipts}
+          total={totalReceipt}
+          setSelectedRow={setSelectedReceipt}
+          initialState={{
+            columnVisibility: columnVisibility,
+            pagination: { pageIndex: 0, pageSize: paginationPageSize },
+          }}
+          totalAmountKey={["จำนวนเงิน"]}
+        >
+          <h2 className="text-xl font-bold flex-1">{`รายการบิลค่าใช้จ่าย`}</h2>
+        </DataTable>
+      )}
     </div>
   );
 }

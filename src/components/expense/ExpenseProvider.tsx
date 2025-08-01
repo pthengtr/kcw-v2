@@ -58,12 +58,12 @@ export type ExpenseContextType = {
   ) => void;
 
   // array group
-  expenseReceipts: ExpenseReceiptType[] | undefined;
+  expenseReceipts: ExpenseReceiptType[];
   setExpenseReceipts: (expenses: ExpenseReceiptType[]) => void;
-  receiptEntries: ExpenseEntryType[] | undefined;
-  setReceiptEntries: (receiptEntries: ExpenseEntryType[] | undefined) => void;
-  expenseItems: ExpenseItemType[] | undefined;
-  setExpenseItems: (expenseItems: ExpenseItemType[] | undefined) => void;
+  receiptEntries: ExpenseEntryType[];
+  setReceiptEntries: (receiptEntries: ExpenseEntryType[]) => void;
+  expenseItems: ExpenseItemType[];
+  setExpenseItems: (expenseItems: ExpenseItemType[]) => void;
   createEntries: ExpenseEntryType[];
   setCreateEntries: (createEntries: ExpenseEntryType[]) => void;
   expenseCategories: ExpenseCategoryType[];
@@ -107,10 +107,11 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     useState<ExpenseCategoryType>();
 
   // array group
-  const [expenseItems, setExpenseItems] = useState<ExpenseItemType[]>();
-  const [expenseReceipts, setExpenseReceipts] =
-    useState<ExpenseReceiptType[]>();
-  const [receiptEntries, setReceiptEntries] = useState<ExpenseEntryType[]>();
+  const [expenseItems, setExpenseItems] = useState<ExpenseItemType[]>([]);
+  const [expenseReceipts, setExpenseReceipts] = useState<ExpenseReceiptType[]>(
+    []
+  );
+  const [receiptEntries, setReceiptEntries] = useState<ExpenseEntryType[]>([]);
   const [createEntries, setCreateEntries] = useState<ExpenseEntryType[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<
     ExpenseCategoryType[]

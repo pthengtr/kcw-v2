@@ -66,27 +66,23 @@ export default function ExpenseEntryTable({
   }, [getExpenseEntry, selectedReceipt]);
 
   return (
-    <div className="flex flex-col gap-2 p-2">
-      <div className="h-full">
-        {!!receiptEntries && (
-          <DataTable
-            tableName="receiptEntries"
-            columns={expenseEntryColumn}
-            data={receiptEntries}
-            total={totalEntry}
-            setSelectedRow={setSelectedEntry}
-            initialState={{
-              columnVisibility: columnVisibility,
-              pagination: { pageIndex: 0, pageSize: paginationPageSize },
-            }}
-            totalAmountKey={["ราคารวม"]}
-          >
-            <h2 className="text-2xl font-bold flex-1">
-              รายละเอียดค่าใช้จ่าย {selectedReceipt?.invoice_number}
-            </h2>
-          </DataTable>
-        )}
-      </div>
+    <div className="h-full">
+      <DataTable
+        tableName="receiptEntries"
+        columns={expenseEntryColumn}
+        data={receiptEntries}
+        total={totalEntry}
+        setSelectedRow={setSelectedEntry}
+        initialState={{
+          columnVisibility: columnVisibility,
+          pagination: { pageIndex: 0, pageSize: paginationPageSize },
+        }}
+        totalAmountKey={["ราคารวม"]}
+      >
+        <h2 className="text-xl font-bold flex-1">
+          รายละเอียดค่าใช้จ่าย {selectedReceipt?.invoice_number}
+        </h2>
+      </DataTable>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+"use client";
 import ExpenseEntryTable, {
   defaultReceiptEntryColumnVisibility,
 } from "./ExpenseEntryTable";

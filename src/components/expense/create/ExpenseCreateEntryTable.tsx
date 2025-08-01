@@ -34,22 +34,20 @@ export default function ExpenseCreateEntryTable({
 
   return (
     <div className="h-full">
-      {createEntries.length > 0 && (
-        <DataTable
-          tableName="createEntries"
-          columns={expenseEntryColumn}
-          data={createEntries}
-          total={createEntries.length}
-          setSelectedRow={setSelectedEntry}
-          initialState={{
-            columnVisibility: columnVisibility,
-            pagination: { pageIndex: 0, pageSize: paginationPageSize },
-          }}
-          totalAmountKey={["ราคารวม"]}
-        >
-          {children}
-        </DataTable>
-      )}
+      <DataTable
+        tableName="createEntries"
+        columns={expenseEntryColumn}
+        data={createEntries}
+        total={createEntries.length}
+        setSelectedRow={setSelectedEntry}
+        initialState={{
+          columnVisibility: columnVisibility,
+          pagination: { pageIndex: 0, pageSize: paginationPageSize },
+        }}
+        totalAmountKey={["ราคารวม"]}
+      >
+        {children}
+      </DataTable>
     </div>
   );
 }

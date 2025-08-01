@@ -10,7 +10,10 @@ import {
   ExpenseContextType,
 } from "@/components/expense/ExpenseProvider";
 import ExpenseItemTable from "@/components/expense/item/ExpenseItemTable";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { FilePlus2 } from "lucide-react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 
@@ -40,9 +43,18 @@ export default function ExpenseCreatePage() {
 
   return (
     <section className="flex flex-col items-center p-2">
-      <h1 className="text-2xl font-bold tracking-wider">{`สร้างบิลค่าใช้จ่าย ${branchName}`}</h1>
-      <div className="grid grid-cols-2">
-        <div className="p-2 flex flex-col gap-4">
+      <div className="flex w-full px-2">
+        <Link className="flex-1" href={`/expense/${branch}/summary`} passHref>
+          <Button variant="default">
+            <FilePlus2 />
+            รายงานบิลค่าใช้จ่าย
+          </Button>
+        </Link>
+        <h1 className="text-2xl font-bold tracking-wider">{`สร้างบิลค่าใช้จ่าย ${branchName}`}</h1>
+        <div className="flex-1"></div>
+      </div>
+      <div className="flex w-full">
+        <div className="p-2">
           <ExpenseItemTable>
             <div className="flex flex-1 justify-start items-center gap-2">
               <h2 className="text-xl font-bold pr-2">เลือกประเภทค่าใช้จ่าย</h2>
@@ -52,7 +64,7 @@ export default function ExpenseCreatePage() {
             </div>
           </ExpenseItemTable>
         </div>
-        <div className="p-2 flex flex-col gap-4">
+        <div className="p-2 flex-1">
           <ExpenseCreateEntryTable
             columnVisibility={defaultCreateEntryColumnVisibility}
             paginationPageSize={10}
