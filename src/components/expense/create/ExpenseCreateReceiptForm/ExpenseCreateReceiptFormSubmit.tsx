@@ -12,7 +12,7 @@ export default function ExpenseCreateReceiptFormSubmit() {
     <Button
       form="create-expense-receipt-form"
       disabled={form.formState.isSubmitting}
-      className={`${form.formState.isSubmitting && "bg-blue-300"}`}
+      className={`${form.formState.isSubmitting && "bg-blue-300"} mt-2`}
       type="submit"
     >
       <Plus />
