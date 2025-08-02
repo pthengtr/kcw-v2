@@ -6,36 +6,37 @@ import { FieldValues, UseFormReturn } from "react-hook-form";
 import { useContext } from "react";
 
 import { Input } from "@/components/ui/input";
-import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
+import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 import { DatePickerInput } from "@/components/common/DatePickerInput";
-import { ExpenseReceiptType } from "../summary/ExpenseReceiptColumn";
+import { ExpenseReceiptType } from "../../summary/ExpenseReceiptColumn";
 import { createClient } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
-import { PaymentMethodSelectInput } from "@/components/expense/create/PaymentMethodSelectInput";
+import { PaymentMethodSelectInput } from "@/components/expense/create/ExpenseCreateReceiptForm/PaymentMethodSelectInput";
 import CommonSupplierNameInput from "@/components/common/CommonSupplierNameInput";
 import { toast } from "sonner";
 import FormExpenseReceipt from "./FormExpenseReceipt";
-import { Plus } from "lucide-react";
-import VatSelectInput from "@/components/common/VatSelectInput";
+import ExpenseVatSelectInput from "@/components/expense/create/ExpenseCreateReceiptForm/ExpenseVatSelectInput";
+import ExpenseWithholdingSelectInput from "./ExpenseWithholdingSelectInput";
+import ExpenseDiscountSelectInput from "./ExpenseDiscountInput";
 
 export type ExpenseCreateReceiptFormDefaultType = {
-  vendor_name: string;
+  supplier_id: string;
   invoice_number?: string;
-  invoice_date?: Date | null;
+  invoice_date?: Date | null | undefined | "";
   tax_invoice_number?: string;
-  tax_invoice_date?: Date | null;
+  tax_invoice_date?: Date | null | undefined | "";
   receipt_number?: string;
-  receipt_date?: Date | null;
+  receipt_date?: Date | null | undefined | "";
   payment_id: string;
   remark: string;
-  vat?: string;
-  withholding?: number;
-  discount?: number;
+  vat?: string | undefined;
+  withholding?: string | undefined;
+  discount?: string | undefined;
 };
 
 export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefaultType =
   {
-    vendor_name: "",
+    supplier_id: "",
     payment_id: "",
     invoice_number: "",
     invoice_date: null,
@@ -44,13 +45,13 @@ export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefa
     receipt_number: "",
     receipt_date: null,
     vat: "7",
-    withholding: 0,
-    discount: 0,
+    withholding: "0",
+    discount: "0",
     remark: "",
   };
 
 const expenseCretaeReceiptFormFieldLabel = {
-  vendor_name: "ชื่อบริษัท",
+  supplier_id: "ชื่อบริษัท",
   invoice_number: "เลขที่เอกสาร",
   invoice_date: "วันที่เอกสาร",
   tax_invoice_number: "เลขที่ใบกำกับภาษี",
@@ -76,26 +77,20 @@ function getFieldLabel(field: FieldValues) {
 
 function getFormInput(
   field: FieldValues,
-  form: UseFormReturn<z.infer<typeof formSchema>>
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  form: UseFormReturn<ExpenseCreateReceiptFormDefaultType>
 ) {
   switch (field.name) {
     case "vat":
-      return <VatSelectInput field={field} />;
+      return <ExpenseVatSelectInput field={field} />;
       break;
 
     case "withholding":
+      return <ExpenseWithholdingSelectInput field={field} />;
+      break;
+
     case "discount":
-      return (
-        <Input
-          type="number"
-          //className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          {...field}
-          {...form.register(field.name, {
-            valueAsNumber:
-              !field.value?.toString() === undefined ? false : true,
-          })}
-        />
-      );
+      return <ExpenseDiscountSelectInput field={field} />;
       break;
 
     case "invoice_date":
@@ -104,7 +99,7 @@ function getFormInput(
       return <DatePickerInput field={field} />;
       break;
 
-    case "vendor_name":
+    case "supplier_id":
       return <CommonSupplierNameInput field={field} />;
 
     case "payment_id":
@@ -117,8 +112,8 @@ function getFormInput(
   }
 }
 
-const formSchema = z.object({
-  vendor_name: z.string().nonempty({ message: "กรุณาใส่ชื่อบริษัท" }),
+export const formSchema = z.object({
+  supplier_id: z.string().nonempty({ message: "กรุณาใส่ชื่อบริษัท" }),
   invoice_number: z.string().optional(),
   invoice_date: z.union([z.date().nullable().optional(), z.literal("")]),
   tax_invoice_number: z.string().optional(),
@@ -128,8 +123,11 @@ const formSchema = z.object({
   payment_id: z.string().nonempty({ message: "กรุณาใส่วิธีการชำระ" }),
   remark: z.string(),
   vat: z.string().optional(),
-  discount: z.number().optional(),
-  withholding: z.number().optional(),
+  discount: z.string().optional(),
+  withholding: z
+    .string()
+    .nonempty({ message: "กรุณาใส่ส่วนลดให้ถูกต้อง" })
+    .optional(),
 });
 
 type ExpenseCreateReceiptFormProps = {
@@ -175,7 +173,7 @@ export default function ExpenseCreateReceiptForm({
 
     const createReceiptFormData: ExpenseReceiptType = {
       receipt_id: 0, // dummy value
-      vendor_name: formData.get("vendor_name") as string,
+      supplier_id: parseInt(formData.get("supplier_id") as string) as number,
       invoice_number: formData.get("invoice_number") as string,
       invoice_date: formData.get("invoice_date") as string,
       tax_invoice_number: formData.get("tax_invoice_number") as string,
@@ -221,7 +219,7 @@ export default function ExpenseCreateReceiptForm({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const {
-      vendor_name,
+      supplier_id,
       invoice_number,
       invoice_date,
       tax_invoice_number,
@@ -237,7 +235,7 @@ export default function ExpenseCreateReceiptForm({
 
     const formData = new FormData();
 
-    formData.append("vendor_name", vendor_name);
+    formData.append("supplier_id", supplier_id);
     formData.append("payment_id", payment_id);
     formData.append("remark", remark);
 
@@ -266,28 +264,24 @@ export default function ExpenseCreateReceiptForm({
       formData.append("vat", vat);
     }
     if (withholding) {
-      formData.append("withholding", withholding.toString());
+      formData.append("withholding", withholding);
     }
     if (discount) {
-      formData.append("discount", discount.toString());
+      formData.append("discount", discount);
     }
 
     await createUpdateSupplier(formData);
   }
 
   return (
-    <FormExpenseReceipt
-      schema={formSchema}
-      defaultValues={defaultValues}
-      onSubmit={onSubmit}
-      getFieldLabel={getFieldLabel}
-      getFormInput={getFormInput}
-      className="grid grid-cols-2 justify-items-center justify-center items-center gap-y-6 gap-x-4"
-      submitLabel={
-        <>
-          <Plus /> สร้างบิล
-        </>
-      }
-    />
+    <>
+      <FormExpenseReceipt
+        defaultValues={defaultValues}
+        onSubmit={onSubmit}
+        getFieldLabel={getFieldLabel}
+        getFormInput={getFormInput}
+        className="grid grid-cols-2 justify-items-center justify-center items-start gap-y-6 gap-x-4"
+      />
+    </>
   );
 }

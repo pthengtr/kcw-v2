@@ -8,7 +8,7 @@ import { ColumnDef, HeaderContext, Row } from "@tanstack/react-table";
 
 export type ExpenseReceiptType = {
   receipt_id: number;
-  vendor_name: string;
+  supplier_id: number;
   invoice_number: string;
   invoice_date: string;
   tax_invoice_number: string;
@@ -28,7 +28,7 @@ export type ExpenseReceiptType = {
 
 export const expenseReceiptFieldLabel = {
   receipt_id: "รายการเลขที่",
-  vendor_name: "บริษัท",
+  supplier_id: "บริษัท",
   invoice_number: "เลขที่ใบแจ้งหนี้",
   invoice_date: "วันที่ใบแจ้งหนี้",
   tax_invoice_number: "เลขที่ใบกำกับภาษี",
@@ -48,7 +48,7 @@ export const expenseReceiptFieldLabel = {
 
 export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
   numberInt("receipt_id"),
-  simpleText("vendor_name"),
+  simpleText("supplier_id"),
   simpleText("invoice_number"),
   dateThai("invoice_date"),
   simpleText("tax_invoice_number"),

@@ -7,19 +7,20 @@ import { FieldValues, UseFormReturn } from "react-hook-form";
 import { useContext } from "react";
 
 import { Input } from "@/components/ui/input";
-import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
-import { ExpenseEntryType } from "../summary/ExpenseEntryColumn";
-import ExpenseItemSelectInput from "./ExpenseItemSelectInput";
+import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
+import { ExpenseEntryType } from "../../summary/ExpenseEntryColumn";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { VAT } from "@/lib/utils";
+import ExpenseSelectItemDialogInput from "./ExpenseSelectItemDialogInput";
+import { Plus } from "lucide-react";
 
 export type ExpenseAddEntryFormDefaultType = {
   entry_detail: string;
   unit_price: number;
   quantity: number;
   discount: number;
-  item_id?: string;
+  item_id: string;
   includeVat?: boolean;
 };
 
@@ -37,8 +38,9 @@ const expenseAddEntryFormFieldLabel = {
   entry_detail: "รายละเอียด",
   unit_price: "ราคาต่อหน่วย",
   quantity: "จำนวน",
-  item_id: "ประเภทค่าใช้จ่าย",
+  item_id: " ",
   includeVat: " ",
+  discount: "ส่วนลดต่อรายการ",
 };
 
 function getFieldLabel(field: FieldValues) {
@@ -57,7 +59,7 @@ function getFormInput(
 ) {
   switch (field.name) {
     case "item_id":
-      return <ExpenseItemSelectInput field={field} />;
+      return <ExpenseSelectItemDialogInput field={field} />;
 
     case "includeVat":
       return (
@@ -100,7 +102,7 @@ const formSchema = z.object({
   }),
   //item_id: z.string().nonempty({ message: "กรุณาเลือกประเุภทค่าใช้จ่าย" }),
   discount: z.number(),
-  item_id: z.string().optional(),
+  item_id: z.string().nonempty({ message: "กรุณาเลือกประเภทค่าใข้จ่าย" }),
   includeVat: z.boolean().optional(),
 });
 
@@ -135,6 +137,7 @@ export default function ExpenseAddEntryForm({
 
     const formItemId = parseInt(formData.get("item_id") as string) as number;
 
+    console.log(formItemId, expenseItems);
     const formExpenseItem = expenseItems.find(
       (item) => item.item_id === formItemId
     );
@@ -214,8 +217,12 @@ export default function ExpenseAddEntryForm({
       onSubmit={onSubmit}
       getFieldLabel={getFieldLabel}
       getFormInput={getFormInput}
-      className="flex flex-col justify-center items-center gap-4"
-      submitLabel="บันทึก"
+      className="flex flex-col justify-center items-center gap-6"
+      submitLabel={
+        <>
+          <Plus /> เพิ่มรายการในบิลนี้
+        </>
+      }
     />
   );
 }

@@ -14,6 +14,15 @@ import { ExpenseItemType } from "./item/ExpenseItemColumn";
 import { ExpenseCategoryType } from "./item/ExpenseCategoryColumn";
 import { createClient } from "@/lib/supabase/client";
 import { ColumnFiltersState } from "@tanstack/react-table";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+import { DefaultValues, useForm, UseFormReturn } from "react-hook-form";
+import {
+  ExpenseCreateReceiptFormDefaultType,
+  expenseCreateReceiptFormDefaultValues,
+  formSchema,
+} from "./create/ExpenseCreateReceiptForm/ExpenseCreateReceiptForm";
 
 export type ExpenseContextType = {
   openAddEntryDialog: boolean;
@@ -80,6 +89,14 @@ export type ExpenseContextType = {
   setTotalItem: (total: number) => void;
   totalCategory: number | undefined;
   setTotalCategory: (total: number) => void;
+
+  vatInput: string;
+  setVatInput: (vatInput: string) => void;
+  discountInput: string;
+  setDiscountInput: (vatInput: string) => void;
+  withholdingInput: string;
+  setWithholdingInput: (vatInput: string) => void;
+  formExpenseReceipt: UseFormReturn<ExpenseCreateReceiptFormDefaultType>;
 };
 
 export const ExpenseContext = createContext<ExpenseContextType | null>(null);
@@ -123,12 +140,24 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [totalEntry, setTotalEntry] = useState<number>();
   const [totalItem, setTotalItem] = useState<number>();
   const [totalCategory, setTotalCategory] = useState<number>();
-  // image
+
+  // image and misc
   const [receiptImageArray, setReceiptImageArray] =
     useState<storageObjectType[]>();
   const [submitError, setSubmitError] = useState<string>();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [createReceiptTab, setCreateReceiptTab] = useState("company");
+
+  // for create receipt form
+  const [vatInput, setVatInput] = useState("7");
+  const [discountInput, setDiscountInput] = useState("0");
+  const [withholdingInput, setWithholdingInput] = useState("0");
+
+  const formExpenseReceipt = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues:
+      expenseCreateReceiptFormDefaultValues as DefaultValues<ExpenseCreateReceiptFormDefaultType>,
+  });
 
   function handleSelectedReceipt(row: ExpenseReceiptType) {
     setSelectedReceipt(row);
@@ -232,6 +261,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     totalCategory,
     setTotalCategory,
 
+    // misc
     submitError,
     setSubmitError,
     receiptImageArray,
@@ -243,6 +273,14 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setColumnFilters,
     createReceiptTab,
     setCreateReceiptTab,
+
+    vatInput,
+    setVatInput,
+    discountInput,
+    setDiscountInput,
+    withholdingInput,
+    setWithholdingInput,
+    formExpenseReceipt,
   };
 
   return (

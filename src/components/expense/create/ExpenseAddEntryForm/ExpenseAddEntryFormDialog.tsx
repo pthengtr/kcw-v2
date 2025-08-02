@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { FilePlus2, Pencil } from "lucide-react";
 import { useContext } from "react";
-import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
+import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 import ExpenseAddEntryForm, {
   ExpenseAddEntryFormDefaultType,
   expenseAddEntryFormDefaultValues,
@@ -71,7 +71,7 @@ export default function ExpenseAddEntryFormDialog({
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader className="flex flex-col gap-4">
+        <DialogHeader className="flex flex-col gap-2">
           <DialogTitle>{update ? "แก้ไขรายการ" : `เพิ่มรายการ`}</DialogTitle>
           <ExpenseAddEntryForm defaultValues={defaultValues} update={update} />
         </DialogHeader>

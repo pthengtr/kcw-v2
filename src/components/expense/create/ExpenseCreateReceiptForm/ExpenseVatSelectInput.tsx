@@ -5,15 +5,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useContext } from "react";
 import { FieldValues } from "react-hook-form";
+import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 
 type VatSelectInputProps = {
   field: FieldValues;
 };
 
-export default function VatSelectInput({ field }: VatSelectInputProps) {
+export default function ExpenseVatSelectInput({ field }: VatSelectInputProps) {
+  const { vatInput, setVatInput } = useContext(
+    ExpenseContext
+  ) as ExpenseContextType;
+
+  function handleOnOpenChange(value: string) {
+    field.onChange(value);
+    setVatInput(value);
+  }
+
   return (
-    <Select defaultValue={field.value} onOpenChange={field.onChange}>
+    <Select value={vatInput} onValueChange={handleOnOpenChange}>
       <SelectTrigger className="">
         <SelectValue placeholder="เลือกภาษี" />
       </SelectTrigger>

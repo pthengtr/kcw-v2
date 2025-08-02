@@ -1,6 +1,6 @@
 "use client";
 
-import ExpenseAddEntryFormDialog from "@/components/expense/create/ExpenseAddEntryFormDialog";
+import ExpenseAddEntryFormDialog from "@/components/expense/create/ExpenseAddEntryForm/ExpenseAddEntryFormDialog";
 import ExpenseCreateEntryTable, {
   defaultCreateEntryColumnVisibility,
 } from "@/components/expense/create/ExpenseCreateEntryTable";
@@ -18,13 +18,19 @@ import { useContext, useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ExpenseCreateReceiptForm, {
   expenseCreateReceiptFormDefaultValues,
-} from "./ExpenseCreateReceiptForm";
-import { VAT } from "@/lib/utils";
+} from "./ExpenseCreateReceiptForm/ExpenseCreateReceiptForm";
+import ExpenseCreateReceiptFormSubmit from "./ExpenseCreateReceiptForm/ExpenseCreateReceiptFormSubmit";
 
 export default function ExpenseCreatePage() {
-  const { selectedEntry, createReceiptTab, setCreateReceiptTab } = useContext(
-    ExpenseContext
-  ) as ExpenseContextType;
+  const {
+    selectedEntry,
+    createReceiptTab,
+    setCreateReceiptTab,
+    vatInput,
+    withholdingInput,
+    discountInput,
+    createEntries,
+  } = useContext(ExpenseContext) as ExpenseContextType;
 
   const [branchName, setBranchName] = useState("");
 
@@ -65,6 +71,16 @@ export default function ExpenseCreatePage() {
     ...noVatDefaultValues
   } = expenseCreateReceiptFormDefaultValues;
 
+  const totalBeforeTax = createEntries.reduce(
+    (sum, item) => sum + item.entry_amount,
+    0
+  );
+
+  const vatOnly = totalBeforeTax * (parseInt(vatInput) / 100);
+  const totalAfterTax = totalBeforeTax - parseFloat(discountInput) + vatOnly;
+  const withholdingOnly = totalBeforeTax * (parseInt(withholdingInput) / 100);
+  const totalNet = totalAfterTax - withholdingOnly;
+
   return (
     <section className="flex flex-col items-center p-2">
       <div className="flex w-full p-2">
@@ -86,7 +102,7 @@ export default function ExpenseCreatePage() {
         <div className="flex-1 flex justify-end gap-2"></div>
       </div>
 
-      <div className="flex w-full justify-center h-[75vh]">
+      <div className="flex w-full justify-center h-[80vh]">
         <div className="p-2 h-full">
           <Tabs
             value={createReceiptTab}
@@ -98,14 +114,14 @@ export default function ExpenseCreatePage() {
               <TabsTrigger value="individual">ทั่วไป</TabsTrigger>
             </TabsList>
             <TabsContent value="company" className="h-full">
-              <div className="p-4 border rounded-lg mt-2 h-full overflow-auto">
+              <div className="p-4 border rounded-lg mt-2 overflow-auto">
                 <ExpenseCreateReceiptForm
                   defaultValues={expenseCreateReceiptFormDefaultValues}
                 />
               </div>
             </TabsContent>
             <TabsContent value="individual" className="h-full">
-              <div className="p-4 border rounded-lg mt-2 h-full">
+              <div className="p-4 border rounded-lg mt-2">
                 <ExpenseCreateReceiptForm defaultValues={noVatDefaultValues} />
               </div>
             </TabsContent>
@@ -122,10 +138,60 @@ export default function ExpenseCreatePage() {
               {selectedEntry && <ExpenseAddEntryFormDialog update />}
             </div>
           </ExpenseCreateEntryTable>
-          <div>
-            <div>ราคา</div>
-            <div>{`ภาษี ${VAT} %`}</div>
-            <div>ราคารวม</div>
+          <div className="flex p-4 h-fit justify-end mr-8">
+            <div className="grid grid-cols-2 gap-2">
+              <div>ราคาก่อนภาษี</div>
+              <div className="text-right">
+                {totalBeforeTax.toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+
+              <div>ส่วนลด</div>
+              <div className="text-right">
+                {parseFloat(discountInput).toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+
+              <div>{`ภาษี ${vatInput} %`}</div>
+              <div className="text-right">
+                {vatOnly.toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+
+              <div>ราคารวม</div>
+              <div className="text-right">
+                {totalAfterTax.toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+
+              <div>{`หัก ณ ที่จ่าย ${withholdingInput} %`}</div>
+              <div className="text-right">
+                {withholdingOnly.toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+
+              <div>ราคารวมสุทธิ</div>
+              <div className="text-right">
+                {totalNet.toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+
+              <div className="col-span-2 justify-self-center">
+                <ExpenseCreateReceiptFormSubmit />
+              </div>
+            </div>
           </div>
         </div>
       </div>
