@@ -32,6 +32,8 @@ export default function ExpenseCreateEntryTable({
     ExpenseContext
   ) as ExpenseContextType;
 
+  console.log(createEntries);
+
   return (
     <div className="h-full">
       <DataTable

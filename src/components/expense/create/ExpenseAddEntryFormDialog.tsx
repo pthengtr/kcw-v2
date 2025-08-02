@@ -27,6 +27,7 @@ export default function ExpenseAddEntryFormDialog({
     openUpdateEntryDialog,
     setOpenUpdateEntryDialog,
     selectedEntry,
+    selectedItem,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const defaultValues: ExpenseAddEntryFormDefaultType =
@@ -58,7 +59,9 @@ export default function ExpenseAddEntryFormDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader className="flex flex-col gap-4">
-          <DialogTitle>{update ? "แก้ไขรายการ" : "เพิ่มรายการ"}</DialogTitle>
+          <DialogTitle>
+            {update ? "แก้ไขรายการ" : `เพิ่มรายการ  ${selectedItem?.item_name}`}
+          </DialogTitle>
           <ExpenseAddEntryForm defaultValues={defaultValues} update={update} />
         </DialogHeader>
       </DialogContent>
