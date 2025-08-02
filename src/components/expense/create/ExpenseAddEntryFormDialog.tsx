@@ -27,17 +27,30 @@ export default function ExpenseAddEntryFormDialog({
     openUpdateEntryDialog,
     setOpenUpdateEntryDialog,
     selectedEntry,
-    selectedItem,
+    createReceiptTab,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
-  const defaultValues: ExpenseAddEntryFormDefaultType =
+  const _defaultValues: ExpenseAddEntryFormDefaultType =
     update && selectedEntry
       ? {
+          item_id: selectedEntry.item_id.toString(),
           entry_detail: selectedEntry.entry_detail,
           unit_price: selectedEntry.unit_price,
+          includeVat: false,
           quantity: selectedEntry.quantity,
+          discount: selectedEntry.discount,
         }
       : expenseAddEntryFormDefaultValues;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { includeVat, ...defaultValuesNovat } = _defaultValues;
+
+  let defaultValues;
+  if (createReceiptTab === "company") {
+    defaultValues = _defaultValues;
+  } else {
+    defaultValues = defaultValuesNovat;
+  }
 
   return (
     <Dialog
@@ -59,9 +72,7 @@ export default function ExpenseAddEntryFormDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader className="flex flex-col gap-4">
-          <DialogTitle>
-            {update ? "แก้ไขรายการ" : `เพิ่มรายการ  ${selectedItem?.item_name}`}
-          </DialogTitle>
+          <DialogTitle>{update ? "แก้ไขรายการ" : `เพิ่มรายการ`}</DialogTitle>
           <ExpenseAddEntryForm defaultValues={defaultValues} update={update} />
         </DialogHeader>
       </DialogContent>

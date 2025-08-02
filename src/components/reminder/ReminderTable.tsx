@@ -87,7 +87,7 @@ export default function ReminderTable({
   const defaultValues = isAdmin ? reminderDefaultValue : nonAdminDefaultValue;
 
   return (
-    <div className="flex flex-col gap-2 p-2">
+    <div className="flex flex-col gap-2 p-2 h-full">
       <div className="flex justify-center items-end p-4 gap-4">
         <div>
           <ReminderSearchForm

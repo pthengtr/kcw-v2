@@ -32,8 +32,6 @@ export default function ExpenseCreateEntryTable({
     ExpenseContext
   ) as ExpenseContextType;
 
-  console.log(createEntries);
-
   return (
     <div className="h-full">
       <DataTable
@@ -46,7 +44,7 @@ export default function ExpenseCreateEntryTable({
           columnVisibility: columnVisibility,
           pagination: { pageIndex: 0, pageSize: paginationPageSize },
         }}
-        totalAmountKey={["ราคารวม"]}
+        totalAmountKey={[]}
       >
         {children}
       </DataTable>

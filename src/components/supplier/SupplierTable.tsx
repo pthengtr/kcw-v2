@@ -59,7 +59,7 @@ export default function SupplierTable() {
   }, [getSuppliers, setSubmitError, openCreateDialog, openDeleteDialog]);
 
   return (
-    <div className="flex flex-col items-center gap-4 p-2">
+    <div className="flex flex-col items-center gap-4 p-2 h-full">
       <div className="flex gap-4 items-end">
         <SupplierSearchForm
           defaultValues={{

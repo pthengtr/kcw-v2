@@ -44,6 +44,8 @@ export type ExpenseContextType = {
   getItems: () => Promise<void>;
   columnFilters: ColumnFiltersState | [];
   setColumnFilters: Dispatch<SetStateAction<ColumnFiltersState>>;
+  createReceiptTab: string;
+  setCreateReceiptTab: (createReceiptTab: string) => void;
 
   // set selected group
   selectedReceipt: ExpenseReceiptType | undefined;
@@ -126,6 +128,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     useState<storageObjectType[]>();
   const [submitError, setSubmitError] = useState<string>();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [createReceiptTab, setCreateReceiptTab] = useState("company");
 
   function handleSelectedReceipt(row: ExpenseReceiptType) {
     setSelectedReceipt(row);
@@ -238,6 +241,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     getItems,
     columnFilters,
     setColumnFilters,
+    createReceiptTab,
+    setCreateReceiptTab,
   };
 
   return (

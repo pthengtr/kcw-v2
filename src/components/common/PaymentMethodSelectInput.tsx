@@ -21,7 +21,7 @@ export function PaymentMethodSelectInput({
 }: PaymentMethodSelectInputProps) {
   return (
     <Select onValueChange={field.onChange}>
-      <SelectTrigger className="w-[200px]">
+      <SelectTrigger className="">
         <SelectValue placeholder="เลือกวิธีการชำระ" />
       </SelectTrigger>
       <SelectContent>

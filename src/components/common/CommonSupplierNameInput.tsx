@@ -40,8 +40,6 @@ export default function CommonSupplierNameInput({
 
       const { data, error } = await query;
 
-      console.log(data, error);
-
       if (error) console.log(error.message);
       if (data) setSupplierOptions(data);
     }

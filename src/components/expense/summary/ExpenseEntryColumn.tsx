@@ -15,6 +15,7 @@ export type ExpenseEntryType = {
   quantity: number;
   entry_detail: string;
   entry_amount: number;
+  discount: number;
   expense_item: ExpenseItemType;
 };
 
@@ -26,6 +27,7 @@ export const expenseEntryFieldLabel = {
   quantity: "จำนวน",
   entry_detail: "รายละเอียด",
   entry_amount: "ราคารวม",
+  discount: "ส่วนลด",
   "expense_item.item_name": "ประเภทค่าใช้จ่าย",
   "expense_item.category": "หมวด",
 };

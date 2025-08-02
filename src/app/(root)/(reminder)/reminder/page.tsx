@@ -87,7 +87,7 @@ export default function Reminder() {
       >
         <ResizablePanel>
           {columnVisibility && paginationPageSize && (
-            <div className="h-full overflow-auto">
+            <div className="h-[75vh]">
               <ReminderTable
                 columnVisibility={columnVisibility}
                 paginationPageSize={paginationPageSize}

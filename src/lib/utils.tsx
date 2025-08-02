@@ -6,6 +6,8 @@ import { HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
 import { storageObjectType } from "@/components/common/ImageCarousel";
 
+export const VAT = 7;
+
 export const imageRegex = /[^A-Za-z0-9ก-ฮ]/g;
 
 export const thaiConsonantRegex = /[ก-ฮ]/g;

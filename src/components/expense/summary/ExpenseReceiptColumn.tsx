@@ -20,6 +20,9 @@ export type ExpenseReceiptType = {
   remark: string;
   branch_id: number;
   user_id: string;
+  vat: number;
+  discount: number;
+  withholding: number;
 };
 
 export const expenseReceiptFieldLabel = {
@@ -36,6 +39,9 @@ export const expenseReceiptFieldLabel = {
   remark: "หมายเหตุ",
   branch_id: "สาขา",
   user_id: "พนักงาน",
+  vat: "ภาษี",
+  discount: "ส่วนลด",
+  withholding: "หัก ณ ที่จ่าย",
 };
 
 export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
