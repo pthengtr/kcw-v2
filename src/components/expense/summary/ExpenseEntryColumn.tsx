@@ -40,6 +40,7 @@ export const expenseEntryColumn: ColumnDef<ExpenseEntryType>[] = [
   simpleText("expense_item.item_name"),
   simpleText("expense_item.category"),
   numberFloat("unit_price"),
+  numberFloat("discount"),
   numberFloat("quantity"),
   numberFloat("entry_amount"),
 ];

@@ -70,13 +70,13 @@ export default function ExpenseCreatePage() {
       <div className="flex w-full p-2">
         <div className="flex-1 flex gap-2">
           <Link className="" href={`/expense/${branch}/summary`} passHref>
-            <Button variant="default">
+            <Button variant="outline">
               <ClipboardList />
               รายงานบิลค่าใช้จ่าย
             </Button>
           </Link>
           <Link className="" href={`/expense`} passHref>
-            <Button variant="default">
+            <Button variant="outline">
               <Store />
               เลือกสาขา
             </Button>

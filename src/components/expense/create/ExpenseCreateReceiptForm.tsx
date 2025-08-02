@@ -11,7 +11,7 @@ import { DatePickerInput } from "@/components/common/DatePickerInput";
 import { ExpenseReceiptType } from "../summary/ExpenseReceiptColumn";
 import { createClient } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
-import { PaymentMethodSelectInput } from "@/components/common/PaymentMethodSelectInput";
+import { PaymentMethodSelectInput } from "@/components/expense/create/PaymentMethodSelectInput";
 import CommonSupplierNameInput from "@/components/common/CommonSupplierNameInput";
 import { toast } from "sonner";
 import FormExpenseReceipt from "./FormExpenseReceipt";
@@ -26,7 +26,7 @@ export type ExpenseCreateReceiptFormDefaultType = {
   tax_invoice_date?: Date | null;
   receipt_number?: string;
   receipt_date?: Date | null;
-  payment_method: string;
+  payment_id: string;
   remark: string;
   vat?: string;
   withholding?: number;
@@ -36,7 +36,7 @@ export type ExpenseCreateReceiptFormDefaultType = {
 export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefaultType =
   {
     vendor_name: "",
-    payment_method: "",
+    payment_id: "",
     invoice_number: "",
     invoice_date: null,
     tax_invoice_number: "",
@@ -57,7 +57,7 @@ const expenseCretaeReceiptFormFieldLabel = {
   tax_invoice_date: "วันที่ใบกำกับภาษี",
   receipt_number: "เลขที่ใบเสร็จรับเงิน",
   receipt_date: "วันที่ใบเสร็จรับเงิน",
-  payment_method: "ชำระโดย",
+  payment_id: "ชำระโดย",
   remark: "หมายเหตุ",
   vat: "ภาษี",
   withholding: "หัก ณ ที่จ่าย",
@@ -107,7 +107,7 @@ function getFormInput(
     case "vendor_name":
       return <CommonSupplierNameInput field={field} />;
 
-    case "payment_method":
+    case "payment_id":
       return <PaymentMethodSelectInput field={field} />;
       break;
 
@@ -125,7 +125,7 @@ const formSchema = z.object({
   tax_invoice_date: z.union([z.date().nullable().optional(), z.literal("")]),
   receipt_number: z.string().optional(),
   receipt_date: z.union([z.date().nullable().optional(), z.literal("")]),
-  payment_method: z.string().nonempty({ message: "กรุณาใส่วิธีการชำระ" }),
+  payment_id: z.string().nonempty({ message: "กรุณาใส่วิธีการชำระ" }),
   remark: z.string(),
   vat: z.string().optional(),
   discount: z.number().optional(),
@@ -145,6 +145,7 @@ export default function ExpenseCreateReceiptForm({
     setSubmitError,
     setOpenCreateNoVatReceiptDialog,
     setOpenCreateVatReceiptDialog,
+    createReceiptTab,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
@@ -185,13 +186,14 @@ export default function ExpenseCreateReceiptForm({
         (sum, item) => sum + item.entry_amount,
         0
       ),
-      payment_method: formData.get("payment_method") as string,
+      payment_id: parseInt(formData.get("payment_id") as string) as number,
       remark: formData.get("remark") as string,
       branch_id: parseInt(branch),
       user_id: user.email,
       vat: formVat ? formVat : 0,
       withholding: formWithholding ? formWithholding : 0,
       discount: formDiscount ? formDiscount : 0,
+      submit_to_account: createReceiptTab === "company" ? true : false,
     };
 
     console.log(JSON.stringify(createReceiptFormData));
@@ -226,7 +228,7 @@ export default function ExpenseCreateReceiptForm({
       tax_invoice_date,
       receipt_number,
       receipt_date,
-      payment_method,
+      payment_id,
       remark,
       vat,
       withholding,
@@ -236,7 +238,7 @@ export default function ExpenseCreateReceiptForm({
     const formData = new FormData();
 
     formData.append("vendor_name", vendor_name);
-    formData.append("payment_method", payment_method);
+    formData.append("payment_id", payment_id);
     formData.append("remark", remark);
 
     if (invoice_number) {

@@ -16,13 +16,14 @@ export type ExpenseReceiptType = {
   receipt_number: string;
   receipt_date: string;
   total_amount: number;
-  payment_method: string;
+  payment_id: number;
   remark: string;
   branch_id: number;
   user_id: string;
   vat: number;
   discount: number;
   withholding: number;
+  submit_to_account: boolean;
 };
 
 export const expenseReceiptFieldLabel = {
@@ -35,13 +36,14 @@ export const expenseReceiptFieldLabel = {
   receipt_number: "เลขที่ใบเสร็จรับเงิน",
   receipt_date: "วันที่ใบเสร็จรับเงิน",
   total_amount: "จำนวนเงิน",
-  payment_method: "ชำระโดย",
+  payment_id: "ชำระโดย",
   remark: "หมายเหตุ",
   branch_id: "สาขา",
   user_id: "พนักงาน",
   vat: "ภาษี",
   discount: "ส่วนลด",
   withholding: "หัก ณ ที่จ่าย",
+  submit_to_account: "ส่งบัญชี",
 };
 
 export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
@@ -54,10 +56,14 @@ export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
   simpleText("receipt_number"),
   dateThai("receipt_date"),
   numberFloat("total_amount"),
-  simpleText("payment_method"),
+  numberFloat("discount"),
+  numberFloat("vat"),
+  numberFloat("withholding"),
+  simpleText("payment_id"),
   simpleText("branch_id"),
   simpleText("remark"),
   simpleText("user_id"),
+  simpleText("submit_to_account"),
 ];
 
 function simpleText(key: keyof ExpenseReceiptType) {

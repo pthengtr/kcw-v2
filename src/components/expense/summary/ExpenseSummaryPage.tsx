@@ -35,13 +35,13 @@ export default function ExpenseSummaryPage() {
       <div className="flex w-full px-2">
         <div className="flex-1 flex gap-2">
           <Link className="" href={`/expense/${branch}/create`} passHref>
-            <Button variant="default">
+            <Button variant="outline">
               <Plus />
               สร้างบิลค่าใช้จ่ายใหม่
             </Button>
           </Link>
           <Link className="" href={`/expense`} passHref>
-            <Button variant="default">
+            <Button variant="outline">
               <Store />
               เลือกสาขา
             </Button>
