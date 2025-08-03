@@ -29,6 +29,7 @@ export default function ExpenseUpdatePage() {
     setWithholdingInput,
     setSelectedPaymentMethod,
     setSelectedSupplier,
+    setDeleteEntries,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const [branchName, setBranchName] = useState("");
@@ -65,6 +66,7 @@ export default function ExpenseUpdatePage() {
       if (error) console.log(error.message);
       if (data) {
         const [receipt] = data;
+        setDeleteEntries([]);
         setSelectedReceipt(receipt);
         setVatInput(receipt.vat.toString());
         setDiscountInput(receipt.discount.toString());
@@ -85,6 +87,7 @@ export default function ExpenseUpdatePage() {
     branch,
     receiptId,
     setCreateReceiptTab,
+    setDeleteEntries,
     setDiscountInput,
     setSelectedPaymentMethod,
     setSelectedReceipt,
@@ -121,7 +124,10 @@ export default function ExpenseUpdatePage() {
                       <ExpenseAddEntryFormDialog update />
                       <Button
                         onClick={() =>
-                          handleDeleteCreateEntry(selectedEntry.entry_uuid)
+                          handleDeleteCreateEntry(
+                            selectedEntry.entry_uuid,
+                            true
+                          )
                         }
                       >
                         <Trash />

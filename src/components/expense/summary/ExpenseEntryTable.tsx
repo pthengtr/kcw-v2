@@ -5,6 +5,9 @@ import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/common/DataTable";
 import { expenseEntryColumn } from "./ExpenseEntryColumn";
+import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useParams, useRouter } from "next/navigation";
 
 export const defaultReceiptEntryColumnVisibility = {
   รายการเลขที่: false,
@@ -33,6 +36,10 @@ export default function ExpenseEntryTable({
     selectedReceipt,
     setSelectedEntry,
   } = useContext(ExpenseContext) as ExpenseContextType;
+
+  const { branch } = useParams();
+
+  const router = useRouter();
 
   const supabase = createClient();
 
@@ -65,6 +72,12 @@ export default function ExpenseEntryTable({
     if (selectedReceipt) getExpenseEntry();
   }, [getExpenseEntry, selectedReceipt]);
 
+  function handleUpdateReceipt() {
+    router.push(
+      `/expense/${branch}/update-receipt?receipt-id=${selectedReceipt?.receipt_uuid}`
+    );
+  }
+
   return (
     <div className="h-full">
       <DataTable
@@ -81,20 +94,25 @@ export default function ExpenseEntryTable({
       >
         <h2 className="flex-1">
           {selectedReceipt ? (
-            <div>
-              <div
-                className={`flex gap-3 items-center ${
-                  selectedReceipt.tax_invoice_number ? "text-sm" : "text-xl"
-                }`}
-              >
-                <div className="font-bold">
-                  {selectedReceipt.supplier.supplier_code}
+            <div className="flex gap-4 items-center">
+              <div>
+                <div
+                  className={`flex gap-3 items-center ${
+                    selectedReceipt.tax_invoice_number ? "text-sm" : "text-xl"
+                  }`}
+                >
+                  <div className="font-bold">
+                    {selectedReceipt.supplier.supplier_code}
+                  </div>
+                  <div>{selectedReceipt.supplier.supplier_name}</div>
                 </div>
-                <div>{selectedReceipt.supplier.supplier_name}</div>
+                <div className="text-xl italic">
+                  {selectedReceipt.tax_invoice_number}
+                </div>
               </div>
-              <div className="text-xl italic">
-                {selectedReceipt.tax_invoice_number}
-              </div>
+              <Button variant="outline" onClick={handleUpdateReceipt}>
+                <Pencil /> แก้ไขบิลนี้
+              </Button>
             </div>
           ) : (
             "รายละเอียดบิล"

@@ -90,6 +90,8 @@ export type ExpenseContextType = {
   setCreateEntries: (createEntries: ExpenseEntryType[]) => void;
   expenseCategories: ExpenseCategoryType[];
   setExpenseCategories: (expenseCategories: ExpenseCategoryType[]) => void;
+  deleteEntries: string[];
+  setDeleteEntries: (deleteEntries: string[]) => void;
 
   // total group
   totalReceipt: number | undefined;
@@ -109,7 +111,7 @@ export type ExpenseContextType = {
   setWithholdingInput: (vatInput: string) => void;
   formExpenseReceipt: UseFormReturn<ExpenseCreateReceiptFormDefaultType>;
   resetCreateReceiptForm: () => void;
-  handleDeleteCreateEntry: (entry_uuid: UUID) => void;
+  handleDeleteCreateEntry: (entry_uuid: UUID, update?: boolean) => void;
 };
 
 export const ExpenseContext = createContext<ExpenseContextType | null>(null);
@@ -156,6 +158,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [totalEntry, setTotalEntry] = useState<number>();
   const [totalItem, setTotalItem] = useState<number>();
   const [totalCategory, setTotalCategory] = useState<number>();
+  const [deleteEntries, setDeleteEntries] = useState<UUID[]>([]);
 
   // image and misc
   const [receiptImageArray, setReceiptImageArray] =
@@ -188,8 +191,14 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setCreateReceiptTab("company");
   }
 
-  function handleDeleteCreateEntry(entry_uuid: UUID) {
+  function handleDeleteCreateEntry(entry_uuid: UUID, update = false) {
     if (!entry_uuid) return;
+
+    if (update) {
+      const newDeleteEntries = [...deleteEntries, entry_uuid];
+      setDeleteEntries(newDeleteEntries);
+    }
+
     const newCreateEntries = createEntries.filter(
       (item) => item.entry_uuid !== entry_uuid
     );
@@ -287,6 +296,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setCreateEntries,
     expenseCategories,
     setExpenseCategories,
+    deleteEntries,
+    setDeleteEntries,
 
     // total group
     totalReceipt,

@@ -61,7 +61,9 @@ export default function ExpenseSummaryPage() {
             columnVisibility={defaultExpenseReceiptColumnVisibility}
             paginationPageSize={10}
           >
-            <h2 className="text-xl font-bold flex-1">{`รายการบิลค่าใช้จ่าย`}</h2>
+            <div className="flex gap-2 flex-1 items-center">
+              <h2 className="text-xl font-bold ">{`รายการบิลค่าใช้จ่าย`}</h2>
+            </div>
           </ExpenseReceiptTable>
         </div>
         <div className="p-2 flex-1">

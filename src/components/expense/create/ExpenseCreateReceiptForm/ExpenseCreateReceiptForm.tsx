@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 import { DatePickerInput } from "@/components/common/DatePickerInput";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import ExpensePaymentMethodSelectInput from "@/components/expense/create/ExpenseCreateReceiptForm/ExpensePaymentMethodSelectInput";
 import { toast } from "sonner";
 import FormExpenseReceipt from "./FormExpenseReceipt";
@@ -133,7 +133,6 @@ export default function ExpenseCreateReceiptForm({
 }: ExpenseCreateReceiptFormProps) {
   const {
     createEntries,
-    setSubmitError,
     createReceiptTab,
     vatInput,
     withholdingInput,
@@ -141,13 +140,13 @@ export default function ExpenseCreateReceiptForm({
     selectedSupplier,
     selectedPaymentMethod,
     resetCreateReceiptForm,
+    selectedReceipt,
+    deleteEntries,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
 
-  async function updateReceipt(formData: FormData) {
-    console.log(formData);
-  }
+  const router = useRouter();
 
   async function createReceipt(formData: FormData) {
     // type-casting here for convenience
@@ -214,24 +213,41 @@ export default function ExpenseCreateReceiptForm({
       submit_to_account: createReceiptTab === "company" ? true : false,
     };
 
+    console.log(selectedReceipt?.receipt_uuid);
     console.log(JSON.stringify(createReceiptFormData));
     console.log(JSON.stringify(createEntries));
+    console.log(JSON.stringify(deleteEntries));
 
-    const rpcFunction = "fn_create_new_expense_receipt";
+    const rpcFunction = update
+      ? "fn_update_expense_receipt"
+      : "fn_create_new_expense_receipt";
 
-    const { data: dataRpc, error: errorRpc } = await supabase.rpc(rpcFunction, {
-      new_receipt: JSON.stringify(createReceiptFormData),
-      new_receipt_entries: JSON.stringify(createEntries),
-    });
+    const input = update
+      ? {
+          receipt_uuid_input: selectedReceipt?.receipt_uuid,
+          updated_receipt: JSON.stringify(createReceiptFormData),
+          updated_entries: JSON.stringify(createEntries),
+          deleted_entry_uuids: JSON.stringify(deleteEntries),
+        }
+      : {
+          new_receipt: JSON.stringify(createReceiptFormData),
+          new_receipt_entries: JSON.stringify(createEntries),
+        };
+
+    const { data: dataRpc, error: errorRpc } = await supabase.rpc(
+      rpcFunction,
+      input
+    );
 
     if (errorRpc) {
-      setSubmitError(errorRpc.message);
       toast.error(errorRpc.message);
       return;
     }
+    console.log(dataRpc);
     if (dataRpc) {
-      resetCreateReceiptForm();
       toast.success("สร้างบิลค่าใช้จ่ายใหม่สำเร็จ");
+      router.push(`/expense/${branch}/summary`);
+      resetCreateReceiptForm();
     }
   }
 
@@ -272,11 +288,7 @@ export default function ExpenseCreateReceiptForm({
       formData.append("receipt_date", receipt_date.toLocaleString("en-US"));
     }
 
-    if (update) {
-      await updateReceipt(formData);
-    } else {
-      await createReceipt(formData);
-    }
+    await createReceipt(formData);
   }
 
   return (
