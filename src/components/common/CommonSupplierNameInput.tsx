@@ -1,5 +1,4 @@
 import { ChangeEvent, useEffect, useState } from "react";
-import { FieldValues } from "react-hook-form";
 import { Input } from "../ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,19 +13,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
 
-type SupplierNameInputProps = {
-  field: FieldValues;
-};
-
 type SupplierType = {
   supplier_id: number;
   supplier_code: string;
   supplier_name: string;
 };
 
+type CommonSupplierNameInputProps = {
+  selectedSupplier: SupplierType | undefined;
+  setSelectedSupplier: (selectedRow: SupplierType | undefined) => void;
+};
+
 export default function CommonSupplierNameInput({
-  field,
-}: SupplierNameInputProps) {
+  selectedSupplier,
+  setSelectedSupplier,
+}: CommonSupplierNameInputProps) {
   const [filterText, setFilterText] = useState("");
   const [supplierOptions, setSupplierOptions] = useState<SupplierType[]>([]);
   const [inputTab, setInputTab] = useState("company-code");
@@ -53,22 +54,17 @@ export default function CommonSupplierNameInput({
     }
 
     if (filterText === "") {
-      field.onChange("");
       setSupplierOptions([]);
     }
-  }, [field, filterText, inputTab]);
+  }, [filterText, inputTab]);
 
-  function handleSupplierChange(value: string) {
-    field.onChange(value);
+  function handleSupplierChange(supplier: SupplierType) {
+    setSelectedSupplier(supplier);
   }
 
   function handleFilterChange(e: ChangeEvent<HTMLInputElement>) {
     setFilterText(e.target.value);
   }
-
-  const selectedSupplier = supplierOptions.find(
-    (supplier) => supplier.supplier_id === parseInt(field.value)
-  );
 
   return (
     <div>
@@ -130,9 +126,7 @@ export default function CommonSupplierNameInput({
             <DropdownMenuItem
               className=""
               key={supplier.supplier_code}
-              onClick={() =>
-                handleSupplierChange(supplier.supplier_id.toString())
-              }
+              onClick={() => handleSupplierChange(supplier)}
             >
               <div className="font-bold">{supplier.supplier_code}</div>
               <div>{supplier.supplier_name}</div>

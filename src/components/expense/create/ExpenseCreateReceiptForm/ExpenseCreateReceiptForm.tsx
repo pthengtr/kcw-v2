@@ -11,24 +11,25 @@ import { DatePickerInput } from "@/components/common/DatePickerInput";
 import { ExpenseReceiptType } from "../../summary/ExpenseReceiptColumn";
 import { createClient } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
-import { PaymentMethodSelectInput } from "@/components/expense/create/ExpenseCreateReceiptForm/PaymentMethodSelectInput";
-import CommonSupplierNameInput from "@/components/common/CommonSupplierNameInput";
+import ExpensePaymentMethodSelectInput from "@/components/expense/create/ExpenseCreateReceiptForm/ExpensePaymentMethodSelectInput";
 import { toast } from "sonner";
 import FormExpenseReceipt from "./FormExpenseReceipt";
 import ExpenseVatSelectInput from "@/components/expense/create/ExpenseCreateReceiptForm/ExpenseVatSelectInput";
 import ExpenseWithholdingSelectInput from "./ExpenseWithholdingSelectInput";
 import ExpenseDiscountSelectInput from "./ExpenseDiscountInput";
+import ExpenseSelectSupplierInput from "./ExpenseSelectSupplierInput";
+import { BranchType } from "@/app/(root)/(expense)/expense/page";
 
 export type ExpenseCreateReceiptFormDefaultType = {
-  supplier_id: string;
+  payment_id: string;
+  remark: string;
+  supplier_id?: string;
   invoice_number?: string;
   invoice_date?: Date | null | undefined | "";
   tax_invoice_number?: string;
   tax_invoice_date?: Date | null | undefined | "";
   receipt_number?: string;
   receipt_date?: Date | null | undefined | "";
-  payment_id: string;
-  remark: string;
   vat?: string | undefined;
   withholding?: string | undefined;
   discount?: string | undefined;
@@ -100,10 +101,10 @@ function getFormInput(
       break;
 
     case "supplier_id":
-      return <CommonSupplierNameInput field={field} />;
+      return <ExpenseSelectSupplierInput />;
 
     case "payment_id":
-      return <PaymentMethodSelectInput field={field} />;
+      return <ExpensePaymentMethodSelectInput />;
       break;
 
     //simple text
@@ -113,7 +114,6 @@ function getFormInput(
 }
 
 export const formSchema = z.object({
-  supplier_id: z.string().nonempty({ message: "กรุณาใส่ชื่อบริษัท" }),
   invoice_number: z.string().optional(),
   invoice_date: z.union([z.date().nullable().optional(), z.literal("")]),
   tax_invoice_number: z.string().optional(),
@@ -141,11 +141,13 @@ export default function ExpenseCreateReceiptForm({
     vatInput,
     withholdingInput,
     discountInput,
+    selectedSupplier,
+    selectedPaymentMethod,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
 
-  async function createUpdateSupplier(formData: FormData) {
+  async function createUpdateReceipt(formData: FormData) {
     // type-casting here for convenience
     // in practice, you should validate your inputs
     const supabase = createClient();
@@ -160,30 +162,53 @@ export default function ExpenseCreateReceiptForm({
       return;
     }
 
+    const query = supabase
+      .from("branch")
+      .select("*")
+      .eq("branch_id", branch)
+      .limit(500)
+      .overrideTypes<BranchType[], { merge: false }>();
+
+    const { data: branches, error: errorBranch } = await query;
+
+    if (errorBranch) {
+      console.log("invalid branch", errorUser);
+      return;
+    }
+
+    const [selectedBranch] = branches;
+
     const formVat = parseFloat(vatInput);
     const formWithholding = parseFloat(withholdingInput);
     const formDiscount = parseFloat(discountInput);
 
+    if (!selectedSupplier || !selectedPaymentMethod) {
+      return;
+    }
+
     const createReceiptFormData: ExpenseReceiptType = {
-      receipt_id: 0, // dummy value
-      supplier_id: parseInt(formData.get("supplier_id") as string) as number,
       invoice_number: formData.get("invoice_number") as string,
       invoice_date: formData.get("invoice_date") as string,
       tax_invoice_number: formData.get("tax_invoice_number") as string,
       tax_invoice_date: formData.get("tax_invoice_date") as string,
       receipt_number: formData.get("receipt_number") as string,
       receipt_date: formData.get("receipt_date") as string,
+      remark: formData.get("remark") as string,
+      receipt_id: 0, // dummy value
+      supplier_id: selectedSupplier.supplier_id,
+      supplier: selectedSupplier,
+      payment_id: selectedPaymentMethod.payment_id,
+      payment_method: selectedPaymentMethod,
+      branch_id: parseInt(branch),
+      branch: selectedBranch,
+      user_id: user.email,
       total_amount: createEntries.reduce(
         (sum, item) => sum + item.entry_amount,
         0
       ),
-      payment_id: parseInt(formData.get("payment_id") as string) as number,
-      remark: formData.get("remark") as string,
-      branch_id: parseInt(branch),
-      user_id: user.email,
+      discount: formDiscount ? formDiscount : 0,
       vat: formVat ? formVat : 0,
       withholding: formWithholding ? formWithholding : 0,
-      discount: formDiscount ? formDiscount : 0,
       submit_to_account: createReceiptTab === "company" ? true : false,
     };
 
@@ -212,7 +237,6 @@ export default function ExpenseCreateReceiptForm({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const {
-      supplier_id,
       invoice_number,
       invoice_date,
       tax_invoice_number,
@@ -225,7 +249,6 @@ export default function ExpenseCreateReceiptForm({
 
     const formData = new FormData();
 
-    formData.append("supplier_id", supplier_id);
     formData.append("payment_id", payment_id);
     formData.append("remark", remark);
 
@@ -251,7 +274,7 @@ export default function ExpenseCreateReceiptForm({
       formData.append("receipt_date", receipt_date.toLocaleString("en-US"));
     }
 
-    await createUpdateSupplier(formData);
+    await createUpdateReceipt(formData);
   }
 
   return (

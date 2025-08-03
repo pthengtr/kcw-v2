@@ -6,20 +6,19 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
-import { useCallback, useEffect, useId, useState } from "react";
-import { FieldValues } from "react-hook-form";
+import { useCallback, useContext, useEffect, useId, useState } from "react";
+import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 
 type PaymentMethodType = {
   payment_id: number;
   payment_description: string;
 };
 
-type PaymentMethodSelectInputProps = {
-  field: FieldValues;
-};
-export function PaymentMethodSelectInput({
-  field,
-}: PaymentMethodSelectInputProps) {
+export default function ExpensePaymentMethodSelectInput() {
+  const { setSelectedPaymentMethod } = useContext(
+    ExpenseContext
+  ) as ExpenseContextType;
+
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodType[]>([]);
 
   const supabase = createClient();
@@ -56,15 +55,23 @@ export function PaymentMethodSelectInput({
     a.payment_description.localeCompare(b.payment_description)
   );
 
+  function handleValueChanage(payment_id: string) {
+    setSelectedPaymentMethod(
+      paymentMethods.find(
+        (method) => method.payment_id === parseInt(payment_id)
+      )
+    );
+  }
+
   return (
-    <Select onValueChange={field.onChange}>
+    <Select onValueChange={(value) => handleValueChanage(value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="เลือกวิธีการชำระ" />
       </SelectTrigger>
       <SelectContent>
-        {sortedPaymentmethod.map((method) => (
+        {sortedPaymentmethod.map((method, index) => (
           <SelectItem
-            key={`${id}-${method.payment_id}`}
+            key={`${id}-${index}`}
             value={method.payment_id.toString()}
           >
             {method.payment_description}

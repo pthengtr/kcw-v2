@@ -77,10 +77,28 @@ export default function ExpenseEntryTable({
           columnVisibility: columnVisibility,
           pagination: { pageIndex: 0, pageSize: paginationPageSize },
         }}
-        totalAmountKey={["ราคารวม"]}
+        totalAmountKey={[]}
       >
-        <h2 className="text-xl font-bold flex-1">
-          รายละเอียดบิล {selectedReceipt?.tax_invoice_number}
+        <h2 className="flex-1">
+          {selectedReceipt ? (
+            <div>
+              <div
+                className={`flex gap-3 items-center ${
+                  selectedReceipt.tax_invoice_number ? "text-sm" : "text-xl"
+                }`}
+              >
+                <div className="font-bold">
+                  {selectedReceipt.supplier.supplier_code}
+                </div>
+                <div>{selectedReceipt.supplier.supplier_name}</div>
+              </div>
+              <div className="text-xl italic">
+                {selectedReceipt.tax_invoice_number}
+              </div>
+            </div>
+          ) : (
+            "รายละเอียดบิล"
+          )}
         </h2>
       </DataTable>
     </div>

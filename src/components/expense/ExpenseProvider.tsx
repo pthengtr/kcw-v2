@@ -8,7 +8,10 @@ import {
 } from "react";
 import React from "react";
 import { storageObjectType } from "../common/ImageCarousel";
-import { ExpenseReceiptType } from "./summary/ExpenseReceiptColumn";
+import {
+  ExpenseReceiptType,
+  PaymentMethodType,
+} from "./summary/ExpenseReceiptColumn";
 import { ExpenseEntryType } from "./summary/ExpenseEntryColumn";
 import { ExpenseItemType } from "./item/ExpenseItemColumn";
 import { ExpenseCategoryType } from "./item/ExpenseCategoryColumn";
@@ -23,6 +26,7 @@ import {
   expenseCreateReceiptFormDefaultValues,
   formSchema,
 } from "./create/ExpenseCreateReceiptForm/ExpenseCreateReceiptForm";
+import { SupplierType } from "../supplier/SupplierColumn";
 
 export type ExpenseContextType = {
   openAddEntryDialog: boolean;
@@ -57,6 +61,8 @@ export type ExpenseContextType = {
   setCreateReceiptTab: (createReceiptTab: string) => void;
 
   // set selected group
+  selectedSupplier: SupplierType | undefined;
+  setSelectedSupplier: (selectedRow: SupplierType | undefined) => void;
   selectedReceipt: ExpenseReceiptType | undefined;
   setSelectedReceipt: (selectedRow: ExpenseReceiptType | undefined) => void;
   selectedEntry: ExpenseEntryType | undefined;
@@ -66,6 +72,10 @@ export type ExpenseContextType = {
   selectedCategory: ExpenseCategoryType | undefined;
   setSelectedCategory: (
     selectedCategory: ExpenseCategoryType | undefined
+  ) => void;
+  selectedPaymentMethod: PaymentMethodType | undefined;
+  setSelectedPaymentMethod: (
+    selectedPaymentMethod: PaymentMethodType | undefined
   ) => void;
 
   // array group
@@ -124,6 +134,9 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [selectedItem, setSelectedItem] = useState<ExpenseItemType>();
   const [selectedCategory, setSelectedCategory] =
     useState<ExpenseCategoryType>();
+  const [selectedSupplier, setSelectedSupplier] = useState<SupplierType>();
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<PaymentMethodType>();
 
   // array group
   const [expenseItems, setExpenseItems] = useState<ExpenseItemType[]>([]);
@@ -238,6 +251,10 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setSelectedItem,
     selectedCategory,
     setSelectedCategory,
+    selectedSupplier,
+    setSelectedSupplier,
+    selectedPaymentMethod,
+    setSelectedPaymentMethod,
 
     // array group
     expenseReceipts,

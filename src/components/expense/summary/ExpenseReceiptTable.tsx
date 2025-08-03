@@ -49,7 +49,9 @@ export default function ExpenseReceiptTable({
     async function () {
       let query = supabase
         .from("expense_receipt")
-        .select("*", { count: "exact" })
+        .select("*, supplier(*), branch(*), payment_method(*)", {
+          count: "exact",
+        })
         .order("receipt_id", { ascending: false })
         .limit(500);
 
@@ -90,7 +92,7 @@ export default function ExpenseReceiptTable({
             columnVisibility: columnVisibility,
             pagination: { pageIndex: 0, pageSize: paginationPageSize },
           }}
-          totalAmountKey={["จำนวนเงิน"]}
+          totalAmountKey={[]}
         >
           <h2 className="text-xl font-bold flex-1">{`รายการบิลค่าใช้จ่าย`}</h2>
         </DataTable>
