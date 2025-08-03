@@ -20,7 +20,7 @@ import ExpenseSelectSupplierInput from "./ExpenseSelectSupplierInput";
 import { BranchType, ExpenseReceiptType } from "@/lib/types/models";
 
 export type ExpenseCreateReceiptFormDefaultType = {
-  payment_uuid: string;
+  payment_uuid?: string;
   remark: string;
   supplier_uuid?: string;
   invoice_number?: string;
@@ -119,7 +119,6 @@ export const formSchema = z.object({
   tax_invoice_date: z.union([z.date().nullable().optional(), z.literal("")]),
   receipt_number: z.string().optional(),
   receipt_date: z.union([z.date().nullable().optional(), z.literal("")]),
-  payment_uuid: z.string().nonempty({ message: "กรุณาใส่วิธีการชำระ" }),
   remark: z.string(),
 });
 
