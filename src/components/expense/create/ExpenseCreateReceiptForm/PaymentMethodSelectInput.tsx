@@ -52,13 +52,17 @@ export function PaymentMethodSelectInput({
     getPaymentmethod();
   }, [getPaymentmethod]);
 
+  const sortedPaymentmethod = paymentMethods.sort((a, b) =>
+    a.payment_description.localeCompare(b.payment_description)
+  );
+
   return (
     <Select onValueChange={field.onChange}>
       <SelectTrigger className="">
         <SelectValue placeholder="เลือกวิธีการชำระ" />
       </SelectTrigger>
       <SelectContent>
-        {paymentMethods.map((method) => (
+        {sortedPaymentmethod.map((method) => (
           <SelectItem
             key={`${id}-${method.payment_id}`}
             value={method.payment_id.toString()}

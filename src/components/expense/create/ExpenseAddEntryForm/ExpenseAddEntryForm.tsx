@@ -19,7 +19,7 @@ export type ExpenseAddEntryFormDefaultType = {
   entry_detail: string;
   unit_price: number;
   quantity: number;
-  discount: number;
+  discount?: number;
   item_id: string;
   includeVat?: boolean;
 };
@@ -101,7 +101,7 @@ const formSchema = z.object({
     message: "กรุณาใส่จำนวนให้ถูกต้อง",
   }),
   //item_id: z.string().nonempty({ message: "กรุณาเลือกประเุภทค่าใช้จ่าย" }),
-  discount: z.number(),
+  discount: z.number().optional(),
   item_id: z.string().nonempty({ message: "กรุณาเลือกประเภทค่าใข้จ่าย" }),
   includeVat: z.boolean().optional(),
 });
@@ -152,6 +152,10 @@ export default function ExpenseAddEntryForm({
       formUnitPrice = (formUnitPrice * 100) / (100 + VAT);
     }
 
+    const discountForm = parseFloat(
+      formData.get("discount") as string
+    ) as number;
+
     const expenseAddEntryFormData: ExpenseEntryType = {
       entry_id:
         update && selectedEntry
@@ -164,7 +168,7 @@ export default function ExpenseAddEntryForm({
       quantity: parseFloat(formData.get("quantity") as string) as number,
       entry_amount: 0, // to be calculate later
       expense_item: formExpenseItem,
-      discount: parseFloat(formData.get("discount") as string) as number,
+      discount: discountForm ? discountForm : 0,
     };
 
     expenseAddEntryFormData.entry_amount =
@@ -200,7 +204,9 @@ export default function ExpenseAddEntryForm({
     formData.append("entry_detail", entry_detail);
     formData.append("unit_price", unit_price.toString());
     formData.append("quantity", quantity.toString());
-    formData.append("discount", discount.toString());
+    if (discount) {
+      formData.append("discount", discount.toString());
+    }
     if (item_id) {
       formData.append("item_id", item_id);
     }

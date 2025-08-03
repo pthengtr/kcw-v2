@@ -43,7 +43,7 @@ export default function ExpenseAddEntryFormDialog({
       : expenseAddEntryFormDefaultValues;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { includeVat, ...defaultValuesNovat } = _defaultValues;
+  const { includeVat, discount, ...defaultValuesNovat } = _defaultValues;
 
   let defaultValues;
   if (createReceiptTab === "company") {

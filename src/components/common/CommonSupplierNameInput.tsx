@@ -53,9 +53,10 @@ export default function CommonSupplierNameInput({
     }
 
     if (filterText === "") {
+      field.onChange("");
       setSupplierOptions([]);
     }
-  }, [filterText, inputTab]);
+  }, [field, filterText, inputTab]);
 
   function handleSupplierChange(value: string) {
     field.onChange(value);
@@ -65,12 +66,28 @@ export default function CommonSupplierNameInput({
     setFilterText(e.target.value);
   }
 
+  const selectedSupplier = supplierOptions.find(
+    (supplier) => supplier.supplier_id === parseInt(field.value)
+  );
+
   return (
     <div>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger
+          asChild
+          className="max-w-72 truncate flex justify-start"
+        >
           <Button variant="outline">
-            {field.value ? field.value : "เลือกบริษัท"}
+            {selectedSupplier ? (
+              <>
+                <span className="font-bold">
+                  {selectedSupplier.supplier_code}
+                </span>
+                <span>{selectedSupplier.supplier_name}</span>
+              </>
+            ) : (
+              "เลือกบริษัท"
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>

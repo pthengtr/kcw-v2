@@ -6,33 +6,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useContext } from "react";
-import { FieldValues } from "react-hook-form";
 import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 
-type WithholdingSelectInputProps = {
-  field: FieldValues;
-};
-
-export default function ExpenseWithholdingSelectInput({
-  field,
-}: WithholdingSelectInputProps) {
+export default function ExpenseWithholdingSelectInput() {
   const { withholdingInput, setWithholdingInput } = useContext(
     ExpenseContext
   ) as ExpenseContextType;
 
-  function handleOnOpenChange(value: string) {
-    field.onChange(value);
-    setWithholdingInput(value);
-  }
-
   return (
-    <Select value={withholdingInput} onValueChange={handleOnOpenChange}>
+    <Select value={withholdingInput} onValueChange={setWithholdingInput}>
       <SelectTrigger className="">
         <SelectValue placeholder="เลือกหัก ณ ที่จ่าย" />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="0">0 %</SelectItem>
         <SelectItem value="1">1 %</SelectItem>
+        <SelectItem value="2">2 %</SelectItem>
         <SelectItem value="3">3 %</SelectItem>
         <SelectItem value="5">5 %</SelectItem>
       </SelectContent>

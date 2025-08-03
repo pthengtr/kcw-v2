@@ -38,12 +38,12 @@ export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefa
   {
     supplier_id: "",
     payment_id: "",
-    invoice_number: "",
-    invoice_date: null,
     tax_invoice_number: "",
     tax_invoice_date: null,
     receipt_number: "",
     receipt_date: null,
+    invoice_number: "",
+    invoice_date: null,
     vat: "7",
     withholding: "0",
     discount: "0",
@@ -82,15 +82,15 @@ function getFormInput(
 ) {
   switch (field.name) {
     case "vat":
-      return <ExpenseVatSelectInput field={field} />;
+      return <ExpenseVatSelectInput />;
       break;
 
     case "withholding":
-      return <ExpenseWithholdingSelectInput field={field} />;
+      return <ExpenseWithholdingSelectInput />;
       break;
 
     case "discount":
-      return <ExpenseDiscountSelectInput field={field} />;
+      return <ExpenseDiscountSelectInput />;
       break;
 
     case "invoice_date":
@@ -122,12 +122,6 @@ export const formSchema = z.object({
   receipt_date: z.union([z.date().nullable().optional(), z.literal("")]),
   payment_id: z.string().nonempty({ message: "กรุณาใส่วิธีการชำระ" }),
   remark: z.string(),
-  vat: z.string().optional(),
-  discount: z.string().optional(),
-  withholding: z
-    .string()
-    .nonempty({ message: "กรุณาใส่ส่วนลดให้ถูกต้อง" })
-    .optional(),
 });
 
 type ExpenseCreateReceiptFormProps = {
@@ -144,6 +138,9 @@ export default function ExpenseCreateReceiptForm({
     setOpenCreateNoVatReceiptDialog,
     setOpenCreateVatReceiptDialog,
     createReceiptTab,
+    vatInput,
+    withholdingInput,
+    discountInput,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
@@ -163,13 +160,9 @@ export default function ExpenseCreateReceiptForm({
       return;
     }
 
-    const formVat = parseFloat(formData.get("vat") as string) as number;
-    const formWithholding = parseFloat(
-      formData.get("withholding") as string
-    ) as number;
-    const formDiscount = parseFloat(
-      formData.get("discount") as string
-    ) as number;
+    const formVat = parseFloat(vatInput);
+    const formWithholding = parseFloat(withholdingInput);
+    const formDiscount = parseFloat(discountInput);
 
     const createReceiptFormData: ExpenseReceiptType = {
       receipt_id: 0, // dummy value
@@ -228,9 +221,6 @@ export default function ExpenseCreateReceiptForm({
       receipt_date,
       payment_id,
       remark,
-      vat,
-      withholding,
-      discount,
     } = values;
 
     const formData = new FormData();
@@ -259,15 +249,6 @@ export default function ExpenseCreateReceiptForm({
     }
     if (receipt_date) {
       formData.append("receipt_date", receipt_date.toLocaleString("en-US"));
-    }
-    if (vat) {
-      formData.append("vat", vat);
-    }
-    if (withholding) {
-      formData.append("withholding", withholding);
-    }
-    if (discount) {
-      formData.append("discount", discount);
     }
 
     await createUpdateSupplier(formData);
