@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/client";
 import CardIconMenu from "@/components/common/CardIconMenu";
 import CardIcon from "@/components/common/CardIcon";
 import { useEffect, useState } from "react";
-import { BranchType } from "../page";
 import { useParams } from "next/navigation";
+import { BranchType } from "@/lib/types/models";
 
 export default function BranchExpense() {
   const { branch } = useParams();
@@ -18,8 +18,7 @@ export default function BranchExpense() {
       const query = supabase
         .from("branch")
         .select("*")
-        .eq("branch_id", branch)
-        .limit(500);
+        .eq("branch_uuid", branch);
 
       const { data: branches, error } = await query;
 

@@ -1,22 +1,19 @@
 "use client";
 
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
+import { ExpenseCategoryType } from "@/lib/types/models";
 import { ColumnDef, HeaderContext, Row } from "@tanstack/react-table";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
-export type ExpenseCategoryType = {
-  category_id: number;
-  category_name: string;
-};
 
 export const expenseCategoryFieldLabel = {
-  category_id: "รหัสหมวด",
+  category_uuid: "รหัสหมวด",
   category_name: "หมวด",
 };
 
 export const expenseCategoryColumn: ColumnDef<ExpenseCategoryType>[] = [
-  numberInt("category_id"),
+  numberInt("category_uuid"),
   simpleText("category_name"),
 ];
 

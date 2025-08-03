@@ -13,17 +13,17 @@ import ExpenseCategorySelectInput from "./ExpenseCategorySelectInput";
 
 export type ExpenseItemDefaultType = {
   item_name: string;
-  category_id: string;
+  category_uuid: string;
 };
 
 export const expenseItemFormDefaultValues: ExpenseItemDefaultType = {
   item_name: "",
-  category_id: "",
+  category_uuid: "",
 };
 
 const expenseItemFormFieldLabel = {
   item_name: "ประเภทค่าใช้จ่าย",
-  category_id: "หมวด",
+  category_uuid: "หมวด",
 };
 
 function getFieldLabel(field: FieldValues) {
@@ -42,7 +42,7 @@ function getFormInput(
   form: UseFormReturn<z.infer<typeof formSchema>>
 ) {
   switch (field.name) {
-    case "category_id":
+    case "category_uuid":
       return <ExpenseCategorySelectInput field={field} />;
 
     //simple text
@@ -53,7 +53,7 @@ function getFormInput(
 
 const formSchema = z.object({
   item_name: z.string().nonempty({ message: "กรุณาใส่ชื่อประเภทค่าใช้จ่าย" }),
-  category_id: z.string().nonempty({ message: "กรุณาใส่เลือกหมวด" }),
+  category_uuid: z.string().nonempty({ message: "กรุณาใส่เลือกหมวด" }),
 });
 
 type ExpenseItemFormProps = {
@@ -79,7 +79,9 @@ export default function ExpenseCategoryForm({
     // in practice, you should validate your inputs
     const expenseItemFormData = {
       item_name: (formData.get("item_name") as string).replace(/\s+$/, ""),
-      category_id: parseInt(formData.get("category_id") as string) as number,
+      category_uuid: parseInt(
+        formData.get("category_uuid") as string
+      ) as number,
     };
 
     const supabase = createClient();
@@ -89,7 +91,7 @@ export default function ExpenseCategoryForm({
         ? supabase
             .from("expense_item")
             .update([expenseItemFormData])
-            .eq("item_id", selectedItem.item_id)
+            .eq("item_uuid", selectedItem.item_uuid)
             .select()
         : supabase.from("expense_item").insert([expenseItemFormData]).select();
 
@@ -105,7 +107,7 @@ export default function ExpenseCategoryForm({
       setSubmitError(undefined);
       if (update) {
         setSelectedItem(data[0]);
-        setColumnFilters([{ id: "รหัส", value: data[0].item_id }]);
+        setColumnFilters([{ id: "รหัส", value: data[0].item_uuid }]);
         toast.success("แก้ไขข้อมูลสำเร็จ");
       } else {
         toast.success("สร้างข้อมูลใหม่สำเร็จ");
@@ -117,12 +119,13 @@ export default function ExpenseCategoryForm({
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const { item_name, category_id } = values;
+    const { item_name, category_uuid } = values;
 
     const formData = new FormData();
 
     formData.append("item_name", item_name);
-    if (category_id) formData.append("category_id", category_id.toString());
+    if (category_uuid)
+      formData.append("category_uuid", category_uuid.toString());
 
     await createUpdateExpenseItem(formData);
   }

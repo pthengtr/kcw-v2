@@ -8,14 +8,10 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useCallback, useContext, useEffect, useId, useState } from "react";
 import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
-
-type PaymentMethodType = {
-  payment_id: number;
-  payment_description: string;
-};
+import { PaymentMethodType } from "@/lib/types/models";
 
 export default function ExpensePaymentMethodSelectInput() {
-  const { setSelectedPaymentMethod } = useContext(
+  const { selectedPaymentMethod, setSelectedPaymentMethod } = useContext(
     ExpenseContext
   ) as ExpenseContextType;
 
@@ -30,7 +26,7 @@ export default function ExpensePaymentMethodSelectInput() {
       const query = supabase
         .from("payment_method")
         .select("*")
-        .order("payment_id", { ascending: false })
+        .order("payment_uuid", { ascending: false })
         .limit(500);
 
       const { data, error } = await query;
@@ -55,25 +51,23 @@ export default function ExpensePaymentMethodSelectInput() {
     a.payment_description.localeCompare(b.payment_description)
   );
 
-  function handleValueChanage(payment_id: string) {
+  function handleValueChanage(payment_uuid: string) {
     setSelectedPaymentMethod(
-      paymentMethods.find(
-        (method) => method.payment_id === parseInt(payment_id)
-      )
+      paymentMethods.find((method) => method.payment_uuid === payment_uuid)
     );
   }
 
   return (
-    <Select onValueChange={(value) => handleValueChanage(value)}>
+    <Select
+      value={selectedPaymentMethod ? selectedPaymentMethod.payment_uuid : ""}
+      onValueChange={(value) => handleValueChanage(value)}
+    >
       <SelectTrigger className="">
         <SelectValue placeholder="เลือกวิธีการชำระ" />
       </SelectTrigger>
       <SelectContent>
         {sortedPaymentmethod.map((method, index) => (
-          <SelectItem
-            key={`${id}-${index}`}
-            value={method.payment_id.toString()}
-          >
+          <SelectItem key={`${id}-${index}`} value={method.payment_uuid}>
             {method.payment_description}
           </SelectItem>
         ))}

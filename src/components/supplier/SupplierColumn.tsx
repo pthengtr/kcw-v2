@@ -2,23 +2,19 @@
 
 import { ColumnDef, HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../common/DataTableColumnHeader";
+import { SupplierType } from "@/lib/types/models";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
-export type SupplierType = {
-  supplier_id: number;
-  supplier_code: string;
-  supplier_name: string;
-};
 
 export const supplierFieldLabel = {
-  supplier_id: "รหัสเฉพาะ",
+  supplier_uuid: "รหัสเฉพาะ",
   supplier_code: "ชื่อย่อบริษัท",
   supplier_name: "ชื่อบริษัท",
 };
 
 export const supplierColumn: ColumnDef<SupplierType>[] = [
-  simpleText("supplier_id"),
+  simpleText("supplier_uuid"),
   simpleText("supplier_code"),
   simpleText("supplier_name"),
 ];

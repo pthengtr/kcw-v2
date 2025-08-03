@@ -66,9 +66,8 @@ export default function ExpenseSelectItemDialogInput({
         <DropdownMenuTrigger asChild>
           <Button variant="outline">
             {field.value
-              ? expenseItems.find(
-                  (item) => item.item_id === parseInt(field.value)
-                )?.item_name
+              ? expenseItems.find((item) => item.item_uuid === field.value)
+                  ?.item_name
               : "ประเภทค่าใช้จ่าย"}
           </Button>
         </DropdownMenuTrigger>
@@ -91,7 +90,7 @@ export default function ExpenseSelectItemDialogInput({
               <DropdownMenuItem
                 className="grid grid-cols-2"
                 key={item.item_name}
-                onClick={() => handleSupplierChange(item.item_id.toString())}
+                onClick={() => handleSupplierChange(item.item_uuid)}
               >
                 <div>{item.item_name}</div>
                 <div>{item.expense_category.category_name}</div>

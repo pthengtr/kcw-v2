@@ -20,7 +20,10 @@ export default function ExpenseSummaryPage() {
     async function getBranchName() {
       const supabase = createClient();
 
-      const query = supabase.from("branch").select("*").eq("branch_id", branch);
+      const query = supabase
+        .from("branch")
+        .select("*")
+        .eq("branch_uuid", branch);
 
       const { data, error } = await query;
 

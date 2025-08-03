@@ -33,7 +33,7 @@ export default function ExpenseAddEntryFormDialog({
   const _defaultValues: ExpenseAddEntryFormDefaultType =
     update && selectedEntry
       ? {
-          item_id: selectedEntry.item_id.toString(),
+          item_uuid: selectedEntry.item_uuid,
           entry_detail: selectedEntry.entry_detail,
           unit_price: selectedEntry.unit_price,
           includeVat: false,

@@ -12,12 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
-
-type SupplierType = {
-  supplier_id: number;
-  supplier_code: string;
-  supplier_name: string;
-};
+import { SupplierType } from "@/lib/types/models";
 
 type CommonSupplierNameInputProps = {
   selectedSupplier: SupplierType | undefined;

@@ -1,7 +1,7 @@
 "use client";
+import { SupplierType } from "@/lib/types/models";
 import { createContext, useState } from "react";
 import React from "react";
-import { SupplierType } from "./SupplierColumn";
 
 export type SupplierContextType = {
   suppliers: SupplierType[] | undefined;

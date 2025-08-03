@@ -1,6 +1,5 @@
 "use client";
 
-import { BranchType } from "@/app/(root)/(expense)/expense/page";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
 import Link from "next/link";
+import { BranchType } from "@/lib/types/models";
 
 type NavbarExpenseDropdownMenuProps = { branches: BranchType[] };
 
@@ -30,7 +30,7 @@ export default function NavbarExpenseDropdownMenu({
         <DropdownMenuSeparator />
         {branches?.map((branch) => (
           <DropdownMenuItem asChild key={branch.branch_name}>
-            <Link href={`/expense/${branch.branch_id}`} passHref>
+            <Link href={`/expense/${branch.branch_uuid}`} passHref>
               {branch.branch_name}
             </Link>
           </DropdownMenuItem>

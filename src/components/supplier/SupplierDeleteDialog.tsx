@@ -24,7 +24,7 @@ export default function SupplierDeleteDialog() {
     const { error } = await supabase
       .from("supplier")
       .delete()
-      .eq("supplier_id", selectedRow?.supplier_id);
+      .eq("supplier_uuid", selectedRow?.supplier_uuid);
 
     if (error) toast.error("ลบข้อมูลไม่สำเร็จ");
     else toast.success("ลบข้อมูลสำเร็จ");

@@ -8,7 +8,7 @@ import LogoutButton from "../auth/LogoutButton";
 import { Button } from "../ui/button";
 import { createClient } from "@/lib/supabase/client";
 import NavbarExpenseDropdownMenu from "./NavbarExpenseDropdownMenu";
-import { BranchType } from "@/app/(root)/(expense)/expense/page";
+import { BranchType } from "@/lib/types/models";
 
 export default async function Navbar() {
   const supabase = createClient();
@@ -16,7 +16,7 @@ export default async function Navbar() {
   const query = supabase
     .from("branch")
     .select("*")
-    .order("branch_id", { ascending: true })
+    .order("branch_uuid", { ascending: true })
     .limit(500);
 
   const { data: branches, error } = await query;

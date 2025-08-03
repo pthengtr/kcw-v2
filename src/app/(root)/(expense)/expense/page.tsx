@@ -2,12 +2,8 @@
 import CardIcon from "@/components/common/CardIcon";
 import CardIconMenu from "@/components/common/CardIconMenu";
 import { createClient } from "@/lib/supabase/client";
+import { BranchType } from "@/lib/types/models";
 import { useEffect, useState } from "react";
-
-export type BranchType = {
-  branch_id: number;
-  branch_name: string;
-};
 
 export default function Branch() {
   const [branches, setBranches] = useState<BranchType[]>([]);
@@ -16,11 +12,7 @@ export default function Branch() {
 
   useEffect(() => {
     async function getBranch() {
-      const query = supabase
-        .from("branch")
-        .select("*")
-        .order("branch_id", { ascending: true })
-        .limit(500);
+      const query = supabase.from("branch").select("*");
 
       const { data: branches, error } = await query;
 
@@ -45,7 +37,7 @@ export default function Branch() {
             {branches.map((branch) => (
               <CardIcon
                 key={branch.branch_name}
-                path={`/expense/${branch.branch_id}`}
+                path={`/expense/${branch.branch_uuid}`}
                 description={branch.branch_name}
                 icon="Store"
               />

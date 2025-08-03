@@ -34,7 +34,7 @@ export default function ExpenseItemPage() {
   const expenseItemUpdateDefaultValue: ExpenseItemDefaultType = selectedItem
     ? {
         item_name: selectedItem.item_name,
-        category_id: selectedItem.category_id.toString(),
+        category_uuid: selectedItem.category_uuid.toString(),
       }
     : expenseItemFormDefaultValues;
 

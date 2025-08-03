@@ -68,7 +68,7 @@ export default function SupplierSearchForm({
     let query = supabase
       .from("supplier")
       .select("*", { count: "exact" })
-      .order("supplier_id", { ascending: false })
+      .order("supplier_uuid", { ascending: false })
       .limit(500);
 
     if (searchData.supplier_code)

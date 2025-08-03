@@ -8,13 +8,6 @@ import {
 } from "react";
 import React from "react";
 import { storageObjectType } from "../common/ImageCarousel";
-import {
-  ExpenseReceiptType,
-  PaymentMethodType,
-} from "./summary/ExpenseReceiptColumn";
-import { ExpenseEntryType } from "./summary/ExpenseEntryColumn";
-import { ExpenseItemType } from "./item/ExpenseItemColumn";
-import { ExpenseCategoryType } from "./item/ExpenseCategoryColumn";
 import { createClient } from "@/lib/supabase/client";
 import { ColumnFiltersState } from "@tanstack/react-table";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,7 +19,15 @@ import {
   expenseCreateReceiptFormDefaultValues,
   formSchema,
 } from "./create/ExpenseCreateReceiptForm/ExpenseCreateReceiptForm";
-import { SupplierType } from "../supplier/SupplierColumn";
+import {
+  ExpenseCategoryType,
+  ExpenseEntryType,
+  ExpenseItemType,
+  ExpenseReceiptType,
+  PaymentMethodType,
+  SupplierType,
+  UUID,
+} from "@/lib/types/models";
 
 export type ExpenseContextType = {
   openAddEntryDialog: boolean;
@@ -108,7 +109,7 @@ export type ExpenseContextType = {
   setWithholdingInput: (vatInput: string) => void;
   formExpenseReceipt: UseFormReturn<ExpenseCreateReceiptFormDefaultType>;
   resetCreateReceiptForm: () => void;
-  handleDeleteCreateEntry: (entry_id: number) => void;
+  handleDeleteCreateEntry: (entry_uuid: UUID) => void;
 };
 
 export const ExpenseContext = createContext<ExpenseContextType | null>(null);
@@ -187,9 +188,10 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setCreateReceiptTab("company");
   }
 
-  function handleDeleteCreateEntry(entry_id: number) {
+  function handleDeleteCreateEntry(entry_uuid: UUID) {
+    if (!entry_uuid) return;
     const newCreateEntries = createEntries.filter(
-      (item) => item.entry_id !== entry_id
+      (item) => item.entry_uuid !== entry_uuid
     );
     setCreateEntries(newCreateEntries);
   }
@@ -201,7 +203,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
       const query = supabase
         .from("expense_category")
         .select("*", { count: "exact" })
-        .order("category_id", { ascending: false })
+        .order("category_uuid", { ascending: false })
         .limit(500);
 
       const { data, error, count } = await query;
@@ -224,7 +226,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
       const query = supabase
         .from("expense_item")
         .select("*, expense_category(*)", { count: "exact" })
-        .order("item_id", { ascending: false })
+        .order("item_uuid", { ascending: false })
         .limit(500);
 
       const { data, error, count } = await query;

@@ -13,15 +13,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
+import { SupplierType } from "@/lib/types/models";
 
 type SupplierNameInputProps = {
   field: FieldValues;
-};
-
-type SupplierType = {
-  supplier_id: number;
-  supplier_code: string;
-  supplier_name: string;
 };
 
 export default function SupplierNameInput({ field }: SupplierNameInputProps) {

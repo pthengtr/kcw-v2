@@ -54,11 +54,11 @@ export default function ExpenseReceiptTable({
         .select("*, supplier(*), branch(*), payment_method(*)", {
           count: "exact",
         })
-        .order("receipt_id", { ascending: false })
+        .order("receipt_uuid", { ascending: false })
         .limit(500);
 
       if (branch !== "all") {
-        query = query.eq("branch_id", branch);
+        query = query.eq("branch_uuid", branch);
       }
 
       const { data, error, count } = await query;

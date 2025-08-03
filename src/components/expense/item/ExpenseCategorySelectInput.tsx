@@ -33,8 +33,8 @@ export default function ExpenseCategorySelectInput({
       <SelectContent>
         {expenseCategories.map((category) => (
           <SelectItem
-            key={`${id}-${category.category_id}`}
-            value={category.category_id.toString()}
+            key={`${id}-${category.category_uuid}`}
+            value={category.category_uuid.toString()}
           >
             {category.category_name}
           </SelectItem>

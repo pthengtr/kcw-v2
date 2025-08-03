@@ -1,6 +1,7 @@
 "use client";
 
 import * as z from "zod";
+import { v4 as uuidv4 } from "uuid";
 
 import Form from "@/components/common/Form";
 import { FieldValues, UseFormReturn } from "react-hook-form";
@@ -8,25 +9,25 @@ import { useContext } from "react";
 
 import { Input } from "@/components/ui/input";
 import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
-import { ExpenseEntryType } from "../../summary/ExpenseEntryColumn";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { VAT } from "@/lib/utils";
 import ExpenseSelectItemDialogInput from "./ExpenseSelectItemDialogInput";
 import { Plus } from "lucide-react";
+import { ExpenseEntryType, UUID } from "@/lib/types/models";
 
 export type ExpenseAddEntryFormDefaultType = {
   entry_detail: string;
   unit_price: number;
   quantity: number;
   discount?: number;
-  item_id: string;
+  item_uuid: string;
   includeVat?: boolean;
 };
 
 export const expenseAddEntryFormDefaultValues: ExpenseAddEntryFormDefaultType =
   {
-    item_id: "",
+    item_uuid: "",
     entry_detail: "",
     unit_price: 0,
     includeVat: false,
@@ -35,10 +36,10 @@ export const expenseAddEntryFormDefaultValues: ExpenseAddEntryFormDefaultType =
   };
 
 const expenseAddEntryFormFieldLabel = {
+  item_uuid: " ",
   entry_detail: "รายละเอียด",
   unit_price: "ราคาต่อหน่วย",
   quantity: "จำนวน",
-  item_id: " ",
   includeVat: " ",
   discount: "ส่วนลดต่อรายการ",
 };
@@ -58,7 +59,7 @@ function getFormInput(
   form: UseFormReturn<z.infer<typeof formSchema>>
 ) {
   switch (field.name) {
-    case "item_id":
+    case "item_uuid":
       return <ExpenseSelectItemDialogInput field={field} />;
 
     case "includeVat":
@@ -100,9 +101,8 @@ const formSchema = z.object({
   quantity: z.number().refine((val) => val !== 0, {
     message: "กรุณาใส่จำนวนให้ถูกต้อง",
   }),
-  //item_id: z.string().nonempty({ message: "กรุณาเลือกประเุภทค่าใช้จ่าย" }),
   discount: z.number().optional(),
-  item_id: z.string().nonempty({ message: "กรุณาเลือกประเภทค่าใข้จ่าย" }),
+  item_uuid: z.string().nonempty({ message: "กรุณาเลือกประเภทค่าใข้จ่าย" }),
   includeVat: z.boolean().optional(),
 });
 
@@ -135,11 +135,10 @@ export default function ExpenseAddEntryForm({
     //   return;
     // }
 
-    const formItemId = parseInt(formData.get("item_id") as string) as number;
+    const formItemUuid = formData.get("item_uuid") as UUID;
 
-    console.log(formItemId, expenseItems);
     const formExpenseItem = expenseItems.find(
-      (item) => item.item_id === formItemId
+      (item) => item.item_uuid === formItemUuid
     );
 
     if (!formExpenseItem) return;
@@ -157,12 +156,10 @@ export default function ExpenseAddEntryForm({
     ) as number;
 
     const expenseAddEntryFormData: ExpenseEntryType = {
-      entry_id:
-        update && selectedEntry
-          ? selectedEntry.entry_id
-          : createEntries.length + 1,
-      receipt_id: 0, // dummy value
-      item_id: formItemId,
+      entry_uuid:
+        update && selectedEntry ? selectedEntry?.entry_uuid : uuidv4(),
+      receipt_uuid: "", // dummy value
+      item_uuid: formItemUuid,
       entry_detail: formData.get("entry_detail") as string,
       unit_price: formUnitPrice,
       quantity: parseFloat(formData.get("quantity") as string) as number,
@@ -175,10 +172,10 @@ export default function ExpenseAddEntryForm({
       (expenseAddEntryFormData.unit_price - expenseAddEntryFormData.discount) *
       expenseAddEntryFormData.quantity;
 
-    const newCreateEntries = update
+    const newCreateEntries: ExpenseEntryType[] = update
       ? [
           ...createEntries.filter(
-            (item) => item.entry_id !== selectedEntry?.entry_id
+            (item) => item.entry_uuid !== selectedEntry?.entry_uuid
           ),
           expenseAddEntryFormData,
         ]
@@ -194,7 +191,7 @@ export default function ExpenseAddEntryForm({
       entry_detail,
       unit_price,
       quantity,
-      item_id,
+      item_uuid,
       discount,
       includeVat,
     } = values;
@@ -207,8 +204,8 @@ export default function ExpenseAddEntryForm({
     if (discount) {
       formData.append("discount", discount.toString());
     }
-    if (item_id) {
-      formData.append("item_id", item_id);
+    if (item_uuid) {
+      formData.append("item_uuid", item_uuid);
     }
     if (includeVat) {
       formData.append("includeVat", includeVat.toString());

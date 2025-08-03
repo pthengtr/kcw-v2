@@ -41,8 +41,8 @@ export default function ExpenseEntryTable({
       const query = supabase
         .from("expense_entry")
         .select("*, expense_item(*)", { count: "exact" })
-        .eq("receipt_id", selectedReceipt?.receipt_id)
-        .order("entry_id", { ascending: true })
+        .eq("receipt_uuid", selectedReceipt?.receipt_uuid)
+        .order("entry_uuid", { ascending: true })
         .limit(500);
 
       const { data, error, count } = await query;
@@ -58,7 +58,7 @@ export default function ExpenseEntryTable({
       }
       if (count) setTotalEntry(count);
     },
-    [selectedReceipt?.receipt_id, setReceiptEntries, setTotalEntry, supabase]
+    [selectedReceipt?.receipt_uuid, setReceiptEntries, setTotalEntry, supabase]
   );
 
   useEffect(() => {

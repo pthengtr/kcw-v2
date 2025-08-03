@@ -1,4 +1,4 @@
-import { ExpenseReceiptType } from "./summary/ExpenseReceiptColumn";
+import { ExpenseReceiptType } from "@/lib/types/models";
 
 type ExpenseCommonReceiptSummaryProps = {
   selectedReceipt: ExpenseReceiptType;

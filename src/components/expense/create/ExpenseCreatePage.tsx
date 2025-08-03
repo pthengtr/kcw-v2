@@ -31,7 +31,10 @@ export default function ExpenseCreatePage() {
     async function getBranchName() {
       const supabase = createClient();
 
-      const query = supabase.from("branch").select("*").eq("branch_id", branch);
+      const query = supabase
+        .from("branch")
+        .select("*")
+        .eq("branch_uuid", branch);
 
       const { data, error } = await query;
 
@@ -80,7 +83,7 @@ export default function ExpenseCreatePage() {
                   <ExpenseAddEntryFormDialog update />
                   <Button
                     onClick={() =>
-                      handleDeleteCreateEntry(selectedEntry.entry_id)
+                      handleDeleteCreateEntry(selectedEntry.entry_uuid)
                     }
                   >
                     <Trash />

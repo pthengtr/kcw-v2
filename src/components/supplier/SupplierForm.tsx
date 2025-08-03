@@ -82,7 +82,7 @@ export default function SupplierForm({
         ? supabase
             .from("supplier")
             .update([supplierFormData])
-            .eq("supplier_id", selectedRow.supplier_id)
+            .eq("supplier_uuid", selectedRow.supplier_uuid)
             .select()
         : supabase.from("supplier").insert([supplierFormData]).select();
 

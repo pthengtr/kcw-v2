@@ -1,28 +1,16 @@
 "use client";
 
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
+import { ExpenseEntryType } from "@/lib/types/models";
 import { ColumnDef, HeaderContext, Row } from "@tanstack/react-table";
-import { ExpenseItemType } from "../item/ExpenseItemColumn";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
 
-export type ExpenseEntryType = {
-  entry_id: number;
-  receipt_id: number;
-  item_id: number;
-  unit_price: number;
-  quantity: number;
-  entry_detail: string;
-  entry_amount: number;
-  discount: number;
-  expense_item: ExpenseItemType;
-};
-
 export const expenseEntryFieldLabel = {
-  entry_id: "รายการเลขที่",
-  receipt_id: "อ้างอิงจากใบกำกับ",
-  item_id: "อ้างอิงประเภทค่าใช้จ่าย",
+  entry_uuid: "รายการเลขที่",
+  receipt_uuid: "อ้างอิงจากใบกำกับ",
+  item_uuid: "อ้างอิงประเภทค่าใช้จ่าย",
   unit_price: "ราคาต่อหน่วย",
   quantity: "จำนวน",
   entry_detail: "รายละเอียด",
@@ -33,9 +21,9 @@ export const expenseEntryFieldLabel = {
 };
 
 export const expenseEntryColumn: ColumnDef<ExpenseEntryType>[] = [
-  numberInt("entry_id"),
-  numberInt("receipt_id"),
-  numberInt("item_id"),
+  numberInt("entry_uuid"),
+  numberInt("receipt_uuid"),
+  numberInt("item_uuid"),
   simpleText("entry_detail"),
   simpleText("expense_item.item_name"),
   simpleText("expense_item.category"),

@@ -8,7 +8,6 @@ import { useContext } from "react";
 import { Input } from "@/components/ui/input";
 import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 import { DatePickerInput } from "@/components/common/DatePickerInput";
-import { ExpenseReceiptType } from "../../summary/ExpenseReceiptColumn";
 import { createClient } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
 import ExpensePaymentMethodSelectInput from "@/components/expense/create/ExpenseCreateReceiptForm/ExpensePaymentMethodSelectInput";
@@ -18,12 +17,12 @@ import ExpenseVatSelectInput from "@/components/expense/create/ExpenseCreateRece
 import ExpenseWithholdingSelectInput from "./ExpenseWithholdingSelectInput";
 import ExpenseDiscountSelectInput from "./ExpenseDiscountInput";
 import ExpenseSelectSupplierInput from "./ExpenseSelectSupplierInput";
-import { BranchType } from "@/app/(root)/(expense)/expense/page";
+import { BranchType, ExpenseReceiptType } from "@/lib/types/models";
 
 export type ExpenseCreateReceiptFormDefaultType = {
-  payment_id: string;
+  payment_uuid: string;
   remark: string;
-  supplier_id?: string;
+  supplier_uuid?: string;
   invoice_number?: string;
   invoice_date?: Date | null | undefined | "";
   tax_invoice_number?: string;
@@ -37,8 +36,8 @@ export type ExpenseCreateReceiptFormDefaultType = {
 
 export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefaultType =
   {
-    supplier_id: "",
-    payment_id: "",
+    supplier_uuid: "",
+    payment_uuid: "",
     tax_invoice_number: "",
     tax_invoice_date: null,
     receipt_number: "",
@@ -52,14 +51,14 @@ export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefa
   };
 
 const expenseCretaeReceiptFormFieldLabel = {
-  supplier_id: "ชื่อบริษัท",
+  supplier_uuid: "ชื่อบริษัท",
   invoice_number: "เลขที่เอกสาร",
   invoice_date: "วันที่เอกสาร",
   tax_invoice_number: "เลขที่ใบกำกับภาษี",
   tax_invoice_date: "วันที่ใบกำกับภาษี",
   receipt_number: "เลขที่ใบเสร็จรับเงิน",
   receipt_date: "วันที่ใบเสร็จรับเงิน",
-  payment_id: "ชำระโดย",
+  payment_uuid: "ชำระโดย",
   remark: "หมายเหตุ",
   vat: "ภาษี",
   withholding: "หัก ณ ที่จ่าย",
@@ -100,10 +99,10 @@ function getFormInput(
       return <DatePickerInput field={field} />;
       break;
 
-    case "supplier_id":
+    case "supplier_uuid":
       return <ExpenseSelectSupplierInput />;
 
-    case "payment_id":
+    case "payment_uuid":
       return <ExpensePaymentMethodSelectInput />;
       break;
 
@@ -120,16 +119,18 @@ export const formSchema = z.object({
   tax_invoice_date: z.union([z.date().nullable().optional(), z.literal("")]),
   receipt_number: z.string().optional(),
   receipt_date: z.union([z.date().nullable().optional(), z.literal("")]),
-  payment_id: z.string().nonempty({ message: "กรุณาใส่วิธีการชำระ" }),
+  payment_uuid: z.string().nonempty({ message: "กรุณาใส่วิธีการชำระ" }),
   remark: z.string(),
 });
 
 type ExpenseCreateReceiptFormProps = {
   defaultValues: ExpenseCreateReceiptFormDefaultType;
+  update?: boolean;
 };
 
 export default function ExpenseCreateReceiptForm({
   defaultValues,
+  update = false,
 }: ExpenseCreateReceiptFormProps) {
   const {
     createEntries,
@@ -145,7 +146,11 @@ export default function ExpenseCreateReceiptForm({
 
   const { branch }: { branch: string } = useParams();
 
-  async function createUpdateReceipt(formData: FormData) {
+  async function updateReceipt(formData: FormData) {
+    console.log(formData);
+  }
+
+  async function createReceipt(formData: FormData) {
     // type-casting here for convenience
     // in practice, you should validate your inputs
     const supabase = createClient();
@@ -163,7 +168,7 @@ export default function ExpenseCreateReceiptForm({
     const query = supabase
       .from("branch")
       .select("*")
-      .eq("branch_id", branch)
+      .eq("branch_uuid", branch)
       .limit(500)
       .overrideTypes<BranchType[], { merge: false }>();
 
@@ -192,12 +197,12 @@ export default function ExpenseCreateReceiptForm({
       receipt_number: formData.get("receipt_number") as string,
       receipt_date: formData.get("receipt_date") as string,
       remark: formData.get("remark") as string,
-      receipt_id: 0, // dummy value
-      supplier_id: selectedSupplier.supplier_id,
+      receipt_uuid: "", // dummy value
+      supplier_uuid: selectedSupplier.supplier_uuid,
       supplier: selectedSupplier,
-      payment_id: selectedPaymentMethod.payment_id,
+      payment_uuid: selectedPaymentMethod.payment_uuid,
       payment_method: selectedPaymentMethod,
-      branch_id: parseInt(branch),
+      branch_uuid: branch,
       branch: selectedBranch,
       user_id: user.email,
       total_amount: createEntries.reduce(
@@ -239,13 +244,11 @@ export default function ExpenseCreateReceiptForm({
       tax_invoice_date,
       receipt_number,
       receipt_date,
-      payment_id,
       remark,
     } = values;
 
     const formData = new FormData();
 
-    formData.append("payment_id", payment_id);
     formData.append("remark", remark);
 
     if (invoice_number) {
@@ -270,7 +273,11 @@ export default function ExpenseCreateReceiptForm({
       formData.append("receipt_date", receipt_date.toLocaleString("en-US"));
     }
 
-    await createUpdateReceipt(formData);
+    if (update) {
+      await updateReceipt(formData);
+    } else {
+      await createReceipt(formData);
+    }
   }
 
   return (

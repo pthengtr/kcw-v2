@@ -83,7 +83,7 @@ export default function ExpenseCategoryForm({
         ? supabase
             .from("expense_category")
             .update([expenseCategoryFormData])
-            .eq("category_id", selectedCategory.category_id)
+            .eq("category_uuid", selectedCategory.category_uuid)
             .select()
         : supabase
             .from("expense_category")
@@ -102,7 +102,7 @@ export default function ExpenseCategoryForm({
       setSubmitError(undefined);
       if (update) {
         setSelectedCategory(data[0]);
-        setColumnFilters([{ id: "รหัสหมวด", value: data[0].category_id }]);
+        setColumnFilters([{ id: "รหัสหมวด", value: data[0].category_uuid }]);
         toast.success("แก้ไขข้อมูลสำเร็จ");
       } else {
         toast.success("สร้างข้อมูลใหม่สำเร็จ");

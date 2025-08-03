@@ -1,8 +1,7 @@
 "use client";
 
-import { BranchType } from "@/app/(root)/(expense)/expense/page";
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
-import { SupplierType } from "@/components/supplier/SupplierColumn";
+import { ExpenseReceiptType } from "@/lib/types/models";
 import {
   CellContext,
   ColumnDef,
@@ -14,36 +13,8 @@ import { Check } from "lucide-react";
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
 
-export type PaymentMethodType = {
-  payment_id: number;
-  payment_description: string;
-};
-
-export type ExpenseReceiptType = {
-  receipt_id: number;
-  supplier_id: number;
-  invoice_number: string;
-  invoice_date: string;
-  tax_invoice_number: string;
-  tax_invoice_date: string;
-  receipt_number: string;
-  receipt_date: string;
-  total_amount: number;
-  payment_id: number;
-  remark: string;
-  branch_id: number;
-  user_id: string;
-  vat: number;
-  discount: number;
-  withholding: number;
-  submit_to_account: boolean;
-  branch: BranchType;
-  payment_method: PaymentMethodType;
-  supplier: SupplierType;
-};
-
 export const expenseReceiptFieldLabel = {
-  receipt_id: "รายการเลขที่",
+  receipt_uuid: "รายการเลขที่",
   "supplier.supplier_name": "บริษัท",
   invoice_number: "เลขที่ใบแจ้งหนี้",
   invoice_date: "วันที่ใบแจ้งหนี้",
@@ -61,7 +32,7 @@ export const expenseReceiptFieldLabel = {
 };
 
 export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
-  numberInt("receipt_id"),
+  numberInt("receipt_uuid"),
   simpleText("supplier.supplier_name"),
   simpleText("invoice_number"),
   dateThai("invoice_date"),

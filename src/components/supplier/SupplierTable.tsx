@@ -35,7 +35,7 @@ export default function SupplierTable() {
       const query = supabase
         .from("supplier")
         .select("*", { count: "exact" })
-        .order("supplier_id", { ascending: false })
+        .order("supplier_uuid", { ascending: false })
         .limit(500);
 
       const { data, error, count } = await query;
