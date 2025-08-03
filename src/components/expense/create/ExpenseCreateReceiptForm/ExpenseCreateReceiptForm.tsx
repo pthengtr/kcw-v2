@@ -139,7 +139,6 @@ export default function ExpenseCreateReceiptForm({
     discountInput,
     selectedSupplier,
     selectedPaymentMethod,
-    resetCreateReceiptForm,
     selectedReceipt,
     deleteEntries,
   } = useContext(ExpenseContext) as ExpenseContextType;
@@ -247,7 +246,6 @@ export default function ExpenseCreateReceiptForm({
     if (dataRpc) {
       toast.success("สร้างบิลค่าใช้จ่ายใหม่สำเร็จ");
       router.push(`/expense/${branch}/summary`);
-      resetCreateReceiptForm();
     }
   }
 

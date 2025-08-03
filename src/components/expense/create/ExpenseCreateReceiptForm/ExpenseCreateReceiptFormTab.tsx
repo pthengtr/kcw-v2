@@ -21,6 +21,7 @@ export default function ExpenseCreateReceiptFormTab({
     setDiscountInput,
     selectedReceipt,
     formExpenseReceipt,
+    resetCreateReceiptForm,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   function handleChangeCreateReceiptTab(value: string) {
@@ -67,6 +68,10 @@ export default function ExpenseCreateReceiptFormTab({
       formExpenseReceipt.reset(expenseCreateReceiptFormDefaultValues);
     }
   }, [formExpenseReceipt, selectedReceipt, update]);
+
+  useEffect(() => {
+    resetCreateReceiptForm();
+  }, [resetCreateReceiptForm]);
 
   const defaultValues = expenseCreateReceiptFormDefaultValues;
 

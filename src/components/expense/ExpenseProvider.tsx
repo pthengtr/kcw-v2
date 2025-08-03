@@ -182,14 +182,14 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setSelectedReceipt(row);
   }
 
-  function resetCreateReceiptForm() {
+  const resetCreateReceiptForm = useCallback(function () {
     setSelectedSupplier(undefined);
     setCreateEntries([]);
     setVatInput("7");
     setDiscountInput("0");
     setWithholdingInput("0");
     setCreateReceiptTab("company");
-  }
+  }, []);
 
   function handleDeleteCreateEntry(entry_uuid: UUID, update = false) {
     if (!entry_uuid) return;
