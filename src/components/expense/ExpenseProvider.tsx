@@ -108,6 +108,7 @@ export type ExpenseContextType = {
   setWithholdingInput: (vatInput: string) => void;
   formExpenseReceipt: UseFormReturn<ExpenseCreateReceiptFormDefaultType>;
   resetCreateReceiptForm: () => void;
+  handleDeleteCreateEntry: (entry_id: number) => void;
 };
 
 export const ExpenseContext = createContext<ExpenseContextType | null>(null);
@@ -184,6 +185,13 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setDiscountInput("0");
     setWithholdingInput("0");
     setCreateReceiptTab("company");
+  }
+
+  function handleDeleteCreateEntry(entry_id: number) {
+    const newCreateEntries = createEntries.filter(
+      (item) => item.entry_id !== entry_id
+    );
+    setCreateEntries(newCreateEntries);
   }
 
   const supabase = createClient();
@@ -301,6 +309,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     createReceiptTab,
     setCreateReceiptTab,
     resetCreateReceiptForm,
+    handleDeleteCreateEntry,
 
     vatInput,
     setVatInput,

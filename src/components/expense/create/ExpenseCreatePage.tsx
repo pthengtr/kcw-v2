@@ -10,7 +10,7 @@ import {
 } from "@/components/expense/ExpenseProvider";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { ClipboardList, Store } from "lucide-react";
+import { ClipboardList, Store, Trash } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
@@ -19,7 +19,9 @@ import ExpenseCreateReceiptSummary from "./ExpenseCreateReceiptSummary";
 import ExpenseCreateReceiptFormTab from "./ExpenseCreateReceiptForm/ExpenseCreateReceiptFormTab";
 
 export default function ExpenseCreatePage() {
-  const { selectedEntry } = useContext(ExpenseContext) as ExpenseContextType;
+  const { selectedEntry, handleDeleteCreateEntry } = useContext(
+    ExpenseContext
+  ) as ExpenseContextType;
 
   const [branchName, setBranchName] = useState("");
 
@@ -73,7 +75,18 @@ export default function ExpenseCreatePage() {
             <div className="flex flex-1 justify-start items-center gap-2">
               <h2 className="text-xl font-bold pr-2">บิลค่าใช้จ่ายใหม่</h2>
               <ExpenseAddEntryFormDialog />
-              {selectedEntry && <ExpenseAddEntryFormDialog update />}
+              {selectedEntry && (
+                <>
+                  <ExpenseAddEntryFormDialog update />
+                  <Button
+                    onClick={() =>
+                      handleDeleteCreateEntry(selectedEntry.entry_id)
+                    }
+                  >
+                    <Trash />
+                  </Button>
+                </>
+              )}
             </div>
           </ExpenseCreateEntryTable>
           <div className="flex p-4 h-fit justify-end mr-8">
