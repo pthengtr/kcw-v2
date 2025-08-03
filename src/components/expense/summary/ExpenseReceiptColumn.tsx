@@ -3,7 +3,12 @@
 import { BranchType } from "@/app/(root)/(expense)/expense/page";
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
 import { SupplierType } from "@/components/supplier/SupplierColumn";
-import { ColumnDef, HeaderContext, Row } from "@tanstack/react-table";
+import {
+  CellContext,
+  ColumnDef,
+  HeaderContext,
+  Row,
+} from "@tanstack/react-table";
 import { Check } from "lucide-react";
 
 // This type is used to define the shape of our data.
@@ -46,14 +51,12 @@ export const expenseReceiptFieldLabel = {
   tax_invoice_date: "วันที่ใบกำกับภาษี",
   receipt_number: "เลขที่ใบเสร็จรับเงิน",
   receipt_date: "วันที่ใบเสร็จรับเงิน",
-  total_amount: "จำนวนเงินก่อนภาษี",
+  total_amount: "ก่อนภาษี",
   "payment_method.payment_description": "ชำระโดย",
   remark: "หมายเหตุ",
   "branch.branch_name": "สาขา",
   user_id: "พนักงาน",
-  vat: "ภาษี",
   discount: "ส่วนลดท้ายบิล",
-  withholding: "หัก ณ ที่จ่าย",
   submit_to_account: "ส่งบัญชี",
 };
 
@@ -68,19 +71,120 @@ export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
   dateThai("receipt_date"),
   numberFloat("total_amount"),
   numberFloat("discount"),
-  numberFloat("vat"),
-  numberFloat("withholding"),
+  taxOnly(),
+  withholdingOnly(),
+  totalAfterTax(),
+  totalNet(),
   simpleText("payment_method.payment_description"),
   simpleText("branch.branch_name"),
   simpleText("remark"),
   simpleText("user_id"),
-  {
+  submitToAccount(),
+];
+
+function taxOnly() {
+  return {
+    id: "ภาษี",
+    accessorKey: "total_amount",
+    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
+      <DataTableColumnHeader column={column} title="ภาษี" />
+    ),
+    cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
+      const row = info.row.original;
+      const taxOnly = (row.total_amount - row.discount) * (row.vat / 100);
+      return (
+        <div className="text-right">
+          {taxOnly.toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </div>
+      );
+    },
+  };
+}
+
+function withholdingOnly() {
+  return {
+    id: "หัก ณ ที่จ่าย",
+    accessorKey: "total_amount",
+    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
+      <DataTableColumnHeader column={column} title="หัก ณ ที่จ่าย" />
+    ),
+    cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
+      const row = info.row.original;
+      const withholdingOnly =
+        (row.total_amount - row.discount) * (row.withholding / 100);
+      return (
+        <div className="text-right">
+          {withholdingOnly.toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </div>
+      );
+    },
+  };
+}
+
+function totalAfterTax() {
+  return {
+    id: "ราคาหลังภาษี",
+    accessorKey: "total_amount",
+    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
+      <DataTableColumnHeader column={column} title="ราคาหลังภาษี" />
+    ),
+    cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
+      const row = info.row.original;
+      const taxOnly = (row.total_amount - row.discount) * (row.vat / 100);
+      const totalAfterTax = row.total_amount - row.discount + taxOnly;
+      return (
+        <div className="text-right">
+          {totalAfterTax.toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </div>
+      );
+    },
+  };
+}
+
+function totalNet() {
+  return {
+    id: "ราคาสุทธิ",
+    accessorKey: "total_amount",
+    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
+      <DataTableColumnHeader column={column} title="ราคาสุทธิ" />
+    ),
+    cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
+      const row = info.row.original;
+      const taxOnly = (row.total_amount - row.discount) * (row.vat / 100);
+      const withholdingOnly =
+        (row.total_amount - row.discount) * (row.withholding / 100);
+      const totalNet =
+        row.total_amount - row.discount + taxOnly - withholdingOnly;
+
+      return (
+        <div className="text-right">
+          {totalNet.toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </div>
+      );
+    },
+  };
+}
+
+function submitToAccount() {
+  return {
     id: "ส่งบัญชี",
     accessorKey: "submit_to_account",
     header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
-      <DataTableColumnHeader column={column} title="หลักฐานการจ่าย" />
+      <DataTableColumnHeader column={column} title="ส่งบัญชี" />
     ),
-    cell: (row) => {
+    cell: (row: CellContext<ExpenseReceiptType, unknown>) => {
       return (
         <div className="text-right">
           {row.getValue() ? (
@@ -93,8 +197,8 @@ export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
         </div>
       );
     },
-  },
-];
+  };
+}
 
 function simpleText(key: keyof typeof expenseReceiptFieldLabel) {
   return {

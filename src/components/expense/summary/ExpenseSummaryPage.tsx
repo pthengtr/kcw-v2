@@ -3,6 +3,7 @@ import ExpenseReceiptDetail from "@/components/expense/summary/ExpenseReceiptDet
 import ExpenseReceiptTable, {
   defaultExpenseReceiptColumnVisibility,
 } from "@/components/expense/summary/ExpenseReceiptTable";
+
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Store } from "lucide-react";
@@ -56,7 +57,9 @@ export default function ExpenseSummaryPage() {
           <ExpenseReceiptTable
             columnVisibility={defaultExpenseReceiptColumnVisibility}
             paginationPageSize={10}
-          />
+          >
+            <h2 className="text-xl font-bold flex-1">{`รายการบิลค่าใช้จ่าย`}</h2>
+          </ExpenseReceiptTable>
         </div>
         <div className="p-2 flex-1">
           <ExpenseReceiptDetail />

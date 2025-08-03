@@ -24,11 +24,13 @@ export const defaultExpenseReceiptColumnVisibility = {
 };
 
 type ExpenseReceiptTableProps = {
+  children?: React.ReactNode;
   columnVisibility: typeof defaultExpenseReceiptColumnVisibility | undefined;
   paginationPageSize: number | undefined;
 };
 
 export default function ExpenseReceiptTable({
+  children,
   columnVisibility,
   paginationPageSize,
 }: ExpenseReceiptTableProps) {
@@ -94,7 +96,7 @@ export default function ExpenseReceiptTable({
           }}
           totalAmountKey={[]}
         >
-          <h2 className="text-xl font-bold flex-1">{`รายการบิลค่าใช้จ่าย`}</h2>
+          {children}
         </DataTable>
       )}
     </div>

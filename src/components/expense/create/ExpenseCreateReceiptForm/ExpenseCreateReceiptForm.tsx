@@ -133,16 +133,14 @@ export default function ExpenseCreateReceiptForm({
 }: ExpenseCreateReceiptFormProps) {
   const {
     createEntries,
-    setCreateEntries,
     setSubmitError,
-    setOpenCreateNoVatReceiptDialog,
-    setOpenCreateVatReceiptDialog,
     createReceiptTab,
     vatInput,
     withholdingInput,
     discountInput,
     selectedSupplier,
     selectedPaymentMethod,
+    resetCreateReceiptForm,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
@@ -228,9 +226,7 @@ export default function ExpenseCreateReceiptForm({
       return;
     }
     if (dataRpc) {
-      setCreateEntries([]);
-      setOpenCreateNoVatReceiptDialog(false);
-      setOpenCreateVatReceiptDialog(false);
+      resetCreateReceiptForm();
       toast.success("สร้างบิลค่าใช้จ่ายใหม่สำเร็จ");
     }
   }
