@@ -51,7 +51,7 @@ export default function ExpenseSummaryPage() {
         <div className="flex-1"></div>
       </div>
 
-      <div className="flex w-full">
+      <div className="flex flex-col w-full">
         <div className="p-2">
           <ExpenseReceiptTable
             columnVisibility={defaultExpenseReceiptColumnVisibility}
