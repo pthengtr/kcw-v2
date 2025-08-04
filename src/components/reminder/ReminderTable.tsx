@@ -125,10 +125,10 @@ export default function ReminderTable({
                   <TabsTrigger value="unpaid">ค้างชำระ</TabsTrigger>
                   <TabsTrigger value="paid">จ่ายแล้ว</TabsTrigger>
                 </TabsList>
-                <ResetTableCookiesDropdown
-                  handleResetCookies={handleResetCookies}
-                />
               </Tabs>
+              <ResetTableCookiesDropdown
+                handleResetCookies={handleResetCookies}
+              />
             </div>
           </DataTable>
         )}
