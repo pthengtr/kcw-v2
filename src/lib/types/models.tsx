@@ -5,11 +5,7 @@ export type ExpenseReceiptType = {
   total_amount: number;
   remark: string;
   user_id: string;
-  invoice_number: string;
-  invoice_date: string;
-  tax_invoice_number: string;
-  tax_invoice_date: string;
-  receipt_number: string;
+  receipt_number?: string;
   receipt_date: string;
   vat: number;
   withholding: number;
@@ -17,10 +13,10 @@ export type ExpenseReceiptType = {
   submit_to_account: boolean;
   branch_uuid: UUID;
   payment_uuid: UUID;
-  supplier_uuid: UUID;
+  supplier_uuid?: UUID;
   branch: BranchType;
   payment_method: PaymentMethodType;
-  supplier: SupplierType;
+  supplier?: SupplierType;
 };
 
 export type ExpenseEntryType = {

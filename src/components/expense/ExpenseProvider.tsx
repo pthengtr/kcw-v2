@@ -125,7 +125,18 @@ export type ExpenseContextType = {
     defaultValues: T,
     setValues: (values: T) => void
   ) => void;
+  receiptNameFormError: string | undefined;
+  setReceiptNameFormError: (receiptNameFormError: string | undefined) => void;
+  receiptDateFormError: string | undefined;
+  setReceiptDateFormError: (receiptDateFormError: string | undefined) => void;
 };
+
+// const [receiptNameFormError, setReceiptNameFormError] = useState<
+//     string | undefined
+//   >();
+//   const [receiptDateFormError, setReceiptDateFormError] = useState<
+//     string | undefined
+//   >();
 
 export const ExpenseContext = createContext<ExpenseContextType | null>(null);
 
@@ -188,6 +199,12 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     string | undefined
   >();
   const [supplierFormError, setSupplierFormError] = useState<
+    string | undefined
+  >();
+  const [receiptNameFormError, setReceiptNameFormError] = useState<
+    string | undefined
+  >();
+  const [receiptDateFormError, setReceiptDateFormError] = useState<
     string | undefined
   >();
 
@@ -400,6 +417,10 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setPaymentMethodFormError,
     supplierFormError,
     setSupplierFormError,
+    receiptNameFormError,
+    setReceiptNameFormError,
+    receiptDateFormError,
+    setReceiptDateFormError,
     getMyCookieClient,
   };
 

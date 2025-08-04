@@ -81,16 +81,16 @@ export default function ExpenseEntryTable({
               <div>
                 <div
                   className={`flex gap-3 items-center ${
-                    selectedReceipt.tax_invoice_number ? "text-sm" : "text-xl"
+                    selectedReceipt.receipt_number ? "text-sm" : "text-xl"
                   }`}
                 >
                   <div className="font-bold">
-                    {selectedReceipt.supplier.supplier_code}
+                    {selectedReceipt.supplier?.supplier_code}
                   </div>
-                  <div>{selectedReceipt.supplier.supplier_name}</div>
+                  <div>{selectedReceipt.supplier?.supplier_name}</div>
                 </div>
                 <div className="text-xl italic">
-                  {selectedReceipt.tax_invoice_number}
+                  {selectedReceipt.receipt_number}
                 </div>
               </div>
               <ExpenseUpdateReceiptButton />

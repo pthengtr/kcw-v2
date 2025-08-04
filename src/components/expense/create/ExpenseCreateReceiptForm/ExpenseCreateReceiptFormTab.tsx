@@ -40,24 +40,8 @@ export default function ExpenseCreateReceiptFormTab({
       formExpenseReceipt.reset({
         supplier_uuid: selectedReceipt.receipt_uuid,
         payment_uuid: selectedReceipt.payment_uuid,
-        tax_invoice_number: selectedReceipt.tax_invoice_number
-          ? selectedReceipt.tax_invoice_number
-          : "",
-        tax_invoice_date: selectedReceipt.tax_invoice_date
-          ? new Date(selectedReceipt.tax_invoice_date)
-          : "",
-        receipt_number: selectedReceipt.receipt_number
-          ? selectedReceipt.receipt_number
-          : "",
-        receipt_date: selectedReceipt.receipt_date
-          ? new Date(selectedReceipt.receipt_date)
-          : "",
-        invoice_number: selectedReceipt.invoice_number
-          ? selectedReceipt.invoice_number
-          : "",
-        invoice_date: selectedReceipt.invoice_date
-          ? new Date(selectedReceipt.invoice_date)
-          : "",
+        receipt_number: selectedReceipt.receipt_number,
+        receipt_date: new Date(selectedReceipt.receipt_date),
         vat: selectedReceipt.vat.toString(),
         withholding: selectedReceipt.vat.toString(),
         discount: selectedReceipt.vat.toString(),
@@ -73,13 +57,7 @@ export default function ExpenseCreateReceiptFormTab({
   // remove for individual
   const {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    invoice_number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    invoice_date,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    tax_invoice_number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    tax_invoice_date,
+    supplier_uuid,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     receipt_number,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

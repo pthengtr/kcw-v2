@@ -86,13 +86,9 @@ export default function ExpenseReceiptSearchForm({
       receipt_end.setMonth(receipt_end.getMonth() + 1);
       receipt_end = receipt_end.toLocaleString("en-US");
 
-      query = query.or(
-        [
-          `and(receipt_date.gte."${receipt_start}",receipt_date.lt."${receipt_end}")`,
-          `and(invoice_date.gte."${receipt_start}",invoice_date.lt."${receipt_end}")`,
-          `and(tax_invoice_date.gte."${receipt_start}",tax_invoice_date.lt."${receipt_end}")`,
-        ].join(",")
-      );
+      query = query
+        .gte("receipt_date", receipt_start)
+        .lt("receipt_date", receipt_end);
     }
 
     const { data, error, count } = await query;
