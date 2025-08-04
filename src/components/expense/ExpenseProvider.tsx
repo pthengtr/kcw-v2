@@ -28,6 +28,7 @@ import {
   SupplierType,
   UUID,
 } from "@/lib/types/models";
+import { getMyCookie } from "@/app/(root)/action";
 
 export type ExpenseContextType = {
   openAddEntryDialog: boolean;
@@ -119,6 +120,11 @@ export type ExpenseContextType = {
   ) => void;
   supplierFormError: string | undefined;
   setSupplierFormError: (supplierFormError: string | undefined) => void;
+  getMyCookieClient: <T>(
+    tableName: string,
+    defaultValues: T,
+    setValues: (values: T) => void
+  ) => void;
 };
 
 export const ExpenseContext = createContext<ExpenseContextType | null>(null);
@@ -301,6 +307,16 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     [setExpenseItems, setTotalItem, supabase]
   );
 
+  async function getMyCookieClient<T>(
+    tableName: string,
+    defaultValues: T,
+    setValues: (values: T) => void
+  ) {
+    const data = await getMyCookie(tableName);
+    if (data) setValues(JSON.parse(data));
+    else setValues(defaultValues);
+  }
+
   const value = {
     openAddEntryDialog,
     setOpenAddEntryDialog,
@@ -384,6 +400,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setPaymentMethodFormError,
     supplierFormError,
     setSupplierFormError,
+    getMyCookieClient,
   };
 
   return (

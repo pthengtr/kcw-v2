@@ -13,16 +13,9 @@ import ReminderSearchForm from "./ReminderSearchForm";
 import ReminderFormDialog from "./ReminderFormDialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { EllipsisVertical, Plus } from "lucide-react";
-import { Button } from "../ui/button";
+import { Plus } from "lucide-react";
 import { clearMyCookie } from "@/app/(root)/action";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import ResetTableCookiesDropdown from "../common/ResetTableCookiesDropdown";
 
 export const defaultColumnVisibility = {
   รายการเลขที่: false,
@@ -76,15 +69,15 @@ export default function ReminderTable({
     getReminder();
   }, [getReminder, openCreateDialog, openUpdateDialog, setSubmitError, status]);
 
-  function handleResetView() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { payment_date, ...nonAdminDefaultValue } = reminderDefaultValue;
+  const defaultValues = isAdmin ? reminderDefaultValue : nonAdminDefaultValue;
+
+  function handleResetCookies() {
     clearMyCookie("reminderColumnVisibility");
     clearMyCookie("reminderPaginationPageSize");
     getReminder();
   }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { payment_date, ...nonAdminDefaultValue } = reminderDefaultValue;
-  const defaultValues = isAdmin ? reminderDefaultValue : nonAdminDefaultValue;
 
   return (
     <div className="flex flex-col gap-2 p-2 h-full">
@@ -132,23 +125,10 @@ export default function ReminderTable({
                   <TabsTrigger value="unpaid">ค้างชำระ</TabsTrigger>
                   <TabsTrigger value="paid">จ่ายแล้ว</TabsTrigger>
                 </TabsList>
+                <ResetTableCookiesDropdown
+                  handleResetCookies={handleResetCookies}
+                />
               </Tabs>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="hidden h-8 lg:flex"
-                  >
-                    <EllipsisVertical />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={handleResetView}>
-                    ลบความจำรูปแบบตาราง ใช้ค่าเริ่มต้นในครั้งต่อไป
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </DataTable>
         )}

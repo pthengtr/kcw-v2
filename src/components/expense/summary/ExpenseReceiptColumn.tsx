@@ -13,6 +13,24 @@ import { Check } from "lucide-react";
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
 
+export const defaultExpenseReceiptColumnVisibility = {
+  รายการเลขที่: false,
+  บริษัท: true,
+  เลขที่ใบแจ้งหนี้: false,
+  วันที่ใบแจ้งหนี้: false,
+  เลขที่ใบกำกับภาษี: true,
+  วันที่ใบกำกับภาษี: true,
+  เลขที่ใบเสร็จรับเงิน: false,
+  วันที่ใบเสร็จรับเงิน: false,
+  ก่อนภาษี: false,
+  ชำระโดย: true,
+  หมายเหตุ: false,
+  สาขา: false,
+  พนักงาน: false,
+  ส่วนลดท้ายบิล: true,
+  ส่งบัญชี: false,
+};
+
 export const expenseReceiptFieldLabel = {
   receipt_uuid: "รายการเลขที่",
   "supplier.supplier_name": "บริษัท",

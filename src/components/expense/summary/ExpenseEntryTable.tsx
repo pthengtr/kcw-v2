@@ -4,19 +4,12 @@ import { useCallback, useContext, useEffect } from "react";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/common/DataTable";
-import { expenseEntryColumn } from "./ExpenseEntryColumn";
+import {
+  defaultReceiptEntryColumnVisibility,
+  expenseEntryColumn,
+} from "./ExpenseEntryColumn";
 import ExpenseUpdateReceiptButton from "./ExpenseUpdateReceiptButton";
 import ExpenseDeleteReceiptButton from "./ExpenseDeleteReceiptButton";
-
-export const defaultReceiptEntryColumnVisibility = {
-  รายการเลขที่: false,
-  อ้างอิงจากใบกำกับ: false,
-  อ้างอิงประเภทค่าใช้จ่าย: false,
-  ราคาต่อหน่วย: true,
-  จำนวน: true,
-  รายละเอียด: true,
-  จำนวนรวม: true,
-};
 
 type ExpenseEntryTableProps = {
   columnVisibility: typeof defaultReceiptEntryColumnVisibility | undefined;
@@ -55,8 +48,6 @@ export default function ExpenseEntryTable({
       }
 
       if (data) {
-        console.log("SET EXPENSE ENTRY");
-
         setReceiptEntries(data);
       }
       if (count) setTotalEntry(count);

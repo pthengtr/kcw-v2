@@ -31,16 +31,27 @@ export default function Reminder() {
   >();
 
   useEffect(() => {
-    async function getCookieColumnVisibility() {
-      const data = await getMyCookie("reminderColumnVisibility");
-      if (data) setColumnVisibility(JSON.parse(data));
-      else setColumnVisibility(defaultColumnVisibility);
+    async function getMyCookieClient<T>(
+      tableName: string,
+      defaultValues: T,
+      setValues: (values: T) => void
+    ) {
+      const data = await getMyCookie(tableName);
+      if (data) setValues(JSON.parse(data));
+      else setValues(defaultValues);
     }
 
-    async function getPaginationPageSize() {
-      const data = await getMyCookie("reminderPaginationPageSize");
-      if (data) setPaginationPageSize(parseInt(data));
-      else setPaginationPageSize(10);
+    async function getCookies() {
+      await getMyCookieClient(
+        "reminderColumnVisibility",
+        defaultColumnVisibility,
+        setColumnVisibility
+      );
+      await getMyCookieClient(
+        "reminderPaginationPageSize",
+        10,
+        setPaginationPageSize
+      );
     }
 
     async function checkUserAdmin() {
@@ -74,8 +85,7 @@ export default function Reminder() {
       }
     }
 
-    getCookieColumnVisibility();
-    getPaginationPageSize();
+    getCookies();
     checkUserAdmin();
   }, [setIsAdmin]);
 

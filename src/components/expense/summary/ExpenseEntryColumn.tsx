@@ -7,6 +7,19 @@ import { ColumnDef, HeaderContext, Row } from "@tanstack/react-table";
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
 
+export const defaultReceiptEntryColumnVisibility = {
+  รายการเลขที่: false,
+  อ้างอิงจากใบกำกับ: false,
+  อ้างอิงประเภทค่าใช้จ่าย: false,
+  ราคาต่อหน่วย: true,
+  จำนวน: true,
+  รายละเอียด: true,
+  ราคารวม: true,
+  ส่วนลด: true,
+  ประเภทค่าใช้จ่าย: true,
+  หมวด: false,
+};
+
 export const expenseEntryFieldLabel = {
   entry_uuid: "รายการเลขที่",
   receipt_uuid: "อ้างอิงจากใบกำกับ",

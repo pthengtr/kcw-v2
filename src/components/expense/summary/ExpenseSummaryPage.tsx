@@ -1,8 +1,6 @@
 "use client";
 import ExpenseReceiptDetail from "@/components/expense/summary/ExpenseReceiptDetail";
-import ExpenseReceiptTable, {
-  defaultExpenseReceiptColumnVisibility,
-} from "@/components/expense/summary/ExpenseReceiptTable";
+import ExpenseReceiptTable from "@/components/expense/summary/ExpenseReceiptTable";
 
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +9,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
+import { getMyCookie } from "@/app/(root)/action";
+import { defaultExpenseReceiptColumnVisibility } from "./ExpenseReceiptColumn";
 
 export default function ExpenseSummaryPage() {
   const { resetCreateReceiptForm } = useContext(
@@ -20,6 +20,40 @@ export default function ExpenseSummaryPage() {
   const [branchName, setBranchName] = useState("");
 
   const { branch } = useParams();
+
+  const [paginationPageSize, setPaginationPageSize] = useState<
+    number | undefined
+  >();
+  const [columnVisibility, setColumnVisibility] = useState<
+    typeof defaultExpenseReceiptColumnVisibility | undefined
+  >();
+
+  useEffect(() => {
+    async function getMyCookieClient<T>(
+      tableName: string,
+      defaultValues: T,
+      setValues: (values: T) => void
+    ) {
+      const data = await getMyCookie(tableName);
+      if (data) setValues(JSON.parse(data));
+      else setValues(defaultValues);
+    }
+
+    async function getCookies() {
+      await getMyCookieClient(
+        "expenseReceiptColumnVisibility",
+        defaultExpenseReceiptColumnVisibility,
+        setColumnVisibility
+      );
+      await getMyCookieClient(
+        "expenseReceiptPaginationPageSize",
+        10,
+        setPaginationPageSize
+      );
+    }
+
+    getCookies();
+  }, []);
 
   useEffect(() => {
     async function getBranchName() {
@@ -66,14 +100,16 @@ export default function ExpenseSummaryPage() {
 
       <div className="flex flex-col w-full">
         <div className="p-2">
-          <ExpenseReceiptTable
-            columnVisibility={defaultExpenseReceiptColumnVisibility}
-            paginationPageSize={10}
-          >
-            <div className="flex gap-2 flex-1 items-center">
-              <h2 className="text-xl font-bold ">{`รายการบิลค่าใช้จ่าย`}</h2>
-            </div>
-          </ExpenseReceiptTable>
+          {columnVisibility && paginationPageSize && (
+            <ExpenseReceiptTable
+              columnVisibility={columnVisibility}
+              paginationPageSize={paginationPageSize}
+            >
+              <div className="flex gap-2 flex-1 items-center">
+                <h2 className="text-xl font-bold ">{`รายการบิลค่าใช้จ่าย`}</h2>
+              </div>
+            </ExpenseReceiptTable>
+          )}
         </div>
         <div className="p-2 flex-1">
           <ExpenseReceiptDetail />
