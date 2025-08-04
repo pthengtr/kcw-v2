@@ -22,8 +22,6 @@ export default function BranchExpense() {
 
       const { data: branches, error } = await query;
 
-      console.log("this is branches", branches);
-
       if (error) {
         console.log(error);
       }

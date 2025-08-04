@@ -17,7 +17,7 @@ export const expenseEntryFieldLabel = {
   entry_amount: "ราคารวม",
   discount: "ส่วนลด",
   "expense_item.item_name": "ประเภทค่าใช้จ่าย",
-  "expense_item.category": "หมวด",
+  "expense_item.expense_category.category_name": "หมวด",
 };
 
 export const expenseEntryColumn: ColumnDef<ExpenseEntryType>[] = [
@@ -26,7 +26,7 @@ export const expenseEntryColumn: ColumnDef<ExpenseEntryType>[] = [
   numberInt("item_uuid"),
   simpleText("entry_detail"),
   simpleText("expense_item.item_name"),
-  simpleText("expense_item.category"),
+  simpleText("expense_item.expense_category.category_name"),
   numberFloat("unit_price"),
   numberFloat("discount"),
   numberFloat("quantity"),

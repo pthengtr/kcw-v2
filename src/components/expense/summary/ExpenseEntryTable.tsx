@@ -42,7 +42,7 @@ export default function ExpenseEntryTable({
     async function () {
       const query = supabase
         .from("expense_entry")
-        .select("*, expense_item(*)", { count: "exact" })
+        .select("*, expense_item(*, expense_category(*))", { count: "exact" })
         .eq("receipt_uuid", selectedReceipt?.receipt_uuid)
         .order("entry_uuid", { ascending: true })
         .limit(500);
@@ -54,35 +54,38 @@ export default function ExpenseEntryTable({
         return;
       }
 
-      console.log(data);
       if (data) {
+        console.log("SET EXPENSE ENTRY");
+
         setReceiptEntries(data);
       }
       if (count) setTotalEntry(count);
     },
-    [selectedReceipt?.receipt_uuid, setReceiptEntries, setTotalEntry, supabase]
+    [selectedReceipt, setReceiptEntries, setTotalEntry, supabase]
   );
 
   useEffect(() => {
-    if (selectedReceipt) getExpenseEntry();
-  }, [getExpenseEntry, selectedReceipt]);
+    if (selectedReceipt) {
+      getExpenseEntry();
+    }
+  }, [getExpenseEntry, selectedReceipt, setReceiptEntries]);
 
   return (
     <div className="h-full">
-      <DataTable
-        tableName="receiptEntries"
-        columns={expenseEntryColumn}
-        data={receiptEntries}
-        total={totalEntry}
-        setSelectedRow={setSelectedEntry}
-        initialState={{
-          columnVisibility: columnVisibility,
-          pagination: { pageIndex: 0, pageSize: paginationPageSize },
-        }}
-        totalAmountKey={[]}
-      >
-        <h2 className="flex-1">
-          {selectedReceipt ? (
+      {selectedReceipt && (
+        <DataTable
+          tableName="receiptEntries"
+          columns={expenseEntryColumn}
+          data={receiptEntries}
+          total={totalEntry}
+          setSelectedRow={setSelectedEntry}
+          initialState={{
+            columnVisibility: columnVisibility,
+            pagination: { pageIndex: 0, pageSize: paginationPageSize },
+          }}
+          totalAmountKey={[]}
+        >
+          <h2 className="flex-1">
             <div className="flex gap-4 items-center">
               <div>
                 <div
@@ -102,11 +105,9 @@ export default function ExpenseEntryTable({
               <ExpenseUpdateReceiptButton />
               <ExpenseDeleteReceiptButton />
             </div>
-          ) : (
-            "รายละเอียดบิล"
-          )}
-        </h2>
-      </DataTable>
+          </h2>
+        </DataTable>
+      )}
     </div>
   );
 }
