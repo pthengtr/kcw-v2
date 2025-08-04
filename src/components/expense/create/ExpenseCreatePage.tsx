@@ -20,9 +20,8 @@ import ExpenseCreateReceiptFormTab from "./ExpenseCreateReceiptForm/ExpenseCreat
 import ExpenseCreateBillHeader from "../ExpenseCreateBillHeader";
 
 export default function ExpenseCreatePage() {
-  const { selectedEntry, handleDeleteCreateEntry } = useContext(
-    ExpenseContext
-  ) as ExpenseContextType;
+  const { selectedEntry, handleDeleteCreateEntry, resetCreateReceiptForm } =
+    useContext(ExpenseContext) as ExpenseContextType;
 
   const [branchName, setBranchName] = useState("");
 
@@ -45,6 +44,10 @@ export default function ExpenseCreatePage() {
 
     getBranchName();
   }, [branch]);
+
+  useEffect(() => {
+    resetCreateReceiptForm();
+  }, [resetCreateReceiptForm]);
 
   return (
     <section className="flex flex-col items-center p-2">

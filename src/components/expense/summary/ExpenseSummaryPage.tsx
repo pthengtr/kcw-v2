@@ -9,9 +9,14 @@ import { createClient } from "@/lib/supabase/client";
 import { Plus, Store } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 
 export default function ExpenseSummaryPage() {
+  const { resetCreateReceiptForm } = useContext(
+    ExpenseContext
+  ) as ExpenseContextType;
+
   const [branchName, setBranchName] = useState("");
 
   const { branch } = useParams();
@@ -33,6 +38,10 @@ export default function ExpenseSummaryPage() {
 
     getBranchName();
   }, [branch]);
+
+  useEffect(() => {
+    resetCreateReceiptForm();
+  }, [resetCreateReceiptForm]);
 
   return (
     <section className="flex flex-col items-center p-2">

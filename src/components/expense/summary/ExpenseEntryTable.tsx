@@ -5,9 +5,8 @@ import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/common/DataTable";
 import { expenseEntryColumn } from "./ExpenseEntryColumn";
-import { Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useParams, useRouter } from "next/navigation";
+import ExpenseUpdateReceiptButton from "./ExpenseUpdateReceiptButton";
+import ExpenseDeleteReceiptButton from "./ExpenseDeleteReceiptButton";
 
 export const defaultReceiptEntryColumnVisibility = {
   รายการเลขที่: false,
@@ -36,10 +35,6 @@ export default function ExpenseEntryTable({
     selectedReceipt,
     setSelectedEntry,
   } = useContext(ExpenseContext) as ExpenseContextType;
-
-  const { branch } = useParams();
-
-  const router = useRouter();
 
   const supabase = createClient();
 
@@ -71,12 +66,6 @@ export default function ExpenseEntryTable({
   useEffect(() => {
     if (selectedReceipt) getExpenseEntry();
   }, [getExpenseEntry, selectedReceipt]);
-
-  function handleUpdateReceipt() {
-    router.push(
-      `/expense/${branch}/update-receipt?receipt-id=${selectedReceipt?.receipt_uuid}`
-    );
-  }
 
   return (
     <div className="h-full">
@@ -110,9 +99,8 @@ export default function ExpenseEntryTable({
                   {selectedReceipt.tax_invoice_number}
                 </div>
               </div>
-              <Button variant="outline" onClick={handleUpdateReceipt}>
-                <Pencil /> แก้ไขบิลนี้
-              </Button>
+              <ExpenseUpdateReceiptButton />
+              <ExpenseDeleteReceiptButton />
             </div>
           ) : (
             "รายละเอียดบิล"

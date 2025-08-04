@@ -56,6 +56,7 @@ export type ExpenseContextType = {
   ) => void;
   getCategory: () => Promise<void>;
   getItems: () => Promise<void>;
+  getExpense: (branch: UUID) => Promise<void>;
   columnFilters: ColumnFiltersState | [];
   setColumnFilters: Dispatch<SetStateAction<ColumnFiltersState>>;
   createReceiptTab: string;
@@ -178,12 +179,18 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
       expenseCreateReceiptFormDefaultValues as DefaultValues<ExpenseCreateReceiptFormDefaultType>,
   });
 
+  const supabase = createClient();
+
   function handleSelectedReceipt(row: ExpenseReceiptType) {
     setSelectedReceipt(row);
   }
 
   const resetCreateReceiptForm = useCallback(function () {
+    setSelectedReceipt(undefined);
+    setSelectedEntry(undefined);
+    setSelectedPaymentMethod(undefined);
     setSelectedSupplier(undefined);
+    setReceiptEntries([]);
     setCreateEntries([]);
     setVatInput("7");
     setDiscountInput("0");
@@ -205,7 +212,34 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setCreateEntries(newCreateEntries);
   }
 
-  const supabase = createClient();
+  const getExpense = useCallback(
+    async function (branch: UUID) {
+      let query = supabase
+        .from("expense_receipt")
+        .select("*, supplier(*), branch(*), payment_method(*)", {
+          count: "exact",
+        })
+        .order("receipt_uuid", { ascending: false })
+        .limit(500);
+
+      if (branch !== "all") {
+        query = query.eq("branch_uuid", branch);
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.log(error);
+        return;
+      }
+
+      if (data) {
+        setExpenseReceipts(data);
+      }
+      if (count) setTotalReceipt(count);
+    },
+    [supabase]
+  );
 
   const getCategory = useCallback(
     async function () {
@@ -317,6 +351,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     handleSelectedReceipt,
     getCategory,
     getItems,
+    getExpense,
     columnFilters,
     setColumnFilters,
     createReceiptTab,
