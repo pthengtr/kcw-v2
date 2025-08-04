@@ -18,7 +18,7 @@ import ExpenseWithholdingSelectInput from "./ExpenseWithholdingSelectInput";
 import ExpenseDiscountSelectInput from "./ExpenseDiscountInput";
 import ExpenseSelectSupplierInput from "./ExpenseSelectSupplierInput";
 import { BranchType, ExpenseReceiptType } from "@/lib/types/models";
-import ExpenseReceiptNameInput from "./ExpenseReceiptNameInput";
+import ExpenseReceiptNumberInput from "./ExpenseReceiptNumberInput";
 
 export type ExpenseCreateReceiptFormDefaultType = {
   payment_uuid?: string;
@@ -45,8 +45,8 @@ export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefa
 
 const expenseCretaeReceiptFormFieldLabel = {
   supplier_uuid: "ชื่อบริษัท",
-  receipt_number: "เลขที่ใบเสร็จรับเงิน",
-  receipt_date: "วันที่ใบเสร็จรับเงิน",
+  receipt_number: "เลขที่เอกสาร",
+  receipt_date: "วันที่",
   payment_uuid: "ชำระโดย",
   remark: "หมายเหตุ",
   vat: "ภาษี",
@@ -96,7 +96,7 @@ function getFormInput(
       break;
 
     case "receipt_number":
-      return <ExpenseReceiptNameInput field={field} />;
+      return <ExpenseReceiptNumberInput />;
 
     //simple text
     default:
@@ -105,7 +105,6 @@ function getFormInput(
 }
 
 export const formSchema = z.object({
-  receipt_number: z.string().optional(),
   receipt_date: z.coerce.date({
     required_error: "กรุณาระบุวันที่",
     invalid_type_error: "วันที่ไม่ถูกต้อง",
@@ -135,6 +134,7 @@ export default function ExpenseCreateReceiptForm({
     setPaymentMethodFormError,
     setSupplierFormError,
     setReceiptNameFormError,
+    receiptNumber,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
@@ -178,9 +178,7 @@ export default function ExpenseCreateReceiptForm({
     const formWithholding = parseFloat(withholdingInput);
     const formDiscount = parseFloat(discountInput);
 
-    const formReceiptNumber = formData.get("receipt_number") as string;
-
-    if (!formReceiptNumber && createReceiptTab === "company") {
+    if (!receiptNumber && createReceiptTab === "company") {
       console.log("ไม่พบข้อมูลเลขที่เอกสาร");
       setReceiptNameFormError("กรูณากรอกเลขที่เอกสาร");
       toast.error("ไม่พบข้อมูลเลขที่เอกสาร");
@@ -213,7 +211,7 @@ export default function ExpenseCreateReceiptForm({
     }
 
     const createReceiptFormData: ExpenseReceiptType = {
-      receipt_number: formReceiptNumber,
+      receipt_number: receiptNumber,
       receipt_date: formData.get("receipt_date") as string,
       remark: formData.get("remark") as string,
       receipt_uuid: "", // dummy value
@@ -272,15 +270,12 @@ export default function ExpenseCreateReceiptForm({
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const { receipt_number, receipt_date, remark } = values;
+    const { receipt_date, remark } = values;
 
     const formData = new FormData();
 
     formData.append("remark", remark);
 
-    if (receipt_number) {
-      formData.append("receipt_number", receipt_number);
-    }
     if (receipt_date) {
       formData.append("receipt_date", receipt_date.toLocaleString("en-US"));
     }

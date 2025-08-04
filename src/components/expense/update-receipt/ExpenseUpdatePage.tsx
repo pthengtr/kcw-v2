@@ -32,6 +32,7 @@ export default function ExpenseUpdatePage() {
     setSelectedPaymentMethod,
     setSelectedSupplier,
     setDeleteEntries,
+    setReceiptNumber,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const [branchName, setBranchName] = useState("");
@@ -70,6 +71,7 @@ export default function ExpenseUpdatePage() {
         const [receipt] = data;
         setDeleteEntries([]);
         setSelectedReceipt(receipt);
+        setReceiptNumber(receipt.receipt_number);
         setVatInput(receipt.vat.toString());
         setDiscountInput(receipt.discount.toString());
         setWithholdingInput(receipt.withholding.toString());
@@ -91,6 +93,7 @@ export default function ExpenseUpdatePage() {
     setCreateReceiptTab,
     setDeleteEntries,
     setDiscountInput,
+    setReceiptNumber,
     setSelectedPaymentMethod,
     setSelectedReceipt,
     setSelectedSupplier,

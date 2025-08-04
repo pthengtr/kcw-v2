@@ -105,6 +105,8 @@ export type ExpenseContextType = {
   totalCategory: number | undefined;
   setTotalCategory: (total: number) => void;
 
+  receiptNumber: string;
+  setReceiptNumber: (vatInput: string) => void;
   vatInput: string;
   setVatInput: (vatInput: string) => void;
   discountInput: string;
@@ -192,6 +194,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [createReceiptTab, setCreateReceiptTab] = useState("company");
 
   // for create receipt form
+  const [receiptNumber, setReceiptNumber] = useState("");
   const [vatInput, setVatInput] = useState("7");
   const [discountInput, setDiscountInput] = useState("0");
   const [withholdingInput, setWithholdingInput] = useState("0");
@@ -229,6 +232,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setSupplierFormError(undefined);
     setReceiptEntries([]);
     setCreateEntries([]);
+    setReceiptNumber("");
     setVatInput("7");
     setDiscountInput("0");
     setWithholdingInput("0");
@@ -406,6 +410,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     resetCreateReceiptForm,
     handleDeleteCreateEntry,
 
+    receiptNumber,
+    setReceiptNumber,
     vatInput,
     setVatInput,
     discountInput,

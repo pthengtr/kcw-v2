@@ -5,7 +5,7 @@ export type ExpenseReceiptType = {
   total_amount: number;
   remark: string;
   user_id: string;
-  receipt_number?: string;
+  receipt_number: string;
   receipt_date: string;
   vat: number;
   withholding: number;
