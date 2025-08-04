@@ -11,9 +11,11 @@ import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 import { PaymentMethodType } from "@/lib/types/models";
 
 export default function ExpensePaymentMethodSelectInput() {
-  const { selectedPaymentMethod, setSelectedPaymentMethod } = useContext(
-    ExpenseContext
-  ) as ExpenseContextType;
+  const {
+    selectedPaymentMethod,
+    setSelectedPaymentMethod,
+    paymentMethodFormError,
+  } = useContext(ExpenseContext) as ExpenseContextType;
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodType[]>([]);
 
@@ -58,20 +60,25 @@ export default function ExpensePaymentMethodSelectInput() {
   }
 
   return (
-    <Select
-      value={selectedPaymentMethod ? selectedPaymentMethod.payment_uuid : ""}
-      onValueChange={(value) => handleValueChanage(value)}
-    >
-      <SelectTrigger className="">
-        <SelectValue placeholder="เลือกวิธีการชำระ" />
-      </SelectTrigger>
-      <SelectContent>
-        {sortedPaymentmethod.map((method, index) => (
-          <SelectItem key={`${id}-${index}`} value={method.payment_uuid}>
-            {method.payment_description}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="flex flex-col gap-1">
+      <Select
+        value={selectedPaymentMethod ? selectedPaymentMethod.payment_uuid : ""}
+        onValueChange={(value) => handleValueChanage(value)}
+      >
+        <SelectTrigger className="">
+          <SelectValue placeholder="เลือกวิธีการชำระ" />
+        </SelectTrigger>
+        <SelectContent>
+          {sortedPaymentmethod.map((method, index) => (
+            <SelectItem key={`${id}-${index}`} value={method.payment_uuid}>
+              {method.payment_description}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {paymentMethodFormError && (
+        <div className="text-red-500 text-xs">{paymentMethodFormError}</div>
+      )}
+    </div>
   );
 }

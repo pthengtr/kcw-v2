@@ -141,6 +141,8 @@ export default function ExpenseCreateReceiptForm({
     selectedPaymentMethod,
     selectedReceipt,
     deleteEntries,
+    setPaymentMethodFormError,
+    setSupplierFormError,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
@@ -158,7 +160,8 @@ export default function ExpenseCreateReceiptForm({
     } = await supabase.auth.getUser();
 
     if (!user?.email || errorUser) {
-      console.log("No user logged in or error:", errorUser);
+      toast.error(errorUser ? errorUser.message : "ไม่พบบัญชีผู้ใช้");
+      console.log(errorUser ? errorUser.message : "ไม่พบบัญชีผู้ใช้");
       return;
     }
 
@@ -172,7 +175,8 @@ export default function ExpenseCreateReceiptForm({
     const { data: branches, error: errorBranch } = await query;
 
     if (errorBranch) {
-      console.log("invalid branch", errorUser);
+      console.log(errorBranch.message);
+      toast.error(errorBranch.message);
       return;
     }
 
@@ -181,6 +185,22 @@ export default function ExpenseCreateReceiptForm({
     const formVat = parseFloat(vatInput);
     const formWithholding = parseFloat(withholdingInput);
     const formDiscount = parseFloat(discountInput);
+
+    if (!selectedSupplier) {
+      console.log("ไม่พบข้อมูลชื่อบริษัท");
+      setSupplierFormError("กรูณาเลือกบริษัท");
+      toast.error("ไม่พบข้อมูลชื่อบริษัท");
+    } else {
+      setSupplierFormError(undefined);
+    }
+
+    if (!selectedPaymentMethod) {
+      console.log("ไม่พบข้อมูลวิธีการชำระ");
+      setPaymentMethodFormError("ไม่พบข้อมูลวิธีการชำระ");
+      toast.error("ไม่พบข้อมูลวิธีการชำระ");
+    } else {
+      setPaymentMethodFormError(undefined);
+    }
 
     if (!selectedSupplier || !selectedPaymentMethod) {
       return;

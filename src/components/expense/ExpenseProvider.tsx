@@ -113,6 +113,12 @@ export type ExpenseContextType = {
   formExpenseReceipt: UseFormReturn<ExpenseCreateReceiptFormDefaultType>;
   resetCreateReceiptForm: () => void;
   handleDeleteCreateEntry: (entry_uuid: UUID, update?: boolean) => void;
+  paymentMethodFormError: string | undefined;
+  setPaymentMethodFormError: (
+    paymentMethodFormError: string | undefined
+  ) => void;
+  supplierFormError: string | undefined;
+  setSupplierFormError: (supplierFormError: string | undefined) => void;
 };
 
 export const ExpenseContext = createContext<ExpenseContextType | null>(null);
@@ -172,6 +178,12 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [vatInput, setVatInput] = useState("7");
   const [discountInput, setDiscountInput] = useState("0");
   const [withholdingInput, setWithholdingInput] = useState("0");
+  const [paymentMethodFormError, setPaymentMethodFormError] = useState<
+    string | undefined
+  >();
+  const [supplierFormError, setSupplierFormError] = useState<
+    string | undefined
+  >();
 
   const formExpenseReceipt = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -190,6 +202,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setSelectedEntry(undefined);
     setSelectedPaymentMethod(undefined);
     setSelectedSupplier(undefined);
+    setPaymentMethodFormError(undefined);
+    setSupplierFormError(undefined);
     setReceiptEntries([]);
     setCreateEntries([]);
     setVatInput("7");
@@ -366,6 +380,10 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     withholdingInput,
     setWithholdingInput,
     formExpenseReceipt,
+    paymentMethodFormError,
+    setPaymentMethodFormError,
+    supplierFormError,
+    setSupplierFormError,
   };
 
   return (

@@ -17,11 +17,13 @@ import { SupplierType } from "@/lib/types/models";
 type CommonSupplierNameInputProps = {
   selectedSupplier: SupplierType | undefined;
   setSelectedSupplier: (selectedRow: SupplierType | undefined) => void;
+  error: string | undefined;
 };
 
 export default function CommonSupplierNameInput({
   selectedSupplier,
   setSelectedSupplier,
+  error,
 }: CommonSupplierNameInputProps) {
   const [filterText, setFilterText] = useState("");
   const [supplierOptions, setSupplierOptions] = useState<SupplierType[]>([]);
@@ -62,7 +64,7 @@ export default function CommonSupplierNameInput({
   }
 
   return (
-    <div>
+    <div className="flex flex-col gap-1">
       <DropdownMenu>
         <DropdownMenuTrigger
           asChild
@@ -128,6 +130,7 @@ export default function CommonSupplierNameInput({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+      {error && <div className="text-red-500 text-xs">{error}</div>}
     </div>
   );
 }
