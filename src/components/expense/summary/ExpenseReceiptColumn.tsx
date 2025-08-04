@@ -34,8 +34,8 @@ export const defaultExpenseReceiptColumnVisibility = {
 export const expenseReceiptFieldLabel = {
   receipt_uuid: "รายการเลขที่",
   "supplier.supplier_name": "บริษัท",
-  invoice_number: "เลขที่ใบแจ้งหนี้",
-  invoice_date: "วันที่ใบแจ้งหนี้",
+  invoice_number: "เลขที่เอกสาร",
+  invoice_date: "วันที่เอกสาร",
   tax_invoice_number: "เลขที่ใบกำกับภาษี",
   tax_invoice_date: "วันที่ใบกำกับภาษี",
   receipt_number: "เลขที่ใบเสร็จรับเงิน",

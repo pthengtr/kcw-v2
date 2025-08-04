@@ -11,6 +11,7 @@ import { useContext, useEffect, useState } from "react";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { getMyCookie } from "@/app/(root)/action";
 import { defaultExpenseReceiptColumnVisibility } from "./ExpenseReceiptColumn";
+import ExpenseReceiptSearchForm from "./ExpenseReceiptSearchForm";
 
 export default function ExpenseSummaryPage() {
   const { resetCreateReceiptForm } = useContext(
@@ -105,8 +106,15 @@ export default function ExpenseSummaryPage() {
               columnVisibility={columnVisibility}
               paginationPageSize={paginationPageSize}
             >
-              <div className="flex gap-2 flex-1 items-center">
-                <h2 className="text-xl font-bold ">{`รายการบิลค่าใช้จ่าย`}</h2>
+              <div className="flex gap-2 flex-1 justify-between items-center">
+                <h2 className="text-xl font-bold ">{`รายการ บิลค่าใช้จ่าย`}</h2>
+                <div>
+                  <ExpenseReceiptSearchForm
+                    defaultValues={{
+                      receipt_month: "all",
+                    }}
+                  />
+                </div>
               </div>
             </ExpenseReceiptTable>
           )}
