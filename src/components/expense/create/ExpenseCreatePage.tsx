@@ -17,6 +17,7 @@ import { useContext, useEffect, useState } from "react";
 
 import ExpenseCreateReceiptSummary from "./ExpenseCreateReceiptSummary";
 import ExpenseCreateReceiptFormTab from "./ExpenseCreateReceiptForm/ExpenseCreateReceiptFormTab";
+import ExpenseCreateBillHeader from "../ExpenseCreateBillHeader";
 
 export default function ExpenseCreatePage() {
   const { selectedEntry, handleDeleteCreateEntry } = useContext(
@@ -76,7 +77,9 @@ export default function ExpenseCreatePage() {
             paginationPageSize={10}
           >
             <div className="flex flex-1 justify-start items-center gap-2">
-              <h2 className="text-xl font-bold pr-2">บิลค่าใช้จ่ายใหม่</h2>
+              <h2 className="text-xl pr-2">
+                <ExpenseCreateBillHeader />
+              </h2>
               <ExpenseAddEntryFormDialog />
               {selectedEntry && (
                 <>

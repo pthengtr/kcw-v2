@@ -10,12 +10,14 @@ import {
 } from "@/components/expense/ExpenseProvider";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { Trash } from "lucide-react";
+import { ArrowBigLeftDash, Trash } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import ExpenseCreateReceiptFormTab from "../create/ExpenseCreateReceiptForm/ExpenseCreateReceiptFormTab";
 import ExpenseCreateReceiptSummary from "../create/ExpenseCreateReceiptSummary";
 import { ExpenseReceiptType } from "@/lib/types/models";
+import Link from "next/link";
+import ExpenseCreateBillHeader from "../ExpenseCreateBillHeader";
 
 export default function ExpenseUpdatePage() {
   const {
@@ -101,7 +103,14 @@ export default function ExpenseUpdatePage() {
       {selectedReceipt && (
         <section className="flex flex-col items-center p-2">
           <div className="flex w-full p-2">
-            <div className="flex-1 flex gap-2"></div>
+            <div className="flex-1 flex gap-2">
+              <Link className="" href={`/expense/${branch}/summary`} passHref>
+                <Button variant="outline">
+                  <ArrowBigLeftDash strokeWidth={1} />
+                  กลับ
+                </Button>
+              </Link>
+            </div>
             <h1 className="text-2xl font-bold tracking-wider">{`แก้ไขบิลค่าใชัจ่าย ${branchName}`}</h1>
             <div className="flex-1 flex justify-end gap-2"></div>
           </div>
@@ -117,7 +126,9 @@ export default function ExpenseUpdatePage() {
                 update
               >
                 <div className="flex flex-1 justify-start items-center gap-2">
-                  <h2 className="text-xl font-bold pr-2">บิลค่าใช้จ่ายใหม่</h2>
+                  <h2 className="text-xl pr-2">
+                    <ExpenseCreateBillHeader />
+                  </h2>
                   <ExpenseAddEntryFormDialog />
                   {selectedEntry && (
                     <>

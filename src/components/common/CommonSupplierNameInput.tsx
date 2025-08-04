@@ -74,7 +74,6 @@ export default function CommonSupplierNameInput({
                 <span className="font-bold">
                   {selectedSupplier.supplier_code}
                 </span>
-                <span>{selectedSupplier.supplier_name}</span>
               </>
             ) : (
               "เลือกบริษัท"
