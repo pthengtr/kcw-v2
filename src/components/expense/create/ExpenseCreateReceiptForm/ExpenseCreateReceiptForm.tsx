@@ -21,14 +21,14 @@ import { BranchType, ExpenseReceiptType } from "@/lib/types/models";
 import ExpenseReceiptNumberInput from "./ExpenseReceiptNumberInput";
 
 export type ExpenseCreateReceiptFormDefaultType = {
-  payment_uuid?: string;
+  payment_uuid: string;
   remark: string;
-  supplier_uuid?: string;
-  receipt_number?: string;
+  supplier_uuid: string;
+  receipt_number: string;
   receipt_date: Date;
-  vat?: string | undefined;
-  withholding?: string | undefined;
-  discount?: string | undefined;
+  vat: string;
+  withholding: string;
+  discount: string;
 };
 
 export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefaultType =
@@ -105,6 +105,12 @@ function getFormInput(
 }
 
 export const formSchema = z.object({
+  payment_uuid: z.string(),
+  supplier_uuid: z.string(),
+  receipt_number: z.string(),
+  vat: z.string(),
+  withholding: z.string(),
+  discount: z.string(),
   receipt_date: z.coerce.date({
     required_error: "กรุณาระบุวันที่",
     invalid_type_error: "วันที่ไม่ถูกต้อง",
@@ -123,7 +129,6 @@ export default function ExpenseCreateReceiptForm({
 }: ExpenseCreateReceiptFormProps) {
   const {
     createEntries,
-    createReceiptTab,
     vatInput,
     withholdingInput,
     discountInput,
@@ -178,7 +183,7 @@ export default function ExpenseCreateReceiptForm({
     const formWithholding = parseFloat(withholdingInput);
     const formDiscount = parseFloat(discountInput);
 
-    if (!receiptNumber && createReceiptTab === "company") {
+    if (!receiptNumber) {
       console.log("ไม่พบข้อมูลเลขที่เอกสาร");
       setReceiptNameFormError("กรูณากรอกเลขที่เอกสาร");
       toast.error("ไม่พบข้อมูลเลขที่เอกสาร");
@@ -186,7 +191,7 @@ export default function ExpenseCreateReceiptForm({
       setReceiptNameFormError(undefined);
     }
 
-    if (!selectedSupplier && createReceiptTab === "company") {
+    if (!selectedSupplier) {
       console.log("ไม่พบข้อมูลชื่อบริษัท");
       setSupplierFormError("กรูณาเลือกบริษัท");
       toast.error("ไม่พบข้อมูลชื่อบริษัท");
@@ -202,13 +207,8 @@ export default function ExpenseCreateReceiptForm({
       setPaymentMethodFormError(undefined);
     }
 
-    if (createReceiptTab === "company") {
-      if (!selectedSupplier || !selectedSupplier) return;
-    }
-
-    if (!selectedPaymentMethod) {
+    if (!selectedSupplier || !selectedSupplier || !selectedPaymentMethod)
       return;
-    }
 
     const createReceiptFormData: ExpenseReceiptType = {
       receipt_number: receiptNumber,
@@ -229,7 +229,6 @@ export default function ExpenseCreateReceiptForm({
       discount: formDiscount ? formDiscount : 0,
       vat: formVat ? formVat : 0,
       withholding: formWithholding ? formWithholding : 0,
-      submit_to_account: createReceiptTab === "company" ? true : false,
     };
 
     console.log(selectedReceipt?.receipt_uuid);

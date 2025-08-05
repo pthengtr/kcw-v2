@@ -10,13 +10,12 @@ export type ExpenseReceiptType = {
   vat: number;
   withholding: number;
   discount: number;
-  submit_to_account: boolean;
   branch_uuid: UUID;
   payment_uuid: UUID;
-  supplier_uuid?: UUID;
+  supplier_uuid: UUID;
   branch: BranchType;
   payment_method: PaymentMethodType;
-  supplier?: SupplierType;
+  supplier: SupplierType;
 };
 
 export type ExpenseEntryType = {

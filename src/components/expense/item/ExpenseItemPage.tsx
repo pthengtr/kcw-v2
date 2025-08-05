@@ -5,7 +5,7 @@ import ExpenseCategoryTable from "./ExpenseCategoryTable";
 import ExpenseItemFormDialog from "./ExpenseItemFormDialog";
 import ExpenseItemTable from "./ExpenseItemTable";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
-import { Pencil, Plus } from "lucide-react";
+import { ArrowBigLeftDash, Pencil, Plus } from "lucide-react";
 import {
   ExpenseItemDefaultType,
   expenseItemFormDefaultValues,
@@ -16,6 +16,8 @@ import {
   expenseCategoryFormDefaultValues,
 } from "./ExpenseCategoryForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function ExpenseItemPage() {
   const {
@@ -46,7 +48,15 @@ export default function ExpenseItemPage() {
       : expenseCategoryFormDefaultValues;
 
   return (
-    <section className="grid place-content-center p-4">
+    <section className="flex flex-col items-center p-4">
+      <div className="flex-1 self-start px-8">
+        <Link className="" href={`/expense`} passHref>
+          <Button variant="outline">
+            <ArrowBigLeftDash strokeWidth={1} />
+            กลับ
+          </Button>
+        </Link>
+      </div>
       <Tabs
         defaultValue="expense-item"
         className="w-fit flex flex-col items-center"

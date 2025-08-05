@@ -31,7 +31,7 @@ export default function Branch() {
       {branches && (
         <>
           <h1 className="text-6xl p-12 text-center tracking-widest">
-            ค่าใช้จ่าย
+            ค่าใช้จ่ายบริษัท
           </h1>
           <CardIconMenu>
             {branches.map((branch) => (

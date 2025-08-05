@@ -60,8 +60,6 @@ export type ExpenseContextType = {
   getExpense: (branch: UUID) => Promise<void>;
   columnFilters: ColumnFiltersState | [];
   setColumnFilters: Dispatch<SetStateAction<ColumnFiltersState>>;
-  createReceiptTab: string;
-  setCreateReceiptTab: (createReceiptTab: string) => void;
 
   // set selected group
   selectedSupplier: SupplierType | undefined;
@@ -191,7 +189,6 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     useState<storageObjectType[]>();
   const [submitError, setSubmitError] = useState<string>();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [createReceiptTab, setCreateReceiptTab] = useState("company");
 
   // for create receipt form
   const [receiptNumber, setReceiptNumber] = useState("");
@@ -236,7 +233,6 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setVatInput("7");
     setDiscountInput("0");
     setWithholdingInput("0");
-    setCreateReceiptTab("company");
   }, []);
 
   function handleDeleteCreateEntry(entry_uuid: UUID, update = false) {
@@ -405,8 +401,6 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     getExpense,
     columnFilters,
     setColumnFilters,
-    createReceiptTab,
-    setCreateReceiptTab,
     resetCreateReceiptForm,
     handleDeleteCreateEntry,
 

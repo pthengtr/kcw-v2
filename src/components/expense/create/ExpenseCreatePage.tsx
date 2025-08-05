@@ -16,7 +16,7 @@ import { useParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 
 import ExpenseCreateReceiptSummary from "./ExpenseCreateReceiptSummary";
-import ExpenseCreateReceiptFormTab from "./ExpenseCreateReceiptForm/ExpenseCreateReceiptFormTab";
+import ExpenseCreateReceiptFormTab from "./ExpenseCreateReceiptForm/ExpenseCreateReceiptFormCard";
 import ExpenseCreateBillHeader from "../ExpenseCreateBillHeader";
 
 export default function ExpenseCreatePage() {
@@ -66,7 +66,7 @@ export default function ExpenseCreatePage() {
             </Button>
           </Link>
         </div>
-        <h1 className="text-2xl font-bold tracking-wider">{`สร้างบิลค่าใช้จ่าย ${branchName}`}</h1>
+        <h1 className="text-2xl font-bold tracking-wider">{`สร้างบิลค่าใช้จ่ายบริษัท ${branchName}`}</h1>
         <div className="flex-1 flex justify-end gap-2"></div>
       </div>
 

@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ArrowBigLeftDash, Trash } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
-import ExpenseCreateReceiptFormTab from "../create/ExpenseCreateReceiptForm/ExpenseCreateReceiptFormTab";
+import ExpenseCreateReceiptFormCard from "../create/ExpenseCreateReceiptForm/ExpenseCreateReceiptFormCard";
 import ExpenseCreateReceiptSummary from "../create/ExpenseCreateReceiptSummary";
 import { ExpenseReceiptType } from "@/lib/types/models";
 import Link from "next/link";
@@ -25,7 +25,6 @@ export default function ExpenseUpdatePage() {
     selectedReceipt,
     setSelectedReceipt,
     handleDeleteCreateEntry,
-    setCreateReceiptTab,
     setVatInput,
     setDiscountInput,
     setWithholdingInput,
@@ -75,11 +74,6 @@ export default function ExpenseUpdatePage() {
         setVatInput(receipt.vat.toString());
         setDiscountInput(receipt.discount.toString());
         setWithholdingInput(receipt.withholding.toString());
-        if (receipt.submit_to_account) {
-          setCreateReceiptTab("company");
-        } else {
-          setCreateReceiptTab("individual");
-        }
         setSelectedSupplier(receipt.supplier);
         setSelectedPaymentMethod(receipt.payment_method);
       }
@@ -90,7 +84,6 @@ export default function ExpenseUpdatePage() {
   }, [
     branch,
     receiptId,
-    setCreateReceiptTab,
     setDeleteEntries,
     setDiscountInput,
     setReceiptNumber,
@@ -120,7 +113,7 @@ export default function ExpenseUpdatePage() {
 
           <div className="flex w-full justify-center h-[80vh]">
             <div className="p-2 h-full">
-              <ExpenseCreateReceiptFormTab update />
+              <ExpenseCreateReceiptFormCard update />
             </div>
             <div className="p-2 flex flex-col gap-2 h-full">
               <ExpenseCreateEntryTable

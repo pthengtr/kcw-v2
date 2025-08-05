@@ -27,10 +27,9 @@ export default function ExpenseAddEntryFormDialog({
     openUpdateEntryDialog,
     setOpenUpdateEntryDialog,
     selectedEntry,
-    createReceiptTab,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
-  const _defaultValues: ExpenseAddEntryFormDefaultType =
+  const defaultValues: ExpenseAddEntryFormDefaultType =
     update && selectedEntry
       ? {
           item_uuid: selectedEntry.item_uuid,
@@ -41,16 +40,6 @@ export default function ExpenseAddEntryFormDialog({
           discount: selectedEntry.discount,
         }
       : expenseAddEntryFormDefaultValues;
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { includeVat, discount, ...defaultValuesNovat } = _defaultValues;
-
-  let defaultValues;
-  if (createReceiptTab === "company") {
-    defaultValues = _defaultValues;
-  } else {
-    defaultValues = defaultValuesNovat;
-  }
 
   return (
     <Dialog

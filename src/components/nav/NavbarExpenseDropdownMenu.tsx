@@ -19,7 +19,7 @@ export default function NavbarExpenseDropdownMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost">ค่าใช้จ่าย</Button>
+        <Button variant="ghost">ค่าใช้จ่ายบริษัท</Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuItem asChild>

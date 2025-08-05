@@ -5,6 +5,9 @@ import CardIcon from "@/components/common/CardIcon";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { BranchType } from "@/lib/types/models";
+import { Button } from "@/components/ui/button";
+import { ArrowBigLeftDash } from "lucide-react";
+import Link from "next/link";
 
 export default function BranchExpense() {
   const { branch } = useParams();
@@ -36,9 +39,21 @@ export default function BranchExpense() {
     <>
       {branches && (
         <>
-          <h1 className="text-6xl p-12 text-center">
-            {branches[0].branch_name}
-          </h1>
+          <div className="flex">
+            <div className="flex-1 flex">
+              <Link className="p-16" href={`/expense`} passHref>
+                <Button variant="outline">
+                  <ArrowBigLeftDash strokeWidth={1} />
+                  กลับ
+                </Button>
+              </Link>
+            </div>
+            <h1 className="text-6xl p-12 text-center">
+              {branches[0].branch_name}
+            </h1>
+            <div className="flex-1"></div>
+          </div>
+
           <CardIconMenu>
             <CardIcon
               path={`/expense/${branch}/summary`}
