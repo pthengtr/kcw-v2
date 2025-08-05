@@ -229,6 +229,10 @@ export default function ExpenseCreateReceiptForm({
       discount: formDiscount ? formDiscount : 0,
       vat: formVat ? formVat : 0,
       withholding: formWithholding ? formWithholding : 0,
+      created_at: "", // dummy value
+      voucher_description: createEntries.reduce((prev, current) =>
+        current.entry_amount > prev.entry_amount ? current : prev
+      ).entry_detail,
     };
 
     console.log(selectedReceipt?.receipt_uuid);

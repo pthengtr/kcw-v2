@@ -16,6 +16,8 @@ export type ExpenseReceiptType = {
   branch: BranchType;
   payment_method: PaymentMethodType;
   supplier: SupplierType;
+  created_at: string;
+  voucher_description: string;
 };
 
 export type ExpenseEntryType = {
