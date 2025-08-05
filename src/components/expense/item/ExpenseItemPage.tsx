@@ -50,7 +50,7 @@ export default function ExpenseItemPage() {
   return (
     <section className="flex flex-col items-center p-4">
       <div className="flex-1 self-start px-8">
-        <Link className="" href={`/expense`} passHref>
+        <Link className="" href={`/home`} passHref>
           <Button variant="outline">
             <ArrowBigLeftDash strokeWidth={1} />
             กลับ

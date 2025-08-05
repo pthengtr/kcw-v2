@@ -17,6 +17,11 @@ export default function Home() {
           icon="Banknote"
         />
         <CardIcon path="/supplier" description="รายชื่อบริษัท" icon="Truck" />
+        <CardIcon
+          path="/expense/item"
+          description="ประเภทค่าใช้จ่าย"
+          icon="SquareMenu"
+        />
       </CardIconMenu>
     </>
   );

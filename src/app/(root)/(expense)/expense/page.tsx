@@ -1,8 +1,11 @@
 "use client";
 import CardIcon from "@/components/common/CardIcon";
 import CardIconMenu from "@/components/common/CardIconMenu";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { BranchType } from "@/lib/types/models";
+import { ArrowBigLeftDash } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function Branch() {
@@ -30,9 +33,18 @@ export default function Branch() {
     <>
       {branches && (
         <>
-          <h1 className="text-6xl p-12 text-center tracking-widest">
-            ค่าใช้จ่ายบริษัท
-          </h1>
+          <div className="flex">
+            <div className="flex-1 flex">
+              <Link className="p-16" href={`/home`} passHref>
+                <Button variant="outline">
+                  <ArrowBigLeftDash strokeWidth={1} />
+                  กลับ
+                </Button>
+              </Link>
+            </div>
+            <h1 className="text-6xl p-12 text-center">ค่าใช้จ่ายบริษัท</h1>
+            <div className="flex-1"></div>
+          </div>
           <CardIconMenu>
             {branches.map((branch) => (
               <CardIcon
@@ -42,11 +54,6 @@ export default function Branch() {
                 icon="Store"
               />
             ))}
-            <CardIcon
-              path="/expense/item"
-              description="ประเภทค่าใช้จ่าย"
-              icon="SquareMenu"
-            />
           </CardIconMenu>
         </>
       )}

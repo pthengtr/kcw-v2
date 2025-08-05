@@ -256,7 +256,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
         .select("*, supplier(*), branch(*), payment_method(*)", {
           count: "exact",
         })
-        .order("receipt_uuid", { ascending: false })
+        .order("receipt_date", { ascending: false })
         .limit(500);
 
       if (branch !== "all") {
