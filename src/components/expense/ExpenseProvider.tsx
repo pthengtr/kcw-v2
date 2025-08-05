@@ -78,6 +78,8 @@ export type ExpenseContextType = {
   setSelectedPaymentMethod: (
     selectedPaymentMethod: PaymentMethodType | undefined
   ) => void;
+  selectedVoucher: ExpenseReceiptType | undefined;
+  setSelectedVoucher: (selectedVoucher: ExpenseReceiptType | undefined) => void;
 
   // array group
   expenseReceipts: ExpenseReceiptType[];
@@ -92,6 +94,8 @@ export type ExpenseContextType = {
   setExpenseCategories: (expenseCategories: ExpenseCategoryType[]) => void;
   deleteEntries: string[];
   setDeleteEntries: (deleteEntries: string[]) => void;
+  expenseVouchers: ExpenseReceiptType[];
+  setExpenseVouchers: (expenses: ExpenseReceiptType[]) => void;
 
   // total group
   totalReceipt: number | undefined;
@@ -102,6 +106,8 @@ export type ExpenseContextType = {
   setTotalItem: (total: number) => void;
   totalCategory: number | undefined;
   setTotalCategory: (total: number) => void;
+  totalVouchers: number | undefined;
+  setTotalVouchers: (total: number) => void;
 
   receiptNumber: string;
   setReceiptNumber: (vatInput: string) => void;
@@ -166,6 +172,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierType>();
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethodType>();
+  const [selectedVoucher, setSelectedVoucher] = useState<ExpenseReceiptType>();
 
   // array group
   const [expenseItems, setExpenseItems] = useState<ExpenseItemType[]>([]);
@@ -177,12 +184,17 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [expenseCategories, setExpenseCategories] = useState<
     ExpenseCategoryType[]
   >([]);
+  const [deleteEntries, setDeleteEntries] = useState<UUID[]>([]);
+  const [expenseVouchers, setExpenseVouchers] = useState<ExpenseReceiptType[]>(
+    []
+  );
+
   // total group
   const [totalReceipt, setTotalReceipt] = useState<number>();
   const [totalEntry, setTotalEntry] = useState<number>();
   const [totalItem, setTotalItem] = useState<number>();
   const [totalCategory, setTotalCategory] = useState<number>();
-  const [deleteEntries, setDeleteEntries] = useState<UUID[]>([]);
+  const [totalVouchers, setTotalVouchers] = useState<number>();
 
   // image and misc
   const [receiptImageArray, setReceiptImageArray] =
@@ -365,6 +377,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setSelectedSupplier,
     selectedPaymentMethod,
     setSelectedPaymentMethod,
+    selectedVoucher,
+    setSelectedVoucher,
 
     // array group
     expenseReceipts,
@@ -379,6 +393,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setExpenseCategories,
     deleteEntries,
     setDeleteEntries,
+    expenseVouchers,
+    setExpenseVouchers,
 
     // total group
     totalReceipt,
@@ -389,6 +405,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setTotalEntry,
     totalCategory,
     setTotalCategory,
+    totalVouchers,
+    setTotalVouchers,
 
     // misc
     submitError,

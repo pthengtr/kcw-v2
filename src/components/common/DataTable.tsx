@@ -55,8 +55,10 @@ import {
 } from "react";
 import { DataTablePagination } from "./DataTablePagination";
 import { DataTableViewOptions } from "./DataTableViewOptions";
-import { GripVertical } from "lucide-react";
+import { FileSpreadsheet, GripVertical } from "lucide-react";
 import { setMyCookie } from "@/app/(root)/action";
+import { Button } from "../ui/button";
+import { exportTableToCSV } from "@/lib/utils";
 
 interface DataTableProps<TData, TValue> {
   children?: React.ReactNode;
@@ -69,6 +71,7 @@ interface DataTableProps<TData, TValue> {
   totalAmountKey?: string[];
   customColumnFilters?: ColumnFiltersState;
   setCustomColumnFilters?: Dispatch<SetStateAction<ColumnFiltersState>>;
+  exportButton?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -82,6 +85,7 @@ export function DataTable<TData, TValue>({
   totalAmountKey = [],
   customColumnFilters,
   setCustomColumnFilters,
+  exportButton = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [_columnFilters, _setColumnFilters] = useState<ColumnFiltersState>(
@@ -170,6 +174,15 @@ export function DataTable<TData, TValue>({
             })}`}</div>
           ))}
         <DataTableViewOptions table={table} />
+        {exportButton && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportTableToCSV(table)}
+          >
+            <FileSpreadsheet strokeWidth={1.2} /> ส่งออกเป็น CSV
+          </Button>
+        )}
       </div>
 
       <DndContext

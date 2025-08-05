@@ -2,7 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { HeaderContext } from "@tanstack/react-table";
+import { HeaderContext, Table } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
 import { storageObjectType } from "@/components/common/ImageCarousel";
 
@@ -89,6 +89,19 @@ export type commonUploadFileReturn = Promise<
       data: null;
     }
 >;
+
+export function getMonthBasedOn10th(): Date {
+  const date = new Date();
+  const day = date.getDate();
+
+  // If day < 10 → go to previous month
+  if (day < 10) {
+    return new Date(date.getFullYear(), date.getMonth() - 1, 1);
+  }
+
+  // Otherwise → 1st of current month
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
 
 export function sanitizeFilename(filename: string) {
   const lastDotIndex = filename.lastIndexOf(".");
@@ -192,4 +205,51 @@ export async function checkImageExist(imageFolder: string, imageId: string) {
     return data.length > 0;
   }
   return false;
+}
+
+export function exportTableToCSV<T>(table: Table<T>, filename = "export.csv") {
+  const headers = table
+    .getAllColumns()
+    .filter((col) => col.getIsVisible() && col.columnDef.header)
+    .map((col) => {
+      const header = col.columnDef.header;
+      return typeof header === "string" ? String(header) : col.id ?? "";
+    });
+
+  const rows = table.getRowModel().rows.map((row) =>
+    row.getVisibleCells().map((cell) => {
+      const value = cell.getValue();
+      if (typeof value === "number")
+        return (value as number)
+          .toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+          .replace(",", "");
+      if (cell.column.id.slice(0, 6) === "วันที่")
+        return new Date(value as string).toLocaleString("th-TH", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        });
+      const raw = `"${String(value).replace(/"/g, '""')}"`; // escape quotes
+      return `=${raw}`;
+    })
+  );
+
+  const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
+
+  // ✨ Add BOM (important for Thai & Excel)
+  const BOM = "\uFEFF";
+  const csvWithBom = BOM + csvContent;
+
+  const blob = new Blob([csvWithBom], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+
+  URL.revokeObjectURL(url);
 }
