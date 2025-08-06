@@ -124,7 +124,7 @@ export default function ExpenseVoucherA4({
             </div>
             <div className="bg-slate-100 p-2 mb-2 w-18">จำนวนเงิน</div>
             {groupVouchers.map((voucher) => (
-              <>
+              <React.Fragment key={voucher.receipt_uuid}>
                 <div className="p-1">{voucher.receipt_number}</div>
                 <div className="p-1">{voucher.voucher_description}</div>
                 <div className="text-right p-1">
@@ -153,7 +153,7 @@ export default function ExpenseVoucherA4({
                     minimumFractionDigits: 2,
                   })}
                 </div>
-              </>
+              </React.Fragment>
             ))}
           </>
         </div>
@@ -198,7 +198,13 @@ export default function ExpenseVoucherA4({
             )})`}</div>
           </div>
         </div>
+        <Separator />
         {/* Footer */}
+        <div className="flex justify-between py-8 px-8">
+          <div className="mt-8 px-8 py-2 border-t">ผู้อนุมัติจ่าย</div>
+          <div className="mt-8 px-8 py-2 border-t">ผู้จ่ายเงิน</div>
+          <div className="mt-8 px-8 py-2 border-t">ผู้รับเงิน</div>
+        </div>
       </div>
     </div>
   );

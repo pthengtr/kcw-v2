@@ -43,7 +43,7 @@ export default function ExpenseVoucherPrintDialog({
 
         <DialogContent className="max-w-4xl w-[90vw] h-[90vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle>Print Preview</DialogTitle>
+            <DialogTitle>ตัวอย่างก่อนพิมพ์</DialogTitle>
           </DialogHeader>
 
           {/* Printable Content  ref={printRef}*/}
@@ -54,9 +54,9 @@ export default function ExpenseVoucherPrintDialog({
 
           <DialogFooter className="mt-6">
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Close
+              ปิด
             </Button>
-            <Button onClick={handlePrint}>Print</Button>
+            <Button onClick={handlePrint}>พิมพ์</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
