@@ -13,7 +13,7 @@ import MonthPickerInput from "@/components/common/MonthPickerInput";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 
 const searchFormFieldLabel = {
-  voucher_month: "เดือน",
+  voucher_month: " ",
 };
 
 function getFieldLabel(field: FieldValues) {

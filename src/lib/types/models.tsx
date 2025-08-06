@@ -59,4 +59,10 @@ export type SupplierType = {
 export type PaymentMethodType = {
   payment_uuid: UUID;
   payment_description: string;
+  voucher_type: string;
+};
+
+export type ExtendedExpenseReceiptType = ExpenseReceiptType & {
+  voucherId: string;
+  totalNet: number;
 };

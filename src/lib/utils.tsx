@@ -253,3 +253,74 @@ export function exportTableToCSV<T>(table: Table<T>, filename = "export.csv") {
 
   URL.revokeObjectURL(url);
 }
+
+export function numberToThaiWords(number: number) {
+  const numberText = [
+    "ศูนย์",
+    "หนึ่ง",
+    "สอง",
+    "สาม",
+    "สี่",
+    "ห้า",
+    "หก",
+    "เจ็ด",
+    "แปด",
+    "เก้า",
+  ];
+  const positionText = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน"];
+
+  function readNumber(n: number) {
+    let result = "";
+    const digits = n.toString().split("").map(Number).reverse();
+
+    for (let i = digits.length - 1; i >= 0; i--) {
+      const digit = digits[i];
+      const position = i;
+
+      if (digit === 0) continue;
+
+      if (position === 1 && digit === 1) {
+        result += "สิบ";
+      } else if (position === 1 && digit === 2) {
+        result += "ยี่สิบ";
+      } else if (position === 1) {
+        result += numberText[digit] + "สิบ";
+      } else if (position === 0 && digit === 1 && digits.length > 1) {
+        result += "เอ็ด";
+      } else {
+        result += numberText[digit] + positionText[position];
+      }
+    }
+    return result || "ศูนย์";
+  }
+
+  function splitMillion(n: string) {
+    const parts = [];
+    let segment = n;
+    let millionCount = 0;
+
+    while (segment.length > 0) {
+      const chunk = segment.slice(-6);
+      segment = segment.slice(0, -6);
+      const chunkWords = readNumber(parseInt(chunk, 10));
+      if (chunkWords !== "ศูนย์") {
+        parts.unshift(
+          chunkWords + (millionCount > 0 ? "ล้าน".repeat(millionCount) : "")
+        );
+      }
+      millionCount++;
+    }
+
+    return parts.join("") || "ศูนย์";
+  }
+
+  if (typeof number !== "number" || number < 0) return "ไม่รองรับ";
+
+  const [bahtPart, satangPart] = number.toFixed(2).split(".");
+  const bahtText = splitMillion(bahtPart);
+  const satangNum = parseInt(satangPart, 10);
+  const satangText =
+    satangNum === 0 ? "ถ้วน" : readNumber(satangNum) + "สตางค์";
+
+  return bahtText + "บาท" + satangText;
+}

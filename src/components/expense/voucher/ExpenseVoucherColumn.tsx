@@ -1,7 +1,7 @@
 "use client";
 
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
-import { ExpenseReceiptType } from "@/lib/types/models";
+import { ExtendedExpenseReceiptType } from "@/lib/types/models";
 import {
   CellContext,
   ColumnDef,
@@ -26,11 +26,6 @@ export const expenseVoucherFieldLabel = {
   voucher_description: "รายละเอียด",
   voucherId: "เลขที่ใบสำคัญจ่าย",
   totalNet: "จำนวนเงินสุทธิ",
-};
-
-type ExtendedExpenseReceiptType = ExpenseReceiptType & {
-  voucherId: string;
-  totalNet: number;
 };
 
 export const expenseVoucherColumn: ColumnDef<ExtendedExpenseReceiptType>[] = [

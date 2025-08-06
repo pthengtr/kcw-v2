@@ -1,17 +1,23 @@
 "use client";
 
-import { useCallback, useContext, useEffect } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { useParams } from "next/navigation";
 import { DataTable } from "@/components/common/DataTable";
 
-import { UUID } from "@/lib/types/models";
+import {
+  ExtendedExpenseReceiptType,
+  PaymentMethodType,
+  UUID,
+} from "@/lib/types/models";
 import {
   defaultExpenseVoucherColumnVisibility,
   expenseVoucherColumn,
 } from "./ExpenseVoucherColumn";
 import { createClient } from "@/lib/supabase/client";
 import { getMonthBasedOn10th } from "@/lib/utils";
+import ExpenseVoucherSearchForm from "./ExpenseVoucherSearchForm";
+import ExpenseVoucherPrintDialog from "./ExpenseVoucherPrintDialog";
 
 type ExpenseReceiptTableProps = {
   children?: React.ReactNode;
@@ -20,7 +26,6 @@ type ExpenseReceiptTableProps = {
 };
 
 export default function ExpenseVoucherTable({
-  children,
   columnVisibility,
   paginationPageSize,
 }: ExpenseReceiptTableProps) {
@@ -33,6 +38,9 @@ export default function ExpenseVoucherTable({
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: UUID } = useParams();
+
+  const [groupVoucher, setGroupVoucher] = useState<UUID[]>([]);
+  const [skipVoucher, setSkipVoucher] = useState<UUID[]>([]);
 
   const supabase = createClient();
 
@@ -55,7 +63,7 @@ export default function ExpenseVoucherTable({
 
       let query = supabase
         .from("expense_receipt")
-        .select("*", {
+        .select("*, supplier(*), branch(*), payment_method(*)", {
           count: "exact",
         })
         .order("receipt_date", { ascending: true })
@@ -82,9 +90,40 @@ export default function ExpenseVoucherTable({
     [setExpenseVouchers, setTotalVouchers, supabase]
   );
 
+  const getPayment = useCallback(
+    async function () {
+      const query = supabase
+        .from("payment_method")
+        .select("*")
+        .overrideTypes<PaymentMethodType[], { merge: false }>();
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.log(error);
+        return;
+      }
+
+      if (data) {
+        setGroupVoucher(
+          data
+            .filter((payment_method) => payment_method.voucher_type === "group")
+            .map((payment_method) => payment_method.payment_uuid)
+        );
+        setSkipVoucher(
+          data
+            .filter((payment_method) => payment_method.voucher_type === "skip")
+            .map((payment_method) => payment_method.payment_uuid)
+        );
+      }
+    },
+    [supabase]
+  );
+
   useEffect(() => {
     getVouchers(branch);
-  }, [branch, getVouchers]);
+    getPayment();
+  }, [branch, getPayment, getVouchers]);
 
   let newVouchers = expenseVouchers.map((obj) => {
     const taxOnly = (obj.total_amount - obj.discount) * (obj.vat / 100);
@@ -111,28 +150,36 @@ export default function ExpenseVoucherTable({
     .slice(-2);
 
   let index = 1;
-  newVouchers = newVouchers.map((voucher) => {
-    const shouldAddIndex =
-      voucher.payment_uuid !== "e98a3376-9b5d-40f1-89be-298d5b99fcef"; // คืนเงินกรรมการ
-    return shouldAddIndex
-      ? {
-          ...voucher,
-          voucherId:
-            "PV" + voucherYY + voucherMM + String(index++).padStart(3, "0"),
-        }
-      : voucher;
-  });
+  newVouchers = newVouchers.filter(
+    (voucher) => !skipVoucher.includes(voucher.payment_uuid)
+  );
 
   newVouchers = newVouchers.map((voucher) => {
-    const shouldAddIndex =
-      voucher.payment_uuid === "e98a3376-9b5d-40f1-89be-298d5b99fcef"; // คืนเงินกรรมการ
-    return shouldAddIndex
-      ? {
+    const isIndividual = !groupVoucher.includes(voucher.payment_uuid);
+
+    if (isIndividual) {
+      return {
+        ...voucher,
+        voucherId:
+          "PV" + voucherYY + voucherMM + String(index++).padStart(3, "0"),
+      };
+    }
+    return voucher;
+  });
+
+  groupVoucher.forEach((group_uuid) => {
+    newVouchers = newVouchers.map((voucher) => {
+      if (voucher.payment_uuid === group_uuid) {
+        return {
           ...voucher,
           voucherId:
             "PV" + voucherYY + voucherMM + String(index).padStart(3, "0"),
-        }
-      : voucher;
+        };
+      }
+      return voucher;
+    });
+
+    index++;
   });
 
   newVouchers.sort((a, b) => a.voucherId.localeCompare(b.voucherId));
@@ -153,7 +200,25 @@ export default function ExpenseVoucherTable({
           totalAmountKey={[]}
           exportButton
         >
-          {children}
+          <div className="flex items-baseline justify-start w-full">
+            <h2 className="p-2 text-xl font-bold tracking-wider">
+              ใบสำคัญจ่าย
+            </h2>
+
+            <div className="">
+              <ExpenseVoucherSearchForm
+                defaultValues={{
+                  voucher_month: getMonthBasedOn10th().toString(),
+                }}
+              />
+            </div>
+
+            <div className="flex-1 flex justify-end">
+              <ExpenseVoucherPrintDialog
+                extendedVouchers={newVouchers as ExtendedExpenseReceiptType[]}
+              />
+            </div>
+          </div>
         </DataTable>
       )}
     </div>

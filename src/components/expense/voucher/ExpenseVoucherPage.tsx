@@ -1,8 +1,6 @@
 "use client";
 
-import { getMonthBasedOn10th } from "@/lib/utils";
 import { defaultExpenseVoucherColumnVisibility } from "./ExpenseVoucherColumn";
-import ExpenseVoucherSearchForm from "./ExpenseVoucherSearchForm";
 import ExpenseVoucherTable from "./ExpenseVoucherTable";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -37,21 +35,7 @@ export default function ExpenseVoucherPage() {
       <ExpenseVoucherTable
         paginationPageSize={500}
         columnVisibility={defaultExpenseVoucherColumnVisibility}
-      >
-        <div className="flex items-center w-full">
-          <h2 className="flex-1 justify-self-start p-2 text-xl font-bold tracking-wider">
-            ใบสำคัญจ่าย
-          </h2>
-
-          <div>
-            <ExpenseVoucherSearchForm
-              defaultValues={{
-                voucher_month: getMonthBasedOn10th().toString(),
-              }}
-            />
-          </div>
-        </div>
-      </ExpenseVoucherTable>
+      ></ExpenseVoucherTable>
     </section>
   );
 }
