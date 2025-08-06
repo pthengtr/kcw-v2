@@ -53,7 +53,7 @@ export default function ExpenseVoucherA4({
   return (
     <div
       ref={printRef}
-      className="bg-white w-[210mm] min-h-[297mm] mx-auto border border-black p-8 text-sm leading-tight text-black"
+      className="bg-white w-[210mm] min-h-[297mm] mx-auto border border-black p-8 text-sm leading-tight text-black font-prompt"
     >
       <div className="flex flex-col gap-4">
         {/* Header */}

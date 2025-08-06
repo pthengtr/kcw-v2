@@ -43,7 +43,7 @@ export default function ExpenseVoucherPrintDialog({
 
         <DialogContent className="max-w-4xl w-[90vw] h-[90vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle>ตัวอย่างก่อนพิมพ์</DialogTitle>
+            <DialogTitle className="text-center">ตัวอย่างก่อนพิมพ์</DialogTitle>
           </DialogHeader>
 
           {/* Printable Content  ref={printRef}*/}
