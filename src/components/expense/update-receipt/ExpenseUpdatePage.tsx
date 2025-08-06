@@ -11,12 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowBigLeftDash, Trash } from "lucide-react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import ExpenseCreateReceiptFormCard from "../create/ExpenseCreateReceiptForm/ExpenseCreateReceiptFormCard";
 import ExpenseCreateReceiptSummary from "../create/ExpenseCreateReceiptSummary";
 import { ExpenseReceiptType } from "@/lib/types/models";
-import Link from "next/link";
 import ExpenseCreateBillHeader from "../ExpenseCreateBillHeader";
 
 export default function ExpenseUpdatePage() {
@@ -94,18 +93,19 @@ export default function ExpenseUpdatePage() {
     setWithholdingInput,
   ]);
 
+  const router = useRouter();
   return (
     <>
       {selectedReceipt && (
         <section className="flex flex-col items-center p-2">
           <div className="flex w-full p-2">
             <div className="flex-1 flex gap-2">
-              <Link className="" href={`/expense/${branch}/summary`} passHref>
-                <Button variant="outline">
-                  <ArrowBigLeftDash strokeWidth={1} />
-                  กลับ
-                </Button>
-              </Link>
+              {/* <Link className="" href={`/expense/${branch}/summary`} passHref> */}
+              <Button variant="outline" onClick={() => router.back()}>
+                <ArrowBigLeftDash strokeWidth={1} />
+                กลับ
+              </Button>
+              {/* </Link> */}
             </div>
             <h1 className="text-2xl font-bold tracking-wider">{`แก้ไขบิลค่าใชัจ่าย ${branchName}`}</h1>
             <div className="flex-1 flex justify-end gap-2"></div>

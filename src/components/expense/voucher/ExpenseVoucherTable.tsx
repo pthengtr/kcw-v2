@@ -18,6 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getMonthBasedOn10th } from "@/lib/utils";
 import ExpenseVoucherSearchForm from "./ExpenseVoucherSearchForm";
 import ExpenseVoucherPrintDialog from "./ExpenseVoucherPrintDialog";
+import ExpenseUpdateReceiptButton from "../summary/ExpenseUpdateReceiptButton";
 
 type ExpenseReceiptTableProps = {
   children?: React.ReactNode;
@@ -35,6 +36,7 @@ export default function ExpenseVoucherTable({
     totalVouchers,
     setTotalVouchers,
     setSelectedVoucher,
+    selectedVoucher,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: UUID } = useParams();
@@ -150,26 +152,33 @@ export default function ExpenseVoucherTable({
     .slice(-2);
 
   let index = 1;
+  // remove skip type
   newVouchers = newVouchers.filter(
     (voucher) => !skipVoucher.includes(voucher.payment_uuid)
   );
 
-  newVouchers = newVouchers.map((voucher) => {
-    const isIndividual = !groupVoucher.includes(voucher.payment_uuid);
-
-    if (isIndividual) {
+  // assign vocher id to inidividual type
+  const individualVouchers = newVouchers
+    .filter((voucher) => !groupVoucher.includes(voucher.payment_uuid))
+    .map((voucher) => {
       return {
         ...voucher,
         voucherId:
           "PV" + voucherYY + voucherMM + String(index++).padStart(3, "0"),
       };
-    }
-    return voucher;
-  });
+    });
 
-  groupVoucher.forEach((group_uuid) => {
-    newVouchers = newVouchers.map((voucher) => {
-      if (voucher.payment_uuid === group_uuid) {
+  let groupVouchers = newVouchers.filter((voucher) =>
+    groupVoucher.includes(voucher.payment_uuid)
+  );
+
+  const uniqueSuppliers = new Set(
+    groupVouchers.map((voucher) => voucher.supplier_uuid)
+  );
+
+  uniqueSuppliers.forEach((unique_supplier_uuid) => {
+    groupVouchers = groupVouchers.map((voucher) => {
+      if (voucher.supplier_uuid === unique_supplier_uuid) {
         return {
           ...voucher,
           voucherId:
@@ -181,6 +190,8 @@ export default function ExpenseVoucherTable({
 
     index++;
   });
+
+  newVouchers = [...individualVouchers, ...groupVouchers];
 
   newVouchers.sort((a, b) => a.voucherId.localeCompare(b.voucherId));
 
@@ -213,7 +224,13 @@ export default function ExpenseVoucherTable({
               />
             </div>
 
-            <div className="flex-1 flex justify-end">
+            <div className="flex-1 flex items-center justify-end gap-4">
+              {selectedVoucher && (
+                <ExpenseUpdateReceiptButton
+                  receipt_uuid={selectedVoucher.receipt_uuid}
+                  size="sm"
+                />
+              )}
               <ExpenseVoucherPrintDialog
                 extendedVouchers={newVouchers as ExtendedExpenseReceiptType[]}
               />

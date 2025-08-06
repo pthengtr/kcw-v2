@@ -45,12 +45,6 @@ export default function ExpenseVoucherA4({
   );
   const vouchersTotalNet =
     vouchersTotalAmount + vouchersVat - vouchersWithholding;
-  //   const vouchersTotalNetTest = groupVouchers.reduce(
-  //     (acc, item) => acc + item.totalNet,
-  //     0
-  //   );
-
-  //   console.log(vouchersTotalNet, vouchersTotalNetTest);
 
   return (
     <div
@@ -83,12 +77,12 @@ export default function ExpenseVoucherA4({
             <div className="grid grid-cols-2 gap-y-2">
               <div>เลขที่</div>
               <div className="text-right">
-                {selectedExtendedVoucher?.voucherId}
+                {selectedExtendedVoucher.voucherId}
               </div>
               <div>วันที่</div>
               <div className="text-right">
                 {new Date(
-                  selectedExtendedVoucher?.receipt_date
+                  groupVouchers.at(-1)?.receipt_date as string
                 ).toLocaleDateString("th-TH", {
                   day: "2-digit",
                   month: "2-digit",
@@ -102,11 +96,7 @@ export default function ExpenseVoucherA4({
         {/* Payment to */}
         <div className="grid grid-cols-[1fr,auto] w-fit">
           <div className="pr-4">จ่ายให้</div>
-          <div>
-            {groupVouchers.length > 1
-              ? "นฤมล วิทยผโลทัย"
-              : selectedExtendedVoucher.supplier.supplier_name}
-          </div>
+          <div>{selectedExtendedVoucher.supplier.supplier_name}</div>
           <div className="pr-4">โดย</div>
           <div>
             {selectedExtendedVoucher.payment_method.payment_description}

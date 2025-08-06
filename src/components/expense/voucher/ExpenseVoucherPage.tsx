@@ -30,7 +30,7 @@ export default function ExpenseVoucherPage() {
   }, [branch]);
 
   return (
-    <section className="flex flex-col items-center gap-2">
+    <section className="flex flex-col items-center gap-2 h-[80vh]">
       <h1 className="text-2xl font-bold p-4 tracking-wider">{`ค่าใชัจ่ายบริษัท ${branchName}`}</h1>
       <ExpenseVoucherTable
         paginationPageSize={500}

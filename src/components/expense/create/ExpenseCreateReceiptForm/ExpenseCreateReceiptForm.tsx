@@ -268,7 +268,8 @@ export default function ExpenseCreateReceiptForm({
     console.log(dataRpc);
     if (dataRpc) {
       toast.success("สร้างบิลค่าใช้จ่ายใหม่สำเร็จ");
-      router.push(`/expense/${branch}/summary`);
+      router.back();
+      //router.push(`/expense/${branch}/summary`);
     }
   }
 

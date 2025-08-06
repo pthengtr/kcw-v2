@@ -173,7 +173,6 @@ export function DataTable<TData, TValue>({
               maximumFractionDigits: 2,
             })}`}</div>
           ))}
-        <DataTableViewOptions table={table} />
         {exportButton && (
           <Button
             variant="outline"
@@ -183,6 +182,7 @@ export function DataTable<TData, TValue>({
             <FileSpreadsheet strokeWidth={1.2} /> ส่งออกเป็น CSV
           </Button>
         )}
+        <DataTableViewOptions table={table} />
       </div>
 
       <DndContext

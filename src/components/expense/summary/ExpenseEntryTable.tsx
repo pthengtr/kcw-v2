@@ -93,7 +93,9 @@ export default function ExpenseEntryTable({
                   {selectedReceipt.receipt_number}
                 </div>
               </div>
-              <ExpenseUpdateReceiptButton />
+              <ExpenseUpdateReceiptButton
+                receipt_uuid={selectedReceipt.receipt_uuid}
+              />
               <ExpenseDeleteReceiptButton />
             </div>
           </h2>
