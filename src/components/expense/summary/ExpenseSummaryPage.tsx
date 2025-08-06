@@ -4,7 +4,7 @@ import ExpenseReceiptTable from "@/components/expense/summary/ExpenseReceiptTabl
 
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Store } from "lucide-react";
+import { FileSpreadsheet, Plus, Store } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
@@ -86,6 +86,12 @@ export default function ExpenseSummaryPage() {
             <Button variant="outline">
               <Plus />
               สร้างบิลค่าใช้จ่ายใหม่
+            </Button>
+          </Link>
+          <Link className="" href={`/expense/${branch}/voucher`} passHref>
+            <Button variant="outline">
+              <FileSpreadsheet />
+              ใบสำคัญจ่าย
             </Button>
           </Link>
           <Link className="" href={`/expense`} passHref>

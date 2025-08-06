@@ -5,6 +5,7 @@ type ExpenseCommonReceiptSummaryProps = {
   vatInput: number;
   discountInput: number;
   withholdingInput: number;
+  taxExemptInput: number;
 };
 
 export default function ExpenseCommonReceiptSummary({
@@ -12,15 +13,18 @@ export default function ExpenseCommonReceiptSummary({
   vatInput,
   discountInput,
   withholdingInput,
+  taxExemptInput,
 }: ExpenseCommonReceiptSummaryProps) {
   const totalBeforeTax = entries.reduce(
     (sum, item) => sum + item.entry_amount,
     0
   );
   const discount = discountInput ? discountInput : 0;
-  const vatOnly = (totalBeforeTax * vatInput) / 100;
+  const vatOnly =
+    ((totalBeforeTax - discount - taxExemptInput) * vatInput) / 100;
   const totalAfterTax = totalBeforeTax - discount + vatOnly;
-  const withholdingOnly = (totalBeforeTax * withholdingInput) / 100;
+  const withholdingOnly =
+    ((totalBeforeTax - discount - taxExemptInput) * withholdingInput) / 100;
   const totalNet = totalAfterTax - withholdingOnly;
 
   return (
@@ -36,6 +40,14 @@ export default function ExpenseCommonReceiptSummary({
       <div>ส่วนลด</div>
       <div className="text-right">
         {discount.toLocaleString("th-TH", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}
+      </div>
+
+      <div>ยกเว้นภาษี</div>
+      <div className="text-right">
+        {taxExemptInput.toLocaleString("th-TH", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}

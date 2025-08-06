@@ -16,7 +16,7 @@ import { useParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 
 import ExpenseCreateReceiptSummary from "./ExpenseCreateReceiptSummary";
-import ExpenseCreateReceiptFormTab from "./ExpenseCreateReceiptForm/ExpenseCreateReceiptFormCard";
+import ExpenseCreateReceiptFormCard from "./ExpenseCreateReceiptForm/ExpenseCreateReceiptFormCard";
 import ExpenseCreateBillHeader from "../ExpenseCreateBillHeader";
 
 export default function ExpenseCreatePage() {
@@ -72,7 +72,7 @@ export default function ExpenseCreatePage() {
 
       <div className="flex w-full justify-center h-[80vh]">
         <div className="p-2 h-full">
-          <ExpenseCreateReceiptFormTab />
+          <ExpenseCreateReceiptFormCard />
         </div>
         <div className="p-2 flex flex-col gap-2 h-full">
           <ExpenseCreateEntryTable

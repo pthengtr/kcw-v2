@@ -128,9 +128,11 @@ export default function ExpenseVoucherTable({
   }, [branch, getPayment, getVouchers]);
 
   let newVouchers = expenseVouchers.map((obj) => {
-    const taxOnly = (obj.total_amount - obj.discount) * (obj.vat / 100);
+    const taxOnly =
+      (obj.total_amount - obj.discount - obj.tax_exempt) * (obj.vat / 100);
     const withholdingOnly =
-      (obj.total_amount - obj.discount) * (obj.withholding / 100);
+      (obj.total_amount - obj.discount - obj.tax_exempt) *
+      (obj.withholding / 100);
     const totalNet =
       obj.total_amount - obj.discount + taxOnly - withholdingOnly;
     return {

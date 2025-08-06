@@ -35,12 +35,16 @@ export default function ExpenseVoucherA4({
     0
   );
   const vouchersVat = groupVouchers.reduce(
-    (acc, item) => acc + (item.total_amount - item.discount) * (item.vat / 100),
+    (acc, item) =>
+      acc +
+      (item.total_amount - item.discount - item.tax_exempt) * (item.vat / 100),
     0
   );
   const vouchersWithholding = groupVouchers.reduce(
     (acc, item) =>
-      acc + (item.total_amount - item.discount) * (item.withholding / 100),
+      acc +
+      (item.total_amount - item.discount - item.tax_exempt) *
+        (item.withholding / 100),
     0
   );
   const vouchersTotalNet =
@@ -118,18 +122,24 @@ export default function ExpenseVoucherA4({
                 <div className="p-1">{voucher.receipt_number}</div>
                 <div className="p-1">{voucher.voucher_description}</div>
                 <div className="text-right p-1">
-                  {((voucher.total_amount * voucher.vat) / 100).toLocaleString(
-                    "th-TH",
-                    {
-                      maximumFractionDigits: 2,
-                      minimumFractionDigits: 2,
-                    }
-                  )}
+                  {(
+                    ((voucher.total_amount -
+                      voucher.discount -
+                      voucher.tax_exempt) *
+                      voucher.vat) /
+                    100
+                  ).toLocaleString("th-TH", {
+                    maximumFractionDigits: 2,
+                    minimumFractionDigits: 2,
+                  })}
                 </div>
 
                 <div className="text-right p-1">
                   {(
-                    (voucher.total_amount * voucher.withholding) /
+                    ((voucher.total_amount -
+                      voucher.discount -
+                      voucher.tax_exempt) *
+                      voucher.withholding) /
                     100
                   ).toLocaleString("th-TH", {
                     maximumFractionDigits: 2,

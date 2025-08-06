@@ -115,6 +115,8 @@ export type ExpenseContextType = {
   setVatInput: (vatInput: string) => void;
   discountInput: string;
   setDiscountInput: (vatInput: string) => void;
+  taxExemptInput: string;
+  setTaxExemptInput: (vatInput: string) => void;
   withholdingInput: string;
   setWithholdingInput: (vatInput: string) => void;
   formExpenseReceipt: UseFormReturn<ExpenseCreateReceiptFormDefaultType>;
@@ -206,6 +208,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [receiptNumber, setReceiptNumber] = useState("");
   const [vatInput, setVatInput] = useState("7");
   const [discountInput, setDiscountInput] = useState("0");
+  const [taxExemptInput, setTaxExemptInput] = useState("0");
   const [withholdingInput, setWithholdingInput] = useState("0");
   const [paymentMethodFormError, setPaymentMethodFormError] = useState<
     string | undefined
@@ -245,6 +248,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setVatInput("7");
     setDiscountInput("0");
     setWithholdingInput("0");
+    setTaxExemptInput("0");
   }, []);
 
   function handleDeleteCreateEntry(entry_uuid: UUID, update = false) {
@@ -428,6 +432,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setVatInput,
     discountInput,
     setDiscountInput,
+    taxExemptInput,
+    setTaxExemptInput,
     withholdingInput,
     setWithholdingInput,
     formExpenseReceipt,

@@ -18,6 +18,7 @@ export type ExpenseReceiptType = {
   supplier: SupplierType;
   created_at: string;
   voucher_description: string;
+  tax_exempt: number;
 };
 
 export type ExpenseEntryType = {

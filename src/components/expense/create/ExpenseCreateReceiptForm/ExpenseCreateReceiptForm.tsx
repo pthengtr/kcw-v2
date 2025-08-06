@@ -19,6 +19,7 @@ import ExpenseDiscountSelectInput from "./ExpenseDiscountInput";
 import ExpenseSelectSupplierInput from "./ExpenseSelectSupplierInput";
 import { BranchType, ExpenseReceiptType } from "@/lib/types/models";
 import ExpenseReceiptNumberInput from "./ExpenseReceiptNumberInput";
+import ExpenseTaxExemptInput from "./ExpenseTaxExemptInput";
 
 export type ExpenseCreateReceiptFormDefaultType = {
   payment_uuid: string;
@@ -29,6 +30,7 @@ export type ExpenseCreateReceiptFormDefaultType = {
   vat: string;
   withholding: string;
   discount: string;
+  tax_exempt: string;
 };
 
 export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefaultType =
@@ -40,6 +42,7 @@ export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefa
     vat: "7",
     withholding: "0",
     discount: "0",
+    tax_exempt: "0",
     remark: "",
   };
 
@@ -52,6 +55,7 @@ const expenseCretaeReceiptFormFieldLabel = {
   vat: "ภาษี",
   withholding: "หัก ณ ที่จ่าย",
   discount: "ส่วนลดท้ายบิล",
+  tax_exempt: "ยกเว้นภาษี",
 };
 
 function getFieldLabel(field: FieldValues) {
@@ -80,6 +84,10 @@ function getFormInput(
 
     case "discount":
       return <ExpenseDiscountSelectInput />;
+      break;
+
+    case "tax_exempt":
+      return <ExpenseTaxExemptInput />;
       break;
 
     case "invoice_date":
@@ -115,6 +123,7 @@ export const formSchema = z.object({
     required_error: "กรุณาระบุวันที่",
     invalid_type_error: "วันที่ไม่ถูกต้อง",
   }),
+  tax_exempt: z.string(),
   remark: z.string(),
 });
 
@@ -140,6 +149,7 @@ export default function ExpenseCreateReceiptForm({
     setSupplierFormError,
     setReceiptNameFormError,
     receiptNumber,
+    taxExemptInput,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
@@ -182,6 +192,7 @@ export default function ExpenseCreateReceiptForm({
     const formVat = parseFloat(vatInput);
     const formWithholding = parseFloat(withholdingInput);
     const formDiscount = parseFloat(discountInput);
+    const formTaxExempt = parseFloat(taxExemptInput);
 
     if (!receiptNumber) {
       console.log("ไม่พบข้อมูลเลขที่เอกสาร");
@@ -226,6 +237,7 @@ export default function ExpenseCreateReceiptForm({
         (sum, item) => sum + item.entry_amount,
         0
       ),
+      tax_exempt: formTaxExempt ? formTaxExempt : 0,
       discount: formDiscount ? formDiscount : 0,
       vat: formVat ? formVat : 0,
       withholding: formWithholding ? formWithholding : 0,

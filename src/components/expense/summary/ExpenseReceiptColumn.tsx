@@ -38,7 +38,7 @@ export const expenseReceiptFieldLabel = {
   "branch.branch_name": "สาขา",
   user_id: "พนักงาน",
   discount: "ส่วนลดท้ายบิล",
-  submit_to_account: "ส่งบัญชี",
+  tax_exempt: "ยกเว้นภาษี",
 };
 
 export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
@@ -48,6 +48,7 @@ export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
   dateThai("receipt_date"),
   numberFloat("total_amount"),
   numberFloat("discount"),
+  numberFloat("tax_exempt"),
   taxOnly(),
   withholdingOnly(),
   totalAfterTax(),
@@ -68,7 +69,8 @@ function taxOnly() {
     ),
     cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
       const row = info.row.original;
-      const taxOnly = (row.total_amount - row.discount) * (row.vat / 100);
+      const taxOnly =
+        (row.total_amount - row.discount - row.tax_exempt) * (row.vat / 100);
       return (
         <div className="text-right">
           {taxOnly.toLocaleString("th-TH", {
@@ -91,7 +93,8 @@ function withholdingOnly() {
     cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
       const row = info.row.original;
       const withholdingOnly =
-        (row.total_amount - row.discount) * (row.withholding / 100);
+        (row.total_amount - row.discount - row.tax_exempt) *
+        (row.withholding / 100);
       return (
         <div className="text-right">
           {withholdingOnly.toLocaleString("th-TH", {
@@ -113,7 +116,8 @@ function totalAfterTax() {
     ),
     cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
       const row = info.row.original;
-      const taxOnly = (row.total_amount - row.discount) * (row.vat / 100);
+      const taxOnly =
+        (row.total_amount - row.discount - row.tax_exempt) * (row.vat / 100);
       const totalAfterTax = row.total_amount - row.discount + taxOnly;
       return (
         <div className="text-right">
@@ -136,9 +140,11 @@ function totalNet() {
     ),
     cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
       const row = info.row.original;
-      const taxOnly = (row.total_amount - row.discount) * (row.vat / 100);
+      const taxOnly =
+        (row.total_amount - row.discount - row.tax_exempt) * (row.vat / 100);
       const withholdingOnly =
-        (row.total_amount - row.discount) * (row.withholding / 100);
+        (row.total_amount - row.discount - row.tax_exempt) *
+        (row.withholding / 100);
       const totalNet =
         row.total_amount - row.discount + taxOnly - withholdingOnly;
 

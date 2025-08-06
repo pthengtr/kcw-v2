@@ -4,8 +4,13 @@ import ExpenseCommonReceiptSummary from "../ExpenseCommonReceiptSummary";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 
 export default function ExpenseCreateReceiptSummary() {
-  const { createEntries, vatInput, discountInput, withholdingInput } =
-    useContext(ExpenseContext) as ExpenseContextType;
+  const {
+    createEntries,
+    vatInput,
+    discountInput,
+    withholdingInput,
+    taxExemptInput,
+  } = useContext(ExpenseContext) as ExpenseContextType;
 
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -14,6 +19,7 @@ export default function ExpenseCreateReceiptSummary() {
         vatInput={parseInt(vatInput)}
         discountInput={parseFloat(discountInput)}
         withholdingInput={parseInt(withholdingInput)}
+        taxExemptInput={parseFloat(taxExemptInput)}
       />
 
       <div className="col-span-2 justify-self-center">

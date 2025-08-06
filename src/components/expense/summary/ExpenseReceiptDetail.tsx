@@ -65,6 +65,7 @@ export default function ExpenseSummaryDetail() {
               vatInput={selectedReceipt.vat}
               discountInput={selectedReceipt.discount}
               withholdingInput={selectedReceipt.withholding}
+              taxExemptInput={selectedReceipt.tax_exempt}
             />
           </div>
         </div>
