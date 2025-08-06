@@ -63,8 +63,8 @@ export default function ExpenseVoucherA4({
               <Image
                 src="/kcw-logo.png"
                 alt="KCW Logo"
-                width={60} // Adjust size as needed
-                height={30}
+                width={120} // Adjust size as needed
+                height={120}
                 className="mb-2"
                 priority
               />
@@ -76,7 +76,7 @@ export default function ExpenseVoucherA4({
               <div className="mt-3">เลขประจำตัวผู้เสียภาษี 0215560000262</div>
             </div>
           </div>
-          <div className="p-8 bg-slate-100 flex flex-col gap-4 items-center">
+          <div className="p-6 bg-slate-100 flex flex-col gap-4 items-center">
             <div className="text-2xl">ใบสำคัญจ่าย</div>
             <div className="grid grid-cols-2 gap-y-2">
               <div>เลขที่</div>
@@ -108,7 +108,7 @@ export default function ExpenseVoucherA4({
         </div>
         <Separator />
         {/* List */}
-        <div className="grid grid-cols-[1fr,1fr,1fr,1fr,1fr]">
+        <div className="grid grid-cols-[1fr,1fr,1fr,1fr,1fr] text-xs">
           <>
             <div className="bg-slate-100 p-2 mb-2 w-32">เลขที่เอกสาร</div>
             <div className="bg-slate-100 p-2 mb-2 w-80">รายละเอียด</div>
@@ -159,7 +159,7 @@ export default function ExpenseVoucherA4({
         </div>
         <Separator />
         {/* Summary */}
-        <div className="flex items-center justify-between p-8">
+        <div className="flex items-center justify-between ">
           <div className="grid grid-cols-[auto,1fr] gap-y-2 gap-x-4">
             <div>มูลค่าก่อนภาษี</div>
             <div className="text-right">
@@ -183,7 +183,7 @@ export default function ExpenseVoucherA4({
               })}
             </div>
           </div>
-          <div className="bg-slate-100 p-8 flex flex-col items-center gap-4">
+          <div className="bg-slate-100 p-6 flex flex-col items-center gap-4">
             <div className=" flex gap-4 items-center">
               <div className="text-lg">จำนวนเงินทั้งสิ้น</div>
               <div className="text-xl font-bold tracking-wide">
