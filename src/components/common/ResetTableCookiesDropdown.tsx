@@ -17,7 +17,7 @@ export default function ResetTableCookiesDropdown({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="hidden h-8 lg:flex">
+          <Button variant="ghost" size="sm" className="hidden h-8 lg:flex">
             <EllipsisVertical />
           </Button>
         </DropdownMenuTrigger>

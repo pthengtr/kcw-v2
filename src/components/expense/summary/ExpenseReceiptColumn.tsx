@@ -19,11 +19,13 @@ export const defaultExpenseReceiptColumnVisibility = {
   เลขที่เอกสาร: true,
   วันที่: true,
   ก่อนภาษี: false,
+  ส่วนลดท้ายบิล: false,
+  "หัก ณ ที่จ่าย": false,
+  ราคาหลังภาษี: false,
   ชำระโดย: true,
   หมายเหตุ: false,
   สาขา: false,
   พนักงาน: false,
-  ส่วนลดท้ายบิล: true,
   ส่งบัญชี: false,
 };
 
@@ -43,7 +45,7 @@ export const expenseReceiptFieldLabel = {
 
 export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
   numberInt("receipt_uuid"),
-  simpleText("supplier.supplier_name"),
+  simpleTextFullWidth("supplier.supplier_name"),
   simpleText("receipt_number"),
   dateThai("receipt_date"),
   numberFloat("total_amount"),
@@ -193,6 +195,22 @@ function simpleText(key: keyof typeof expenseReceiptFieldLabel) {
         title={expenseReceiptFieldLabel[key]}
       />
     ),
+  };
+}
+
+function simpleTextFullWidth(key: keyof typeof expenseReceiptFieldLabel) {
+  return {
+    id: expenseReceiptFieldLabel[key],
+    accessorKey: key,
+    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
+      <DataTableColumnHeader
+        column={column}
+        title={expenseReceiptFieldLabel[key]}
+      />
+    ),
+    cell: (row: CellContext<ExpenseReceiptType, unknown>) => {
+      return <div className="min-w-96 w-full">{row.getValue() as string}</div>;
+    },
   };
 }
 

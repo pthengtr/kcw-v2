@@ -9,9 +9,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
-import { getMyCookie } from "@/app/(root)/action";
+import { clearMyCookie, getMyCookie } from "@/app/(root)/action";
 import { defaultExpenseReceiptColumnVisibility } from "./ExpenseReceiptColumn";
 import ExpenseReceiptSearchForm from "./ExpenseReceiptSearchForm";
+import ResetTableCookiesDropdown from "@/components/common/ResetTableCookiesDropdown";
 
 export default function ExpenseSummaryPage() {
   const { resetCreateReceiptForm } = useContext(
@@ -55,6 +56,11 @@ export default function ExpenseSummaryPage() {
 
     getCookies();
   }, []);
+
+  function handleResetCookies() {
+    clearMyCookie("expenseReceiptColumnVisibility");
+    clearMyCookie("expenseReceiptPaginationPageSize");
+  }
 
   useEffect(() => {
     async function getBranchName() {
@@ -105,7 +111,7 @@ export default function ExpenseSummaryPage() {
         <div className="flex-1"></div>
       </div>
 
-      <div className="flex flex-col w-full">
+      <div className="flex flex-col w-fit">
         <div className="p-2">
           {columnVisibility && paginationPageSize && (
             <ExpenseReceiptTable
@@ -113,7 +119,13 @@ export default function ExpenseSummaryPage() {
               paginationPageSize={paginationPageSize}
             >
               <div className="flex gap-2 flex-1 justify-between items-center">
-                <h2 className="text-xl font-bold ">{`รายการ บิลค่าใช้จ่าย`}</h2>
+                <div className="flex gap-2 items-center">
+                  <h2 className="text-xl font-bold ">{`รายการ บิลค่าใช้จ่าย`}</h2>
+                  <ResetTableCookiesDropdown
+                    handleResetCookies={handleResetCookies}
+                  />
+                </div>
+
                 <div>
                   <ExpenseReceiptSearchForm
                     defaultValues={{
