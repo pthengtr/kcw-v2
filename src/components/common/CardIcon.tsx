@@ -8,6 +8,7 @@ import {
   SquareMenu,
   ReceiptText,
   FileSpreadsheet,
+  Sheet,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -25,7 +26,8 @@ type iconType =
   | "Truck"
   | "SquareMenu"
   | "ReceiptText"
-  | "FileSpreadsheet";
+  | "FileSpreadsheet"
+  | "Sheet";
 
 type CardIconProps = {
   path: string;
@@ -54,6 +56,8 @@ export default function CardIcon({ path, description, icon }: CardIconProps) {
         return <ReceiptText strokeWidth={1} className={iconStyle} />;
       case "FileSpreadsheet":
         return <FileSpreadsheet strokeWidth={1} className={iconStyle} />;
+      case "Sheet":
+        return <Sheet strokeWidth={1} className={iconStyle} />;
     }
   }
   return (

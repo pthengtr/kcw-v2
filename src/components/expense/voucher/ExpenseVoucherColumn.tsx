@@ -29,18 +29,6 @@ export const expenseVoucherFieldLabel = {
 };
 
 export const expenseVoucherColumn: ColumnDef<ExtendedExpenseReceiptType>[] = [
-  // {
-  //   id: "เลขที่ใบสำคัญจ่าย",
-  //   accessorKey: "receipt_number",
-  //   header: ({
-  //     column,
-  //   }: HeaderContext<ExtendedExpenseReceiptType, unknown>) => (
-  //     <DataTableColumnHeader column={column} title="เลขที่ใบสำคัญจ่าย" />
-  //   ),
-  //   cell: ({ row }) => {
-  //     return row.original.voucherId;
-  //   },
-  // },
   simpleText("voucherId"),
   simpleText("receipt_number"),
   dateThai("receipt_date"),

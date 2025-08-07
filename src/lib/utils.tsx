@@ -232,7 +232,7 @@ export function exportTableToCSV<T>(table: Table<T>, filename = "export.csv") {
           month: "2-digit",
           day: "2-digit",
         });
-      const raw = `"${String(value).replace(/"/g, '""')}"`; // escape quotes
+      const raw = `"${String(value).replace(/"/g, '""').replace(",", "")}"`; // escape quotes
       return `=${raw}`;
     })
   );

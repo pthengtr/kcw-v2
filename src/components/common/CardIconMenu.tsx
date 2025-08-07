@@ -3,5 +3,7 @@ type CardIconMenuProps = {
 };
 
 export default function CardIconMenu({ children }: CardIconMenuProps) {
-  return <div className="p-12 flex gap-12 justify-center">{children}</div>;
+  return (
+    <div className="p-12 flex gap-12 justify-center flex-wrap">{children}</div>
+  );
 }

@@ -107,7 +107,7 @@ export default function ExpenseSummaryPage() {
             </Button>
           </Link>
         </div>
-        <h1 className="text-2xl font-bold tracking-wider">{`รายงานบิลค่าใช้จ่าย ${branchName}`}</h1>
+        <h1 className="text-2xl font-bold tracking-wider">{`จัดการบิลค่าใช้จ่าย ${branchName}`}</h1>
         <div className="flex-1"></div>
       </div>
 
@@ -120,7 +120,7 @@ export default function ExpenseSummaryPage() {
             >
               <div className="flex gap-2 flex-1 justify-between items-center">
                 <div className="flex gap-2 items-center">
-                  <h2 className="text-xl font-bold ">{`รายการ บิลค่าใช้จ่าย`}</h2>
+                  <h2 className="text-xl font-bold ">{`รายการบิลค่าใช้จ่าย`}</h2>
                   <ResetTableCookiesDropdown
                     handleResetCookies={handleResetCookies}
                   />
