@@ -48,7 +48,7 @@ export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
   dateThai("receipt_date"),
   numberFloat("total_amount"),
   numberFloat("discount"),
-  numberFloat("tax_exempt"),
+  // numberFloat("tax_exempt"),
   taxOnly(),
   withholdingOnly(),
   totalAfterTax(),

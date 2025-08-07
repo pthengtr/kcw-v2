@@ -39,14 +39,6 @@ export default function ExpenseCommonReceiptSummaryDebug({
         })}
       </div>
 
-      <div>ยกเว้นภาษี</div>
-      <div className="text-right">
-        {taxExempt.toLocaleString("th-TH", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}
-      </div>
-
       <div>{`ภาษี ${selectedReceipt.vat} %`}</div>
       <div className="text-right">
         {vatOnly.toLocaleString("th-TH", {

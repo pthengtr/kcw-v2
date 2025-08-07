@@ -30,7 +30,7 @@ export type ExpenseCreateReceiptFormDefaultType = {
   vat: string;
   withholding: string;
   discount: string;
-  tax_exempt: string;
+  // tax_exempt: string;
 };
 
 export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefaultType =
@@ -42,7 +42,7 @@ export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefa
     vat: "7",
     withholding: "0",
     discount: "0",
-    tax_exempt: "0",
+    // tax_exempt: "0",
     remark: "",
   };
 
@@ -123,7 +123,7 @@ export const formSchema = z.object({
     required_error: "กรุณาระบุวันที่",
     invalid_type_error: "วันที่ไม่ถูกต้อง",
   }),
-  tax_exempt: z.string(),
+  // tax_exempt: z.string(),
   remark: z.string(),
 });
 
