@@ -55,6 +55,14 @@ export type SupplierType = {
   supplier_uuid: UUID;
   supplier_code: string;
   supplier_name: string;
+  supplier_tax_info?: SupplierTaxInfoType;
+};
+
+export type SupplierTaxInfoType = {
+  supplier_tax_info_uuid: UUID;
+  supplier_uuid: UUID;
+  address: string;
+  tax_payer_id: string;
 };
 
 export type PaymentMethodType = {

@@ -8,8 +8,7 @@ import {
 
 import SupplierForm, { SupplierFormDefaultType } from "./SupplierForm";
 import { useContext } from "react";
-
-import { SupplierContext, SupplierContextType } from "./SupplierProvider";
+import { SupplierContext, SupplierContextType } from "../SupplierProvider";
 
 type SupplierFormDialogProps = {
   open: boolean;

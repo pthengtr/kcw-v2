@@ -4,12 +4,12 @@ import * as z from "zod";
 
 import { createClient } from "@/lib/supabase/client";
 
-import Form from "../common/Form";
+import Form from "../../common/Form";
 import { FieldValues, UseFormReturn } from "react-hook-form";
 import { useContext } from "react";
 import { Search } from "lucide-react";
-import { Input } from "../ui/input";
-import { SupplierContext, SupplierContextType } from "./SupplierProvider";
+import { Input } from "../../ui/input";
+import { SupplierContext, SupplierContextType } from "../SupplierProvider";
 
 const searchFormFieldLabel = {
   supplier_code: "ชื่อย่อบริษัท",
@@ -67,7 +67,7 @@ export default function SupplierSearchForm({
 
     let query = supabase
       .from("supplier")
-      .select("*", { count: "exact" })
+      .select("*, supplier_tax_info(*)", { count: "exact" })
       .order("supplier_uuid", { ascending: false })
       .limit(500);
 
@@ -79,6 +79,7 @@ export default function SupplierSearchForm({
 
     const { data, error, count } = await query;
 
+    console.log(data);
     if (error) {
       console.log(error);
       return;

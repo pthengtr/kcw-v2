@@ -6,10 +6,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { DialogClose, DialogDescription } from "@radix-ui/react-dialog";
-import { Check, Trash, X } from "lucide-react";
-import { Button } from "../ui/button";
+import { Check, Trash2, X } from "lucide-react";
+import { Button } from "../../ui/button";
 import { useContext } from "react";
-import { SupplierContext, SupplierContextType } from "./SupplierProvider";
+import { SupplierContext, SupplierContextType } from "../SupplierProvider";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
@@ -35,8 +35,8 @@ export default function SupplierDeleteDialog() {
   return (
     <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Trash />
+        <Button size="sm" variant="outline">
+          <Trash2 />
         </Button>
       </DialogTrigger>
       <DialogContent>

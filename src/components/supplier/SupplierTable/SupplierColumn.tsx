@@ -1,11 +1,13 @@
 "use client";
 
 import { ColumnDef, HeaderContext } from "@tanstack/react-table";
-import { DataTableColumnHeader } from "../common/DataTableColumnHeader";
+import { DataTableColumnHeader } from "../../common/DataTableColumnHeader";
 import { SupplierType } from "@/lib/types/models";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
+
+export const defaultSupplierColumnVisibility = { รหัสเฉพาะ: false };
 
 export const supplierFieldLabel = {
   supplier_uuid: "รหัสเฉพาะ",
@@ -19,7 +21,7 @@ export const supplierColumn: ColumnDef<SupplierType>[] = [
   simpleText("supplier_name"),
 ];
 
-function simpleText(key: keyof SupplierType) {
+function simpleText(key: keyof typeof supplierFieldLabel) {
   return {
     id: supplierFieldLabel[key],
     accessorKey: key,

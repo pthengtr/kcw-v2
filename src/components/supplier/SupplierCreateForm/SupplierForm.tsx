@@ -4,12 +4,13 @@ import * as z from "zod";
 
 import { createClient } from "@/lib/supabase/client";
 
-import Form from "../common/Form";
+import Form from "@/components/common/Form";
 import { FieldValues, UseFormReturn } from "react-hook-form";
 import { useContext } from "react";
-import { Input } from "../ui/input";
-import { SupplierContext, SupplierContextType } from "./SupplierProvider";
+
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { SupplierContext, SupplierContextType } from "../SupplierProvider";
 
 export type SupplierFormDefaultType = {
   supplier_code: string;
