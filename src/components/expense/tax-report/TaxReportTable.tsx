@@ -13,6 +13,8 @@ import {
   taxReportColumn,
 } from "./TaxReportColumn";
 import { getMonthBasedOn10th } from "@/lib/utils";
+import ExpenseUpdateReceiptButton from "../summary/ExpenseUpdateReceiptButton";
+import TaxReportSearchForm from "./TaxReportSearchForm";
 
 type ExpenseReceiptTableProps = {
   children?: React.ReactNode;
@@ -25,6 +27,7 @@ export default function TaxReportTable({
   paginationPageSize,
 }: ExpenseReceiptTableProps) {
   const {
+    selectedReceipt,
     expenseReceipts,
     setExpenseReceipts,
     setTotalReceipt,
@@ -110,6 +113,23 @@ export default function TaxReportTable({
             <h2 className="p-2 text-xl font-bold tracking-wider">
               รายงานภาษีซื้อ
             </h2>
+
+            <div>
+              <TaxReportSearchForm
+                defaultValues={{
+                  tax_report_month: getMonthBasedOn10th().toString(),
+                }}
+              />
+            </div>
+
+            <div className="flex-1 flex justify-end items-center">
+              {selectedReceipt && (
+                <ExpenseUpdateReceiptButton
+                  receipt_uuid={selectedReceipt.receipt_uuid}
+                  size="sm"
+                />
+              )}
+            </div>
           </div>
         </DataTable>
       )}

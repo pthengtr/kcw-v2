@@ -9,7 +9,7 @@ export default function TaxReportPage() {
       <div className="w-fit h-[90vh] p-8">
         <TaxReportTable
           columnVisibility={defaultTaxReportColumnVisibility}
-          paginationPageSize={10}
+          paginationPageSize={500}
         />
       </div>
     </section>

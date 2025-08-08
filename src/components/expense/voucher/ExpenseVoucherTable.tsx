@@ -228,14 +228,18 @@ export default function ExpenseVoucherTable({
 
             <div className="flex-1 flex items-center justify-end gap-4">
               {selectedVoucher && (
-                <ExpenseUpdateReceiptButton
-                  receipt_uuid={selectedVoucher.receipt_uuid}
-                  size="sm"
-                />
+                <>
+                  <ExpenseUpdateReceiptButton
+                    receipt_uuid={selectedVoucher.receipt_uuid}
+                    size="sm"
+                  />
+                  <ExpenseVoucherPrintDialog
+                    extendedVouchers={
+                      newVouchers as ExtendedExpenseReceiptType[]
+                    }
+                  />
+                </>
               )}
-              <ExpenseVoucherPrintDialog
-                extendedVouchers={newVouchers as ExtendedExpenseReceiptType[]}
-              />
             </div>
           </div>
         </DataTable>
