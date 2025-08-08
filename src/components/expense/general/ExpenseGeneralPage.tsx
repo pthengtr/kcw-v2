@@ -47,13 +47,13 @@ export default function ExpenseGeneralPage() {
                 dialogHeader="แก้ไขบิลค่าใชัจ่ายทั่วไป"
                 update
                 defaultValues={{
-                  payment_uuid: selectedGeneralEntry.payment_uuid,
+                  entry_date: new Date(selectedGeneralEntry.entry_date),
                   branch_uuid: selectedGeneralEntry.branch_uuid,
                   item_uuid: selectedGeneralEntry.item_uuid,
-                  entry_date: new Date(selectedGeneralEntry.entry_date),
                   description: selectedGeneralEntry.description,
                   unit_price: selectedGeneralEntry.unit_price,
                   quantity: selectedGeneralEntry.quantity,
+                  payment_uuid: selectedGeneralEntry.payment_uuid,
                   remark: selectedGeneralEntry.remark,
                 }}
               />
