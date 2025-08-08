@@ -11,17 +11,8 @@ export default function Home() {
           description="เตือนโอน"
           icon="MessageCircleWarning"
         />
-        <CardIcon
-          path="/expense"
-          description="ค่าใช้จ่ายบริษัท"
-          icon="Banknote"
-        />
+        <CardIcon path="/expense" description="ค่าใช้จ่าย" icon="Banknote" />
         <CardIcon path="/supplier" description="รายชื่อบริษัท" icon="Truck" />
-        <CardIcon
-          path="/expense/item"
-          description="ประเภทค่าใช้จ่าย"
-          icon="SquareMenu"
-        />
       </CardIconMenu>
     </>
   );

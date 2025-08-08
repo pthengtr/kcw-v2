@@ -56,22 +56,22 @@ export default function BranchExpense() {
 
           <CardIconMenu>
             <CardIcon
-              path={`/expense/${branch}/tax-report`}
+              path={`/expense/company/${branch}/tax-report`}
               description="รายงานภาษีซื้อ"
               icon="Sheet"
             />
             <CardIcon
-              path={`/expense/${branch}/voucher`}
+              path={`/expense/company/${branch}/voucher`}
               description="ใบสำคัญจ่าย"
               icon="FileSpreadsheet"
             />
             <CardIcon
-              path={`/expense/${branch}/manage`}
+              path={`/expense/company/${branch}/manage`}
               description="จัดการบิล"
               icon="ClipboardList"
             />
             <CardIcon
-              path={`/expense/${branch}/create`}
+              path={`/expense/company/${branch}/create`}
               description="สร้าง"
               icon="FilePlus2"
             />

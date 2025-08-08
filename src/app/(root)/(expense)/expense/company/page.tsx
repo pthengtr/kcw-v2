@@ -42,25 +42,18 @@ export default function Branch() {
                 </Button>
               </Link>
             </div>
-            <h1 className="text-6xl p-12 text-center">ค่าใช้จ่าย</h1>
+            <h1 className="text-6xl p-12 text-center">ค่าใช้จ่ายบริษัท</h1>
             <div className="flex-1"></div>
           </div>
           <CardIconMenu>
-            <CardIcon
-              path="/expense/company"
-              description="ค่าใช้จ่ายบริษัท"
-              icon="Building2"
-            />
-            <CardIcon
-              path="/expense/general"
-              description="ค่าใช้จ่ายทั่วไป"
-              icon="Users"
-            />
-            <CardIcon
-              path="/expense/item"
-              description="ประเภทค่าใช้จ่าย"
-              icon="SquareMenu"
-            />
+            {branches.map((branch) => (
+              <CardIcon
+                key={branch.branch_name}
+                path={`/expense/company/${branch.branch_uuid}`}
+                description={branch.branch_name}
+                icon="Store"
+              />
+            ))}
           </CardIconMenu>
         </>
       )}

@@ -9,6 +9,8 @@ import {
   ReceiptText,
   FileSpreadsheet,
   Sheet,
+  Building2,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,7 +29,9 @@ type iconType =
   | "SquareMenu"
   | "ReceiptText"
   | "FileSpreadsheet"
-  | "Sheet";
+  | "Sheet"
+  | "Building2"
+  | "Users";
 
 type CardIconProps = {
   path: string;
@@ -58,6 +62,10 @@ export default function CardIcon({ path, description, icon }: CardIconProps) {
         return <FileSpreadsheet strokeWidth={1} className={iconStyle} />;
       case "Sheet":
         return <Sheet strokeWidth={1} className={iconStyle} />;
+      case "Building2":
+        return <Building2 strokeWidth={1} className={iconStyle} />;
+      case "Users":
+        return <Users strokeWidth={1} className={iconStyle} />;
     }
   }
   return (
