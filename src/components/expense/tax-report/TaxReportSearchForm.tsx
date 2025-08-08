@@ -69,9 +69,12 @@ export default function TaxReportSearchForm({
 
     let query = supabase
       .from("expense_receipt")
-      .select("*", {
-        count: "exact",
-      })
+      .select(
+        "*, supplier(*, supplier_tax_info(*)), branch(*), payment_method(*)",
+        {
+          count: "exact",
+        }
+      )
       .gt("vat", 0)
       .order("receipt_date", { ascending: true })
       .limit(500);
