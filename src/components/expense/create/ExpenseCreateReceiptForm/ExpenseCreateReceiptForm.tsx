@@ -281,7 +281,6 @@ export default function ExpenseCreateReceiptForm({
     if (dataRpc) {
       toast.success("สร้างบิลค่าใช้จ่ายใหม่สำเร็จ");
       router.back();
-      //router.push(`/expense/${branch}/summary`);
     }
   }
 

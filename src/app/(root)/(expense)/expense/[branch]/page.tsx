@@ -66,7 +66,7 @@ export default function BranchExpense() {
               icon="FileSpreadsheet"
             />
             <CardIcon
-              path={`/expense/${branch}/summary`}
+              path={`/expense/${branch}/manage`}
               description="จัดการบิล"
               icon="ClipboardList"
             />

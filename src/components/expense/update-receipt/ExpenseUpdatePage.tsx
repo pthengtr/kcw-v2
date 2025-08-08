@@ -103,7 +103,6 @@ export default function ExpenseUpdatePage() {
         <section className="flex flex-col items-center p-2">
           <div className="flex w-full p-2">
             <div className="flex-1 flex gap-2">
-              {/* <Link className="" href={`/expense/${branch}/summary`} passHref> */}
               <Button variant="outline" onClick={() => router.back()}>
                 <ArrowBigLeftDash strokeWidth={1} />
                 กลับ

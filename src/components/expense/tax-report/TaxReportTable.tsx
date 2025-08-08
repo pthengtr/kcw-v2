@@ -13,7 +13,7 @@ import {
   taxReportColumn,
 } from "./TaxReportColumn";
 import { getMonthBasedOn10th } from "@/lib/utils";
-import ExpenseUpdateReceiptButton from "../summary/ExpenseUpdateReceiptButton";
+import ExpenseUpdateReceiptButton from "../manage/ExpenseUpdateReceiptButton";
 import TaxReportSearchForm from "./TaxReportSearchForm";
 
 type ExpenseReceiptTableProps = {

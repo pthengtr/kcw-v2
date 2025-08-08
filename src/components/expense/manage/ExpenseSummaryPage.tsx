@@ -1,6 +1,6 @@
 "use client";
-import ExpenseReceiptDetail from "@/components/expense/summary/ExpenseReceiptDetail";
-import ExpenseReceiptTable from "@/components/expense/summary/ExpenseReceiptTable";
+import ExpenseReceiptDetail from "@/components/expense/manage/ExpenseReceiptDetail";
+import ExpenseReceiptTable from "@/components/expense/manage/ExpenseReceiptTable";
 
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";

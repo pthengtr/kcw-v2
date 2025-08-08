@@ -18,7 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getMonthBasedOn10th } from "@/lib/utils";
 import ExpenseVoucherSearchForm from "./ExpenseVoucherSearchForm";
 import ExpenseVoucherPrintDialog from "./ExpenseVoucherPrintDialog";
-import ExpenseUpdateReceiptButton from "../summary/ExpenseUpdateReceiptButton";
+import ExpenseUpdateReceiptButton from "../manage/ExpenseUpdateReceiptButton";
 
 type ExpenseReceiptTableProps = {
   children?: React.ReactNode;

@@ -3,7 +3,7 @@
 import { useContext, useEffect } from "react";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { DataTable } from "@/components/common/DataTable";
-import { expenseEntryColumn } from "../summary/ExpenseEntryColumn";
+import { expenseEntryColumn } from "../manage/ExpenseEntryColumn";
 import { createClient } from "@/lib/supabase/client";
 
 export const defaultCreateEntryColumnVisibility = {

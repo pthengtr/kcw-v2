@@ -53,10 +53,10 @@ export default function ExpenseCreatePage() {
     <section className="flex flex-col items-center p-2">
       <div className="flex w-full p-2">
         <div className="flex-1 flex gap-2">
-          <Link className="" href={`/expense/${branch}/summary`} passHref>
+          <Link className="" href={`/expense/${branch}/manage`} passHref>
             <Button variant="outline">
               <ClipboardList />
-              รายงานบิลค่าใช้จ่าย
+              จัดการบิลค่าใช้จ่าย
             </Button>
           </Link>
           <Link className="" href={`/expense`} passHref>
