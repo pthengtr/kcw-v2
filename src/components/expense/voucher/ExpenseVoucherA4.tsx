@@ -205,6 +205,22 @@ export default function ExpenseVoucherA4({
           <div className="mt-8 px-8 py-2 border-t">ผู้จ่ายเงิน</div>
           <div className="mt-8 px-8 py-2 border-t">ผู้รับเงิน</div>
         </div>
+
+        <div className="flex flex-col gap-4">
+          <div>หมายเหตุ</div>
+          <div className="grid grid-cols-3 w-fit">
+            {groupVouchers.map((voucher) => (
+              <React.Fragment key={voucher.receipt_uuid}>
+                {voucher.remark && (
+                  <>
+                    <div>{voucher.receipt_number}</div>
+                    <div className="col-span-2">{voucher.remark}</div>
+                  </>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

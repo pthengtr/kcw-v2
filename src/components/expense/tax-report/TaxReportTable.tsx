@@ -93,13 +93,17 @@ export default function TaxReportTable({
     getTaxReceipt(branch);
   }, [branch, getTaxReceipt]);
 
+  const newExpenseReceipts = expenseReceipts.map((receipt) => {
+    return { ...receipt, receipt_number: receipt.receipt_number.slice(-13) };
+  });
+
   return (
     <div className="h-full">
       {!!expenseReceipts && (
         <DataTable
           tableName="expenseVoucher"
           columns={taxReportColumn}
-          data={expenseReceipts}
+          data={newExpenseReceipts}
           total={totalReceipt}
           setSelectedRow={setSelectedReceipt}
           initialState={{
