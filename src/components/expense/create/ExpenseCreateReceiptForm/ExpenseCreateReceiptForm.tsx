@@ -10,7 +10,7 @@ import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 import { DatePickerInput } from "@/components/common/DatePickerInput";
 import { createClient } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
-import ExpensePaymentMethodSelectInput from "@/components/expense/create/ExpenseCreateReceiptForm/ExpensePaymentMethodSelectInput";
+import ExpensePaymentMethodSelectInput from "@/components/expense/ExpensePaymentMethodSelectInput";
 import { toast } from "sonner";
 import FormExpenseReceipt from "./FormExpenseReceipt";
 import ExpenseVatSelectInput from "@/components/expense/create/ExpenseCreateReceiptForm/ExpenseVatSelectInput";

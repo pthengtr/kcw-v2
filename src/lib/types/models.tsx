@@ -75,3 +75,19 @@ export type ExtendedExpenseReceiptType = ExpenseReceiptType & {
   voucherId: string;
   totalNet: number;
 };
+
+export type ExpenseGeneralType = {
+  general_uuid: UUID;
+  created_at: Date;
+  payment_uuid: UUID;
+  branch_uuid: UUID;
+  item_uuid: UUID;
+  entry_date: string;
+  description: string;
+  unit_price: number;
+  quantity: number;
+  remark: string;
+  payment_method: PaymentMethodType;
+  branch: BranchType;
+  expense_item: ExpenseItemType;
+};

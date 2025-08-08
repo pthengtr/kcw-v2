@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
+import { ExpenseContext, ExpenseContextType } from "./ExpenseProvider";
 
 type ExpenseSelectItemDialogInputProps = {
   field: FieldValues;

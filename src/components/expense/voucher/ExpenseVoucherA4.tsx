@@ -213,7 +213,7 @@ export default function ExpenseVoucherA4({
               <React.Fragment key={voucher.receipt_uuid}>
                 {voucher.remark && (
                   <>
-                    <div>{voucher.receipt_number}</div>
+                    <div>{`remark-${voucher.receipt_number}`}</div>
                     <div className="col-span-2">{voucher.remark}</div>
                   </>
                 )}

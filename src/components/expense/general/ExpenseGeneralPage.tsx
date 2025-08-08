@@ -1,3 +1,63 @@
+import { useContext } from "react";
+import ExpenseGeneralFormDialog from "./ExpenseGeneralCreateFormDialog";
+import ExpenseGeneralTable from "./ExpenseGeneralTable";
+import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
+import { Pencil, Plus } from "lucide-react";
+import { expenseGeneralFormDefaultValues } from "./ExpenseGeneralCreateForm";
+import { Button } from "@/components/ui/button";
+
 export default function ExpenseGeneralPage() {
-  return <div>General Page</div>;
+  const {
+    openCreateExpenseGeneralDialog,
+    setOpenCreateExpenseGeneralDialog,
+    openUpdateExpenseGeneralDialog,
+    setOpenUpdateExpenseGeneralDialog,
+    selectedGeneralEntry,
+  } = useContext(ExpenseContext) as ExpenseContextType;
+
+  return (
+    <section className="flex flex-col justify-center items-center w-full ">
+      <div className="h-[90vh] p-8">
+        <ExpenseGeneralTable>
+          <div className="flex w-full">
+            <h2 className="text-xl font-semibold">ค่าใช้จ่ายทั่วไป</h2>
+          </div>
+          <ExpenseGeneralFormDialog
+            open={openCreateExpenseGeneralDialog}
+            setOpen={setOpenCreateExpenseGeneralDialog}
+            dialogTrigger={
+              <Button size="sm" variant="outline">
+                <Plus /> เพิ่มบิลทั่วไป
+              </Button>
+            }
+            dialogHeader="เพิ่มบิลค่าใชัจ่ายทั่วไป"
+            defaultValues={expenseGeneralFormDefaultValues}
+          />
+          {selectedGeneralEntry && (
+            <ExpenseGeneralFormDialog
+              open={openUpdateExpenseGeneralDialog}
+              setOpen={setOpenUpdateExpenseGeneralDialog}
+              dialogTrigger={
+                <Button size="sm" variant="outline">
+                  <Pencil /> แก้ไขบิล
+                </Button>
+              }
+              dialogHeader="แก้ไขบิลค่าใชัจ่ายทั่วไป"
+              update
+              defaultValues={{
+                payment_uuid: selectedGeneralEntry.payment_uuid,
+                branch_uuid: selectedGeneralEntry.branch_uuid,
+                item_uuid: selectedGeneralEntry.item_uuid,
+                entry_date: new Date(selectedGeneralEntry.entry_date),
+                description: selectedGeneralEntry.description,
+                unit_price: selectedGeneralEntry.unit_price,
+                quantity: selectedGeneralEntry.quantity,
+                remark: selectedGeneralEntry.remark,
+              }}
+            />
+          )}
+        </ExpenseGeneralTable>
+      </div>
+    </section>
+  );
 }

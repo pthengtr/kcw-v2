@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { useCallback, useContext, useEffect, useId, useState } from "react";
-import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
+import { ExpenseContext, ExpenseContextType } from "./ExpenseProvider";
 import { PaymentMethodType } from "@/lib/types/models";
 
 export default function ExpensePaymentMethodSelectInput() {

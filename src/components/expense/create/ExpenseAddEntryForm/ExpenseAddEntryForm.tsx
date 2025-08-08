@@ -12,9 +12,10 @@ import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { VAT } from "@/lib/utils";
-import ExpenseSelectItemDialogInput from "./ExpenseSelectItemDialogInput";
+
 import { Plus } from "lucide-react";
 import { ExpenseEntryType, UUID } from "@/lib/types/models";
+import ExpenseSelectItemDialogInput from "../../ExpenseSelectItemDialogInput";
 
 export type ExpenseAddEntryFormDefaultType = {
   entry_detail: string;

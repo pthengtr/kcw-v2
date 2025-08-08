@@ -22,6 +22,7 @@ import {
 import {
   ExpenseCategoryType,
   ExpenseEntryType,
+  ExpenseGeneralType,
   ExpenseItemType,
   ExpenseReceiptType,
   PaymentMethodType,
@@ -47,6 +48,10 @@ export type ExpenseContextType = {
   setOpenAddCategoryDialog: (open: boolean) => void;
   openUpdateCategoryDialog: boolean;
   setOpenUpdateCategoryDialog: (open: boolean) => void;
+  openCreateExpenseGeneralDialog: boolean;
+  setOpenCreateExpenseGeneralDialog: (open: boolean) => void;
+  openUpdateExpenseGeneralDialog: boolean;
+  setOpenUpdateExpenseGeneralDialog: (open: boolean) => void;
 
   submitError: string | undefined;
   setSubmitError: (error: string | undefined) => void;
@@ -80,6 +85,12 @@ export type ExpenseContextType = {
   ) => void;
   selectedVoucher: ExpenseReceiptType | undefined;
   setSelectedVoucher: (selectedVoucher: ExpenseReceiptType | undefined) => void;
+  selectedGeneralEntry: ExpenseGeneralType | undefined;
+  setSelectedGeneralEntry: (
+    selectedVoucher: ExpenseGeneralType | undefined
+  ) => void;
+  selectedBranch: UUID | undefined;
+  setSelectedBranch: (selectedBranch: UUID | undefined) => void;
 
   // array group
   expenseReceipts: ExpenseReceiptType[];
@@ -96,6 +107,8 @@ export type ExpenseContextType = {
   setDeleteEntries: (deleteEntries: string[]) => void;
   expenseVouchers: ExpenseReceiptType[];
   setExpenseVouchers: (expenses: ExpenseReceiptType[]) => void;
+  generalEntries: ExpenseGeneralType[];
+  setGeneralEntries: (generalEntries: ExpenseGeneralType[]) => void;
 
   // total group
   totalReceipt: number | undefined;
@@ -108,6 +121,8 @@ export type ExpenseContextType = {
   setTotalCategory: (total: number) => void;
   totalVouchers: number | undefined;
   setTotalVouchers: (total: number) => void;
+  totalGeneralEntries: number | undefined;
+  setTotalGeneralEntries: (total: number) => void;
 
   receiptNumber: string;
   setReceiptNumber: (vatInput: string) => void;
@@ -126,6 +141,8 @@ export type ExpenseContextType = {
   setPaymentMethodFormError: (
     paymentMethodFormError: string | undefined
   ) => void;
+  branchFormError: string | undefined;
+  setBranchFormError: (branchFormError: string | undefined) => void;
   supplierFormError: string | undefined;
   setSupplierFormError: (supplierFormError: string | undefined) => void;
   getMyCookieClient: <T>(
@@ -164,6 +181,10 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [openAddCategoryDialog, setOpenAddCategoryDialog] = useState(false);
   const [openUpdateCategoryDialog, setOpenUpdateCategoryDialog] =
     useState(false);
+  const [openCreateExpenseGeneralDialog, setOpenCreateExpenseGeneralDialog] =
+    useState(false);
+  const [openUpdateExpenseGeneralDialog, setOpenUpdateExpenseGeneralDialog] =
+    useState(false);
 
   // select group
   const [selectedReceipt, setSelectedReceipt] = useState<ExpenseReceiptType>();
@@ -175,6 +196,9 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethodType>();
   const [selectedVoucher, setSelectedVoucher] = useState<ExpenseReceiptType>();
+  const [selectedGeneralEntry, setSelectedGeneralEntry] =
+    useState<ExpenseGeneralType>();
+  const [selectedBranch, setSelectedBranch] = useState<UUID>();
 
   // array group
   const [expenseItems, setExpenseItems] = useState<ExpenseItemType[]>([]);
@@ -190,6 +214,9 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [expenseVouchers, setExpenseVouchers] = useState<ExpenseReceiptType[]>(
     []
   );
+  const [generalEntries, setGeneralEntries] = useState<ExpenseGeneralType[]>(
+    []
+  );
 
   // total group
   const [totalReceipt, setTotalReceipt] = useState<number>();
@@ -197,6 +224,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [totalItem, setTotalItem] = useState<number>();
   const [totalCategory, setTotalCategory] = useState<number>();
   const [totalVouchers, setTotalVouchers] = useState<number>();
+  const [totalGeneralEntries, setTotalGeneralEntries] = useState<number>();
 
   // image and misc
   const [receiptImageArray, setReceiptImageArray] =
@@ -210,6 +238,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [discountInput, setDiscountInput] = useState("0");
   const [taxExemptInput, setTaxExemptInput] = useState("0");
   const [withholdingInput, setWithholdingInput] = useState("0");
+  const [branchFormError, setBranchFormError] = useState<string | undefined>();
   const [paymentMethodFormError, setPaymentMethodFormError] = useState<
     string | undefined
   >();
@@ -367,6 +396,10 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setOpenAddCategoryDialog,
     openUpdateCategoryDialog,
     setOpenUpdateCategoryDialog,
+    openCreateExpenseGeneralDialog,
+    setOpenCreateExpenseGeneralDialog,
+    openUpdateExpenseGeneralDialog,
+    setOpenUpdateExpenseGeneralDialog,
 
     //selected group
     selectedReceipt,
@@ -383,6 +416,10 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setSelectedPaymentMethod,
     selectedVoucher,
     setSelectedVoucher,
+    selectedGeneralEntry,
+    setSelectedGeneralEntry,
+    selectedBranch,
+    setSelectedBranch,
 
     // array group
     expenseReceipts,
@@ -399,6 +436,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setDeleteEntries,
     expenseVouchers,
     setExpenseVouchers,
+    generalEntries,
+    setGeneralEntries,
 
     // total group
     totalReceipt,
@@ -411,6 +450,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setTotalCategory,
     totalVouchers,
     setTotalVouchers,
+    totalGeneralEntries,
+    setTotalGeneralEntries,
 
     // misc
     submitError,
@@ -445,6 +486,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setReceiptNameFormError,
     receiptDateFormError,
     setReceiptDateFormError,
+    branchFormError,
+    setBranchFormError,
     getMyCookieClient,
   };
 
