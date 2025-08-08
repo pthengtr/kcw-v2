@@ -52,6 +52,8 @@ export type ExpenseContextType = {
   setOpenCreateExpenseGeneralDialog: (open: boolean) => void;
   openUpdateExpenseGeneralDialog: boolean;
   setOpenUpdateExpenseGeneralDialog: (open: boolean) => void;
+  openDeleteExpenseGeneralDialog: boolean;
+  setOpenDeleteExpenseGeneralDialog: (open: boolean) => void;
 
   submitError: string | undefined;
   setSubmitError: (error: string | undefined) => void;
@@ -184,6 +186,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [openCreateExpenseGeneralDialog, setOpenCreateExpenseGeneralDialog] =
     useState(false);
   const [openUpdateExpenseGeneralDialog, setOpenUpdateExpenseGeneralDialog] =
+    useState(false);
+  const [openDeleteExpenseGeneralDialog, setOpenDeleteExpenseGeneralDialog] =
     useState(false);
 
   // select group
@@ -400,6 +404,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setOpenCreateExpenseGeneralDialog,
     openUpdateExpenseGeneralDialog,
     setOpenUpdateExpenseGeneralDialog,
+    openDeleteExpenseGeneralDialog,
+    setOpenDeleteExpenseGeneralDialog,
 
     //selected group
     selectedReceipt,

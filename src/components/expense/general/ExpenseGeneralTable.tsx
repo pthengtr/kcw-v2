@@ -22,6 +22,7 @@ export default function ExpenseGeneralTable({
     setSelectedGeneralEntry,
     openCreateExpenseGeneralDialog,
     openUpdateExpenseGeneralDialog,
+    openDeleteExpenseGeneralDialog,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const getExpenseGeneral = useCallback(
@@ -58,6 +59,7 @@ export default function ExpenseGeneralTable({
     setSubmitError,
     openCreateExpenseGeneralDialog,
     openUpdateExpenseGeneralDialog,
+    openDeleteExpenseGeneralDialog,
   ]);
 
   return (

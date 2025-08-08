@@ -5,6 +5,7 @@ import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { Pencil, Plus } from "lucide-react";
 import { expenseGeneralFormDefaultValues } from "./ExpenseGeneralCreateForm";
 import { Button } from "@/components/ui/button";
+import ExpenseGeneralDeleteDialog from "./ExpenseGeneralDeleteDialog";
 
 export default function ExpenseGeneralPage() {
   const {
@@ -34,27 +35,30 @@ export default function ExpenseGeneralPage() {
             defaultValues={expenseGeneralFormDefaultValues}
           />
           {selectedGeneralEntry && (
-            <ExpenseGeneralFormDialog
-              open={openUpdateExpenseGeneralDialog}
-              setOpen={setOpenUpdateExpenseGeneralDialog}
-              dialogTrigger={
-                <Button size="sm" variant="outline">
-                  <Pencil /> แก้ไขบิล
-                </Button>
-              }
-              dialogHeader="แก้ไขบิลค่าใชัจ่ายทั่วไป"
-              update
-              defaultValues={{
-                payment_uuid: selectedGeneralEntry.payment_uuid,
-                branch_uuid: selectedGeneralEntry.branch_uuid,
-                item_uuid: selectedGeneralEntry.item_uuid,
-                entry_date: new Date(selectedGeneralEntry.entry_date),
-                description: selectedGeneralEntry.description,
-                unit_price: selectedGeneralEntry.unit_price,
-                quantity: selectedGeneralEntry.quantity,
-                remark: selectedGeneralEntry.remark,
-              }}
-            />
+            <>
+              <ExpenseGeneralFormDialog
+                open={openUpdateExpenseGeneralDialog}
+                setOpen={setOpenUpdateExpenseGeneralDialog}
+                dialogTrigger={
+                  <Button size="sm" variant="outline">
+                    <Pencil /> แก้ไขบิล
+                  </Button>
+                }
+                dialogHeader="แก้ไขบิลค่าใชัจ่ายทั่วไป"
+                update
+                defaultValues={{
+                  payment_uuid: selectedGeneralEntry.payment_uuid,
+                  branch_uuid: selectedGeneralEntry.branch_uuid,
+                  item_uuid: selectedGeneralEntry.item_uuid,
+                  entry_date: new Date(selectedGeneralEntry.entry_date),
+                  description: selectedGeneralEntry.description,
+                  unit_price: selectedGeneralEntry.unit_price,
+                  quantity: selectedGeneralEntry.quantity,
+                  remark: selectedGeneralEntry.remark,
+                }}
+              />
+              <ExpenseGeneralDeleteDialog />
+            </>
           )}
         </ExpenseGeneralTable>
       </div>
