@@ -16,7 +16,9 @@ export default function ExpenseUpdateReceiptButton({
   const router = useRouter();
 
   function handleUpdateReceipt() {
-    router.push(`/expense/${branch}/update-receipt?receipt-id=${receipt_uuid}`);
+    router.push(
+      `/expense/company/${branch}/update-receipt?receipt-id=${receipt_uuid}`
+    );
   }
   return (
     <>
