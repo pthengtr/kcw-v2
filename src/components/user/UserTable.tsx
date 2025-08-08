@@ -22,7 +22,7 @@ export default function UserTable({ setSelectedUser }: UserTableType) {
 
       if (error) console.log(error);
       if (data) setUsers(data);
-      if (count) setTotal(count);
+      if (count !== null && count !== undefined) setTotal(count);
     }
 
     getUsers();

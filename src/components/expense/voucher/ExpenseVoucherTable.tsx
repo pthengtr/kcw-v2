@@ -87,7 +87,7 @@ export default function ExpenseVoucherTable({
       if (data) {
         setExpenseVouchers(data);
       }
-      if (count) setTotalVouchers(count);
+      if (count !== null && count !== undefined) setTotalVouchers(count);
     },
     [setExpenseVouchers, setTotalVouchers, supabase]
   );

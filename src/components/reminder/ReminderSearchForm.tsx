@@ -129,7 +129,7 @@ export default function ReminderSearchForm({
     if (data) {
       setReminders(data);
     }
-    if (count) setTotal(count);
+    if (count !== null && count !== undefined) setTotal(count);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

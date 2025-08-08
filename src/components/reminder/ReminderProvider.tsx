@@ -118,7 +118,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
         console.log(data);
         setReminders(data);
       }
-      if (count) setTotal(count);
+      if (count !== null && count !== undefined) setTotal(count);
     },
     [status]
   );

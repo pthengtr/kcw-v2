@@ -127,7 +127,7 @@ export default function SupplierTaxPayerForm({
       }
     }
 
-    if (count) setTotal(count);
+    if (count !== null && count !== undefined) setTotal(count);
 
     setOpenCreateTaxFormDialog(false);
     setOpenUpdateTaxFormDialog(false);

@@ -104,7 +104,7 @@ export default function SupplierForm({
       }
     }
 
-    if (count) setTotal(count);
+    if (count !== null && count !== undefined) setTotal(count);
 
     setOpenUpdateDialog(false);
     setOpenCreateDialog(false);

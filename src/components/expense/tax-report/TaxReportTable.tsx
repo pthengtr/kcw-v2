@@ -84,7 +84,7 @@ export default function TaxReportTable({
       if (data) {
         setExpenseReceipts(data);
       }
-      if (count) setTotalReceipt(count);
+      if (count !== null && count !== undefined) setTotalReceipt(count);
     },
     [setExpenseReceipts, setTotalReceipt, supabase]
   );

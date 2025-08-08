@@ -101,7 +101,7 @@ export default function ExpenseReceiptSearchForm({
     if (data) {
       setExpenseReceipts(data);
     }
-    if (count) setTotalReceipt(count);
+    if (count !== null && count !== undefined) setTotalReceipt(count);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

@@ -50,7 +50,7 @@ export default function ExpenseEntryTable({
       if (data) {
         setReceiptEntries(data);
       }
-      if (count) setTotalEntry(count);
+      if (count !== null && count !== undefined) setTotalEntry(count);
     },
     [selectedReceipt, setReceiptEntries, setTotalEntry, supabase]
   );

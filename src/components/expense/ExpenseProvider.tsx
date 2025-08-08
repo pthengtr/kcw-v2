@@ -289,7 +289,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
       if (data) {
         setExpenseReceipts(data);
       }
-      if (count) setTotalReceipt(count);
+      if (count !== null && count !== undefined) setTotalReceipt(count);
     },
     [supabase]
   );
@@ -312,7 +312,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
       if (data) {
         setExpenseCategories(data);
       }
-      if (count) setTotalCategory(count);
+      if (count !== null && count !== undefined) setTotalCategory(count);
     },
     [setExpenseCategories, setTotalCategory, supabase]
   );
@@ -335,7 +335,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
       if (data) {
         setExpenseItems(data);
       }
-      if (count) setTotalItem(count);
+      if (count !== null && count !== undefined) setTotalItem(count);
     },
     [setExpenseItems, setTotalItem, supabase]
   );

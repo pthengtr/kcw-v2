@@ -88,7 +88,7 @@ export default function SupplierSearchForm({
     if (data) {
       setSuppliers(data);
     }
-    if (count) setTotal(count);
+    if (count !== null && count !== undefined) setTotal(count);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

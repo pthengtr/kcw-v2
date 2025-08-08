@@ -102,7 +102,7 @@ export default function ExpenseVoucherSearchForm({
     if (data) {
       setExpenseVouchers(data);
     }
-    if (count) setTotalVouchers(count);
+    if (count !== null && count !== undefined) setTotalVouchers(count);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
