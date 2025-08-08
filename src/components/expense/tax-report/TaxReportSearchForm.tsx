@@ -30,7 +30,7 @@ function getFormInput(
   switch (field.name) {
     //month picker
     case "tax_report_month":
-      return <MonthPickerInput field={field} />;
+      return <MonthPickerInput field={field} includeAllOption={false} />;
       break;
 
     //simple text

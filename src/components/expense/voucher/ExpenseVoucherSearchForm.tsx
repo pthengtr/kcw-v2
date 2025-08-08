@@ -30,7 +30,7 @@ function getFormInput(
   switch (field.name) {
     //month picker
     case "voucher_month":
-      return <MonthPickerInput field={field} />;
+      return <MonthPickerInput field={field} includeAllOption={false} />;
       break;
 
     //simple text
@@ -69,7 +69,7 @@ export default function ExpenseVoucherSearchForm({
 
     let query = supabase
       .from("expense_receipt")
-      .select("*", {
+      .select("*, supplier(*), branch(*), payment_method(*)", {
         count: "exact",
       })
       .order("receipt_date", { ascending: true })
