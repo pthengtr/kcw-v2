@@ -6,6 +6,7 @@ import { Pencil, Plus } from "lucide-react";
 import { expenseGeneralFormDefaultValues } from "./ExpenseGeneralCreateForm";
 import { Button } from "@/components/ui/button";
 import ExpenseGeneralDeleteDialog from "./ExpenseGeneralDeleteDialog";
+import ExpenseGeneralSearchForm from "./ExpenseGeneralSearchForm";
 
 export default function ExpenseGeneralPage() {
   const {
@@ -20,8 +21,15 @@ export default function ExpenseGeneralPage() {
     <section className="flex flex-col justify-center items-center w-full ">
       <div className="h-[90vh] p-8">
         <ExpenseGeneralTable>
-          <div className="flex w-full">
-            <h2 className="text-xl font-semibold">ค่าใช้จ่ายทั่วไป</h2>
+          <div className="flex w-full justify-start items-center">
+            <h2 className="text-xl font-semibold px-4">ค่าใช้จ่ายทั่วไป</h2>
+            <div>
+              <ExpenseGeneralSearchForm
+                defaultValues={{
+                  general_entries_month: new Date().toLocaleDateString("th-TH"),
+                }}
+              />
+            </div>
           </div>
           <ExpenseGeneralFormDialog
             open={openCreateExpenseGeneralDialog}

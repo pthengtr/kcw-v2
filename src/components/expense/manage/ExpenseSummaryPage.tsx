@@ -2,10 +2,7 @@
 import ExpenseReceiptDetail from "@/components/expense/manage/ExpenseReceiptDetail";
 import ExpenseReceiptTable from "@/components/expense/manage/ExpenseReceiptTable";
 
-import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { FileSpreadsheet, Plus, Store } from "lucide-react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
@@ -13,6 +10,7 @@ import { clearMyCookie, getMyCookie } from "@/app/(root)/action";
 import { defaultExpenseReceiptColumnVisibility } from "./ExpenseReceiptColumn";
 import ExpenseReceiptSearchForm from "./ExpenseReceiptSearchForm";
 import ResetTableCookiesDropdown from "@/components/common/ResetTableCookiesDropdown";
+import ExpensePageHeader from "../ExpensePageHeader";
 
 export default function ExpenseSummaryPage() {
   const { resetCreateReceiptForm } = useContext(
@@ -86,40 +84,16 @@ export default function ExpenseSummaryPage() {
 
   return (
     <section className="flex flex-col items-center p-2">
-      <div className="flex w-full px-2">
-        <div className="flex-1 flex gap-2">
-          <Link className="" href={`/expense/${branch}/create`} passHref>
-            <Button variant="outline">
-              <Plus />
-              สร้างบิลค่าใช้จ่ายใหม่
-            </Button>
-          </Link>
-          <Link className="" href={`/expense/${branch}/voucher`} passHref>
-            <Button variant="outline">
-              <FileSpreadsheet />
-              ใบสำคัญจ่าย
-            </Button>
-          </Link>
-          <Link className="" href={`/expense`} passHref>
-            <Button variant="outline">
-              <Store />
-              เลือกสาขา
-            </Button>
-          </Link>
-        </div>
-        <h1 className="text-2xl font-bold tracking-wider">{`จัดการบิลค่าใช้จ่าย ${branchName}`}</h1>
-        <div className="flex-1"></div>
-      </div>
-
+      <ExpensePageHeader pageTitle={`จัดการค่าใช้จ่าย ${branchName}`} />
       <div className="flex flex-col w-fit">
-        <div className="p-2">
+        <div className="p-2 h-[80vh]">
           {columnVisibility && paginationPageSize && (
             <ExpenseReceiptTable
               columnVisibility={columnVisibility}
               paginationPageSize={paginationPageSize}
             >
               <div className="flex gap-2 flex-1 justify-between items-center">
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center px-4">
                   <h2 className="text-xl font-bold ">{`รายการบิลค่าใช้จ่าย`}</h2>
                   <ResetTableCookiesDropdown
                     handleResetCookies={handleResetCookies}

@@ -213,7 +213,7 @@ export default function ExpenseVoucherTable({
           totalAmountKey={[]}
           exportButton
         >
-          <div className="flex items-baseline justify-start w-full">
+          <div className="flex items-center justify-start w-full">
             <h2 className="p-2 text-xl font-bold tracking-wider">
               ใบสำคัญจ่าย
             </h2>

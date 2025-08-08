@@ -10,14 +10,14 @@ import {
 } from "@/components/expense/ExpenseProvider";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { ClipboardList, Store, Trash } from "lucide-react";
-import Link from "next/link";
+import { Trash } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 
 import ExpenseCreateReceiptSummary from "./ExpenseCreateReceiptSummary";
 import ExpenseCreateReceiptFormCard from "./ExpenseCreateReceiptForm/ExpenseCreateReceiptFormCard";
 import ExpenseCreateBillHeader from "../ExpenseCreateBillHeader";
+import ExpensePageHeader from "../ExpensePageHeader";
 
 export default function ExpenseCreatePage() {
   const { selectedEntry, handleDeleteCreateEntry, resetCreateReceiptForm } =
@@ -50,26 +50,8 @@ export default function ExpenseCreatePage() {
   }, [resetCreateReceiptForm]);
 
   return (
-    <section className="flex flex-col items-center p-2">
-      <div className="flex w-full p-2">
-        <div className="flex-1 flex gap-2">
-          <Link className="" href={`/expense/${branch}/manage`} passHref>
-            <Button variant="outline">
-              <ClipboardList />
-              จัดการบิลค่าใช้จ่าย
-            </Button>
-          </Link>
-          <Link className="" href={`/expense`} passHref>
-            <Button variant="outline">
-              <Store />
-              เลือกสาขา
-            </Button>
-          </Link>
-        </div>
-        <h1 className="text-2xl font-bold tracking-wider">{`สร้างบิลค่าใช้จ่ายบริษัท ${branchName}`}</h1>
-        <div className="flex-1 flex justify-end gap-2"></div>
-      </div>
-
+    <section className="flex flex-col items-center p-4 gap-4">
+      <ExpensePageHeader pageTitle={`สร้างบิลค่าใช้จ่ายบริษัท ${branchName}`} />
       <div className="flex w-full justify-center h-[80vh]">
         <div className="p-2 h-full">
           <ExpenseCreateReceiptFormCard />

@@ -5,6 +5,7 @@ import ExpenseVoucherTable from "./ExpenseVoucherTable";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import ExpensePageHeader from "../ExpensePageHeader";
 
 export default function ExpenseVoucherPage() {
   const [branchName, setBranchName] = useState("");
@@ -30,8 +31,8 @@ export default function ExpenseVoucherPage() {
   }, [branch]);
 
   return (
-    <section className="flex flex-col items-center gap-2 h-[80vh]">
-      <h1 className="text-2xl font-bold p-4 tracking-wider">{`ค่าใชัจ่ายบริษัท ${branchName}`}</h1>
+    <section className="flex flex-col items-center gap-2 h-[90vh] p-4">
+      <ExpensePageHeader pageTitle={`ใบสำคัญจ่าย ${branchName}`} />
       <ExpenseVoucherTable
         paginationPageSize={500}
         columnVisibility={defaultExpenseVoucherColumnVisibility}
