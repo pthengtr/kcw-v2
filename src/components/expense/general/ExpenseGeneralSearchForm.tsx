@@ -30,7 +30,7 @@ function getFormInput(
   switch (field.name) {
     //month picker
     case "general_entries_month":
-      return <MonthPickerInput field={field} />;
+      return <MonthPickerInput field={field} includeAllOption={false} />;
       break;
 
     //simple text
@@ -40,11 +40,11 @@ function getFormInput(
 }
 
 const formSchema = z.object({
-  general_entries_month: z.date(),
+  general_entries_month: z.string(),
 });
 
 type ExpenseGeneralSearchFormDefaultType = {
-  general_entries_month: Date;
+  general_entries_month: string;
 };
 
 type ExpenseGeneralSearchFormProps = {
@@ -110,10 +110,7 @@ export default function ExpenseGeneralSearchForm({
     const { general_entries_month } = values;
 
     const formData = new FormData();
-    formData.append(
-      "general_entries_month",
-      general_entries_month.toLocaleDateString("en-US")
-    );
+    formData.append("general_entries_month", general_entries_month);
 
     await searchExpenseGeneral(formData);
   }

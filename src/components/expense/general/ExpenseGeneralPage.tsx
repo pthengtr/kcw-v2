@@ -26,7 +26,7 @@ export default function ExpenseGeneralPage() {
             <div>
               <ExpenseGeneralSearchForm
                 defaultValues={{
-                  general_entries_month: new Date(),
+                  general_entries_month: "",
                 }}
               />
             </div>
