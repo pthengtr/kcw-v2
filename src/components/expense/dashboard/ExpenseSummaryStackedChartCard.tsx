@@ -164,7 +164,7 @@ export default function ExpenseSummaryStackedChartCard({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={{ top: 10, right: 16, bottom: 0, left: -16 }}
+              margin={{ top: 10, right: 16, bottom: 0, left: 32 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" tickMargin={8} />
