@@ -7,7 +7,9 @@ import PieChartCard from "./ExpenseSummaryPieChartCard";
 import { createClient } from "@/lib/supabase/client";
 import ExpenseSummaryStackedChartCard from "./ExpenseSummaryStackedChartCard";
 import ExpenseDashboardTable from "./ExpenseDashboardTable/ExpenseDashboardTable";
-import ExpensePageHeader from "../ExpensePageHeader";
+import { Button } from "@/components/ui/button";
+import { ArrowBigLeftDash } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export type ItemYearRow = {
   item_name: string;
@@ -48,6 +50,8 @@ export default function ExpenseDashboardPage() {
   const [generalSummary, setGeneralSummary] = useState<ItemYearRow[]>();
 
   const supabase = createClient();
+
+  const router = useRouter();
 
   const getReceiptByMonth = useCallback(
     async function () {
@@ -129,7 +133,17 @@ export default function ExpenseDashboardPage() {
 
   return (
     <section className="flex flex-col justify-center items-center p-4">
-      <ExpensePageHeader pageTitle="ภาพรวมค่าใช้จ่าย" />
+      <div className="flex w-full px-2 items-center">
+        <div className="flex-1 flex gap-2">
+          <Button variant="outline" onClick={() => router.back()}>
+            <ArrowBigLeftDash strokeWidth={1} />
+            กลับ
+          </Button>
+          {/* </Link> */}
+        </div>
+        <h1 className="text-2xl font-bold tracking-wider">ภาพรวมค่าใช้จ่าย</h1>
+        <div className="flex-1" />
+      </div>
       <div className="w-fit grid grid-cols-2 gap-8 p-8 justify-center items-center">
         {expenseSummary && (
           <>
