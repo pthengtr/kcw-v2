@@ -128,12 +128,12 @@ export default function ExpenseDashboardPage() {
 
   return (
     <section className="flex justify-center">
-      <div className="w-full flex flex-col gap-8 p-8 justify-center items-center">
+      <div className="w-full grid grid-cols-2 gap-8 p-8 justify-center items-center">
         {expenseSummary && (
           <>
             <ExpenseSummaryLineChartCard
               data={expenseSummary}
-              title="ค่าใช้จ่าย (พ.ศ. 2568)"
+              title="ค่าใช้จ่ายทั้งหมด (พ.ศ. 2568)"
               yTickFormatter={thb}
             />
             <PieChartCard
@@ -142,15 +142,47 @@ export default function ExpenseDashboardPage() {
               valueFormatter={thb}
               initialMonthIndex={new Date().getMonth()}
             />
-            {companySummary && generalSummary && (
-              <ExpenseSummaryStackedChartCard
-                entriesData={companySummary}
-                generalData={generalSummary}
-                title="เปรียบเทียบค่าใช้จ่ายรายเดือน"
-                yTickFormatter={thb}
-              />
+            {companySummary && (
+              <>
+                <ExpenseSummaryLineChartCard
+                  data={companySummary}
+                  title="ค่าใช้จ่ายเฉพาะบริษัท (พ.ศ. 2568)"
+                  yTickFormatter={thb}
+                />
+                <PieChartCard
+                  data={companySummary}
+                  title="สัดส่วนค่าใช้จ่ายต่อเดือนเฉพาะบริษัท"
+                  valueFormatter={thb}
+                  initialMonthIndex={new Date().getMonth()}
+                />
+              </>
             )}
-            <div className="w-[80vw] h-[90vh]">
+            {generalSummary && (
+              <>
+                <ExpenseSummaryLineChartCard
+                  data={generalSummary}
+                  title="ค่าใช้จ่ายเฉพาะทั่วไป (พ.ศ. 2568)"
+                  yTickFormatter={thb}
+                />
+                <PieChartCard
+                  data={generalSummary}
+                  title="สัดส่วนค่าใช้จ่ายต่อเดือนเฉพาะทั่วไป"
+                  valueFormatter={thb}
+                  initialMonthIndex={new Date().getMonth()}
+                />
+              </>
+            )}
+            {companySummary && generalSummary && (
+              <div className="col-span-2">
+                <ExpenseSummaryStackedChartCard
+                  entriesData={companySummary}
+                  generalData={generalSummary}
+                  title="เปรียบเทียบค่าใช้จ่ายรายเดือน"
+                  yTickFormatter={thb}
+                />
+              </div>
+            )}
+            <div className="w-[80vw] h-[90vh] col-span-2 justify-self-center">
               <ExpenseDashboardTable expenseSummary={expenseSummary} />
             </div>
           </>

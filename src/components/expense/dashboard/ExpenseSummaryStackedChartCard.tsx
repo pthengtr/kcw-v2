@@ -161,7 +161,7 @@ export default function ExpenseSummaryStackedChartCard({
       </CardHeader>
 
       <CardContent className="pt-2">
-        <div className="h-80">
+        <div className="h-[60vh]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}

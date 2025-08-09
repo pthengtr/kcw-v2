@@ -124,7 +124,7 @@ export default function ExpenseSummaryLineChartCard({
       </CardHeader>
 
       <CardContent className="pt-2">
-        <div className="h-72">
+        <div className="h-[60vh]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={series}
