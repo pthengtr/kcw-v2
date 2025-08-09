@@ -11,6 +11,7 @@ import {
   Sheet,
   Building2,
   Users,
+  ChartLine,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -31,7 +32,8 @@ type iconType =
   | "FileSpreadsheet"
   | "Sheet"
   | "Building2"
-  | "Users";
+  | "Users"
+  | "ChartLine";
 
 type CardIconProps = {
   path: string;
@@ -66,6 +68,8 @@ export default function CardIcon({ path, description, icon }: CardIconProps) {
         return <Building2 strokeWidth={1} className={iconStyle} />;
       case "Users":
         return <Users strokeWidth={1} className={iconStyle} />;
+      case "ChartLine":
+        return <ChartLine strokeWidth={1} className={iconStyle} />;
     }
   }
   return (
