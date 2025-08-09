@@ -129,7 +129,7 @@ export default function ExpenseDashboardPage() {
 
   return (
     <section className="flex flex-col justify-center items-center p-4">
-      <ExpensePageHeader pageTitle="ภาพรวมค่าใช่จ่าย" />
+      <ExpensePageHeader pageTitle="ภาพรวมค่าใช้จ่าย" />
       <div className="w-fit grid grid-cols-2 gap-8 p-8 justify-center items-center">
         {expenseSummary && (
           <>
