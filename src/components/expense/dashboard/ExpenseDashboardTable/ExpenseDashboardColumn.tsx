@@ -52,7 +52,7 @@ function numberCol<K extends keyof ItemYearRow>(
   opts?: { format?: (v: number) => string }
 ) {
   return {
-    id: String(key),
+    id: itemYearFieldLabel[key],
     accessorKey: key as string,
     header: ({ column }: HeaderContext<ItemYearRow, unknown>) => (
       <DataTableColumnHeader

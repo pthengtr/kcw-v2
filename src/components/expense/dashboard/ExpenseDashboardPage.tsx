@@ -150,14 +150,11 @@ export default function ExpenseDashboardPage() {
                 yTickFormatter={thb}
               />
             )}
-            <div className="w-[80vw]">
+            <div className="w-[80vw] h-[90vh]">
               <ExpenseDashboardTable expenseSummary={expenseSummary} />
             </div>
           </>
         )}
-
-        {/* <BarChartCard />
-        <PieChartCard /> */}
       </div>
     </section>
   );
