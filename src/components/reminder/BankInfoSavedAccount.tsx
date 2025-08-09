@@ -26,11 +26,11 @@ export default function BankInfoSavedAccount({
 
   const supabase = createClient();
 
-  async function deleteBankInfo(id: string) {
+  async function deleteBankInfo(uuid: string) {
     const { error } = await supabase
       .from("supplier_bank_info")
       .delete()
-      .eq("id", id);
+      .eq("bank_info_uuid", uuid);
 
     if (error) {
       toast.success("ลบข้อมูลไม่สำเร็จ");
