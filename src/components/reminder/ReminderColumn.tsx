@@ -5,12 +5,13 @@ import { DataTableColumnHeader } from "../common/DataTableColumnHeader";
 import { reminderFieldLabel } from "./ReminderForm";
 import { Row } from "@tanstack/react-table";
 import { Check } from "lucide-react";
+import { UUID } from "@/lib/types/models";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
 
 export type BankInfoType = {
-  id: number;
+  bank_info_uuid: UUID;
   supplier_code: string;
   bank_name: string;
   bank_account_name: string;

@@ -41,7 +41,7 @@ export default function BankInfoSavedAccount({
       .from("supplier_bank_info")
       .select("*", { count: "exact" })
       .ilike("supplier_code", supplierName)
-      .order("id", { ascending: false })
+      .order("bank_name", { ascending: false })
       .limit(500);
 
     if (errorGetBankInfo) {
@@ -55,9 +55,9 @@ export default function BankInfoSavedAccount({
     }
   }
 
-  function handleRadioBankInfoValueChange(bankInfoId: string) {
+  function handleRadioBankInfoValueChange(bankInfoUuid: string) {
     setSelectBankInfo(
-      bankInfoList?.find((bankInfo) => bankInfo.id === parseInt(bankInfoId))
+      bankInfoList?.find((bankInfo) => bankInfo.bank_info_uuid === bankInfoUuid)
     );
   }
 
@@ -71,13 +71,13 @@ export default function BankInfoSavedAccount({
       onValueChange={handleRadioBankInfoValueChange}
     >
       {bankInfoList?.map((bankInfo) => (
-        <React.Fragment key={`bank-info-${bankInfo.id}`}>
+        <React.Fragment key={`bank-info-${bankInfo.bank_info_uuid}`}>
           <div className="flex items-center space-x-2">
             <RadioGroupItem
-              value={bankInfo.id.toString()}
-              id={`bank-info-${bankInfo.id}`}
+              value={bankInfo.bank_info_uuid.toString()}
+              id={`bank-info-${bankInfo.bank_info_uuid}`}
             />
-            <Label htmlFor={`bank-info-${bankInfo.id}`}>
+            <Label htmlFor={`bank-info-${bankInfo.bank_info_uuid}`}>
               <div className="flex flex-col gap-1">
                 <span>{bankInfo.bank_account_name}</span>
                 <div className="flex gap-3">
@@ -90,7 +90,7 @@ export default function BankInfoSavedAccount({
           <Button
             className="justify-self-start"
             type="reset"
-            onClick={() => handleDeleteBankInfo(bankInfo.id.toString())}
+            onClick={() => handleDeleteBankInfo(bankInfo.bank_info_uuid)}
           >
             <Trash />
           </Button>

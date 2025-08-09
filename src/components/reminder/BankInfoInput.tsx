@@ -36,7 +36,7 @@ export default function BankInfoInput() {
       .from("supplier_bank_info")
       .select("*", { count: "exact" })
       .ilike("supplier_code", supplierName)
-      .order("id", { ascending: false })
+      .order("bank_name", { ascending: false })
       .limit(500);
 
     if (error) {
