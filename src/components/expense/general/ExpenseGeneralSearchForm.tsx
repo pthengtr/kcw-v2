@@ -40,11 +40,11 @@ function getFormInput(
 }
 
 const formSchema = z.object({
-  general_entries_month: z.string(),
+  general_entries_month: z.date(),
 });
 
 type ExpenseGeneralSearchFormDefaultType = {
-  general_entries_month: string;
+  general_entries_month: Date;
 };
 
 type ExpenseGeneralSearchFormProps = {
@@ -110,7 +110,10 @@ export default function ExpenseGeneralSearchForm({
     const { general_entries_month } = values;
 
     const formData = new FormData();
-    formData.append("general_entries_month", general_entries_month);
+    formData.append(
+      "general_entries_month",
+      general_entries_month.toLocaleDateString("en-US")
+    );
 
     await searchExpenseGeneral(formData);
   }
