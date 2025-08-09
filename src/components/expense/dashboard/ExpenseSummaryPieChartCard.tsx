@@ -192,7 +192,7 @@ export default function PieChartCard({
           </ResponsiveContainer>
         </div>
         {pieData.length === 0 && (
-          <div className="text-sm text-muted-foreground mt-3">ไม่มีข้อมูล</div>
+          <div className="text-sm text-muted-foreground">ไม่มีข้อมูล</div>
         )}
       </CardContent>
     </Card>

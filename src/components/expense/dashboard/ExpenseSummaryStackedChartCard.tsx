@@ -75,10 +75,9 @@ const MONTHS_TH = [
 
 // Mid‑tone cool palette to match shadcn blue theme
 const COLORS = {
-  entries: "#60a5fa", // blue-400
-  general: "#38bdf8", // sky-400
+  entries: "#3b82f6", // blue-500 (primary)
+  general: "#06b6d4", // cyan-500 (cool aqua, distinct but not extreme)
 };
-
 // ------------- Helpers -------------
 function monthKey(i: number): MonthEn {
   return MONTHS_EN[i];

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
+  ChartLine,
   ClipboardList,
   FileSpreadsheet,
   Plus,
@@ -19,6 +20,12 @@ export default function ExpensePageHeader({
   return (
     <div className="flex w-full px-2 items-center">
       <div className="flex-1 flex gap-2">
+        <Link className="" href={`/expense/dashboard`} passHref>
+          <Button size="sm" variant="outline">
+            <ChartLine />
+            ภาพรวม
+          </Button>
+        </Link>
         <Link className="" href={`/expense/company/${branch}/create`} passHref>
           <Button size="sm" variant="outline">
             <Plus />

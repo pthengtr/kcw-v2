@@ -14,7 +14,7 @@ import {
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { BranchType } from "@/lib/types/models";
-import { Building2, SquareMenu, Users } from "lucide-react";
+import { Building2, ChartLine, SquareMenu, Users } from "lucide-react";
 
 type NavbarExpenseDropdownMenuProps = { branches: BranchType[] };
 
@@ -33,6 +33,12 @@ export default function NavbarExpenseDropdownMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/expense/dashboard" passHref>
+            <ChartLine />
+            ภาพรวม
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Building2 />

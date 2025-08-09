@@ -7,6 +7,7 @@ import PieChartCard from "./ExpenseSummaryPieChartCard";
 import { createClient } from "@/lib/supabase/client";
 import ExpenseSummaryStackedChartCard from "./ExpenseSummaryStackedChartCard";
 import ExpenseDashboardTable from "./ExpenseDashboardTable/ExpenseDashboardTable";
+import ExpensePageHeader from "../ExpensePageHeader";
 
 export type ItemYearRow = {
   item_name: string;
@@ -127,8 +128,9 @@ export default function ExpenseDashboardPage() {
     }).format(n);
 
   return (
-    <section className="flex justify-center">
-      <div className="w-full grid grid-cols-2 gap-8 p-8 justify-center items-center">
+    <section className="flex flex-col justify-center items-center p-4">
+      <ExpensePageHeader pageTitle="ภาพรวมค่าใช่จ่าย" />
+      <div className="w-fit grid grid-cols-2 gap-8 p-8 justify-center items-center">
         {expenseSummary && (
           <>
             <ExpenseSummaryLineChartCard

@@ -21,7 +21,11 @@ export default function ExpenseDashboardTable({
           total={expenseSummary.length}
           setSelectedRow={undefined}
           initialState={{ pagination: { pageSize: expenseSummary.length } }}
-        ></DataTable>
+        >
+          <div className="flex-1">
+            <h2 className="text-xl font-bold px-8">สรุปค่าใช้จ่ายทั้งหมด</h2>
+          </div>
+        </DataTable>
       )}
     </div>
   );
