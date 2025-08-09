@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   ChartLine,
@@ -9,60 +11,76 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function ExpensePageHeader({
   pageTitle,
 }: {
   pageTitle: string;
 }) {
-  const { branch } = useParams();
+  const { branch } = useParams<{ branch: string }>();
+
+  const links = [
+    {
+      href: `/expense/dashboard`,
+      label: "ภาพรวม",
+      icon: <ChartLine className="h-4 w-4" />,
+    },
+    {
+      href: `/expense/company/${branch}/create`,
+      label: "สร้างบิลใหม่",
+      icon: <Plus className="h-4 w-4" />,
+    },
+    {
+      href: `/expense/company/${branch}/tax-report`,
+      label: "รายงานภาษีซื้อ",
+      icon: <Sheet className="h-4 w-4" />,
+    },
+    {
+      href: `/expense/company/${branch}/voucher`,
+      label: "ใบสำคัญจ่าย",
+      icon: <FileSpreadsheet className="h-4 w-4" />,
+    },
+    {
+      href: `/expense/company/${branch}/manage`,
+      label: "จัดการบิล",
+      icon: <ClipboardList className="h-4 w-4" />,
+    },
+    {
+      href: `/expense/company`,
+      label: "เลือกสาขา",
+      icon: <Store className="h-4 w-4" />,
+    },
+  ];
 
   return (
     <div className="flex w-full px-2 items-center">
       <div className="flex-1 flex gap-2">
-        <Link className="" href={`/expense/dashboard`} passHref>
-          <Button size="sm" variant="outline">
-            <ChartLine />
-            ภาพรวม
-          </Button>
-        </Link>
-        <Link className="" href={`/expense/company/${branch}/create`} passHref>
-          <Button size="sm" variant="outline">
-            <Plus />
-            สร้างบิลใหม่
-          </Button>
-        </Link>
-        <Link
-          className=""
-          href={`/expense/company/${branch}/tax-report`}
-          passHref
-        >
-          <Button size="sm" variant="outline">
-            <Sheet />
-            รายงานภาษีซื้อ
-          </Button>
-        </Link>
-        <Link className="" href={`/expense/company/${branch}/voucher`} passHref>
-          <Button size="sm" variant="outline">
-            <FileSpreadsheet />
-            ใบสำคัญจ่าย
-          </Button>
-        </Link>
-        <Link className="" href={`/expense/company/${branch}/manage`} passHref>
-          <Button size="sm" variant="outline">
-            <ClipboardList />
-            จัดการบิล
-          </Button>
-        </Link>
-        <Link className="" href={`/expense/company`} passHref>
-          <Button size="sm" variant="outline">
-            <Store />
-            เลือกสาขา
-          </Button>
-        </Link>
+        <TooltipProvider delayDuration={200}>
+          {links.map(({ href, label, icon }) => (
+            <Tooltip key={href}>
+              <TooltipTrigger asChild>
+                <Link href={href} aria-label={label}>
+                  <Button size="icon" variant="outline">
+                    {icon}
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{label}</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </TooltipProvider>
       </div>
+
       <h1 className="text-2xl font-bold tracking-wider">{pageTitle}</h1>
-      <div className="flex-1"></div>
+      <div className="flex-1" />
     </div>
   );
 }
