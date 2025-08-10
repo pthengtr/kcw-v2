@@ -11,6 +11,7 @@ import { useContext } from "react";
 import { Search } from "lucide-react";
 import MonthPickerInput from "@/components/common/MonthPickerInput";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
+import { BILL_CYCLE_DATE } from "@/lib/utils";
 
 const searchFormFieldLabel = {
   voucher_month: "สร้างบิลหลังวันที่ 10",
@@ -80,14 +81,14 @@ export default function ExpenseVoucherSearchForm({
     const fromDate = new Date(
       date.getFullYear(),
       date.getMonth(),
-      10
+      BILL_CYCLE_DATE
     ).toLocaleString("en-US");
 
     // 10th of the next month
     const toDate = new Date(
       date.getFullYear(),
       date.getMonth() + 1,
-      10
+      BILL_CYCLE_DATE
     ).toLocaleString("en-US");
 
     query = query.gte("created_at", fromDate).lt("created_at", toDate);

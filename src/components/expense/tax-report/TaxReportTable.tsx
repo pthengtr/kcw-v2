@@ -12,7 +12,7 @@ import {
   defaultTaxReportColumnVisibility,
   taxReportColumn,
 } from "./TaxReportColumn";
-import { getMonthBasedOn10th } from "@/lib/utils";
+import { BILL_CYCLE_DATE, getMonthBasedOn10th } from "@/lib/utils";
 import ExpenseUpdateReceiptButton from "../manage/ExpenseUpdateReceiptButton";
 import TaxReportSearchForm from "./TaxReportSearchForm";
 
@@ -46,14 +46,14 @@ export default function TaxReportTable({
       const fromDate = new Date(
         date.getFullYear(),
         date.getMonth(),
-        10
+        BILL_CYCLE_DATE
       ).toLocaleString("en-US");
 
       // 10th of the next month
       const toDate = new Date(
         date.getFullYear(),
         date.getMonth() + 1,
-        10
+        BILL_CYCLE_DATE
       ).toLocaleString("en-US");
 
       let query = supabase

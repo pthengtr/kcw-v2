@@ -15,7 +15,7 @@ import {
   expenseVoucherColumn,
 } from "./ExpenseVoucherColumn";
 import { createClient } from "@/lib/supabase/client";
-import { getMonthBasedOn10th } from "@/lib/utils";
+import { BILL_CYCLE_DATE, getMonthBasedOn10th } from "@/lib/utils";
 import ExpenseVoucherSearchForm from "./ExpenseVoucherSearchForm";
 import ExpenseVoucherPrintDialog from "./ExpenseVoucherPrintDialog";
 import ExpenseUpdateReceiptButton from "../manage/ExpenseUpdateReceiptButton";
@@ -53,14 +53,14 @@ export default function ExpenseVoucherTable({
       const fromDate = new Date(
         date.getFullYear(),
         date.getMonth(),
-        10
+        BILL_CYCLE_DATE
       ).toLocaleString("en-US");
 
       // 10th of the next month
       const toDate = new Date(
         date.getFullYear(),
         date.getMonth() + 1,
-        10
+        BILL_CYCLE_DATE
       ).toLocaleString("en-US");
 
       let query = supabase

@@ -90,12 +90,14 @@ export type commonUploadFileReturn = Promise<
     }
 >;
 
+export const BILL_CYCLE_DATE = 11;
+
 export function getMonthBasedOn10th(): Date {
   const date = new Date();
   const day = date.getDate();
 
   // If day < 10 → go to previous month
-  if (day < 10) {
+  if (day < BILL_CYCLE_DATE) {
     return new Date(date.getFullYear(), date.getMonth() - 1, 1);
   }
 
