@@ -2,8 +2,8 @@
 
 import { useContext, useEffect } from "react";
 
-import { DataTable } from "../common/DataTable";
-import { ProductContext, ProductContextType } from "./ProductProvider";
+import { DataTable } from "../../common/DataTable";
+import { ProductContext, ProductContextType } from "../ProductProvider";
 import SkuCatalogTableHeader from "./SkuCatalogTableHeader";
 import { skuColumns } from "./SkuCatalogColumns";
 

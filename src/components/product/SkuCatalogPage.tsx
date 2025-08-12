@@ -1,11 +1,17 @@
 // components/sku/SkuCatalogPage.tsx
 
-import SkuCatalogTable from "./SkuCatalogTable";
+import SkuCatalogTable from "./SkuCatalog/SkuCatalogTable";
+import SkuSearchForm, {
+  skuSearchDefaultValues,
+} from "./SkuCatalog/SkuSearchForm";
+import SkuDetail from "./SkuDetail/SkuDetail";
 
 export default function SkuCatalogPage() {
   return (
-    <section className="flex flex-col items-center h-[80vh] p-8">
+    <section className="flex flex-col items-center h-[80vh] p-8 gap-4">
+      <SkuSearchForm defaultValues={skuSearchDefaultValues} />
       <SkuCatalogTable />
+      <SkuDetail />
     </section>
   );
 }

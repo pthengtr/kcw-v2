@@ -103,3 +103,19 @@ export type SkuCatalogRowType = {
   price_ui2: number | string | null;
   on_hand_total: number | string | null;
 };
+
+export type PriceRow = {
+  sku_uuid: string;
+  pack_uom_code: string;
+  qty_per_pack: number | string;
+  unit_price: number | string;
+};
+
+export type StockRow = {
+  sku_uuid: string;
+  sku_code: string;
+  base_uom: string;
+  location_uuid: string | null;
+  location_code: string | null;
+  on_hand: number | string | null;
+};
