@@ -7,8 +7,8 @@ import Form from "@/components/common/Form";
 import type { FieldValues, UseFormReturn } from "react-hook-form";
 import { useContext } from "react";
 import { Search } from "lucide-react";
-import { Input } from "../../ui/input";
-import { ProductContext, ProductContextType } from "../ProductProvider";
+import { Input } from "../ui/input";
+import { ProductContext, ProductContextType } from "./ProductProvider";
 
 const searchFormFieldLabel = {
   barcode: "บาร์โค้ด",

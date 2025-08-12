@@ -11,6 +11,8 @@ export type ProductContextType = {
   selectedSku: SkuCatalogRowType | undefined;
   setSelectedSku: (row: SkuCatalogRowType | undefined) => void;
 
+  openEditPriceDialog: boolean;
+  setOpenEditPriceDialog: (open: boolean) => void;
   openAdjustStockDialog: boolean;
   setOpenAdjustStockDialog: (open: boolean) => void;
   openAddBarcodeDialog: boolean;
@@ -39,6 +41,7 @@ export default function ProductProvider({ children }: ProviderProps) {
   const [skus, setSkus] = useState<SkuCatalogRowType[]>();
   const [selectedSku, setSelectedSku] = useState<SkuCatalogRowType>();
 
+  const [openEditPriceDialog, setOpenEditPriceDialog] = useState(false);
   const [openAdjustStockDialog, setOpenAdjustStockDialog] = useState(false);
   const [openAddBarcodeDialog, setOpenAddBarcodeDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -83,6 +86,8 @@ export default function ProductProvider({ children }: ProviderProps) {
     selectedSku,
     setSelectedSku,
 
+    openEditPriceDialog,
+    setOpenEditPriceDialog,
     openAdjustStockDialog,
     setOpenAdjustStockDialog,
     openAddBarcodeDialog,

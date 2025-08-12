@@ -1,9 +1,7 @@
 // components/sku/SkuCatalogPage.tsx
 
 import SkuCatalogTable from "./SkuCatalog/SkuCatalogTable";
-import SkuSearchForm, {
-  skuSearchDefaultValues,
-} from "./SkuCatalog/SkuSearchForm";
+import SkuSearchForm, { skuSearchDefaultValues } from "./SkuSearchForm";
 import SkuDetail from "./SkuDetail/SkuDetail";
 
 export default function SkuCatalogPage() {
