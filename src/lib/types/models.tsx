@@ -91,3 +91,15 @@ export type ExpenseGeneralType = {
   branch: BranchType;
   expense_item: ExpenseItemType;
 };
+
+export type SkuCatalogRowType = {
+  sku_uuid: string;
+  sku_code: string;
+  product_name: string;
+  base_uom: string;
+  primary_barcode: string | null;
+  price_ui1: number | string | null;
+  price_ui2_pack: number | string | null;
+  price_ui2: number | string | null;
+  on_hand_total: number | string | null;
+};
