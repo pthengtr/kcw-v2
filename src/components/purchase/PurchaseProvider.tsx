@@ -9,26 +9,13 @@ import React, {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { v4 as uuidv4 } from "uuid";
-import { LocationRow, PurchaseLineDraft } from "@/lib/types/models";
-
-type SkuLookupRow = {
-  sku_uuid: string;
-  sku_code: string;
-  uom_code: string; // base uom
-  product: { product_name: string } | null;
-};
-
-type BarcodeLookupRow = {
-  barcode: string;
-  sku: SkuLookupRow | null;
-};
-
-type SkuBasic = {
-  sku_uuid: string;
-  sku_code: string;
-  base_uom: string;
-  product_name: string;
-};
+import {
+  BarcodeLookupRow,
+  LocationRow,
+  PurchaseLineDraft,
+  SkuBasic,
+  SkuLookupRow,
+} from "@/lib/types/models";
 
 export type PurchaseContextType = {
   locations: LocationRow[];

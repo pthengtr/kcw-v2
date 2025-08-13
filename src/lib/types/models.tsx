@@ -140,3 +140,22 @@ export type LocationRow = {
   location_name: string;
   is_active: boolean;
 };
+
+export type SkuLookupRow = {
+  sku_uuid: string;
+  sku_code: string;
+  uom_code: string; // base uom
+  product: { product_name: string } | null;
+};
+
+export type BarcodeLookupRow = {
+  barcode: string;
+  sku: SkuLookupRow | null;
+};
+
+export type SkuBasic = {
+  sku_uuid: string;
+  sku_code: string;
+  base_uom: string;
+  product_name: string;
+};
