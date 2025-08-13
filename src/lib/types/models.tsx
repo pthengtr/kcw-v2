@@ -119,3 +119,22 @@ export type StockRow = {
   location_code: string | null;
   on_hand: number | string | null;
 };
+
+// components/purchase/types.ts
+export type PurchaseLineDraft = {
+  temp_id: string; // client-only id
+  sku_uuid: string;
+  sku_code: string;
+  product_name: string;
+  base_uom: string;
+  qty: number;
+  unit_cost: number;
+  line_total: number;
+};
+
+export type LocationRow = {
+  location_uuid: string;
+  location_code: string;
+  location_name: string;
+  is_active: boolean;
+};

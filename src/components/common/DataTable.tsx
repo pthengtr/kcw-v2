@@ -72,6 +72,7 @@ interface DataTableProps<TData, TValue> {
   customColumnFilters?: ColumnFiltersState;
   setCustomColumnFilters?: Dispatch<SetStateAction<ColumnFiltersState>>;
   exportButton?: boolean;
+  filterInHeader?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -86,6 +87,7 @@ export function DataTable<TData, TValue>({
   customColumnFilters,
   setCustomColumnFilters,
   exportButton = false,
+  filterInHeader = true,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [_columnFilters, _setColumnFilters] = useState<ColumnFiltersState>(
@@ -208,39 +210,40 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ))}
             {/* Filter input for each column */}
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <SortableContext
-                      key={header.id}
-                      items={columnOrder}
-                      strategy={horizontalListSortingStrategy}
-                    >
-                      <DragAlongCell
-                        columnSize={header.column.getSize()}
-                        columnId={header.column.id}
+            {filterInHeader &&
+              table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <SortableContext
+                        key={header.id}
+                        items={columnOrder}
+                        strategy={horizontalListSortingStrategy}
                       >
-                        {header.isPlaceholder ? null : (
-                          <Input
-                            value={
-                              (table
-                                .getColumn(header.id)
-                                ?.getFilterValue() as string) ?? ""
-                            }
-                            onChange={(event) =>
-                              table
-                                .getColumn(header.id)
-                                ?.setFilterValue(event.target.value)
-                            }
-                          ></Input>
-                        )}
-                      </DragAlongCell>
-                    </SortableContext>
-                  );
-                })}
-              </TableRow>
-            ))}
+                        <DragAlongCell
+                          columnSize={header.column.getSize()}
+                          columnId={header.column.id}
+                        >
+                          {header.isPlaceholder ? null : (
+                            <Input
+                              value={
+                                (table
+                                  .getColumn(header.id)
+                                  ?.getFilterValue() as string) ?? ""
+                              }
+                              onChange={(event) =>
+                                table
+                                  .getColumn(header.id)
+                                  ?.setFilterValue(event.target.value)
+                              }
+                            ></Input>
+                          )}
+                        </DragAlongCell>
+                      </SortableContext>
+                    );
+                  })}
+                </TableRow>
+              ))}
           </TableHeader>
           <TableBody>
             {/* Main data table */}
