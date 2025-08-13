@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useContext, useEffect } from "react";
-import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { useParams } from "next/navigation";
 import { DataTable } from "@/components/common/DataTable";
 
@@ -15,6 +14,7 @@ import {
 import { BILL_CYCLE_DATE, getMonthBasedOn10th } from "@/lib/utils";
 import ExpenseUpdateReceiptButton from "../manage/ExpenseUpdateReceiptButton";
 import TaxReportSearchForm from "./TaxReportSearchForm";
+import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 
 type ExpenseReceiptTableProps = {
   children?: React.ReactNode;
@@ -27,12 +27,12 @@ export default function TaxReportTable({
   paginationPageSize,
 }: ExpenseReceiptTableProps) {
   const {
-    selectedReceipt,
-    expenseReceipts,
-    setExpenseReceipts,
-    setTotalReceipt,
-    totalReceipt,
-    setSelectedReceipt,
+    setExpenseTaxReport,
+    expenseTaxReport,
+    setSelectedTaxReport,
+    selectedTaxReport,
+    setTotalTaxReport,
+    totalTaxReport,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: UUID } = useParams();
@@ -40,72 +40,60 @@ export default function TaxReportTable({
   const supabase = createClient();
 
   const getTaxReceipt = useCallback(
-    async function (branch: UUID) {
+    async function (branchParam: UUID) {
       const date = getMonthBasedOn10th();
+
       // 10th of the same month
       const fromDate = new Date(
         date.getFullYear(),
         date.getMonth(),
         BILL_CYCLE_DATE
-      ).toLocaleString("en-US");
+      ).toISOString();
 
       // 10th of the next month
       const toDate = new Date(
         date.getFullYear(),
         date.getMonth() + 1,
         BILL_CYCLE_DATE
-      ).toLocaleString("en-US");
+      ).toISOString();
 
-      let query = supabase
-        .from("expense_receipt")
-        .select(
-          "*, supplier(*, supplier_tax_info(*)), branch(*), payment_method(*)",
-          {
-            count: "exact",
-          }
-        )
-        .gt("vat", 0)
-        .order("receipt_date", { ascending: true })
-        .gte("created_at", fromDate)
-        .lte("created_at", toDate)
-        .limit(500);
-
-      if (branch !== "all") {
-        query = query.eq("branch_uuid", branch);
-      }
-
-      const { data, error, count } = await query;
+      const { data, error } = await supabase.rpc("fn_tax_report", {
+        from_date: fromDate,
+        to_date: toDate,
+        in_branch: branchParam === "all" ? null : branchParam,
+        limit_count: 500,
+        offset_count: 0,
+      });
 
       if (error) {
-        console.log(error);
+        console.error(error);
         return;
       }
 
-      if (data) {
-        setExpenseReceipts(data);
+      if (data && data.length > 0) {
+        setExpenseTaxReport(data); // keep context flexible or change context type to TaxReportRow[]
+        setTotalTaxReport(data[0].total_count ?? data.length);
+      } else {
+        setExpenseTaxReport([]);
+        setTotalTaxReport(0);
       }
-      if (count !== null && count !== undefined) setTotalReceipt(count);
     },
-    [setExpenseReceipts, setTotalReceipt, supabase]
+    [setExpenseTaxReport, setTotalTaxReport, supabase]
   );
 
   useEffect(() => {
     getTaxReceipt(branch);
   }, [branch, getTaxReceipt]);
 
-  const newExpenseReceipts = expenseReceipts.map((receipt) => {
-    return { ...receipt, receipt_number: receipt.receipt_number.slice(-13) };
-  });
-
   return (
     <div className="h-full">
-      {!!expenseReceipts && (
+      {!!expenseTaxReport && (
         <DataTable
           tableName="expenseVoucher"
           columns={taxReportColumn}
-          data={newExpenseReceipts}
-          total={totalReceipt}
-          setSelectedRow={setSelectedReceipt}
+          data={expenseTaxReport}
+          total={totalTaxReport}
+          setSelectedRow={setSelectedTaxReport}
           initialState={{
             columnVisibility: columnVisibility,
             pagination: { pageIndex: 0, pageSize: paginationPageSize },
@@ -127,9 +115,9 @@ export default function TaxReportTable({
             </div>
 
             <div className="flex-1 flex justify-end items-center">
-              {selectedReceipt && (
+              {selectedTaxReport && (
                 <ExpenseUpdateReceiptButton
-                  receipt_uuid={selectedReceipt.receipt_uuid}
+                  receipt_uuid={selectedTaxReport.receipt_uuid}
                   size="sm"
                 />
               )}

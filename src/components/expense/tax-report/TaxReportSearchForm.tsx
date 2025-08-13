@@ -12,6 +12,8 @@ import { Search } from "lucide-react";
 import MonthPickerInput from "@/components/common/MonthPickerInput";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { BILL_CYCLE_DATE } from "@/lib/utils";
+import { useParams } from "next/navigation";
+import { UUID } from "crypto";
 
 const searchFormFieldLabel = {
   tax_report_month: "สร้างบิลหลังวันที่ 10",
@@ -55,9 +57,11 @@ type TaxReportSearchFormProps = {
 export default function TaxReportSearchForm({
   defaultValues,
 }: TaxReportSearchFormProps) {
-  const { setExpenseReceipts, setTotalReceipt } = useContext(
+  const { setExpenseTaxReport, setTotalTaxReport } = useContext(
     ExpenseContext
   ) as ExpenseContextType;
+
+  const { branch }: { branch: UUID } = useParams();
 
   async function searchTaxReceipt(formData: FormData) {
     // type-casting here for convenience
@@ -67,18 +71,6 @@ export default function TaxReportSearchForm({
     };
 
     const supabase = createClient();
-
-    let query = supabase
-      .from("expense_receipt")
-      .select(
-        "*, supplier(*, supplier_tax_info(*)), branch(*), payment_method(*)",
-        {
-          count: "exact",
-        }
-      )
-      .gt("vat", 0)
-      .order("receipt_date", { ascending: true })
-      .limit(500);
 
     const date = new Date(searchData.voucher_month);
     // 10th of the same month
@@ -95,20 +87,26 @@ export default function TaxReportSearchForm({
       BILL_CYCLE_DATE
     ).toLocaleString("en-US");
 
-    query = query.gte("created_at", fromDate).lt("created_at", toDate);
-
-    const { data, error, count } = await query;
+    const { data, error } = await supabase.rpc("fn_tax_report", {
+      from_date: fromDate,
+      to_date: toDate,
+      in_branch: branch,
+      limit_count: 500,
+      offset_count: 0,
+    });
 
     if (error) {
-      console.log(error);
+      console.error(error);
       return;
     }
 
-    if (data) {
-      setExpenseReceipts(data);
+    if (data && data.length > 0) {
+      setExpenseTaxReport(data); // keep context flexible or change context type to TaxReportRow[]
+      setTotalTaxReport(data[0].total_count ?? data.length);
+    } else {
+      setExpenseTaxReport([]);
+      setTotalTaxReport(0);
     }
-
-    if (count !== null && count !== undefined) setTotalReceipt(count);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

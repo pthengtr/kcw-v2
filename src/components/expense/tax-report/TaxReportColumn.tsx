@@ -1,16 +1,14 @@
+// TaxReportColumn.ts
 "use client";
 
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
-import { ExpenseReceiptType } from "@/lib/types/models";
 import {
-  CellContext,
   ColumnDef,
   HeaderContext,
   Row,
+  CellContext,
 } from "@tanstack/react-table";
-
-// This type is used to define the shape of our data.
-// You can use a Zod schema here if you want.
+import { TaxReportRow } from "@/lib/types/models";
 
 export const defaultTaxReportColumnVisibility = {
   ลำดับที่: true,
@@ -28,54 +26,68 @@ export const defaultTaxReportColumnVisibility = {
 export const taxReportFieldLabel = {
   receipt_number: "เลขที่ใบกำกับภาษี",
   receipt_date: "วันที่",
-  "supplier.supplier_name": "ชื่อผู้ขายสินค้า/บริการ",
-  "supplier.supplier_tax_info.tax_payer_id": "เลขที่ผู้เสียภาษี",
-  // total amount before vat
-  // vat
-  // total net
+  supplier_name: "ชื่อผู้ขายสินค้า/บริการ",
+  tax_payer_id: "เลขที่ผู้เสียภาษี",
   voucher_description: "รายการสินค้า",
   remark: "หมายเหตุ",
-};
+  total_before_tax: "มูลค่าสินค้า",
+  vat_only: "ภาษีมูลค่าเพิ่ม",
+  total_after_tax: "ยอดสุทธิ",
+} as const;
 
-export const taxReportColumn: ColumnDef<ExpenseReceiptType>[] = [
+export const taxReportColumn: ColumnDef<TaxReportRow>[] = [
   simpleText("receipt_number"),
   dateThai("receipt_date"),
-  simpleTextFullWidth("supplier.supplier_name"),
-  simpleText("supplier.supplier_tax_info.tax_payer_id"),
-  totalBeforeTax(),
-  taxOnly(),
-  totalAfterTax(),
+  simpleTextFullWidth("supplier_name"),
+  simpleText("tax_payer_id"),
+  moneyRight("total_before_tax", taxReportFieldLabel.total_before_tax),
+  moneyRight("vat_only", taxReportFieldLabel.vat_only),
+  moneyRight("total_after_tax", taxReportFieldLabel.total_after_tax),
   simpleTextFullWidth("voucher_description"),
   simpleText("remark"),
 ];
 
-function simpleText(key: keyof typeof taxReportFieldLabel) {
+function simpleText<K extends keyof typeof taxReportFieldLabel>(key: K) {
+  const title = taxReportFieldLabel[key] ?? (String(key) as string);
   return {
-    id: taxReportFieldLabel[key],
-    accessorKey: key,
-    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
-      <DataTableColumnHeader column={column} title={taxReportFieldLabel[key]} />
+    id: title,
+    accessorKey: key as string,
+    header: ({ column }: HeaderContext<TaxReportRow, unknown>) => (
+      <DataTableColumnHeader column={column} title={title} />
     ),
-  };
+  } as ColumnDef<TaxReportRow>;
 }
 
-function dateThai(
-  key: keyof typeof taxReportFieldLabel,
-  withTime: boolean = false
+function simpleTextFullWidth<K extends keyof typeof taxReportFieldLabel>(
+  key: K
 ) {
+  const title = taxReportFieldLabel[key] ?? (String(key) as string);
   return {
-    id: taxReportFieldLabel[key],
-    accessorKey: key,
-    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
-      <DataTableColumnHeader column={column} title={taxReportFieldLabel[key]} />
+    id: title,
+    accessorKey: key as string,
+    header: ({ column }: HeaderContext<TaxReportRow, unknown>) => (
+      <DataTableColumnHeader column={column} title={title} />
     ),
-    cell: (row: Row<ExpenseReceiptType>) => {
+    cell: (ctx: CellContext<TaxReportRow, unknown>) => {
+      return <div className="min-w-72 w-full">{ctx.getValue() as string}</div>;
+    },
+  } as ColumnDef<TaxReportRow>;
+}
+
+function dateThai(key: keyof typeof taxReportFieldLabel, withTime = false) {
+  const title = taxReportFieldLabel[key] ?? (String(key) as string);
+  return {
+    id: title,
+    accessorKey: key as string,
+    header: ({ column }: HeaderContext<TaxReportRow, unknown>) => (
+      <DataTableColumnHeader column={column} title={title} />
+    ),
+    cell: (row: CellContext<TaxReportRow, unknown>) => {
+      const raw = row.getValue() as string | undefined;
       return (
         <div className="text-right">
-          {!!row.getValue(taxReportFieldLabel[key]) &&
-            new Date(
-              row.getValue(taxReportFieldLabel[key]) as string
-            ).toLocaleString("th-TH", {
+          {!!raw &&
+            new Date(raw).toLocaleString("th-TH", {
               day: "2-digit",
               month: "2-digit",
               year: "2-digit",
@@ -84,20 +96,18 @@ function dateThai(
         </div>
       );
     },
-    filterFn: (
-      row: Row<ExpenseReceiptType>,
-      columnId: string,
-      filterValue: string
-    ) => dateFilterFn(row, columnId, filterValue),
-  };
+    filterFn: (row: Row<TaxReportRow>, columnId: string, filterValue: string) =>
+      dateFilterFn(row, columnId, filterValue),
+  } as ColumnDef<TaxReportRow>;
 }
 
 function dateFilterFn(
-  row: Row<ExpenseReceiptType>,
+  row: Row<TaxReportRow>,
   columnId: string,
   filterValue: string
 ) {
-  return new Date(row.getValue(columnId) as string)
+  const raw = row.getValue(columnId) as string;
+  return new Date(raw)
     .toLocaleString("th-TH", {
       day: "2-digit",
       month: "2-digit",
@@ -106,84 +116,25 @@ function dateFilterFn(
     .includes(filterValue);
 }
 
-function simpleTextFullWidth(key: keyof typeof taxReportFieldLabel) {
+function moneyRight<K extends keyof TaxReportRow>(key: K, title: string) {
   return {
-    id: taxReportFieldLabel[key],
-    accessorKey: key,
-    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
-      <DataTableColumnHeader column={column} title={taxReportFieldLabel[key]} />
+    id: title,
+    accessorKey: key as string,
+    header: ({ column }: HeaderContext<TaxReportRow, unknown>) => (
+      <DataTableColumnHeader column={column} title={title} />
     ),
-    cell: (row: CellContext<ExpenseReceiptType, unknown>) => {
-      return <div className="min-w-72 w-full">{row.getValue() as string}</div>;
-    },
-  };
-}
-
-function taxOnly() {
-  return {
-    id: "ภาษีมูลค่าเพิ่ม",
-    accessorKey: "total_amount",
-    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
-      <DataTableColumnHeader column={column} title="ภาษีมูลค่าเพิ่ม" />
-    ),
-    cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
-      const row = info.row.original;
-      const taxOnly =
-        (row.total_amount - row.discount - row.tax_exempt) * (row.vat / 100);
+    cell: (ctx: CellContext<TaxReportRow, unknown>) => {
+      const n = Number(ctx.getValue());
       return (
         <div className="text-right">
-          {taxOnly.toLocaleString("th-TH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
+          {Number.isFinite(n)
+            ? n.toLocaleString("th-TH", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
+            : ""}
         </div>
       );
     },
-  };
-}
-
-function totalAfterTax() {
-  return {
-    id: "ยอดสุทธิ",
-    accessorKey: "total_amount",
-    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
-      <DataTableColumnHeader column={column} title="ยอดสุทธิ" />
-    ),
-    cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
-      const row = info.row.original;
-      const taxOnly =
-        (row.total_amount - row.discount - row.tax_exempt) * (row.vat / 100);
-      const totalAfterTax = row.total_amount - row.discount + taxOnly;
-      return (
-        <div className="text-right">
-          {totalAfterTax.toLocaleString("th-TH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </div>
-      );
-    },
-  };
-}
-
-function totalBeforeTax() {
-  return {
-    id: "มูลค่าสินค้า",
-    accessorKey: "total_amount",
-    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
-      <DataTableColumnHeader column={column} title="มูลค่าสินค้า" />
-    ),
-    cell: (info: CellContext<ExpenseReceiptType, unknown>) => {
-      const row = info.row.original;
-      const totalBeforeTax = row.total_amount - row.discount;
-      return (
-        <div className="text-right">
-          {totalBeforeTax.toLocaleString("th-TH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </div>
-      );
-    },
-  };
+  } as ColumnDef<TaxReportRow>;
 }

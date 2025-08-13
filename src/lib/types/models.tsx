@@ -159,3 +159,24 @@ export type SkuBasic = {
   base_uom: string;
   product_name: string;
 };
+
+// types/tax-report.ts
+export type TaxReportRow = {
+  receipt_uuid: string;
+  receipt_number: string; // already shortened to last 13 chars
+  receipt_date: string; // ISO date string
+  supplier_name: string | null;
+  tax_payer_id: string | null;
+  voucher_description: string | null;
+  remark: string | null;
+  total_amount: number;
+  discount: number;
+  tax_exempt: number;
+  vat: number;
+  total_before_tax: number;
+  vat_only: number;
+  total_after_tax: number;
+  branch_uuid: string;
+  created_at: string;
+  total_count: number; // same value on every row in the page
+};

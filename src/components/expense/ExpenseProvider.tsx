@@ -27,6 +27,7 @@ import {
   ExpenseReceiptType,
   PaymentMethodType,
   SupplierType,
+  TaxReportRow,
   UUID,
 } from "@/lib/types/models";
 import { getMyCookie } from "@/app/(root)/action";
@@ -93,6 +94,8 @@ export type ExpenseContextType = {
   ) => void;
   selectedBranch: UUID | undefined;
   setSelectedBranch: (selectedBranch: UUID | undefined) => void;
+  selectedTaxReport: TaxReportRow | undefined;
+  setSelectedTaxReport: (selectedTaxReport: TaxReportRow | undefined) => void;
 
   // array group
   expenseReceipts: ExpenseReceiptType[];
@@ -111,6 +114,8 @@ export type ExpenseContextType = {
   setExpenseVouchers: (expenses: ExpenseReceiptType[]) => void;
   generalEntries: ExpenseGeneralType[];
   setGeneralEntries: (generalEntries: ExpenseGeneralType[]) => void;
+  expenseTaxReport: TaxReportRow[];
+  setExpenseTaxReport: (expenseTaxReport: TaxReportRow[]) => void;
 
   // total group
   totalReceipt: number | undefined;
@@ -125,6 +130,8 @@ export type ExpenseContextType = {
   setTotalVouchers: (total: number) => void;
   totalGeneralEntries: number | undefined;
   setTotalGeneralEntries: (total: number) => void;
+  totalTaxReport: number | undefined;
+  setTotalTaxReport: (totalTaxReport: number) => void;
 
   receiptNumber: string;
   setReceiptNumber: (vatInput: string) => void;
@@ -203,6 +210,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [selectedGeneralEntry, setSelectedGeneralEntry] =
     useState<ExpenseGeneralType>();
   const [selectedBranch, setSelectedBranch] = useState<UUID>();
+  const [selectedTaxReport, setSelectedTaxReport] = useState<TaxReportRow>();
 
   // array group
   const [expenseItems, setExpenseItems] = useState<ExpenseItemType[]>([]);
@@ -221,6 +229,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [generalEntries, setGeneralEntries] = useState<ExpenseGeneralType[]>(
     []
   );
+  const [expenseTaxReport, setExpenseTaxReport] = useState<TaxReportRow[]>([]);
 
   // total group
   const [totalReceipt, setTotalReceipt] = useState<number>();
@@ -229,6 +238,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [totalCategory, setTotalCategory] = useState<number>();
   const [totalVouchers, setTotalVouchers] = useState<number>();
   const [totalGeneralEntries, setTotalGeneralEntries] = useState<number>();
+  const [totalTaxReport, setTotalTaxReport] = useState(0);
 
   // image and misc
   const [receiptImageArray, setReceiptImageArray] =
@@ -426,6 +436,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setSelectedGeneralEntry,
     selectedBranch,
     setSelectedBranch,
+    selectedTaxReport,
+    setSelectedTaxReport,
 
     // array group
     expenseReceipts,
@@ -444,6 +456,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setExpenseVouchers,
     generalEntries,
     setGeneralEntries,
+    expenseTaxReport,
+    setExpenseTaxReport,
 
     // total group
     totalReceipt,
@@ -458,6 +472,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setTotalVouchers,
     totalGeneralEntries,
     setTotalGeneralEntries,
+    totalTaxReport,
+    setTotalTaxReport,
 
     // misc
     submitError,
