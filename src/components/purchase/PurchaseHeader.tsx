@@ -1,4 +1,3 @@
-// components/purchase/PurchaseHeader.tsx
 "use client";
 
 import { useContext } from "react";
@@ -23,6 +22,14 @@ export default function PurchaseHeader() {
     setSupplierName,
     docNumber,
     setDocNumber,
+
+    // header adjustments
+    headerDiscount,
+    setHeaderDiscount,
+    freightAmount,
+    setFreightAmount,
+    otherCharge,
+    setOtherCharge,
   } = useContext(PurchaseContext) as PurchaseContextType;
 
   return (
@@ -34,6 +41,7 @@ export default function PurchaseHeader() {
           onChange={(e) => setSupplierName(e.target.value)}
         />
       </div>
+
       <div>
         <Label>สาขา (Location)</Label>
         <Select
@@ -53,11 +61,44 @@ export default function PurchaseHeader() {
           </SelectContent>
         </Select>
       </div>
+
       <div>
         <Label>เลขที่เอกสาร (ถ้ามี)</Label>
         <Input
           value={docNumber}
           onChange={(e) => setDocNumber(e.target.value)}
+        />
+      </div>
+
+      {/* Header adjustments */}
+      <div>
+        <Label>ส่วนลดท้ายบิล</Label>
+        <Input
+          type="number"
+          step="0.01"
+          min="0"
+          value={headerDiscount}
+          onChange={(e) => setHeaderDiscount(Number(e.target.value || 0))}
+        />
+      </div>
+      <div>
+        <Label>ค่าขนส่ง</Label>
+        <Input
+          type="number"
+          step="0.01"
+          min="0"
+          value={freightAmount}
+          onChange={(e) => setFreightAmount(Number(e.target.value || 0))}
+        />
+      </div>
+      <div>
+        <Label>ค่าใช้จ่ายอื่น ๆ</Label>
+        <Input
+          type="number"
+          step="0.01"
+          min="0"
+          value={otherCharge}
+          onChange={(e) => setOtherCharge(Number(e.target.value || 0))}
         />
       </div>
     </div>

@@ -1,4 +1,3 @@
-// components/purchase/CartTable.tsx
 "use client";
 
 import { useContext, useMemo } from "react";

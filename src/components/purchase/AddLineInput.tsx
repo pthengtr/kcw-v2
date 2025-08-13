@@ -1,4 +1,3 @@
-// components/purchase/AddLineInput.tsx
 "use client";
 
 import { useContext, useRef, useState } from "react";

@@ -1,4 +1,3 @@
-// components/purchase/PurchaseProvider.tsx
 "use client";
 
 import React, {
@@ -9,7 +8,6 @@ import React, {
   useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-
 import { v4 as uuidv4 } from "uuid";
 import { LocationRow, PurchaseLineDraft } from "@/lib/types/models";
 
@@ -44,13 +42,26 @@ export type PurchaseContextType = {
   docNumber: string;
   setDocNumber: (s: string) => void;
 
+  // header adjustments (inputs)
+  headerDiscount: number;
+  setHeaderDiscount: (n: number) => void;
+  freightAmount: number;
+  setFreightAmount: (n: number) => void;
+  otherCharge: number;
+  setOtherCharge: (n: number) => void;
+
   lines: PurchaseLineDraft[];
   addLineByInput: (input: string) => Promise<void>; // barcode or sku code
   updateLine: (temp_id: string, patch: Partial<PurchaseLineDraft>) => void;
   removeLine: (temp_id: string) => void;
   clearLines: () => void;
 
-  subTotal: number;
+  // totals
+  totalBeforeTax: number;
+  vatTotal: number;
+  grandTotal: number;
+  subTotal: number; // kept for backward compatibility (sum of qty*unit)
+
   canSubmit: boolean;
   submitting: boolean;
   submit: () => Promise<string | undefined>; // returns purchase_uuid
@@ -72,6 +83,12 @@ export default function PurchaseProvider({
   const [selectedLocation, setSelectedLocation] = useState<string>();
   const [supplierName, setSupplierName] = useState<string>("");
   const [docNumber, setDocNumber] = useState<string>("");
+
+  // header adjustments
+  const [headerDiscount, setHeaderDiscount] = useState<number>(0);
+  const [freightAmount, setFreightAmount] = useState<number>(0);
+  const [otherCharge, setOtherCharge] = useState<number>(0);
+
   const [lines, setLines] = useState<PurchaseLineDraft[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
@@ -90,6 +107,7 @@ export default function PurchaseProvider({
     })();
   }, [supabase]);
 
+  // legacy subtotal (qty * unit)
   const subTotal = useMemo(
     () =>
       lines.reduce(
@@ -98,6 +116,31 @@ export default function PurchaseProvider({
       ),
     [lines]
   );
+
+  // new totals that mirror DB generated columns (exclusive VAT)
+  const { totalBeforeTax, vatTotal, grandTotal } = useMemo(() => {
+    let base = 0;
+    let vat = 0;
+    for (const r of lines) {
+      const qty = Number(r.qty || 0);
+      const unit = Number(r.unit_cost || 0);
+      const disc = Number(r.line_discount_amount || 0);
+      const rate = Number(r.effective_tax_rate || 0) / 100;
+
+      const gross = +(qty * unit).toFixed(2);
+      const taxable = +Math.max(0, gross - disc).toFixed(2);
+      const v = +(taxable * rate).toFixed(2);
+
+      base += taxable;
+      vat += v;
+    }
+    const total = +(base + vat).toFixed(2);
+    return {
+      totalBeforeTax: +base.toFixed(2),
+      vatTotal: +vat.toFixed(2),
+      grandTotal: total,
+    };
+  }, [lines]);
 
   const addLineByInput = useCallback(
     async (input: string) => {
@@ -116,9 +159,7 @@ export default function PurchaseProvider({
             sku_uuid,
             sku_code,
             uom_code,
-            product:product_uuid (
-              product_name
-            )
+            product:product_uuid ( product_name )
           )
         `
           )
@@ -147,9 +188,7 @@ export default function PurchaseProvider({
           sku_uuid,
           sku_code,
           uom_code,
-          product:product_uuid (
-            product_name
-          )
+          product:product_uuid ( product_name )
         `
           )
           .ilike("sku_code", `%${q}%`)
@@ -183,9 +222,7 @@ export default function PurchaseProvider({
         if (exists) {
           const qty = Number(exists.qty) + 1;
           return prev.map((x) =>
-            x.temp_id === exists.temp_id
-              ? { ...x, qty, line_total: qty * Number(exists.unit_cost || 0) }
-              : x
+            x.temp_id === exists.temp_id ? { ...x, qty } : x
           );
         }
         return [
@@ -197,8 +234,11 @@ export default function PurchaseProvider({
             base_uom: hit.base_uom,
             qty: 1,
             unit_cost: 0,
-            line_total: 0,
-          },
+            unit_cost_inc_tax: 0,
+            // NEW fields for your latest schema
+            line_discount_amount: 0,
+            effective_tax_rate: 7.0, // default; adjust if you prefer 0
+          } as PurchaseLineDraft,
           ...prev,
         ];
       });
@@ -212,9 +252,35 @@ export default function PurchaseProvider({
         prev.map((r) => {
           if (r.temp_id !== temp_id) return r;
           const next = { ...r, ...patch };
+
+          // When inclusive price is changed
+          if (patch.unit_cost_inc_tax !== undefined) {
+            const rate = Number(next.effective_tax_rate || 0) / 100;
+            next.unit_cost = +(
+              Number(patch.unit_cost_inc_tax) /
+              (1 + rate)
+            ).toFixed(6);
+          }
+
+          // When exclusive price is changed
+          if (
+            patch.unit_cost !== undefined &&
+            patch.unit_cost_inc_tax === undefined
+          ) {
+            const rate = Number(next.effective_tax_rate || 0) / 100;
+            next.unit_cost_inc_tax = +(
+              Number(patch.unit_cost) *
+              (1 + rate)
+            ).toFixed(6);
+          }
+
+          // Keep all numeric
           next.qty = Number(next.qty || 0);
           next.unit_cost = Number(next.unit_cost || 0);
-          next.line_total = Number(next.qty) * Number(next.unit_cost);
+          next.unit_cost_inc_tax = Number(next.unit_cost_inc_tax || 0);
+          next.line_discount_amount = Number(next.line_discount_amount || 0);
+          next.effective_tax_rate = Number(next.effective_tax_rate || 0);
+
           return next;
         })
       );
@@ -244,6 +310,8 @@ export default function PurchaseProvider({
         sku_uuid: l.sku_uuid,
         qty: Number(l.qty),
         unit_cost: Number(l.unit_cost),
+        line_discount_amount: Number(l.line_discount_amount ?? 0),
+        effective_tax_rate: Number(l.effective_tax_rate ?? 0),
       }));
 
       const { data, error } = await supabase.rpc(
@@ -252,7 +320,10 @@ export default function PurchaseProvider({
           in_supplier_name: supplierName,
           in_location_uuid: selectedLocation,
           in_doc_number: docNumber || null,
-          in_doc_date: null, // server current_date
+          in_doc_date: null, // server uses current_date
+          in_header_discount: headerDiscount ?? 0,
+          in_freight_amount: freightAmount ?? 0,
+          in_other_charge: otherCharge ?? 0,
           in_lines: payload,
         }
       );
@@ -265,6 +336,10 @@ export default function PurchaseProvider({
       // success → clear cart
       clearLines();
       setDocNumber("");
+      setHeaderDiscount(0);
+      setFreightAmount(0);
+      setOtherCharge(0);
+
       return data as unknown as string; // purchase_uuid
     } finally {
       setSubmitting(false);
@@ -276,6 +351,9 @@ export default function PurchaseProvider({
     lines,
     selectedLocation,
     supplierName,
+    headerDiscount,
+    freightAmount,
+    otherCharge,
     supabase,
   ]);
 
@@ -288,12 +366,25 @@ export default function PurchaseProvider({
     setSupplierName,
     docNumber,
     setDocNumber,
+
+    headerDiscount,
+    setHeaderDiscount,
+    freightAmount,
+    setFreightAmount,
+    otherCharge,
+    setOtherCharge,
+
     lines,
     addLineByInput,
     updateLine,
     removeLine,
     clearLines,
+
+    totalBeforeTax,
+    vatTotal,
+    grandTotal,
     subTotal,
+
     canSubmit,
     submitting,
     submit,

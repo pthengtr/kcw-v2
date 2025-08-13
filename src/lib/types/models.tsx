@@ -122,14 +122,16 @@ export type StockRow = {
 
 // components/purchase/types.ts
 export type PurchaseLineDraft = {
-  temp_id: string; // client-only id
+  temp_id: string;
   sku_uuid: string;
-  sku_code: string;
-  product_name: string;
-  base_uom: string;
+  sku_code?: string;
+  product_name?: string;
+  base_uom?: string;
   qty: number;
-  unit_cost: number;
-  line_total: number;
+  unit_cost: number; // exclusive VAT (stored in DB)
+  unit_cost_inc_tax: number; // inclusive VAT (UI only)
+  line_discount_amount: number;
+  effective_tax_rate: number;
 };
 
 export type LocationRow = {

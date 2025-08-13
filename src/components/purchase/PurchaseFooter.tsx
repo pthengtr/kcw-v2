@@ -1,4 +1,3 @@
-// components/purchase/PurchaseFooter.tsx
 "use client";
 
 import { useContext } from "react";
@@ -11,18 +10,36 @@ const money = new Intl.NumberFormat("th-TH", {
 });
 
 export default function PurchaseFooter() {
-  const { subTotal, canSubmit, submitting, submit, submitError } = useContext(
-    PurchaseContext
-  ) as PurchaseContextType;
+  const {
+    totalBeforeTax,
+    vatTotal,
+    grandTotal,
+    canSubmit,
+    submitting,
+    submit,
+    submitError,
+  } = useContext(PurchaseContext) as PurchaseContextType;
 
   return (
     <div className="flex flex-col items-center justify-between">
       <div className="text-sm text-destructive h-6">{submitError ?? ""}</div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-6">
         <div className="text-right">
-          <div className="text-xs text-muted-foreground">ยอดรวม</div>
+          <div className="text-xs text-muted-foreground">ก่อน VAT</div>
           <div className="text-lg font-semibold tabular-nums">
-            {money.format(subTotal)}
+            {money.format(totalBeforeTax)}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-muted-foreground">VAT</div>
+          <div className="text-lg font-semibold tabular-nums">
+            {money.format(vatTotal)}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-muted-foreground">รวมทั้งสิ้น</div>
+          <div className="text-lg font-semibold tabular-nums">
+            {money.format(grandTotal)}
           </div>
         </div>
         <Button

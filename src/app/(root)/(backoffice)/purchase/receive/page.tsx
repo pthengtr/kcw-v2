@@ -1,22 +1,18 @@
-// app/(backoffice)/purchase/receive/page.tsx
 "use client";
+import { Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
 
-import PurchaseProvider from "@/components/purchase/PurchaseProvider";
-import PurchaseHeader from "@/components/purchase/PurchaseHeader";
-import AddLineInput from "@/components/purchase/AddLineInput";
-import CartTable from "@/components/purchase/CartTable";
-import PurchaseFooter from "@/components/purchase/PurchaseFooter";
-
-export default function PurchaseReceivePage() {
-  return (
-    <PurchaseProvider>
-      <div className="p-4 flex flex-col items-center gap-8">
-        <h1 className="text-xl font-semibold">รับสินค้า (Purchase Receive)</h1>
-        <PurchaseHeader />
-        <AddLineInput />
-        <CartTable />
-        <PurchaseFooter />
+const PurchaseReceivePage = dynamic(
+  () => import("@/components/purchase/PurchaseReceivePage"),
+  {
+    ssr: false, // ⛔ disables server-side rendering
+    loading: () => (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    </PurchaseProvider>
-  );
+    ),
+  }
+);
+export default function Create() {
+  return <PurchaseReceivePage />;
 }

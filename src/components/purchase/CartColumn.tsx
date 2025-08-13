@@ -1,4 +1,3 @@
-// components/purchase/CartColumns.tsx
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
@@ -51,7 +50,7 @@ export function makeCartColumns(
         const r = row.original;
         return (
           <Input
-            className="w-24"
+            className="w-24 text-right"
             type="number"
             step="1"
             min="0"
@@ -66,12 +65,12 @@ export function makeCartColumns(
     },
     {
       id: "unit_cost",
-      header: "Unit Cost",
+      header: "Unit Cost (Excl.)",
       cell: ({ row }) => {
         const r = row.original;
         return (
           <Input
-            className="w-28"
+            className="w-28 text-right"
             type="number"
             step="0.01"
             min="0"
@@ -87,12 +86,88 @@ export function makeCartColumns(
       meta: { align: "right" },
     },
     {
-      id: "line_total",
+      id: "unit_cost_inc_tax",
+      header: "Unit Cost (Incl.)",
+      cell: ({ row }) => {
+        const r = row.original;
+        return (
+          <Input
+            className="w-28 text-right"
+            type="number"
+            step="0.01"
+            min="0"
+            value={r.unit_cost_inc_tax}
+            onChange={(e) =>
+              actions.updateLine(r.temp_id, {
+                unit_cost_inc_tax: Number(e.target.value),
+              })
+            }
+          />
+        );
+      },
+      meta: { align: "right" },
+    },
+    {
+      id: "line_discount_amount",
+      header: "Disc",
+      cell: ({ row }) => {
+        const r = row.original;
+        return (
+          <Input
+            className="w-24 text-right"
+            type="number"
+            step="0.01"
+            min="0"
+            value={r.line_discount_amount ?? 0}
+            onChange={(e) =>
+              actions.updateLine(r.temp_id, {
+                line_discount_amount: Number(e.target.value),
+              })
+            }
+          />
+        );
+      },
+      meta: { align: "right" },
+    },
+    {
+      id: "effective_tax_rate",
+      header: "VAT %",
+      cell: ({ row }) => {
+        const r = row.original;
+        return (
+          <Input
+            className="w-20 text-right"
+            type="number"
+            step="0.01"
+            min="0"
+            value={r.effective_tax_rate ?? 0}
+            onChange={(e) =>
+              actions.updateLine(r.temp_id, {
+                effective_tax_rate: Number(e.target.value),
+              })
+            }
+          />
+        );
+      },
+      meta: { align: "right" },
+    },
+    {
+      id: "line_total_preview",
       header: "Line Total",
-      accessorFn: (r) => r.qty * r.unit_cost,
-      cell: ({ row }) => (
+      accessorFn: (r) => {
+        const qty = Number(r.qty || 0);
+        const unit = Number(r.unit_cost || 0);
+        const disc = Number(r.line_discount_amount || 0);
+        const rate = Number(r.effective_tax_rate || 0) / 100;
+
+        const gross = +(qty * unit).toFixed(2);
+        const taxable = +Math.max(0, gross - disc).toFixed(2);
+        const vat = +(taxable * rate).toFixed(2);
+        return +(taxable + vat).toFixed(2);
+      },
+      cell: ({ getValue }) => (
         <div className="text-right tabular-nums">
-          {money.format(row.original.line_total)}
+          {money.format(getValue<number>())}
         </div>
       ),
       meta: { align: "right" },
