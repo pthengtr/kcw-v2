@@ -49,8 +49,8 @@ export default function Branch() {
             {branches.map((branch) => (
               <CardIcon
                 key={branch.branch_name}
-                path={`/expense/company/${branch.branch_uuid}`}
-                description={branch.branch_name}
+                href={`/expense/company/${branch.branch_uuid}`}
+                label={branch.branch_name}
                 icon="Store"
               />
             ))}

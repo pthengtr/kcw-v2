@@ -47,23 +47,23 @@ export default function Branch() {
           </div>
           <CardIconMenu>
             <CardIcon
-              path="/expense/dashboard"
-              description="ภาพรวม"
+              href="/expense/dashboard"
+              label="ภาพรวม"
               icon="ChartLine"
             />
             <CardIcon
-              path="/expense/company"
-              description="ค่าใช้จ่ายบริษัท"
+              href="/expense/company"
+              label="ค่าใช้จ่ายบริษัท"
               icon="Building2"
             />
             <CardIcon
-              path="/expense/general"
-              description="ค่าใช้จ่ายทั่วไป"
+              href="/expense/general"
+              label="ค่าใช้จ่ายทั่วไป"
               icon="Users"
             />
             <CardIcon
-              path="/expense/item"
-              description="ประเภทค่าใช้จ่าย"
+              href="/expense/item"
+              label="ประเภทค่าใช้จ่าย"
               icon="SquareMenu"
             />
           </CardIconMenu>
