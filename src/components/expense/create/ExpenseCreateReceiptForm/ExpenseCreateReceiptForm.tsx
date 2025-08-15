@@ -282,7 +282,7 @@ export default function ExpenseCreateReceiptForm({
       voucher_description: createEntries.reduce((prev, current) =>
         current.entry_amount > prev.entry_amount ? current : prev
       ).entry_detail,
-      ...(pathName.includes("credit-note")
+      ...(pathName.includes("credit-note") || selectedRefReceipt
         ? {
             doc_type: "CREDIT_NOTE",
             ref_receipt_uuid: selectedRefReceipt?.receipt_uuid,
@@ -322,7 +322,13 @@ export default function ExpenseCreateReceiptForm({
     }
     console.log(dataRpc);
     if (dataRpc) {
-      toast.success("สร้างบิลค่าใช้จ่ายใหม่สำเร็จ");
+      toast.success(
+        `${update ? "แก้ไข" : "สร้าง"}${
+          pathName.includes("credit-note") || selectedRefReceipt
+            ? "ใบลดหนี้"
+            : "บิลค่าใช้จ่าย"
+        }สำเร็จ`
+      );
       router.back();
     }
   }
