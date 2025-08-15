@@ -21,6 +21,7 @@ export const defaultTaxReportColumnVisibility = {
   ยอดสุทธิ: true,
   รายการสินค้า: true,
   หมายเหตุ: true,
+  ประเภท: false,
 };
 
 export const taxReportFieldLabel = {
@@ -33,6 +34,7 @@ export const taxReportFieldLabel = {
   total_before_tax: "มูลค่าสินค้า",
   vat_only: "ภาษีมูลค่าเพิ่ม",
   total_after_tax: "ยอดสุทธิ",
+  doc_type: "ประเภท",
 } as const;
 
 export const taxReportColumn: ColumnDef<TaxReportRow>[] = [
@@ -45,6 +47,7 @@ export const taxReportColumn: ColumnDef<TaxReportRow>[] = [
   moneyRight("total_after_tax", taxReportFieldLabel.total_after_tax),
   simpleTextFullWidth("voucher_description"),
   simpleText("remark"),
+  simpleText("doc_type"),
 ];
 
 function simpleText<K extends keyof typeof taxReportFieldLabel>(key: K) {

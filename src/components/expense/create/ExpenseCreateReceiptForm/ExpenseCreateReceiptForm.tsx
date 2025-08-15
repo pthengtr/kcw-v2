@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 import { DatePickerInput } from "@/components/common/DatePickerInput";
 import { createClient } from "@/lib/supabase/client";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import ExpensePaymentMethodSelectInput from "@/components/expense/ExpensePaymentMethodSelectInput";
 import { toast } from "sonner";
 import FormExpenseReceipt from "./FormExpenseReceipt";
@@ -20,11 +20,24 @@ import ExpenseSelectSupplierInput from "./ExpenseSelectSupplierInput";
 import { BranchType, ExpenseReceiptType } from "@/lib/types/models";
 import ExpenseReceiptNumberInput from "./ExpenseReceiptNumberInput";
 import ExpenseTaxExemptInput from "./ExpenseTaxExemptInput";
+import RefReceiptByNumber from "./RefReceiptByNumber";
 
 export type ExpenseCreateReceiptFormDefaultType = {
   payment_uuid: string;
   remark: string;
-  supplier_uuid: string;
+  supplier_uuid?: string;
+  receipt_number: string;
+  receipt_date: Date;
+  vat: string;
+  withholding: string;
+  discount: string;
+  // tax_exempt: string;
+};
+
+export type ExpenseCreateCreditNoteFormDefaultType = {
+  payment_uuid: string;
+  remark: string;
+  ref_number?: string;
   receipt_number: string;
   receipt_date: Date;
   vat: string;
@@ -46,6 +59,19 @@ export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefa
     remark: "",
   };
 
+export const expenseCreateCreditNoteFormDefaultValues: ExpenseCreateCreditNoteFormDefaultType =
+  {
+    ref_number: "",
+    payment_uuid: "",
+    receipt_number: "",
+    receipt_date: new Date(),
+    vat: "7",
+    withholding: "0",
+    discount: "0",
+    // tax_exempt: "0",
+    remark: "",
+  };
+
 const expenseCretaeReceiptFormFieldLabel = {
   supplier_uuid: "ชื่อบริษัท",
   receipt_number: "เลขที่เอกสาร",
@@ -56,6 +82,7 @@ const expenseCretaeReceiptFormFieldLabel = {
   withholding: "หัก ณ ที่จ่าย",
   discount: "ส่วนลดท้ายบิล",
   tax_exempt: "ยกเว้นภาษี",
+  ref_number: "อ้างอิงเอกสาร",
 };
 
 function getFieldLabel(field: FieldValues) {
@@ -74,6 +101,10 @@ function getFormInput(
   form: UseFormReturn<ExpenseCreateReceiptFormDefaultType>
 ) {
   switch (field.name) {
+    case "ref_number":
+      return <RefReceiptByNumber />;
+      break;
+
     case "vat":
       return <ExpenseVatSelectInput />;
       break;
@@ -113,8 +144,9 @@ function getFormInput(
 }
 
 export const formSchema = z.object({
+  ref_number: z.string().optional(),
   payment_uuid: z.string(),
-  supplier_uuid: z.string(),
+  supplier_uuid: z.string().optional(),
   receipt_number: z.string(),
   vat: z.string(),
   withholding: z.string(),
@@ -128,7 +160,9 @@ export const formSchema = z.object({
 });
 
 type ExpenseCreateReceiptFormProps = {
-  defaultValues: ExpenseCreateReceiptFormDefaultType;
+  defaultValues:
+    | ExpenseCreateReceiptFormDefaultType
+    | ExpenseCreateCreditNoteFormDefaultType;
   update?: boolean;
 };
 
@@ -150,11 +184,14 @@ export default function ExpenseCreateReceiptForm({
     setReceiptNameFormError,
     receiptNumber,
     taxExemptInput,
+    selectedRefReceipt,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
 
   const router = useRouter();
+
+  const pathName = usePathname();
 
   async function createReceipt(formData: FormData) {
     // type-casting here for convenience
@@ -221,7 +258,7 @@ export default function ExpenseCreateReceiptForm({
     if (!selectedSupplier || !selectedSupplier || !selectedPaymentMethod)
       return;
 
-    const createReceiptFormData: ExpenseReceiptType = {
+    const createReceiptFormData: Omit<ExpenseReceiptType, "doc_type"> = {
       receipt_number: receiptNumber,
       receipt_date: formData.get("receipt_date") as string,
       remark: formData.get("remark") as string,
@@ -245,6 +282,12 @@ export default function ExpenseCreateReceiptForm({
       voucher_description: createEntries.reduce((prev, current) =>
         current.entry_amount > prev.entry_amount ? current : prev
       ).entry_detail,
+      ...(pathName.includes("credit-note")
+        ? {
+            doc_type: "CREDIT_NOTE",
+            ref_receipt_uuid: selectedRefReceipt?.receipt_uuid,
+          }
+        : {}),
     };
 
     console.log(selectedReceipt?.receipt_uuid);

@@ -32,6 +32,8 @@ export default function ExpenseUpdatePage() {
     setDeleteEntries,
     setReceiptNumber,
     setTaxExemptInput,
+    setSelectedRefReceipt,
+    selectedRefReceipt,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const [branchName, setBranchName] = useState("");
@@ -59,7 +61,9 @@ export default function ExpenseUpdatePage() {
     async function getReceipt() {
       const query = supabase
         .from("expense_receipt")
-        .select("*, supplier(*), payment_method(*)")
+        .select(
+          "*, supplier(*), payment_method(*), expense_receipt:ref_receipt_uuid (*)"
+        )
         .eq("receipt_uuid", receiptId)
         .overrideTypes<ExpenseReceiptType[], { merge: false }>();
 
@@ -77,6 +81,7 @@ export default function ExpenseUpdatePage() {
         setTaxExemptInput(receipt.tax_exempt.toString());
         setSelectedSupplier(receipt.supplier);
         setSelectedPaymentMethod(receipt.payment_method);
+        setSelectedRefReceipt(receipt.expense_receipt);
       }
     }
 
@@ -90,6 +95,7 @@ export default function ExpenseUpdatePage() {
     setReceiptNumber,
     setSelectedPaymentMethod,
     setSelectedReceipt,
+    setSelectedRefReceipt,
     setSelectedSupplier,
     setTaxExemptInput,
     setVatInput,
@@ -109,7 +115,11 @@ export default function ExpenseUpdatePage() {
               </Button>
               {/* </Link> */}
             </div>
-            <h1 className="text-2xl font-bold tracking-wider">{`แก้ไขบิลค่าใชัจ่าย ${branchName}`}</h1>
+            <h1 className="text-2xl font-bold tracking-wider">
+              {selectedRefReceipt
+                ? `แก้ไขใบลดหนี้ ${branchName}`
+                : `แก้ไขบิลค่าใชัจ่าย ${branchName}`}
+            </h1>
             <div className="flex-1 flex justify-end gap-2"></div>
           </div>
 

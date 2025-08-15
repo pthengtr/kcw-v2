@@ -27,6 +27,7 @@ export const defaultExpenseReceiptColumnVisibility = {
   สาขา: false,
   พนักงาน: false,
   ส่งบัญชี: false,
+  ประเภท: false,
 };
 
 export const expenseReceiptFieldLabel = {
@@ -41,6 +42,7 @@ export const expenseReceiptFieldLabel = {
   user_id: "พนักงาน",
   discount: "ส่วนลดท้ายบิล",
   tax_exempt: "ยกเว้นภาษี",
+  doc_type: "ประเภท",
 };
 
 export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
@@ -60,6 +62,7 @@ export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
   simpleText("remark"),
   simpleText("user_id"),
   submitToAccount(),
+  simpleText("doc_type"),
 ];
 
 function taxOnly() {

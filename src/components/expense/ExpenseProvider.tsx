@@ -15,6 +15,7 @@ import * as z from "zod";
 
 import { DefaultValues, useForm, UseFormReturn } from "react-hook-form";
 import {
+  ExpenseCreateCreditNoteFormDefaultType,
   ExpenseCreateReceiptFormDefaultType,
   expenseCreateReceiptFormDefaultValues,
   formSchema,
@@ -96,6 +97,8 @@ export type ExpenseContextType = {
   setSelectedBranch: (selectedBranch: UUID | undefined) => void;
   selectedTaxReport: TaxReportRow | undefined;
   setSelectedTaxReport: (selectedTaxReport: TaxReportRow | undefined) => void;
+  selectedRefReceipt: ExpenseReceiptType | undefined;
+  setSelectedRefReceipt: (selectedRow: ExpenseReceiptType | undefined) => void;
 
   // array group
   expenseReceipts: ExpenseReceiptType[];
@@ -143,7 +146,9 @@ export type ExpenseContextType = {
   setTaxExemptInput: (vatInput: string) => void;
   withholdingInput: string;
   setWithholdingInput: (vatInput: string) => void;
-  formExpenseReceipt: UseFormReturn<ExpenseCreateReceiptFormDefaultType>;
+  formExpenseReceipt: UseFormReturn<
+    ExpenseCreateReceiptFormDefaultType | ExpenseCreateCreditNoteFormDefaultType
+  >;
   resetCreateReceiptForm: () => void;
   handleDeleteCreateEntry: (entry_uuid: UUID, update?: boolean) => void;
   paymentMethodFormError: string | undefined;
@@ -211,6 +216,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     useState<ExpenseGeneralType>();
   const [selectedBranch, setSelectedBranch] = useState<UUID>();
   const [selectedTaxReport, setSelectedTaxReport] = useState<TaxReportRow>();
+  const [selectedRefReceipt, setSelectedRefReceipt] =
+    useState<ExpenseReceiptType>();
 
   // array group
   const [expenseItems, setExpenseItems] = useState<ExpenseItemType[]>([]);
@@ -268,8 +275,10 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
 
   const formExpenseReceipt = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues:
-      expenseCreateReceiptFormDefaultValues as DefaultValues<ExpenseCreateReceiptFormDefaultType>,
+    defaultValues: expenseCreateReceiptFormDefaultValues as DefaultValues<
+      | ExpenseCreateReceiptFormDefaultType
+      | ExpenseCreateCreditNoteFormDefaultType
+    >,
   });
 
   const supabase = createClient();
@@ -438,6 +447,8 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setSelectedBranch,
     selectedTaxReport,
     setSelectedTaxReport,
+    selectedRefReceipt,
+    setSelectedRefReceipt,
 
     // array group
     expenseReceipts,

@@ -72,7 +72,12 @@ export default function BranchExpense() {
             />
             <CardIcon
               href={`/expense/company/${branch}/create`}
-              label="สร้าง"
+              label="สร้างบิลค่าใชัจ่าย"
+              icon="ClipboardPlus"
+            />
+            <CardIcon
+              href={`/expense/company/${branch}/credit-note`}
+              label="สร้างใบลดหนี้"
               icon="FilePlus2"
             />
           </CardIconMenu>

@@ -19,6 +19,9 @@ export type ExpenseReceiptType = {
   created_at: string;
   voucher_description: string;
   tax_exempt: number;
+  doc_type: string;
+  ref_receipt_uuid?: UUID | undefined;
+  expense_receipt?: ExpenseReceiptType | undefined;
 };
 
 export type ExpenseEntryType = {

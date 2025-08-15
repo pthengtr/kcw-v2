@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { Trash } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 
 import ExpenseCreateReceiptSummary from "./ExpenseCreateReceiptSummary";
@@ -22,6 +22,8 @@ import ExpensePageHeader from "../ExpensePageHeader";
 export default function ExpenseCreatePage() {
   const { selectedEntry, handleDeleteCreateEntry, resetCreateReceiptForm } =
     useContext(ExpenseContext) as ExpenseContextType;
+
+  const pathName = usePathname();
 
   const [branchName, setBranchName] = useState("");
 
@@ -51,7 +53,13 @@ export default function ExpenseCreatePage() {
 
   return (
     <section className="flex flex-col items-center p-4 gap-4">
-      <ExpensePageHeader pageTitle={`สร้างบิลค่าใช้จ่ายบริษัท ${branchName}`} />
+      <ExpensePageHeader
+        pageTitle={
+          pathName.includes("/credit-note")
+            ? `สร้างใบลดหนี้บริษัท ${branchName}`
+            : `สร้างบิลค่าใช้จ่ายบริษัท ${branchName}`
+        }
+      />
       <div className="flex w-full justify-center h-[80vh]">
         <div className="p-2 h-full">
           <ExpenseCreateReceiptFormCard />

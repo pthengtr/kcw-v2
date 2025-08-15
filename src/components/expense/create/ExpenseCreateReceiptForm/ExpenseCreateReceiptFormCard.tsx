@@ -1,9 +1,11 @@
 import { useContext, useEffect } from "react";
 import { ExpenseContext, ExpenseContextType } from "../../ExpenseProvider";
 import ExpenseCreateReceiptForm, {
+  expenseCreateCreditNoteFormDefaultValues,
   expenseCreateReceiptFormDefaultValues,
 } from "./ExpenseCreateReceiptForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePathname } from "next/navigation";
 
 type ExpenseCreateReceiptFormTabProps = {
   update?: boolean;
@@ -12,9 +14,10 @@ type ExpenseCreateReceiptFormTabProps = {
 export default function ExpenseCreateReceiptFormCard({
   update = false,
 }: ExpenseCreateReceiptFormTabProps) {
-  const { selectedReceipt, formExpenseReceipt } = useContext(
-    ExpenseContext
-  ) as ExpenseContextType;
+  const { selectedReceipt, formExpenseReceipt, selectedRefReceipt } =
+    useContext(ExpenseContext) as ExpenseContextType;
+
+  const pathName = usePathname();
 
   useEffect(() => {
     if (update && selectedReceipt) {
@@ -31,9 +34,19 @@ export default function ExpenseCreateReceiptFormCard({
     } else {
       formExpenseReceipt.reset(expenseCreateReceiptFormDefaultValues);
     }
-  }, [formExpenseReceipt, selectedReceipt, update]);
+  }, [
+    formExpenseReceipt,
+    pathName,
+    selectedReceipt,
+    selectedRefReceipt?.receipt_uuid,
+    update,
+  ]);
 
-  const defaultValues = expenseCreateReceiptFormDefaultValues;
+  const defaultValues =
+    pathName.includes("credit-note") ||
+    selectedReceipt?.doc_type === "CREDIT_NOTE"
+      ? expenseCreateCreditNoteFormDefaultValues
+      : expenseCreateReceiptFormDefaultValues;
 
   return (
     <Card className="">

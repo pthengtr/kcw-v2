@@ -18,6 +18,7 @@ export const defaultExpenseVoucherColumnVisibility = {
   วันที่: true,
   รายละเอียด: true,
   จำนวนเงินสุทธิ: true,
+  ประเภท: false,
 };
 
 export const expenseVoucherFieldLabel = {
@@ -26,6 +27,7 @@ export const expenseVoucherFieldLabel = {
   voucher_description: "รายละเอียด",
   voucherId: "เลขที่ใบสำคัญจ่าย",
   totalNet: "จำนวนเงินสุทธิ",
+  doc_type: "ประเภท",
 };
 
 export const expenseVoucherColumn: ColumnDef<ExtendedExpenseReceiptType>[] = [
@@ -34,6 +36,7 @@ export const expenseVoucherColumn: ColumnDef<ExtendedExpenseReceiptType>[] = [
   dateThai("receipt_date"),
   simpleTextFullWidth("voucher_description"),
   numberFloat("totalNet"),
+  simpleText("doc_type"),
 ];
 
 function simpleText(key: keyof typeof expenseVoucherFieldLabel) {
