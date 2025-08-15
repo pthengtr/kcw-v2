@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import {
   ChartLine,
   ClipboardList,
+  ClipboardPlus,
+  FilePlus2,
   FileSpreadsheet,
-  Plus,
   Sheet,
   Store,
 } from "lucide-react";
@@ -34,7 +35,12 @@ export default function ExpensePageHeader({
     {
       href: `/expense/company/${branch}/create`,
       label: "สร้างบิลใหม่",
-      icon: <Plus className="h-4 w-4" />,
+      icon: <FilePlus2 className="h-4 w-4" />,
+    },
+    {
+      href: `/expense/company/${branch}/credit-note`,
+      label: "สร้างใบลดหนี้ไหม่",
+      icon: <ClipboardPlus className="h-4 w-4" />,
     },
     {
       href: `/expense/company/${branch}/tax-report`,
