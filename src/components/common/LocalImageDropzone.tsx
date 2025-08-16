@@ -149,14 +149,16 @@ export function LocalImageDropzone({
         <div className="flex flex-col items-center gap-2">
           <Upload className="h-6 w-6" />
           {isDragActive ? (
-            <p className="text-sm text-primary font-medium">Drop files here…</p>
+            <p className="text-sm text-primary font-medium">วางไฟล์ที่นี่…</p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Drag & drop images here, or click to select
+              วางไฟล์ที่นี่ หรือ คลิกเพื่อเลือกไฟล์
             </p>
           )}
           <p className="text-xs text-muted-foreground">
-            {multiple ? "Multiple files supported" : "Single file only"}
+            {multiple
+              ? "สามารถเลือกได้มากกว่าหนึ่งไฟล์"
+              : "เลือกได้ไฟล์เดียวเท่านั้น"}
           </p>
         </div>
       </div>
