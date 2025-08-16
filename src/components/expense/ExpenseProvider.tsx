@@ -294,6 +294,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setSelectedSupplier(undefined);
     setPaymentMethodFormError(undefined);
     setSupplierFormError(undefined);
+    setSelectedRefReceipt(undefined);
     setReceiptEntries([]);
     setCreateEntries([]);
     setReceiptNumber("");
