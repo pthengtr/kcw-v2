@@ -66,7 +66,7 @@ export default function ExpenseDeleteReceiptButton() {
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="destructive">
+          <Button variant="destructive" size="sm">
             <Trash2 /> ลบบิลนี้
           </Button>
         </DialogTrigger>

@@ -15,6 +15,8 @@ import { BILL_CYCLE_DATE, getMonthBasedOn10th } from "@/lib/utils";
 import ExpenseUpdateReceiptButton from "../manage/ExpenseUpdateReceiptButton";
 import TaxReportSearchForm from "./TaxReportSearchForm";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
+import CommonImageManagerDialog from "@/components/common/CommonImageManagerDialog";
+import { Button } from "@/components/ui/button";
 
 type ExpenseReceiptTableProps = {
   children?: React.ReactNode;
@@ -114,12 +116,25 @@ export default function TaxReportTable({
               />
             </div>
 
-            <div className="flex-1 flex justify-end items-center">
+            <div className="flex-1 flex justify-end items-center gap-4">
               {selectedTaxReport && (
-                <ExpenseUpdateReceiptButton
-                  receipt_uuid={selectedTaxReport.receipt_uuid}
-                  size="sm"
-                />
+                <>
+                  <CommonImageManagerDialog
+                    receiptUuid={selectedTaxReport.receipt_uuid}
+                    folder="public/expense_receipts"
+                    bucket="pictures"
+                    makePublicUrl
+                    trigger={
+                      <Button variant="outline" size="sm">
+                        อัปโหลด/ดูรูป
+                      </Button>
+                    }
+                  />
+                  <ExpenseUpdateReceiptButton
+                    receipt_uuid={selectedTaxReport.receipt_uuid}
+                    size="sm"
+                  />
+                </>
               )}
             </div>
           </div>

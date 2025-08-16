@@ -19,6 +19,8 @@ import { BILL_CYCLE_DATE, getMonthBasedOn10th } from "@/lib/utils";
 import ExpenseVoucherSearchForm from "./ExpenseVoucherSearchForm";
 import ExpenseVoucherPrintDialog from "./ExpenseVoucherPrintDialog";
 import ExpenseUpdateReceiptButton from "../manage/ExpenseUpdateReceiptButton";
+import CommonImageManagerDialog from "@/components/common/CommonImageManagerDialog";
+import { Button } from "@/components/ui/button";
 
 type ExpenseReceiptTableProps = {
   children?: React.ReactNode;
@@ -229,6 +231,17 @@ export default function ExpenseVoucherTable({
             <div className="flex-1 flex items-center justify-end gap-4">
               {selectedVoucher && (
                 <>
+                  <CommonImageManagerDialog
+                    receiptUuid={selectedVoucher.receipt_uuid}
+                    folder="public/expense_receipts"
+                    bucket="pictures"
+                    makePublicUrl
+                    trigger={
+                      <Button variant="outline" size="sm">
+                        อัปโหลด/ดูรูป
+                      </Button>
+                    }
+                  />
                   <ExpenseUpdateReceiptButton
                     receipt_uuid={selectedVoucher.receipt_uuid}
                     size="sm"

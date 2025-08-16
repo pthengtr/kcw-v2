@@ -10,6 +10,8 @@ import {
 } from "./ExpenseEntryColumn";
 import ExpenseUpdateReceiptButton from "./ExpenseUpdateReceiptButton";
 import ExpenseDeleteReceiptButton from "./ExpenseDeleteReceiptButton";
+import CommonImageManagerDialog from "@/components/common/CommonImageManagerDialog";
+import { Button } from "@/components/ui/button";
 
 type ExpenseEntryTableProps = {
   columnVisibility: typeof defaultReceiptEntryColumnVisibility | undefined;
@@ -93,7 +95,19 @@ export default function ExpenseEntryTable({
                   {selectedReceipt.receipt_number}
                 </div>
               </div>
+              <CommonImageManagerDialog
+                receiptUuid={selectedReceipt.receipt_uuid}
+                folder="public/expense_receipts"
+                bucket="pictures"
+                makePublicUrl
+                trigger={
+                  <Button variant="outline" size="sm">
+                    อัปโหลด/ดูรูป
+                  </Button>
+                }
+              />
               <ExpenseUpdateReceiptButton
+                size="sm"
                 receipt_uuid={selectedReceipt.receipt_uuid}
               />
               <ExpenseDeleteReceiptButton />
