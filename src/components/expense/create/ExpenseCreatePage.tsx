@@ -18,10 +18,16 @@ import ExpenseCreateReceiptSummary from "./ExpenseCreateReceiptSummary";
 import ExpenseCreateReceiptFormCard from "./ExpenseCreateReceiptForm/ExpenseCreateReceiptFormCard";
 import ExpenseCreateBillHeader from "../ExpenseCreateBillHeader";
 import ExpensePageHeader from "../ExpensePageHeader";
+import { LocalImageDropzone } from "@/components/common/LocalImageDropzone";
 
 export default function ExpenseCreatePage() {
-  const { selectedEntry, handleDeleteCreateEntry, resetCreateReceiptForm } =
-    useContext(ExpenseContext) as ExpenseContextType;
+  const {
+    selectedEntry,
+    handleDeleteCreateEntry,
+    resetCreateReceiptForm,
+    pendingFiles,
+    setPendingFiles,
+  } = useContext(ExpenseContext) as ExpenseContextType;
 
   const pathName = usePathname();
 
@@ -61,8 +67,13 @@ export default function ExpenseCreatePage() {
         }
       />
       <div className="flex w-full justify-center h-[80vh]">
-        <div className="p-2 h-full">
+        <div className="p-2 h-full flex flex-col gap-4">
           <ExpenseCreateReceiptFormCard />
+          <LocalImageDropzone
+            value={pendingFiles}
+            onChange={setPendingFiles}
+            multiple
+          />
         </div>
         <div className="p-2 flex flex-col gap-2 h-full">
           <ExpenseCreateEntryTable

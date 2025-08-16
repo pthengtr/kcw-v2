@@ -17,6 +17,7 @@ import ExpenseCreateReceiptFormCard from "../create/ExpenseCreateReceiptForm/Exp
 import ExpenseCreateReceiptSummary from "../create/ExpenseCreateReceiptSummary";
 import { ExpenseReceiptType } from "@/lib/types/models";
 import ExpenseCreateBillHeader from "../ExpenseCreateBillHeader";
+import { LocalImageDropzone } from "@/components/common/LocalImageDropzone";
 
 export default function ExpenseUpdatePage() {
   const {
@@ -34,6 +35,8 @@ export default function ExpenseUpdatePage() {
     setTaxExemptInput,
     setSelectedRefReceipt,
     selectedRefReceipt,
+    pendingFiles,
+    setPendingFiles,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const [branchName, setBranchName] = useState("");
@@ -124,8 +127,13 @@ export default function ExpenseUpdatePage() {
           </div>
 
           <div className="flex w-full justify-center h-[80vh]">
-            <div className="p-2 h-full">
+            <div className="p-2 h-full flex flex-col gap-4">
               <ExpenseCreateReceiptFormCard update />
+              <LocalImageDropzone
+                value={pendingFiles}
+                onChange={setPendingFiles}
+                multiple
+              />
             </div>
             <div className="p-2 flex flex-col gap-2 h-full">
               <ExpenseCreateEntryTable

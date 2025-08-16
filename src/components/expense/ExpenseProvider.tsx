@@ -168,6 +168,9 @@ export type ExpenseContextType = {
   setReceiptNameFormError: (receiptNameFormError: string | undefined) => void;
   receiptDateFormError: string | undefined;
   setReceiptDateFormError: (receiptDateFormError: string | undefined) => void;
+
+  pendingFiles: File[];
+  setPendingFiles: React.Dispatch<React.SetStateAction<File[]>>;
 };
 
 // const [receiptNameFormError, setReceiptNameFormError] = useState<
@@ -272,6 +275,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [receiptDateFormError, setReceiptDateFormError] = useState<
     string | undefined
   >();
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const formExpenseReceipt = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -302,6 +306,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     setDiscountInput("0");
     setWithholdingInput("0");
     setTaxExemptInput("0");
+    setPendingFiles([]);
   }, []);
 
   function handleDeleteCreateEntry(entry_uuid: UUID, update = false) {
@@ -523,6 +528,9 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     branchFormError,
     setBranchFormError,
     getMyCookieClient,
+
+    pendingFiles,
+    setPendingFiles,
   };
 
   return (

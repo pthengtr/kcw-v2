@@ -215,7 +215,7 @@ export default function CommonImagesCarousel({
   return (
     <div className={className}>
       <div className="flex items-center justify-between mb-2">
-        <div className="text-sm font-medium">Existing images</div>
+        <div className="text-sm font-medium">รูปที่ลิงก์กับรายการนี้</div>
         <div className="flex items-center gap-2">
           {showRefresh && (
             <Button
@@ -232,9 +232,9 @@ export default function CommonImagesCarousel({
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <div className="text-sm text-muted-foreground">กำลังโหลด…</div>
       ) : !hasImages ? (
-        <div className="text-sm text-muted-foreground">No images found.</div>
+        <div className="text-sm text-muted-foreground">ไม่พบรูปภาพ...</div>
       ) : (
         <Carousel className="w-full max-w-xl mx-auto">
           <CarouselContent>

@@ -21,6 +21,7 @@ import { BranchType, ExpenseReceiptType } from "@/lib/types/models";
 import ExpenseReceiptNumberInput from "./ExpenseReceiptNumberInput";
 import ExpenseTaxExemptInput from "./ExpenseTaxExemptInput";
 import RefReceiptByNumber from "./RefReceiptByNumber";
+import { uploadReceiptFiles } from "@/lib/utils";
 
 export type ExpenseCreateReceiptFormDefaultType = {
   payment_uuid: string;
@@ -185,6 +186,7 @@ export default function ExpenseCreateReceiptForm({
     receiptNumber,
     taxExemptInput,
     selectedRefReceipt,
+    pendingFiles,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const { branch }: { branch: string } = useParams();
@@ -290,10 +292,10 @@ export default function ExpenseCreateReceiptForm({
         : {}),
     };
 
-    console.log(selectedReceipt?.receipt_uuid);
-    console.log(JSON.stringify(createReceiptFormData));
-    console.log(JSON.stringify(createEntries));
-    console.log(JSON.stringify(deleteEntries));
+    // console.log(selectedReceipt?.receipt_uuid);
+    // console.log(JSON.stringify(createReceiptFormData));
+    // console.log(JSON.stringify(createEntries));
+    // console.log(JSON.stringify(deleteEntries));
 
     const rpcFunction = update
       ? "fn_update_expense_receipt"
@@ -322,6 +324,11 @@ export default function ExpenseCreateReceiptForm({
     }
     console.log(dataRpc);
     if (dataRpc) {
+      uploadReceiptFiles(
+        update ? selectedReceipt?.receipt_uuid : dataRpc,
+        pendingFiles
+      );
+
       toast.success(
         `${update ? "แก้ไข" : "สร้าง"}${
           pathName.includes("credit-note") || selectedRefReceipt

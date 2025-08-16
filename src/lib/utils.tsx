@@ -326,3 +326,28 @@ export function numberToThaiWords(number: number) {
 
   return bahtText + "บาท" + satangText;
 }
+
+export async function uploadReceiptFiles(
+  receiptUuid: string,
+  files: File[],
+  {
+    bucket = "pictures",
+    folder = "public/expense_receipts",
+    upsert = true,
+  }: { bucket?: string; folder?: string; upsert?: boolean } = {}
+) {
+  const supabase = createClient();
+  const storage = supabase.storage;
+  const prefix = `${folder}/${receiptUuid}`;
+
+  const results = [];
+  for (const f of files) {
+    const path = `${prefix}/${f.name}`;
+    const { data, error } = await storage.from(bucket).upload(path, f, {
+      upsert,
+    });
+    if (error) throw error;
+    results.push(data);
+  }
+  return results;
+}
