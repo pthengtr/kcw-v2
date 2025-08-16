@@ -342,12 +342,80 @@ export async function uploadReceiptFiles(
 
   const results = [];
   for (const f of files) {
-    const path = `${prefix}/${f.name}`;
+    // Generate random UUID + keep original extension
+    const ext = f.name.includes(".") ? f.name.split(".").pop() : "";
+    const randomName = ext
+      ? `${crypto.randomUUID()}.${ext}`
+      : crypto.randomUUID();
+    const path = `${prefix}/${randomName}`;
+
     const { data, error } = await storage.from(bucket).upload(path, f, {
       upsert,
     });
     if (error) throw error;
-    results.push(data);
+    results.push({
+      ...data,
+      originalName: f.name,
+      uploadedName: randomName,
+      path,
+    });
   }
   return results;
+}
+
+// filename-utils.ts
+export function getExt(name: string) {
+  const i = name.lastIndexOf(".");
+  return i > -1 ? name.slice(i + 1).toLowerCase() : "";
+}
+
+/**
+ * Make a storage-safe ASCII file name.
+ * - Lowercase
+ * - Strip diacritics
+ * - Replace non [a-z0-9._-] with '-'
+ * - Collapse multiple '-' and trim leading/trailing '.' or '-'
+ * - Keep original extension (if present)
+ */
+export function normalizeFileName(
+  original: string,
+  opts?: { maxBase?: number }
+) {
+  const { maxBase = 64 } = opts ?? {};
+  const ext = getExt(original);
+  const base = ext ? original.slice(0, -(ext.length + 1)) : original;
+
+  // Remove diacritics, to ASCII-ish
+  let norm = base
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "") // strip combining marks
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-") // keep safe chars
+    .replace(/-+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "");
+
+  if (!norm) {
+    // If everything was non-ASCII (e.g., entirely Thai), fallback
+    const slug = crypto.randomUUID().slice(0, 8);
+    norm = `file-${slug}`;
+  }
+
+  // Limit base length (keep room for ext)
+  if (norm.length > maxBase) norm = norm.slice(0, maxBase);
+
+  return ext ? `${norm}.${ext}` : norm;
+}
+
+/** Create a renamed File with the normalized name (if the environment supports it). */
+export function renameFileKeepingContent(file: File, newName: string): File {
+  try {
+    // Most modern browsers support this
+    return new File([file], newName, {
+      type: file.type,
+      lastModified: file.lastModified,
+    });
+  } catch {
+    // Fallback: if File construction isn’t supported, just return original
+    return file;
+  }
 }

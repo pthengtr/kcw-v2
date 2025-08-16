@@ -5,38 +5,31 @@ import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { X, Upload } from "lucide-react";
 import clsx from "clsx";
+import { normalizeFileName, renameFileKeepingContent } from "@/lib/utils";
 
 export type LocalImageDropzoneProps = {
-  /** Controlled value (optional). If provided, component becomes controlled. */
   value?: File[];
-  /** Called whenever the internal file list changes. */
   onChange?: (files: File[]) => void;
-
-  /** Accept images only by default */
   accept?: Record<string, string[]>;
-  /** Maximum file size in bytes (optional) */
   maxSize?: number;
-  /** Allow multiple files (default: true) */
   multiple?: boolean;
-
-  /** Optional classNames */
   className?: string;
   dropAreaClassName?: string;
   gridClassName?: string;
-
-  /** Prevent duplicate files by name+size (default: true) */
   preventDuplicates?: boolean;
-
-  /** Start with these files (uncontrolled only) */
   defaultFiles?: File[];
+
+  /** NEW: normalize filenames to storage-safe ASCII (default: true) */
+  normalizeFilenames?: boolean;
+  /** NEW: run a custom normalizer; if provided, overrides default normalizeFileName */
+  fileNameNormalizer?: (original: string) => string;
 };
 
 type Preview = {
   file: File;
-  /** For quick preview */
   objectUrl: string;
-  /** Simple id for react list keys */
   id: string;
+  displayName: string; // normalized or original
 };
 
 export function LocalImageDropzone({
@@ -50,10 +43,11 @@ export function LocalImageDropzone({
   gridClassName,
   preventDuplicates = true,
   defaultFiles = [],
+  normalizeFilenames = true,
+  fileNameNormalizer,
 }: LocalImageDropzoneProps) {
   const isControlled = Array.isArray(value);
   const [files, setFiles] = React.useState<File[]>(defaultFiles);
-
   const list = isControlled ? value! : files;
 
   const setList = React.useCallback(
@@ -66,12 +60,12 @@ export function LocalImageDropzone({
 
   const [previews, setPreviews] = React.useState<Preview[]>([]);
 
-  // Build/cleanup object URLs for thumbnails
   React.useEffect(() => {
     const next: Preview[] = list.map((f, i) => ({
       file: f,
       objectUrl: URL.createObjectURL(f),
       id: `${f.name}-${f.size}-${i}`,
+      displayName: f.name,
     }));
     setPreviews(next);
     return () => next.forEach((p) => URL.revokeObjectURL(p.objectUrl));
@@ -79,7 +73,14 @@ export function LocalImageDropzone({
 
   const addFiles = React.useCallback(
     (incoming: File[]) => {
-      let merged = [...list, ...incoming];
+      const normalized = incoming.map((f) => {
+        if (!normalizeFilenames) return f;
+        const nn = (fileNameNormalizer ?? normalizeFileName)(f.name);
+        // If the normalized name differs, create a renamed File
+        return nn !== f.name ? renameFileKeepingContent(f, nn) : f;
+      });
+
+      let merged = [...list, ...normalized];
 
       if (preventDuplicates) {
         const seen = new Set<string>();
@@ -93,7 +94,7 @@ export function LocalImageDropzone({
 
       setList(merged);
     },
-    [list, preventDuplicates, setList]
+    [fileNameNormalizer, list, normalizeFilenames, preventDuplicates, setList]
   );
 
   const removeAt = React.useCallback(
@@ -109,12 +110,21 @@ export function LocalImageDropzone({
   const onDrop = React.useCallback(
     (accepted: File[]) => {
       if (!multiple && accepted.length > 0) {
-        setList([accepted[0]]);
+        // normalize the first one only
+        const f = accepted[0];
+        const nn = normalizeFilenames
+          ? (fileNameNormalizer ?? normalizeFileName)(f.name)
+          : f.name;
+        const renamed =
+          normalizeFilenames && nn !== f.name
+            ? renameFileKeepingContent(f, nn)
+            : f;
+        setList([renamed]);
         return;
       }
       addFiles(accepted);
     },
-    [addFiles, multiple, setList]
+    [addFiles, fileNameNormalizer, multiple, normalizeFilenames, setList]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -126,7 +136,6 @@ export function LocalImageDropzone({
 
   return (
     <div className={clsx("space-y-4", className)}>
-      {/* Drop Area */}
       <div
         {...getRootProps()}
         className={clsx(
@@ -143,18 +152,15 @@ export function LocalImageDropzone({
             <p className="text-sm text-primary font-medium">Drop files here…</p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              วางรูปภาพที่นี่ หรือ คลิกเพื่อค้นหาไฟล์
+              Drag & drop images here, or click to select
             </p>
           )}
           <p className="text-xs text-muted-foreground">
-            {multiple
-              ? "สามารถเลือกได้มากกว่าหนึ่งไฟล์"
-              : "รองรับหนี่งไฟล์เท่านั้น"}
+            {multiple ? "Multiple files supported" : "Single file only"}
           </p>
         </div>
       </div>
 
-      {/* Selected Files Grid */}
       {list.length > 0 && (
         <>
           <div className="flex items-center justify-between">
@@ -180,7 +186,7 @@ export function LocalImageDropzone({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={p.objectUrl}
-                  alt={p.file.name}
+                  alt={p.displayName}
                   className="aspect-square w-full object-cover"
                 />
                 <button
@@ -192,7 +198,9 @@ export function LocalImageDropzone({
                 >
                   <X className="h-4 w-4" />
                 </button>
-                <div className="px-2 py-1 text-xs truncate">{p.file.name}</div>
+                <div className="px-2 py-1 text-xs truncate">
+                  {p.displayName}
+                </div>
               </div>
             ))}
           </div>
