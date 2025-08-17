@@ -22,15 +22,39 @@ import { PartyKind, PartyOption } from "@/lib/types/models";
 type Props = {
   selectedParty: PartyOption | undefined;
   setSelectedParty: (party: PartyOption | undefined) => void;
-  /** "SUPPLIER" shows SUPPLIER + BOTH, "CUSTOMER" shows CUSTOMER + BOTH.
-   *  "BOTH" shows BOTH only, "ANY" shows all. */
   kind?: PartyKind | "ANY";
   error?: string;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  limit?: number; // default 20
+  limit?: number;
 };
+
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Highlight all case-insensitive occurrences of any token from q within text. */
+function highlightText(text: string, q: string) {
+  const norm = (q || "").replace(/[%_]/g, " ").trim();
+  if (!norm) return text;
+
+  const tokens = Array.from(new Set(norm.split(/\s+/).filter(Boolean)));
+  if (tokens.length === 0) return text;
+
+  const pattern = new RegExp(`(${tokens.map(escapeRegExp).join("|")})`, "gi");
+  const parts = text.split(pattern);
+
+  return parts.map((part, idx) =>
+    idx % 2 === 1 ? (
+      <mark key={idx} className="bg-yellow-200/60 rounded px-0.5">
+        {part}
+      </mark>
+    ) : (
+      <span key={idx}>{part}</span>
+    )
+  );
+}
 
 export default function PartySelect({
   selectedParty,
@@ -67,8 +91,6 @@ export default function PartySelect({
 
   async function fetchOptions(query: string) {
     setLoading(true);
-
-    // Build search pattern; keep % for ilike in .or()
     const like = `%${(query || "").replace(/[%_]/g, " ").trim()}%`;
 
     let req = supabase
@@ -94,11 +116,9 @@ export default function PartySelect({
       .limit(limit);
 
     if (query?.trim()) {
-      // Search name OR code
       req = req.or(`party_name.ilike.${like},party_code.ilike.${like}`);
     }
 
-    // Kind filter using .in() to avoid multiple .or() chains
     if (kind === "SUPPLIER") {
       req = req.in("kind", ["SUPPLIER", "BOTH"]);
     } else if (kind === "CUSTOMER") {
@@ -180,28 +200,34 @@ export default function PartySelect({
                 {options.map((opt) => {
                   const isSelected =
                     selectedParty?.party_uuid === opt.party_uuid;
-                  // Example: derive a default bank for display (optional)
                   const defaultBank =
                     opt.banks.find((b) => b.is_default) || opt.banks[0];
+
                   return (
                     <CommandItem
                       key={opt.party_uuid}
                       value={opt.party_uuid}
                       onSelect={() => {
-                        setSelectedParty(opt); // includes all FKs
+                        setSelectedParty(opt);
                         setOpen(false);
                       }}
                       className="flex items-center justify-between"
                     >
                       <div className="min-w-0">
                         <div className="truncate font-medium">
-                          {opt.party_name}
+                          {highlightText(opt.party_name, q)}
                         </div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {opt.party_code || "—"} · {opt.kind}
-                          {defaultBank
-                            ? ` · ${defaultBank.bank_name} (${defaultBank.bank_account_number})`
-                            : ""}
+                          {highlightText(opt.party_code || "—", q)} · {opt.kind}
+                          {defaultBank ? (
+                            <>
+                              {" · "}
+                              {highlightText(
+                                `${defaultBank.bank_name} (${defaultBank.bank_account_number})`,
+                                q
+                              )}
+                            </>
+                          ) : null}
                         </div>
                       </div>
                       <Check
