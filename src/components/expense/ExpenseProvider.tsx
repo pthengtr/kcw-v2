@@ -26,8 +26,8 @@ import {
   ExpenseGeneralType,
   ExpenseItemType,
   ExpenseReceiptType,
+  PartyOption,
   PaymentMethodType,
-  SupplierType,
   TaxReportRow,
   UUID,
 } from "@/lib/types/models";
@@ -71,8 +71,8 @@ export type ExpenseContextType = {
   setColumnFilters: Dispatch<SetStateAction<ColumnFiltersState>>;
 
   // set selected group
-  selectedSupplier: SupplierType | undefined;
-  setSelectedSupplier: (selectedRow: SupplierType | undefined) => void;
+  selectedSupplier: PartyOption | undefined;
+  setSelectedSupplier: (selectedRow: PartyOption | undefined) => void;
   selectedReceipt: ExpenseReceiptType | undefined;
   setSelectedReceipt: (selectedRow: ExpenseReceiptType | undefined) => void;
   selectedEntry: ExpenseEntryType | undefined;
@@ -211,7 +211,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [selectedItem, setSelectedItem] = useState<ExpenseItemType>();
   const [selectedCategory, setSelectedCategory] =
     useState<ExpenseCategoryType>();
-  const [selectedSupplier, setSelectedSupplier] = useState<SupplierType>();
+  const [selectedSupplier, setSelectedSupplier] = useState<PartyOption>();
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethodType>();
   const [selectedVoucher, setSelectedVoucher] = useState<ExpenseReceiptType>();
@@ -327,7 +327,7 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     async function (branch: UUID) {
       let query = supabase
         .from("expense_receipt")
-        .select("*, supplier(*), branch(*), payment_method(*)", {
+        .select("*, party(*), branch(*), payment_method(*)", {
           count: "exact",
         })
         .order("receipt_date", { ascending: false })

@@ -265,7 +265,7 @@ export default function ExpenseCreateReceiptForm({
       receipt_date: formData.get("receipt_date") as string,
       remark: formData.get("remark") as string,
       receipt_uuid: "", // dummy value
-      supplier_uuid: selectedSupplier?.supplier_uuid,
+      party_uuid: selectedSupplier?.party_uuid,
       supplier: selectedSupplier,
       payment_uuid: selectedPaymentMethod.payment_uuid,
       payment_method: selectedPaymentMethod,

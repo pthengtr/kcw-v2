@@ -12,6 +12,7 @@ import {
 } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { PartyOption } from "@/lib/types/models";
 
 export type ReminderContextType = {
   selectedRow: ReminderType | undefined;
@@ -39,6 +40,8 @@ export type ReminderContextType = {
   setSelectBankInfo: (selectedBankInfo: BankInfoType | undefined) => void;
   supplierName: string;
   setSupplierName: (supplierName: string) => void;
+  selectedSupplier: PartyOption | undefined;
+  setSelectedSupplier: (selectedSupplier: PartyOption | undefined) => void;
   billImageArray: storageObjectType[] | undefined;
   setBillImageArray: (billImageArray: storageObjectType[] | undefined) => void;
   paymentImageArray: storageObjectType[] | undefined;
@@ -81,6 +84,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [saveBankInfo, setSaveBankInfo] = useState<CheckedState>(false);
   const [selectedBankInfo, setSelectBankInfo] = useState<BankInfoType>();
   const [supplierName, setSupplierName] = useState("");
+  const [selectedSupplier, setSelectedSupplier] = useState<PartyOption>();
   const [billImageArray, setBillImageArray] = useState<storageObjectType[]>();
   const [paymentImageArray, setPaymentImageArray] =
     useState<storageObjectType[]>();
@@ -236,6 +240,8 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setSelectBankInfo,
     supplierName,
     setSupplierName,
+    selectedSupplier,
+    setSelectedSupplier,
     billImageArray,
     setBillImageArray,
     paymentImageArray,

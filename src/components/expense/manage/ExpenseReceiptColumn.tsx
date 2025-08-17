@@ -32,7 +32,7 @@ export const defaultExpenseReceiptColumnVisibility = {
 
 export const expenseReceiptFieldLabel = {
   receipt_uuid: "รายการเลขที่",
-  "supplier.supplier_name": "บริษัท",
+  "party.party_name": "บริษัท",
   receipt_number: "เลขที่เอกสาร",
   receipt_date: "วันที่",
   total_amount: "ก่อนภาษี",
@@ -47,7 +47,7 @@ export const expenseReceiptFieldLabel = {
 
 export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
   numberInt("receipt_uuid"),
-  simpleTextFullWidth("supplier.supplier_name"),
+  simpleTextFullWidth("party.party_name"),
   simpleText("receipt_number"),
   dateThai("receipt_date"),
   numberFloat("total_amount"),

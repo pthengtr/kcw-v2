@@ -87,9 +87,9 @@ export default function ExpenseEntryTable({
                   }`}
                 >
                   <div className="font-bold">
-                    {selectedReceipt.supplier?.supplier_code}
+                    {selectedReceipt.supplier?.party_code}
                   </div>
-                  <div>{selectedReceipt.supplier?.supplier_name}</div>
+                  <div>{selectedReceipt.supplier?.party_name}</div>
                 </div>
                 <div className="text-xl italic">
                   {selectedReceipt.receipt_number}

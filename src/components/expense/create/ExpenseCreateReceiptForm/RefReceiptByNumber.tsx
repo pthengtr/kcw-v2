@@ -124,9 +124,9 @@ export default function RefReceiptByNumber({
                 <div className="text-xs opacity-70">
                   {formatDate(selected.receipt_date)} • ฿
                   {fmtMoney(selected.total_amount)} •{" "}
-                  {selected.supplier?.supplier_code ?? ""}{" "}
-                  {selected.supplier?.supplier_name
-                    ? `— ${selected.supplier.supplier_name}`
+                  {selected.supplier?.party_code ?? ""}{" "}
+                  {selected.supplier?.party_name
+                    ? `— ${selected.supplier.party_name}`
                     : ""}
                 </div>
               </div>
@@ -171,9 +171,9 @@ export default function RefReceiptByNumber({
               </div>
               <div className="text-xs opacity-70">
                 {formatDate(rec.receipt_date)} • ฿{fmtMoney(rec.total_amount)} •{" "}
-                {rec.supplier?.supplier_code ?? ""}
-                {rec.supplier?.supplier_name
-                  ? ` — ${rec.supplier.supplier_name}`
+                {rec.supplier?.party_code ?? ""}
+                {rec.supplier?.party_name
+                  ? ` — ${rec.supplier.party_name}`
                   : ""}
               </div>
             </DropdownMenuItem>

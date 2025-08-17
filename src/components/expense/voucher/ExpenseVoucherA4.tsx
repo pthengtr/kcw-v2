@@ -100,7 +100,7 @@ export default function ExpenseVoucherA4({
         {/* Payment to */}
         <div className="grid grid-cols-[1fr,auto] w-fit">
           <div className="pr-4">จ่ายให้</div>
-          <div>{selectedExtendedVoucher.supplier.supplier_name}</div>
+          <div>{selectedExtendedVoucher.supplier.party_name}</div>
           <div className="pr-4">โดย</div>
           <div>
             {selectedExtendedVoucher.payment_method.payment_description}

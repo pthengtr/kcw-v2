@@ -12,10 +12,10 @@ export type ExpenseReceiptType = {
   discount: number;
   branch_uuid: UUID;
   payment_uuid: UUID;
-  supplier_uuid: UUID;
+  party_uuid: UUID;
   branch: BranchType;
   payment_method: PaymentMethodType;
-  supplier: SupplierType;
+  supplier: PartyOption;
   created_at: string;
   voucher_description: string;
   tax_exempt: number;
@@ -52,20 +52,6 @@ export type ExpenseCategoryType = {
 export type BranchType = {
   branch_uuid: UUID;
   branch_name: string;
-};
-
-export type SupplierType = {
-  supplier_uuid: UUID;
-  supplier_code: string;
-  supplier_name: string;
-  supplier_tax_info?: SupplierTaxInfoType;
-};
-
-export type SupplierTaxInfoType = {
-  supplier_tax_info_uuid: UUID;
-  supplier_uuid: UUID;
-  address: string;
-  tax_payer_id: string;
 };
 
 export type PaymentMethodType = {
@@ -182,4 +168,44 @@ export type TaxReportRow = {
   branch_uuid: string;
   created_at: string;
   total_count: number; // same value on every row in the page
+};
+
+export type PartyKind = "SUPPLIER" | "CUSTOMER" | "BOTH";
+
+export type PartyTaxInfo = {
+  tax_info_uuid: string;
+  legal_name: string | undefined;
+  tax_payer_id: string | undefined;
+  address: string | undefined;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PartyBankInfo = {
+  bank_info_uuid: string;
+  bank_name: string;
+  bank_account_name: string;
+  bank_account_number: string;
+  bank_branch: string | undefined;
+  account_type: "CHECKING" | "SAVINGS" | "OTHER";
+  is_default: boolean;
+};
+
+export type PartyContact = {
+  contact_uuid: string;
+  contact_name: string;
+  role_title: string | undefined;
+  email: string | undefined;
+  phone: string | undefined;
+  is_primary: boolean;
+};
+
+export type PartyOption = {
+  party_uuid: string;
+  party_code: string;
+  party_name: string;
+  kind: PartyKind;
+  tax_info: PartyTaxInfo[]; // FK: party_tax_info
+  banks: PartyBankInfo[]; // FK: party_bank_info
+  contacts: PartyContact[]; // FK: party_contact
 };

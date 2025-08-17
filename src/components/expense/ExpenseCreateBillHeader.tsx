@@ -11,8 +11,8 @@ export default function ExpenseCreateBillHeader() {
     <>
       {selectedSupplier ? (
         <div className={`flex gap-3 items-center text-lg`}>
-          <div className="font-bold">{selectedSupplier.supplier_code}</div>
-          <div>{selectedSupplier.supplier_name}</div>
+          <div className="font-bold">{selectedSupplier.party_code}</div>
+          <div>{selectedSupplier.party_name}</div>
         </div>
       ) : pathName.includes("/credit-note") ? (
         "ใบลดหนี้ใหม่"

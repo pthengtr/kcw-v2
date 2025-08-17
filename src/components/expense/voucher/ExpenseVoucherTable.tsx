@@ -67,7 +67,7 @@ export default function ExpenseVoucherTable({
 
       let query = supabase
         .from("expense_receipt")
-        .select("*, supplier(*), branch(*), payment_method(*)", {
+        .select("*, party(*), branch(*), payment_method(*)", {
           count: "exact",
         })
         .order("receipt_date", { ascending: true })
@@ -177,12 +177,12 @@ export default function ExpenseVoucherTable({
   );
 
   const uniqueSuppliers = new Set(
-    groupVouchers.map((voucher) => voucher.supplier_uuid)
+    groupVouchers.map((voucher) => voucher.party_uuid)
   );
 
   uniqueSuppliers.forEach((unique_supplier_uuid) => {
     groupVouchers = groupVouchers.map((voucher) => {
-      if (voucher.supplier_uuid === unique_supplier_uuid) {
+      if (voucher.party_uuid === unique_supplier_uuid) {
         return {
           ...voucher,
           voucherId:
