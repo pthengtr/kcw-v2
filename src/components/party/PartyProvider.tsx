@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PartyBankLike } from "../common/BankAccountPicker";
 
 export type PartyKind = "SUPPLIER" | "CUSTOMER" | "BOTH";
 
@@ -94,7 +95,7 @@ type Actions = {
       account_type?: BankAccountType;
       is_default?: boolean;
     }
-  ) => Promise<void>;
+  ) => Promise<PartyBankLike>;
   deleteBank: (bank_info_uuid: string) => Promise<void>;
   setDefaultBank: (party_uuid: string, bank_info_uuid: string) => Promise<void>;
 };
@@ -245,32 +246,34 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
       await fetchData();
     },
 
+    // PartyProvider.tsx (inside actions)
     addBank: async (party_uuid, input) => {
-      const payload = {
-        party_uuid,
-        bank_name: input.bank_name,
-        bank_account_name: input.bank_account_name,
-        bank_account_number: input.bank_account_number,
-        bank_branch: input.bank_branch ?? null,
-        account_type: input.account_type ?? "OTHER",
-        is_default: !!input.is_default,
-      };
-      const { error } = await supabase
+      // insert + return the new row
+      const { data, error } = await supabase
         .from("party_bank_info")
-        .insert([payload]);
+        .insert([{ party_uuid, ...input }])
+        .select(
+          "bank_info_uuid, bank_name, bank_account_name, bank_account_number, bank_branch, account_type, is_default"
+        )
+        .single();
       if (error) throw error;
 
-      // If marking default, clear others
-      if (payload.is_default) {
+      // if set default, clear others
+      if (input.is_default) {
         const { error: e2 } = await supabase
           .from("party_bank_info")
           .update({ is_default: false })
           .eq("party_uuid", party_uuid)
-          .neq("bank_account_number", payload.bank_account_number);
+          .neq("bank_info_uuid", data.bank_info_uuid);
         if (e2) throw e2;
+        data.is_default = true; // reflect final state
       }
 
+      // keep the rest of the UI in sync
       await fetchData();
+
+      // IMPORTANT: return the created row
+      return data; // PartyBankLike
     },
 
     deleteBank: async (bank_info_uuid) => {

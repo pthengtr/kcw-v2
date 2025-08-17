@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useCallback, useState } from "react";
 import React from "react";
-import { BankInfoType, ReminderType } from "./ReminderColumn";
+
 import { CheckedState } from "@radix-ui/react-checkbox";
 import { storageObjectType } from "../common/ImageCarousel";
 import {
@@ -12,19 +12,20 @@ import {
 } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { PartyOption } from "@/lib/types/models";
+import { PartyOption, PaymentReminderRow } from "@/lib/types/models";
+import { PartyBankInfo } from "../party/PartyProvider";
 
 export type ReminderContextType = {
-  selectedRow: ReminderType | undefined;
-  setSelectedRow: (selectedRow: ReminderType | undefined) => void;
+  selectedRow: PaymentReminderRow | undefined;
+  setSelectedRow: (selectedRow: PaymentReminderRow | undefined) => void;
   openCreateDialog: boolean;
   setOpenCreateDialog: (open: boolean) => void;
   openUpdateDialog: boolean;
   setOpenUpdateDialog: (open: boolean) => void;
   submitError: string | undefined;
   setSubmitError: (error: string | undefined) => void;
-  reminders: ReminderType[] | undefined;
-  setReminders: (reminders: ReminderType[]) => void;
+  reminders: PaymentReminderRow[] | undefined;
+  setReminders: (reminders: PaymentReminderRow[]) => void;
   total: number | undefined;
   setTotal: (total: number) => void;
   bankName: string;
@@ -33,11 +34,11 @@ export type ReminderContextType = {
   setBankAccountName: (bankAccountName: string) => void;
   bankAccountNumber: string;
   setBankAccountNumber: (bankAccountNumber: string) => void;
-  handleSelectedRow: (row: ReminderType) => void;
+  handleSelectedRow: (row: PaymentReminderRow) => void;
   saveBankInfo: CheckedState;
   setSaveBankInfo: (saveBankInfo: CheckedState) => void;
-  selectedBankInfo: BankInfoType | undefined;
-  setSelectBankInfo: (selectedBankInfo: BankInfoType | undefined) => void;
+  selectedBankInfo: PartyBankInfo | undefined;
+  setSelectBankInfo: (selectedBankInfo: PartyBankInfo | undefined) => void;
   supplierName: string;
   setSupplierName: (supplierName: string) => void;
   selectedSupplier: PartyOption | undefined;
@@ -72,17 +73,17 @@ type ReminderProvider = {
 };
 
 export default function ReminderProvider({ children }: ReminderProvider) {
-  const [selectedRow, setSelectedRow] = useState<ReminderType>();
+  const [selectedRow, setSelectedRow] = useState<PaymentReminderRow>();
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
-  const [reminders, setReminders] = useState<ReminderType[]>();
+  const [reminders, setReminders] = useState<PaymentReminderRow[]>();
   const [total, setTotal] = useState<number>();
   const [bankName, setBankName] = useState<string>("");
   const [bankAccountName, setBankAccountName] = useState<string>("");
   const [bankAccountNumber, setBankAccountNumber] = useState<string>("");
   const [saveBankInfo, setSaveBankInfo] = useState<CheckedState>(false);
-  const [selectedBankInfo, setSelectBankInfo] = useState<BankInfoType>();
+  const [selectedBankInfo, setSelectBankInfo] = useState<PartyBankInfo>();
   const [supplierName, setSupplierName] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState<PartyOption>();
   const [billImageArray, setBillImageArray] = useState<storageObjectType[]>();
@@ -91,12 +92,8 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [status, setStatus] = useState("all");
 
-  function handleSelectedRow(row: ReminderType) {
+  function handleSelectedRow(row: PaymentReminderRow) {
     setSelectedRow(row);
-    setSupplierName(row.supplier_code);
-    setBankName(row.bank_name);
-    setBankAccountName(row.bank_account_name);
-    setBankAccountNumber(row.bank_account_number);
   }
 
   const getReminder = useCallback(
@@ -104,8 +101,8 @@ export default function ReminderProvider({ children }: ReminderProvider) {
       const supabase = createClient();
       let query = supabase
         .from("payment_reminder")
-        .select("*", { count: "exact" })
-        .order("id", { ascending: false })
+        .select("*, party(*)", { count: "exact" })
+        .order("created_at", { ascending: false })
         .limit(500);
 
       if (status === "paid") query = query.not("payment_date", "is", "null");
@@ -156,7 +153,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
       const { data: dataUpdate, error: errorUpdate } = await supabase
         .from("payment_reminder")
         .update({ proof_of_payment: true })
-        .eq("id", selectedRow.id)
+        .eq("reminder_uuid", selectedRow.reminder_uuid)
         .select();
 
       if (errorUpdate) console.log(errorUpdate);
@@ -198,7 +195,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
           const { data: dataUpdate, error: errorUpdate } = await supabase
             .from("payment_reminder")
             .update({ proof_of_payment: false })
-            .eq("id", selectedRow.id)
+            .eq("reminder_uuid", selectedRow.reminder_uuid)
             .select();
 
           if (errorUpdate) console.log(errorUpdate);

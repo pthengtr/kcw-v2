@@ -1,3 +1,4 @@
+import { PartyProvider } from "@/components/party/PartyProvider";
 import ReminderProvider from "@/components/reminder/ReminderProvider";
 
 export default function Layout({
@@ -7,7 +8,9 @@ export default function Layout({
 }>) {
   return (
     <>
-      <ReminderProvider>{children}</ReminderProvider>
+      <PartyProvider>
+        <ReminderProvider>{children}</ReminderProvider>
+      </PartyProvider>
     </>
   );
 }

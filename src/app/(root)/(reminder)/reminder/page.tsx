@@ -1,11 +1,5 @@
 "use client";
 
-import {
-  ResizablePanel,
-  ResizablePanelGroup,
-  ResizableHandle,
-} from "@/components/ui/resizable";
-
 import { useContext, useEffect, useState } from "react";
 import ReminderTable, {
   defaultColumnVisibility,
@@ -17,9 +11,16 @@ import {
 } from "@/components/reminder/ReminderProvider";
 import { getMyCookie } from "../../action";
 import { createClient } from "@/lib/supabase/client";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 export default function Reminder() {
-  const { selectedRow, setIsAdmin } = useContext(
+  const { selectedRow, setIsAdmin, setSelectedRow } = useContext(
     ReminderContext
   ) as ReminderContextType;
 
@@ -91,27 +92,41 @@ export default function Reminder() {
 
   return (
     <section className="h-[90vh]">
-      <ResizablePanelGroup
-        className="grid grid-cols-2 w-full"
-        direction="horizontal"
+      {/* Table now uses full width/height */}
+      {columnVisibility && paginationPageSize && (
+        <div className="h-[80vh] px-8">
+          <ReminderTable
+            columnVisibility={columnVisibility}
+            paginationPageSize={paginationPageSize}
+          />
+        </div>
+      )}
+
+      {/* Right drawer for detail */}
+      <Sheet
+        open={!!selectedRow}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRow?.(undefined);
+        }}
       >
-        <ResizablePanel>
-          {columnVisibility && paginationPageSize && (
-            <div className="h-[75vh]">
-              <ReminderTable
-                columnVisibility={columnVisibility}
-                paginationPageSize={paginationPageSize}
-              />
-            </div>
-          )}
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel className="overflow-y-auto" defaultSize={30}>
-          <div className="h-full overflow-auto">
+        {/* Keep padding zero so the detail component controls its layout */}
+        <SheetContent
+          side="right"
+          className="w-full min-w-[80vw] p-8 overflow-auto"
+        >
+          {/* Visually hidden, satisfies a11y */}
+          <SheetHeader className="sr-only">
+            <SheetTitle>รายละเอียดการเตือนโอน</SheetTitle>
+            <SheetDescription>
+              ดู/แก้ไขรายละเอียดรายการเตือนโอน
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="overflow-hidden relative">
             {selectedRow && <ReminderDetail />}
           </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        </SheetContent>
+      </Sheet>
     </section>
   );
 }

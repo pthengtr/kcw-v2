@@ -102,10 +102,12 @@ export default function CommonImagesCarousel({
       const prefix = `${folder}/${receiptUuid}`;
       const { data, error } = await storage.from(bucket).list(prefix, {
         limit: listLimit,
+        offset: 0,
         sortBy: { column: "created_at", order: "asc" },
       });
       if (error) throw new Error(error.message ?? JSON.stringify(error));
 
+      console.log(bucket, prefix);
       const items: ObjItem[] = [];
       for (const f of data ?? []) {
         const mm = f?.metadata?.mimetype as string | undefined;

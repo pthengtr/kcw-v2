@@ -1,0 +1,10 @@
+set "DRY_RUN=true"
+set "SUPABASE_URL=https://jdzitzsucntqbjvwiwxm.supabase.co"
+set "SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impkeml0enN1Y250cWJqdndpd3htIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNTAxNTgzNCwiZXhwIjoyMDUwNTkxODM0fQ.mNlplZE7PIgwrdUl4fLxavTkY66ZyP4r3ZeHp8_88XA"
+node migrate-reminder-images-to-uuid.mjs
+
+set "DRY_RUN=false"
+set "REMOVE_OLD=false"
+set "SUPABASE_URL=https://jdzitzsucntqbjvwiwxm.supabase.co"
+set "SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impkeml0enN1Y250cWJqdndpd3htIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNTAxNTgzNCwiZXhwIjoyMDUwNTkxODM0fQ.mNlplZE7PIgwrdUl4fLxavTkY66ZyP4r3ZeHp8_88XA"
+node migrate-reminder-images-to-uuid.mjs

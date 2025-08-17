@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  reminderColumns,
-  reminderDefaultValue,
-} from "@/components/reminder/ReminderColumn";
+import { reminderColumns } from "@/components/reminder/ReminderColumn";
 
 import { useContext, useEffect } from "react";
 import { DataTable } from "@/components/common/DataTable";
@@ -58,20 +55,24 @@ export default function ReminderTable({
     reminders,
     total,
     handleSelectedRow,
-    isAdmin,
     status,
     setStatus,
     getReminder,
+    setSelectedSupplier,
   } = useContext(ReminderContext) as ReminderContextType;
 
   useEffect(() => {
+    setSelectedSupplier(undefined);
     setSubmitError(undefined);
     getReminder();
-  }, [getReminder, openCreateDialog, openUpdateDialog, setSubmitError, status]);
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { payment_date, ...nonAdminDefaultValue } = reminderDefaultValue;
-  const defaultValues = isAdmin ? reminderDefaultValue : nonAdminDefaultValue;
+  }, [
+    getReminder,
+    openCreateDialog,
+    openUpdateDialog,
+    setSelectedSupplier,
+    setSubmitError,
+    status,
+  ]);
 
   function handleResetCookies() {
     clearMyCookie("reminderColumnVisibility");
@@ -98,7 +99,6 @@ export default function ReminderTable({
             setOpen={setOpenCreateDialog}
             dialogTrigger={<Plus />}
             dialogHeader="เพิ่มรายการเตือนโอน"
-            defaultValues={defaultValues}
           />
         </div>
       </div>

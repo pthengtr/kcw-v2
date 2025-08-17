@@ -1,86 +1,65 @@
 "use client";
 
-import { ColumnDef, HeaderContext } from "@tanstack/react-table";
+import {
+  CellContext,
+  ColumnDef,
+  HeaderContext,
+  Row,
+} from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../common/DataTableColumnHeader";
-import { reminderFieldLabel } from "./ReminderForm";
-import { Row } from "@tanstack/react-table";
 import { Check } from "lucide-react";
-import { UUID } from "@/lib/types/models";
+import type { PaymentReminderRow } from "@/lib/types/models";
 
-// This type is used to define the shape of our data.
-// You can use a Zod schema here if you want.
-
-export type BankInfoType = {
-  bank_info_uuid: UUID;
-  supplier_code: string;
-  bank_name: string;
-  bank_account_name: string;
-  bank_account_number: string;
+// add this near your columns file
+type ReminderRow = PaymentReminderRow & {
+  party?: {
+    party_uuid: string;
+    party_name: string;
+    party_code: string | null;
+  } | null;
 };
 
-export type ReminderType = {
-  id: number;
-  created_at: string;
-  supplier_code: string;
-  note_id: string;
-  bill_count: number;
-  start_date: string;
-  end_date: string;
-  total_amount: number;
-  discount: number;
-  user_id: string;
-  due_date: string;
-  kbiz_datetime: string;
-  payment_date: string;
-  remark: string;
-  bank_name: string;
-  bank_account_name: string;
-  bank_account_number: string;
-  last_modified: string;
-  proof_of_payment: boolean;
-};
+/** Map field keys to Thai labels (keys must exist on PaymentReminderRow) */
+const reminderFieldLabel = {
+  created_at: "สร้างเมื่อ",
+  last_modified: "แก้ไขเมื่อ",
+  note_id: "เลขที่เอกสาร",
+  bill_count: "จำนวนใบ",
+  start_date: "เริ่มต้น",
+  end_date: "สิ้นสุด",
+  total_amount: "จำนวนเงิน (หักส่วนลดแล้ว)",
+  discount: "ส่วนลด",
+  user_id: "ผู้บันทึก",
+  due_date: "กำหนดชำระ",
+  kbiz_datetime: "เข้า KBIZ",
+  payment_date: "วันโอนจริง",
+  remark: "หมายเหตุ",
+  party_uuid: "รหัสคู่ค้า",
+  bank_info_uuid: "บัญชีธนาคาร",
+} as const;
 
-export type ReminderDefaultValueType = {
-  supplier_code: string;
-  note_id: string;
-  bill_count: number;
-  start_date: Date;
-  end_date: Date;
-  total_amount: number;
-  discount: number;
-  due_date: Date;
-  kbiz_datetime: Date | null;
-  payment_date?: Date | null;
-  bill_pictures: File[];
-  payment_pictures: File[];
-  bank_info: BankInfoType | null;
-  remark: string;
-  agree: boolean;
-};
+type RemKey = keyof typeof reminderFieldLabel;
 
-export const reminderDefaultValue: ReminderDefaultValueType = {
-  supplier_code: "",
-  note_id: "",
-  bill_count: 1,
-  start_date: new Date(),
-  end_date: new Date(),
-  total_amount: 0,
-  discount: 0,
-  due_date: new Date(),
-  kbiz_datetime: null,
-  payment_date: null,
-  bill_pictures: [],
-  payment_pictures: [],
-  bank_info: null,
-  remark: "",
-  agree: false,
-};
-
-export const reminderColumns: ColumnDef<ReminderType>[] = [
-  numberInt("id"),
+export const reminderColumns: ColumnDef<PaymentReminderRow>[] = [
+  // If you fetch with a join alias like:
+  // .select(`..., party:party(party_uuid, party_code, party_name)`)
+  // you can include this display column:
+  {
+    id: "คู่ค้า",
+    // value type is string for this column
+    // TData is ReminderRow so `row.party?...` is type-safe
+    accessorFn: (row: ReminderRow): string =>
+      row.party?.party_name ?? row.party_uuid ?? "—",
+    header: ({ column }: HeaderContext<ReminderRow, unknown>) => (
+      <DataTableColumnHeader column={column} title="คู่ค้า" />
+    ),
+    cell: ({ getValue }) => (
+      <div className="truncate">{String(getValue() ?? "—")}</div>
+    ),
+    sortingFn: "alphanumeric",
+  },
   dateThai("created_at", true),
   dateThai("last_modified", true),
-  simpleText("supplier_code"),
   simpleText("note_id"),
   numberInt("bill_count"),
   dateThai("start_date"),
@@ -90,154 +69,162 @@ export const reminderColumns: ColumnDef<ReminderType>[] = [
   simpleText("user_id"),
   dateThai("due_date"),
   dateThai("kbiz_datetime", true),
-  dateThai("payment_date"),
+  dateThai("payment_date", true),
   simpleText("remark"),
+
+  // สถานะ (derived from payment_date)
   {
     id: "สถานะ",
     accessorKey: "payment_date",
-    header: ({ column }: HeaderContext<ReminderType, unknown>) => (
+    header: ({ column }: HeaderContext<PaymentReminderRow, unknown>) => (
       <DataTableColumnHeader column={column} title="สถานะ" />
     ),
-    cell: (row) => {
-      return (
-        <div className="text-right">{row.getValue() ? "จ่ายแล้ว" : "ค้าง"}</div>
-      );
-    },
+    cell: ({ getValue }) => (
+      <div className="text-right">{getValue() ? "จ่ายแล้ว" : "ค้าง"}</div>
+    ),
     filterFn: (row, columnId, filterValue) => {
-      return (
-        (row.getValue(columnId) as string) ? "จ่ายแล้ว" : "ค้าง"
-      ).includes(filterValue);
+      const text = (row.getValue(columnId) ? "จ่ายแล้ว" : "ค้าง") as string;
+      return text.includes(String(filterValue ?? ""));
     },
   },
+
+  // หลักฐานการจ่าย
   {
     id: "หลักฐานการจ่าย",
     accessorKey: "proof_of_payment",
-    header: ({ column }: HeaderContext<ReminderType, unknown>) => (
+    header: ({ column }: HeaderContext<PaymentReminderRow, unknown>) => (
       <DataTableColumnHeader column={column} title="หลักฐานการจ่าย" />
     ),
-    cell: (row) => {
-      return (
-        <div className="text-right">
-          {row.getValue() ? (
-            <div className="flex justify-center">
-              <Check />
-            </div>
-          ) : (
-            ""
-          )}
-        </div>
-      );
-    },
+    cell: ({ getValue }) => (
+      <div className="text-right">
+        {getValue() ? (
+          <div className="flex justify-center">
+            <Check className="h-4 w-4" />
+          </div>
+        ) : (
+          ""
+        )}
+      </div>
+    ),
   },
 ];
 
-function simpleText(key: keyof ReminderType) {
-  return {
-    id: reminderFieldLabel[key],
-    accessorKey: key,
-    header: ({ column }: HeaderContext<ReminderType, unknown>) => (
-      <DataTableColumnHeader column={column} title={reminderFieldLabel[key]} />
-    ),
-  };
-}
+/* ---------------- helpers ---------------- */
 
-function dateThai(key: keyof ReminderType, withTime: boolean = false) {
+function simpleText(key: RemKey): ColumnDef<PaymentReminderRow> {
   return {
     id: reminderFieldLabel[key],
     accessorKey: key,
-    header: ({ column }: HeaderContext<ReminderType, unknown>) => (
+    header: ({ column }) => (
       <DataTableColumnHeader column={column} title={reminderFieldLabel[key]} />
     ),
-    cell: (row: Row<ReminderType>) => {
+    cell: (row: CellContext<PaymentReminderRow, unknown>) => {
+      const v = row.getValue();
       return (
-        <div className="text-right">
-          {!!row.getValue(reminderFieldLabel[key]) &&
-            new Date(
-              row.getValue(reminderFieldLabel[key]) as string
-            ).toLocaleString("th-TH", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "2-digit",
-              ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
-            })}
+        <div className="truncate">
+          <>{v ?? "—"}</>
         </div>
       );
     },
-    filterFn: (row: Row<ReminderType>, columnId: string, filterValue: string) =>
+    filterFn: (row, columnId, filterValue) => {
+      const v = row.getValue(columnId);
+      return String(v ?? "")
+        .toLowerCase()
+        .includes(String(filterValue ?? "").toLowerCase());
+    },
+  };
+}
+
+function dateThai(
+  key: RemKey,
+  withTime = false
+): ColumnDef<PaymentReminderRow> {
+  return {
+    id: reminderFieldLabel[key],
+    accessorKey: key,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={reminderFieldLabel[key]} />
+    ),
+    cell: (row: CellContext<PaymentReminderRow, unknown>) => {
+      const v = row.getValue() as string | null | undefined;
+      if (!v) return <div className="text-right">—</div>;
+      const d = new Date(v);
+      const text = d.toLocaleString("th-TH", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+        ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+      });
+      return <div className="text-right">{text}</div>;
+    },
+    filterFn: (row, columnId, filterValue) =>
       dateFilterFn(row, columnId, filterValue),
-  };
-}
-
-function numberFloat(key: keyof ReminderType) {
-  return {
-    id: reminderFieldLabel[key],
-    accessorKey: key,
-    header: ({ column }: HeaderContext<ReminderType, unknown>) => (
-      <DataTableColumnHeader column={column} title={reminderFieldLabel[key]} />
-    ),
-    cell: (row: Row<ReminderType>) => {
-      return (
-        <div className="text-right">
-          {(row.getValue(reminderFieldLabel[key]) as number).toLocaleString(
-            "th-TH",
-            {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            }
-          )}
-        </div>
-      );
-    },
-    filterFn: (
-      row: Row<ReminderType>,
-      columnId: string,
-      filterValue: string
-    ) => {
-      return (row.getValue(reminderFieldLabel[key]) as number)
-        .toString()
-        .includes(filterValue);
+    sortingFn: (rowA, rowB, columnId) => {
+      const a = rowA.getValue(columnId) as string | null | undefined;
+      const b = rowB.getValue(columnId) as string | null | undefined;
+      const ta = a ? Date.parse(a) : 0;
+      const tb = b ? Date.parse(b) : 0;
+      return ta - tb;
     },
   };
 }
 
-function numberInt(key: keyof ReminderType) {
+function numberFloat(key: RemKey): ColumnDef<PaymentReminderRow> {
   return {
     id: reminderFieldLabel[key],
     accessorKey: key,
-    header: ({ column }: HeaderContext<ReminderType, unknown>) => (
+    header: ({ column }) => (
       <DataTableColumnHeader column={column} title={reminderFieldLabel[key]} />
     ),
-    cell: (row: Row<ReminderType>) => {
+    cell: (row: CellContext<PaymentReminderRow, unknown>) => {
+      const v = Number(row.getValue() ?? 0);
       return (
         <div className="text-right">
-          {(row.getValue(reminderFieldLabel[key]) as number).toLocaleString(
-            "th-TH"
-          )}
+          {v.toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
         </div>
       );
     },
-    filterFn: (
-      row: Row<ReminderType>,
-      columnId: string,
-      filterValue: string
-    ) => {
-      return (row.getValue(reminderFieldLabel[key]) as number)
-        .toString()
-        .includes(filterValue);
+    filterFn: (row, columnId, filterValue) => {
+      const v = row.getValue(columnId);
+      return String(v ?? "").includes(String(filterValue ?? ""));
     },
+    sortingFn: "basic",
+  };
+}
+
+function numberInt(key: RemKey): ColumnDef<PaymentReminderRow> {
+  return {
+    id: reminderFieldLabel[key],
+    accessorKey: key,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={reminderFieldLabel[key]} />
+    ),
+    cell: (row: CellContext<PaymentReminderRow, unknown>) => {
+      const v = Number(row.getValue() ?? 0);
+      return <div className="text-right">{v.toLocaleString("th-TH")}</div>;
+    },
+    filterFn: (row, columnId, filterValue) => {
+      const v = row.getValue(columnId);
+      return String(v ?? "").includes(String(filterValue ?? ""));
+    },
+    sortingFn: "basic",
   };
 }
 
 function dateFilterFn(
-  row: Row<ReminderType>,
+  row: Row<PaymentReminderRow>,
   columnId: string,
   filterValue: string
 ) {
-  return new Date(row.getValue(columnId) as string)
-    .toLocaleString("th-TH", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-    })
-    .includes(filterValue);
+  const v = row.getValue(columnId) as string | null | undefined;
+  if (!v) return false;
+  const text = new Date(v).toLocaleString("th-TH", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  });
+  return text.includes(String(filterValue ?? ""));
 }

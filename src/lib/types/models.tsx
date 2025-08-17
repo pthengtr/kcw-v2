@@ -174,9 +174,9 @@ export type PartyKind = "SUPPLIER" | "CUSTOMER" | "BOTH";
 
 export type PartyTaxInfo = {
   tax_info_uuid: string;
-  legal_name: string | undefined;
-  tax_payer_id: string | undefined;
-  address: string | undefined;
+  legal_name: string | null;
+  tax_payer_id: string | null;
+  address: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -186,26 +186,97 @@ export type PartyBankInfo = {
   bank_name: string;
   bank_account_name: string;
   bank_account_number: string;
-  bank_branch: string | undefined;
-  account_type: "CHECKING" | "SAVINGS" | "OTHER";
+  bank_branch: string | null;
+  account_type: "CHECKING" | "SAVINGS" | "OTHER"; // DB enum; assume NOT NULL or default
   is_default: boolean;
 };
 
 export type PartyContact = {
   contact_uuid: string;
   contact_name: string;
-  role_title: string | undefined;
-  email: string | undefined;
-  phone: string | undefined;
+  role_title: string | null;
+  email: string | null;
+  phone: string | null;
   is_primary: boolean;
 };
 
 export type PartyOption = {
   party_uuid: string;
-  party_code: string;
+  party_code: string | null; // <- allow null
   party_name: string;
   kind: PartyKind;
-  tax_info: PartyTaxInfo[]; // FK: party_tax_info
-  banks: PartyBankInfo[]; // FK: party_bank_info
-  contacts: PartyContact[]; // FK: party_contact
+  tax_info: PartyTaxInfo[];
+  banks: PartyBankInfo[];
+  contacts: PartyContact[];
 };
+
+// payment_reminder.types.ts
+
+/** Exact row shape returned by Supabase */
+export type PaymentReminderRow = {
+  created_at: string; // timestamptz (ISO string)
+  note_id: string;
+  bill_count: number;
+  start_date: string; // timestamptz (ISO string)
+  end_date: string; // timestamptz (ISO string)
+  total_amount: number;
+  user_id: string;
+  last_modified: string; // timestamptz (ISO string)
+  due_date: string; // timestamptz (ISO string)
+  payment_date: string | null; // timestamptz (ISO string) | null
+  kbiz_datetime: string | null; // timestamptz (ISO string) | null
+  discount: number;
+  remark: string | null;
+  proof_of_payment: boolean | null; // default false (nullable per schema)
+  bank_info_uuid: string | null;
+  party_uuid: string | null;
+  reminder_uuid: string; // PK, default gen_random_uuid()
+};
+
+/** Shape for inserting a new row */
+export type PaymentReminderInsert = {
+  // Required (NOT NULL, no default):
+  created_at: string;
+  note_id: string;
+  bill_count: number;
+  start_date: string;
+  end_date: string;
+  total_amount: number;
+  user_id: string;
+  last_modified: string;
+  due_date: string;
+  discount: number;
+
+  // Optional / nullable:
+  payment_date?: string | null;
+  kbiz_datetime?: string | null;
+  remark?: string | null;
+
+  // Defaults / optional:
+  proof_of_payment?: boolean | null; // defaults to false if omitted
+  bank_info_uuid?: string | null;
+  party_uuid?: string | null;
+  reminder_uuid?: string; // generated if omitted
+};
+
+/** Shape for updating an existing row */
+export type PaymentReminderUpdate = Partial<{
+  created_at: string;
+  supplier_code: string;
+  note_id: string;
+  bill_count: number;
+  start_date: string;
+  end_date: string;
+  total_amount: number;
+  user_id: string;
+  last_modified: string;
+  due_date: string;
+  payment_date: string | null;
+  kbiz_datetime: string | null;
+  discount: number;
+  remark: string | null;
+  proof_of_payment: boolean | null;
+  bank_info_uuid: string | null;
+  party_uuid: string | null;
+  reminder_uuid: string; // rarely updated
+}>;

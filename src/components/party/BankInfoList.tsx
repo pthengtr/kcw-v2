@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import type { Party, BankAccountType } from "./PartyProvider";
 import { CheckCircle2, Plus, Star, Trash2 } from "lucide-react";
+import { PartyBankLike } from "../common/BankAccountPicker";
 
 export default function BankInfoList({
   party,
@@ -28,7 +29,7 @@ export default function BankInfoList({
     bank_branch?: string | null;
     account_type?: BankAccountType;
     is_default?: boolean;
-  }) => Promise<void>;
+  }) => Promise<PartyBankLike>;
   onDelete: (bank_info_uuid: string) => Promise<void>;
   onMakeDefault: (bank_info_uuid: string) => Promise<void>;
 }) {
