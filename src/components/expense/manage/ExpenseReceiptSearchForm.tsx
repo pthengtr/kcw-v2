@@ -70,7 +70,7 @@ export default function ExpenseReceiptSearchForm({
     console.log(searchData);
     let query = supabase
       .from("expense_receipt")
-      .select("*, supplier(*), branch(*), payment_method(*)", {
+      .select("*, party(*), branch(*), payment_method(*)", {
         count: "exact",
       })
       .order("receipt_uuid", { ascending: false })
