@@ -43,8 +43,8 @@ export default async function Navbar() {
             <NavbarExpenseDropdownMenu branches={branches as BranchType[]} />
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link href="/supplier" passHref>
-              <Button variant="ghost">รายชื่อบริษัท</Button>
+            <Link href="/party" passHref>
+              <Button variant="ghost">รายชื่อคู่ค้า</Button>
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
