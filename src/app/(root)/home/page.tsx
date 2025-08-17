@@ -13,7 +13,7 @@ export default function Home() {
             icon="MessageCircleWarning"
           />
           <CardIcon href="/expense" label="ค่าใช้จ่าย" icon="Banknote" />
-          <CardIcon href="/supplier" label="รายชื่อบริษัท" icon="Truck" />
+          <CardIcon href="/party" label="รายชื่อคู่ค้า" icon="Handshake" />
           <CardIcon href="/product" label="สินค้า" icon="ShoppingBag" />
           <CardIcon href="/pos" label="ขายหน้าร้าน" icon="SquareMenu" />
           <CardIcon
