@@ -11,7 +11,7 @@ import { useContext, useEffect, useState } from "react";
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import PaymentReminderForm from "./PaymentReminderForm";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { PaymentReminderRow } from "@/lib/types/models";
 
 type ReminderFormDialogProps = {
   open: boolean;
@@ -28,11 +28,15 @@ export default function ReminderFormDialog({
   dialogHeader = dialogTrigger,
   update = false,
 }: ReminderFormDialogProps) {
-  const { submitError } = useContext(ReminderContext) as ReminderContextType;
+  const {
+    submitError,
+    selectedRow,
+    setSelectedRow,
+    setOpenCreateDialog,
+    setOpenUpdateDialog,
+  } = useContext(ReminderContext) as ReminderContextType;
 
   const [currentUserId, setCurrentUserId] = useState<string>();
-
-  const router = useRouter();
 
   useEffect(() => {
     async function getUser() {
@@ -53,6 +57,11 @@ export default function ReminderFormDialog({
     getUser();
   });
 
+  function handleOnsavedForm(row: PaymentReminderRow) {
+    setOpenCreateDialog(false);
+    setOpenUpdateDialog(false);
+    setSelectedRow?.(row);
+  }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
@@ -69,10 +78,12 @@ export default function ReminderFormDialog({
           {currentUserId && (
             <PaymentReminderForm
               className="flex flex-col gap-6 items-stretch p-8"
-              mode={update ? "edit" : "create"}
               currentUserId={currentUserId}
               defaultPartyKind="SUPPLIER"
-              onSaved={() => router.push("/reminder")}
+              onSaved={(row) => handleOnsavedForm(row)}
+              {...(update && selectedRow
+                ? { mode: "edit" as const, value: selectedRow }
+                : { mode: "create" as const })}
             />
           )}
         </div>

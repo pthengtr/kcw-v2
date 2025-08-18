@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
 import { clearMyCookie } from "@/app/(root)/action";
 import ResetTableCookiesDropdown from "../common/ResetTableCookiesDropdown";
+import { Button } from "../ui/button";
 
 export const defaultColumnVisibility = {
   รายการเลขที่: false,
@@ -97,7 +98,11 @@ export default function ReminderTable({
           <ReminderFormDialog
             open={openCreateDialog}
             setOpen={setOpenCreateDialog}
-            dialogTrigger={<Plus />}
+            dialogTrigger={
+              <Button>
+                <Plus />
+              </Button>
+            }
             dialogHeader="เพิ่มรายการเตือนโอน"
           />
         </div>

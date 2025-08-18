@@ -228,8 +228,8 @@ export type PaymentReminderRow = {
   discount: number;
   remark: string | null;
   proof_of_payment: boolean | null; // default false (nullable per schema)
-  bank_info_uuid: string | null;
-  party_uuid: string | null;
+  bank_info_uuid: string;
+  party_uuid: string;
   reminder_uuid: string; // PK, default gen_random_uuid()
 };
 

@@ -64,6 +64,7 @@ export type ReminderContextType = {
   ) => void;
   status: string;
   setStatus: (status: string) => void;
+  updateSelectedRow?: (patch: Partial<PaymentReminderRow>) => void; // NEW
 };
 
 export const ReminderContext = createContext<ReminderContextType | null>(null);
@@ -96,6 +97,12 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setSelectedRow(row);
   }
 
+  const updateSelectedRow = useCallback(
+    (patch: Partial<PaymentReminderRow>) => {
+      setSelectedRow((prev) => (prev ? { ...prev, ...patch } : prev));
+    },
+    []
+  );
   const getReminder = useCallback(
     async function () {
       const supabase = createClient();
@@ -250,6 +257,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setStatus,
     status,
     reminderGetImageArray,
+    updateSelectedRow,
   };
 
   return (

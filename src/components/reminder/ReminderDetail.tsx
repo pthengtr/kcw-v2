@@ -133,7 +133,12 @@ export default function ReminderDetail() {
     return () => {
       cancelled = true;
     };
-  }, [selectedRow, supabase]);
+  }, [
+    selectedRow,
+    supabase,
+    selectedRow?.party_uuid,
+    selectedRow?.bank_info_uuid,
+  ]);
 
   if (!selectedRow) {
     return (
