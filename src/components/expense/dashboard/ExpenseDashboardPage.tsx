@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowBigLeftDash } from "lucide-react";
+import { ArrowBigLeftDash, RefreshCcw } from "lucide-react";
 
 import ExpenseSummaryLineChartCard from "./ExpenseSummaryLineChartCard";
 import PieChartCard from "./ExpenseSummaryPieChartCard";
@@ -19,6 +19,10 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+
+// NEW: add these imports
+import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export type ItemYearRow = {
   item_name: string;
@@ -37,39 +41,26 @@ export type ItemYearRow = {
   total?: number;
 };
 
-// type TestTotalsRow = {
-//   source: string;
-//   January: number;
-//   February: number;
-//   March: number;
-//   April: number;
-//   May: number;
-//   June: number;
-//   July: number;
-//   August: number;
-//   September: number;
-//   October: number;
-//   November: number;
-//   December: number;
-//   total: number;
-// };
-
 type BranchRow = {
   branch_uuid: string;
   branch_name: string;
 };
 
+type DataView = "ALL" | "ENTRIES" | "GENERAL";
+
 const YEAR = 2025;
 const TZ = "Asia/Bangkok";
 
 export default function ExpenseDashboardPage() {
-  const [expenseSummary, setExpenseSummary] = useState<ItemYearRow[]>();
-  const [companySummary, setCompanySummary] = useState<ItemYearRow[]>();
-  const [generalSummary, setGeneralSummary] = useState<ItemYearRow[]>();
+  const [expenseSummary, setExpenseSummary] = useState<ItemYearRow[]>([]);
+  const [companySummary, setCompanySummary] = useState<ItemYearRow[]>([]);
+  const [generalSummary, setGeneralSummary] = useState<ItemYearRow[]>([]);
 
   const [branches, setBranches] = useState<BranchRow[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<string | "ALL">("ALL");
+
+  const [dataView, setDataView] = useState<DataView>("ALL");
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | undefined>();
@@ -114,7 +105,7 @@ export default function ExpenseDashboardPage() {
       // All expense summary
       const { data, error } = await supabase.rpc("fn_item_year_summary_all", {
         p_year: YEAR,
-        p_branch: pBranch, // null => all branches
+        p_branch: pBranch,
         p_supplier: null,
         p_timezone: TZ,
       });
@@ -145,14 +136,6 @@ export default function ExpenseDashboardPage() {
       );
       if (errorGeneral) throw errorGeneral;
       setGeneralSummary((dataGeneral ?? []) as ItemYearRow[]);
-
-      // Optional test/debug
-      // const { data: dataTest, error: errorTest } = await supabase.rpc(
-      //   "fn_test_totals_receipt_general",
-      //   { p_year: YEAR, p_branch: pBranch, p_supplier: null, p_timezone: TZ }
-      // );
-      // if (errorTest) throw errorTest;
-      // console.table((dataTest ?? []) as TestTotalsRow[]);
     } catch (err) {
       const e = err as { message?: string };
       setErrorMsg(e?.message ?? "โหลดข้อมูลไม่สำเร็จ");
@@ -173,6 +156,43 @@ export default function ExpenseDashboardPage() {
       maximumFractionDigits: 0,
     }).format(n);
 
+  // ---- New: pick the active dataset + dynamic titles ----
+  const currentData = useMemo(() => {
+    switch (dataView) {
+      case "ENTRIES":
+        return companySummary;
+      case "GENERAL":
+        return generalSummary;
+      case "ALL":
+      default:
+        return expenseSummary;
+    }
+  }, [dataView, expenseSummary, companySummary, generalSummary]);
+
+  const chartTitle = useMemo(() => {
+    switch (dataView) {
+      case "ENTRIES":
+        return `ค่าใช้จ่ายเฉพาะบริษัท (พ.ศ. ${YEAR + 543})`;
+      case "GENERAL":
+        return `ค่าใช้จ่ายเฉพาะทั่วไป (พ.ศ. ${YEAR + 543})`;
+      case "ALL":
+      default:
+        return `ค่าใช้จ่ายทั้งหมด (พ.ศ. ${YEAR + 543})`;
+    }
+  }, [dataView]);
+
+  const pieTitle = useMemo(() => {
+    switch (dataView) {
+      case "ENTRIES":
+        return "สัดส่วนค่าใช้จ่ายต่อเดือนเฉพาะบริษัท";
+      case "GENERAL":
+        return "สัดส่วนค่าใช้จ่ายต่อเดือนเฉพาะทั่วไป";
+      case "ALL":
+      default:
+        return "สัดส่วนค่าใช้จ่ายต่อเดือน";
+    }
+  }, [dataView]);
+
   return (
     <section className="flex flex-col justify-center items-center p-4">
       <div className="flex w-full px-2 items-center gap-2">
@@ -186,6 +206,7 @@ export default function ExpenseDashboardPage() {
         <h1 className="text-2xl font-bold tracking-wider">ภาพรวมค่าใช้จ่าย</h1>
 
         <div className="flex-1 flex justify-end gap-3 items-end">
+          {/* Branch selector */}
           <div className="grid gap-1">
             <Label htmlFor="branch">สาขา</Label>
             <Select
@@ -195,7 +216,7 @@ export default function ExpenseDashboardPage() {
               }
               disabled={branchesLoading}
             >
-              <SelectTrigger id="branch" className="w-[260px]">
+              <SelectTrigger id="branch" className="w-44">
                 <SelectValue placeholder="เลือกสาขา" />
               </SelectTrigger>
               <SelectContent>
@@ -208,12 +229,32 @@ export default function ExpenseDashboardPage() {
               </SelectContent>
             </Select>
           </div>
+
+          {/* New: Data view selector */}
+          <div className="grid gap-1">
+            <Label htmlFor="dataview">มุมมองข้อมูล</Label>
+            <Select
+              value={dataView}
+              onValueChange={(v) => setDataView(v as DataView)}
+              disabled={loading}
+            >
+              <SelectTrigger id="dataview" className="w-44">
+                <SelectValue placeholder="เลือกมุมมองข้อมูล" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">ทั้งหมด</SelectItem>
+                <SelectItem value="ENTRIES">เฉพาะบริษัท (Entries)</SelectItem>
+                <SelectItem value="GENERAL">เฉพาะทั่วไป (General)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button
             variant="secondary"
             onClick={() => fetchSummaries()}
             disabled={loading}
           >
-            {loading ? "กำลังโหลด…" : "รีเฟรช"}
+            {loading ? "กำลังโหลด…" : <RefreshCcw />}
           </Button>
         </div>
       </div>
@@ -223,69 +264,95 @@ export default function ExpenseDashboardPage() {
       )}
 
       <div className="w-fit grid grid-cols-2 gap-8 p-8 justify-center items-center">
-        {expenseSummary && !loading && (
-          <>
-            <ExpenseSummaryLineChartCard
-              data={expenseSummary}
-              title={`ค่าใช้จ่ายทั้งหมด (พ.ศ. ${YEAR + 543})`}
+        {/* Single pair of charts: use the selected dataset */}
+        <PersistedCard loading={loading} skeletonBars={4}>
+          <ExpenseSummaryLineChartCard
+            data={currentData}
+            title={chartTitle}
+            yTickFormatter={thb}
+          />
+        </PersistedCard>
+        <PersistedCard loading={loading} skeletonBars={6}>
+          <PieChartCard
+            data={currentData}
+            title={pieTitle}
+            valueFormatter={thb}
+            initialMonthIndex={new Date().getMonth()}
+          />
+        </PersistedCard>
+
+        {/* Stacked comparison stays mounted too */}
+        <PersistedCard
+          loading={loading}
+          skeletonBars={6}
+          className="col-span-2"
+        >
+          {companySummary.length > 0 && generalSummary.length > 0 ? (
+            <ExpenseSummaryStackedChartCard
+              entriesData={companySummary}
+              generalData={generalSummary}
+              title="เปรียบเทียบค่าใช้จ่ายรายเดือน"
               yTickFormatter={thb}
             />
-            <PieChartCard
-              data={expenseSummary}
-              title="สัดส่วนค่าใช้จ่ายต่อเดือน"
-              valueFormatter={thb}
-              initialMonthIndex={new Date().getMonth()}
-            />
+          ) : (
+            <div className="h-[360px] w-[1000px]" />
+          )}
+        </PersistedCard>
 
-            {companySummary && (
-              <>
-                <ExpenseSummaryLineChartCard
-                  data={companySummary}
-                  title={`ค่าใช้จ่ายเฉพาะบริษัท (พ.ศ. ${YEAR + 543})`}
-                  yTickFormatter={thb}
-                />
-                <PieChartCard
-                  data={companySummary}
-                  title="สัดส่วนค่าใช้จ่ายต่อเดือนเฉพาะบริษัท"
-                  valueFormatter={thb}
-                  initialMonthIndex={new Date().getMonth()}
-                />
-              </>
-            )}
-
-            {generalSummary && (
-              <>
-                <ExpenseSummaryLineChartCard
-                  data={generalSummary}
-                  title={`ค่าใช้จ่ายเฉพาะทั่วไป (พ.ศ. ${YEAR + 543})`}
-                  yTickFormatter={thb}
-                />
-                <PieChartCard
-                  data={generalSummary}
-                  title="สัดส่วนค่าใช้จ่ายต่อเดือนเฉพาะทั่วไป"
-                  valueFormatter={thb}
-                  initialMonthIndex={new Date().getMonth()}
-                />
-              </>
-            )}
-
-            {companySummary && generalSummary && (
-              <div className="col-span-2">
-                <ExpenseSummaryStackedChartCard
-                  entriesData={companySummary}
-                  generalData={generalSummary}
-                  title="เปรียบเทียบค่าใช้จ่ายรายเดือน"
-                  yTickFormatter={thb}
-                />
-              </div>
-            )}
-
-            <div className="w-[80vw] h-[90vh] col-span-2 justify-self-center">
-              <ExpenseDashboardTable expenseSummary={expenseSummary} />
-            </div>
-          </>
-        )}
+        {/* Table follows currentData; keep mounted */}
+        <PersistedCard
+          loading={loading}
+          className="w-[80vw] h-[90vh] col-span-2 justify-self-center"
+        >
+          <ExpenseDashboardTable
+            key={`${dataView}-${selectedBranch ?? "ALL"}-${YEAR}`}
+            expenseSummary={currentData.length ? currentData : expenseSummary} // fallback just in case
+          />
+        </PersistedCard>
       </div>
     </section>
+  );
+}
+
+// NEW: a tiny overlay you can reuse anywhere
+function LoadingOverlay({
+  show,
+  skeletonBars = 0,
+}: {
+  show: boolean;
+  skeletonBars?: number;
+}) {
+  if (!show) return null;
+  return (
+    <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4 rounded-2xl border">
+      <Loader2 className="h-6 w-6 animate-spin" />
+      {skeletonBars > 0 && (
+        <div className="w-4/5 space-y-2">
+          {Array.from({ length: skeletonBars }).map((_, i) => (
+            <Skeleton key={i} className="h-4 w-full" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// OPTIONAL: a wrapper that keeps children mounted and shows the overlay on top
+function PersistedCard({
+  loading,
+  children,
+  skeletonBars = 0,
+  className = "",
+}: {
+  loading: boolean;
+  children: React.ReactNode;
+  skeletonBars?: number;
+  className?: string;
+}) {
+  return (
+    <div className={`relative ${className}`}>
+      {children}
+      <LoadingOverlay show={loading} skeletonBars={skeletonBars} />
+    </div>
   );
 }
