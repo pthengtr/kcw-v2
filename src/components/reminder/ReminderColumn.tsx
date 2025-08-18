@@ -58,6 +58,20 @@ export const reminderColumns: ColumnDef<PaymentReminderRow>[] = [
     ),
     sortingFn: "alphanumeric",
   },
+  {
+    id: "รหัสคู่ค้า",
+    // value type is string for this column
+    // TData is ReminderRow so `row.party?...` is type-safe
+    accessorFn: (row: ReminderRow): string =>
+      row.party?.party_code ?? row.party_uuid ?? "—",
+    header: ({ column }: HeaderContext<ReminderRow, unknown>) => (
+      <DataTableColumnHeader column={column} title="รหัสคู่ค้า" />
+    ),
+    cell: ({ getValue }) => (
+      <div className="truncate">{String(getValue() ?? "—")}</div>
+    ),
+    sortingFn: "alphanumeric",
+  },
   dateThai("created_at", true),
   dateThai("last_modified", true),
   simpleText("note_id"),
