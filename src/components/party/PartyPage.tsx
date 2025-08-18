@@ -3,5 +3,9 @@
 import PartyScreen from "./PartyScreen";
 
 export default function PartyPage() {
-  return <PartyScreen />;
+  return (
+    <section className="px-12">
+      <PartyScreen />
+    </section>
+  );
 }

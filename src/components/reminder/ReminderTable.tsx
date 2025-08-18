@@ -138,7 +138,7 @@ export default function ReminderTable({
                   getReminder();
                 }}
               >
-                <RefreshCcw strokeWidth={1} />
+                <RefreshCcw strokeWidth={1} /> รีเฟรช
               </Button>
               <ResetTableCookiesDropdown
                 handleResetCookies={handleResetCookies}
