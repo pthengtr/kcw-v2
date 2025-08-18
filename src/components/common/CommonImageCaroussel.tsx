@@ -107,7 +107,6 @@ export default function CommonImagesCarousel({
       });
       if (error) throw new Error(error.message ?? JSON.stringify(error));
 
-      console.log(bucket, prefix);
       const items: ObjItem[] = [];
       for (const f of data ?? []) {
         const mm = f?.metadata?.mimetype as string | undefined;

@@ -28,13 +28,9 @@ export default function ReminderFormDialog({
   dialogHeader = dialogTrigger,
   update = false,
 }: ReminderFormDialogProps) {
-  const {
-    submitError,
-    selectedRow,
-    setSelectedRow,
-    setOpenCreateDialog,
-    setOpenUpdateDialog,
-  } = useContext(ReminderContext) as ReminderContextType;
+  const { submitError, selectedRow, setSelectedRow } = useContext(
+    ReminderContext
+  ) as ReminderContextType;
 
   const [currentUserId, setCurrentUserId] = useState<string>();
 
@@ -58,8 +54,7 @@ export default function ReminderFormDialog({
   });
 
   function handleOnsavedForm(row: PaymentReminderRow) {
-    setOpenCreateDialog(false);
-    setOpenUpdateDialog(false);
+    setOpen(false);
     setSelectedRow?.(row);
   }
   return (
@@ -77,6 +72,7 @@ export default function ReminderFormDialog({
         <div className="w-[60vw] h-full overflow-y-auto">
           {currentUserId && (
             <PaymentReminderForm
+              open={open}
               className="flex flex-col gap-6 items-stretch p-8"
               currentUserId={currentUserId}
               defaultPartyKind="SUPPLIER"

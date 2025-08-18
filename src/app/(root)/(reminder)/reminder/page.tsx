@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/sheet";
 
 export default function Reminder() {
-  const { selectedRow, setIsAdmin, setSelectedRow } = useContext(
+  const { selectedRow, setIsAdmin, setSelectedRow, getReminder } = useContext(
     ReminderContext
   ) as ReminderContextType;
 
@@ -123,7 +123,7 @@ export default function Reminder() {
           </SheetHeader>
 
           <div className="overflow-hidden relative">
-            {selectedRow && <ReminderDetail />}
+            {selectedRow && <ReminderDetail onDeleted={() => getReminder()} />}
           </div>
         </SheetContent>
       </Sheet>

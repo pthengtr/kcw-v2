@@ -20,8 +20,21 @@ import {
   CheckCircle2,
   CircleDashed,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { PostgrestError } from "@supabase/supabase-js";
 
 /* ---------------- types for joined data ---------------- */
 type PartyMini = {
@@ -88,18 +101,61 @@ function FieldRow({
   );
 }
 
+type Props = {
+  onDeleted?: (reminder_uuid: string) => void; // optional hook for parent to refresh/close
+};
 /* =======================================================
    MAIN
 ======================================================= */
-export default function ReminderDetail() {
-  const { selectedRow, openUpdateDialog, setOpenUpdateDialog } = useContext(
-    ReminderContext
-  ) as ReminderContextType;
+export default function ReminderDetail({ onDeleted }: Props) {
+  const { selectedRow, openUpdateDialog, setOpenUpdateDialog, setSelectedRow } =
+    useContext(ReminderContext) as ReminderContextType;
 
   const supabase = useMemo(() => createClient(), []);
   const [party, setParty] = useState<PartyMini | null>(null);
   const [bank, setBank] = useState<BankMini | null>(null);
 
+  const [deleting, setDeleting] = useState(false);
+
+  function isPostgrestError(e: unknown): e is PostgrestError {
+    return !!e && typeof e === "object" && "message" in e && "code" in e;
+  }
+
+  function errorMessage(e: unknown): string {
+    if (typeof e === "string") return e;
+    if (e instanceof Error) return e.message;
+    if (isPostgrestError(e))
+      return e.message || e.details || "Unexpected error";
+    try {
+      return JSON.stringify(e);
+    } catch {
+      return "Unexpected error";
+    }
+  }
+
+  async function handleDelete() {
+    if (!selectedRow) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("payment_reminder")
+        .delete()
+        .eq("reminder_uuid", selectedRow.reminder_uuid);
+
+      if (error) throw error;
+
+      // clear selection so the detail pane empties
+      setSelectedRow?.(undefined);
+
+      // let parent refresh list / close drawer
+      onDeleted?.(selectedRow.reminder_uuid);
+    } catch (e: unknown) {
+      console.error("[delete reminder] failed", e);
+      alert(errorMessage(e));
+    } finally {
+      setDeleting(false);
+    }
+  }
   // fetch joined details for prettier display
   useEffect(() => {
     let cancelled = false;
@@ -184,18 +240,52 @@ export default function ReminderDetail() {
             </div>
           </div>
 
-          <ReminderFormDialog
-            update
-            open={openUpdateDialog}
-            setOpen={setOpenUpdateDialog}
-            dialogTrigger={
-              <Button size="sm" variant="outline" className="gap-2">
-                <Pencil className="h-4 w-4" />
-                แก้ไข
-              </Button>
-            }
-            dialogHeader="แก้ไขรายการเตือนโอน"
-          />
+          <div className="flex gap-2">
+            <ReminderFormDialog
+              update
+              open={openUpdateDialog}
+              setOpen={setOpenUpdateDialog}
+              dialogTrigger={
+                <Button size="sm" variant="outline" className="gap-2">
+                  <Pencil className="h-4 w-4" />
+                  แก้ไข
+                </Button>
+              }
+              dialogHeader="แก้ไขรายการเตือนโอน"
+            />
+
+            {/* Delete with confirm */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4" />
+                  ลบ
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>ลบรายการนี้หรือไม่?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    การลบจะไม่สามารถกู้คืนได้ คุณต้องการลบรายการเตือนโอนเลขที่{" "}
+                    <span className="font-medium">{selectedRow.note_id}</span>{" "}
+                    จริงหรือไม่ (คู่ค้า: {selectedRow.party_uuid})?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleting}>
+                    ยกเลิก
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? "กำลังลบ…" : "ลบรายการ"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </div>
 
