@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormField,
@@ -568,14 +567,14 @@ export default function PaymentReminderForm({
             )}
           />
           {/* proof_of_payment can stay simple */}
-          <div className="flex items-end gap-2">
+          {/* <div className="flex items-end gap-2">
             <Checkbox
               checked={!!form.watch("proof_of_payment")}
               onCheckedChange={(v) => form.setValue("proof_of_payment", !!v)}
               id="pop"
             />
             <Label htmlFor="pop">มีหลักฐานการโอน</Label>
-          </div>
+          </div> */}
         </div>
 
         {/* Dates */}
