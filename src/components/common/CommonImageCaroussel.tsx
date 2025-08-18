@@ -187,30 +187,42 @@ export default function CommonImagesCarousel({
       const item = images[i];
       if (!item) return;
 
+      // snapshot for correct math + rollback
+      const prevImages = images;
+      const prevIndex = index;
+      const nextLen = prevImages.length - 1; // length if delete succeeds
+
       // optimistic remove
       setImages((prev) => prev.filter((_, idx) => idx !== i));
       setIndex((prev) => {
-        const len = images.length - 1; // after removal
-        if (len <= 0) return 0;
-        // keep index within range; when deleting current last item, step back
-        return Math.min(prev, len - 1);
+        if (nextLen <= 0) return 0;
+        // keep index in range; step back if you deleted the last visible
+        return Math.min(prev, nextLen - 1);
       });
 
       const { error } = await storage.from(bucket).remove([item.path]);
       if (error) {
         console.error("[storage.remove] failed", error.message ?? error);
-        // rollback if deletion fails
-        setImages((prev) => {
-          const copy = [...prev];
+
+        // rollback images (avoid duplicates if concurrent changes happened)
+        setImages((curr) => {
+          if (curr.find((x) => x.path === item.path)) return curr;
+          const copy = [...curr];
           copy.splice(i, 0, item);
           return copy;
         });
+
+        // rollback index
+        setIndex(prevIndex);
         return;
       }
 
+      // success: close dialog if none left
+      if (nextLen <= 0) setOpen(false);
+
       onDeleted?.(item.path);
     },
-    [images, storage, bucket, onDeleted]
+    [images, index, storage, bucket, onDeleted, setOpen]
   );
 
   return (

@@ -10,7 +10,7 @@ import ReminderSearchForm from "./ReminderSearchForm";
 import ReminderFormDialog from "./ReminderFormDialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { Plus } from "lucide-react";
+import { Plus, RefreshCcw } from "lucide-react";
 import { clearMyCookie } from "@/app/(root)/action";
 import ResetTableCookiesDropdown from "../common/ResetTableCookiesDropdown";
 import { Button } from "../ui/button";
@@ -131,6 +131,15 @@ export default function ReminderTable({
                   <TabsTrigger value="paid">จ่ายแล้ว</TabsTrigger>
                 </TabsList>
               </Tabs>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  getReminder();
+                }}
+              >
+                <RefreshCcw strokeWidth={1} />
+              </Button>
               <ResetTableCookiesDropdown
                 handleResetCookies={handleResetCookies}
               />
