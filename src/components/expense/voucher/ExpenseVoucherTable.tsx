@@ -21,6 +21,7 @@ import ExpenseVoucherPrintDialog from "./ExpenseVoucherPrintDialog";
 import ExpenseUpdateReceiptButton from "../manage/ExpenseUpdateReceiptButton";
 import CommonImageManagerDialog from "@/components/common/CommonImageManagerDialog";
 import { Button } from "@/components/ui/button";
+import { ImageIcon } from "lucide-react";
 
 type ExpenseReceiptTableProps = {
   children?: React.ReactNode;
@@ -231,6 +232,10 @@ export default function ExpenseVoucherTable({
             <div className="flex-1 flex items-center justify-end gap-4">
               {selectedVoucher && (
                 <>
+                  <ExpenseUpdateReceiptButton
+                    receipt_uuid={selectedVoucher.receipt_uuid}
+                    size="sm"
+                  />
                   <CommonImageManagerDialog
                     receiptUuid={selectedVoucher.receipt_uuid}
                     folder="public/expense_receipts"
@@ -238,13 +243,10 @@ export default function ExpenseVoucherTable({
                     makePublicUrl
                     trigger={
                       <Button variant="outline" size="sm">
+                        <ImageIcon />
                         อัปโหลด/ดูรูป
                       </Button>
                     }
-                  />
-                  <ExpenseUpdateReceiptButton
-                    receipt_uuid={selectedVoucher.receipt_uuid}
-                    size="sm"
                   />
                   <ExpenseVoucherPrintDialog
                     extendedVouchers={
