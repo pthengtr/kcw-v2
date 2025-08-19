@@ -266,7 +266,7 @@ export default function ExpenseCreateReceiptForm({
       remark: formData.get("remark") as string,
       receipt_uuid: "", // dummy value
       party_uuid: selectedSupplier?.party_uuid,
-      supplier: selectedSupplier,
+      party: selectedSupplier,
       payment_uuid: selectedPaymentMethod.payment_uuid,
       payment_method: selectedPaymentMethod,
       branch_uuid: branch,

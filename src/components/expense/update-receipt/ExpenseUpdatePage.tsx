@@ -82,7 +82,7 @@ export default function ExpenseUpdatePage() {
         setDiscountInput(receipt.discount.toString());
         setWithholdingInput(receipt.withholding.toString());
         setTaxExemptInput(receipt.tax_exempt.toString());
-        setSelectedSupplier(receipt.supplier);
+        setSelectedSupplier(receipt.party);
         setSelectedPaymentMethod(receipt.payment_method);
         setSelectedRefReceipt(receipt.expense_receipt);
       }
