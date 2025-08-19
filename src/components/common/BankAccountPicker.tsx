@@ -373,7 +373,7 @@ export default function BankAccountPicker({
             </div>
 
             <div className="grid md:grid-cols-2 gap-3 items-end mt-2">
-              <div>
+              {/* <div>
                 <Label>ประเภทบัญชี</Label>
                 <Select
                   defaultValue="OTHER"
@@ -399,7 +399,7 @@ export default function BankAccountPicker({
                   type="hidden"
                   defaultValue="OTHER"
                 />
-              </div>
+              </div> */}
 
               <label className="inline-flex items-center gap-2 mt-1">
                 <input type="checkbox" name="is_default" className="h-4 w-4" />
