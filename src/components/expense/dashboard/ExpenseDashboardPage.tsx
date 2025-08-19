@@ -305,8 +305,15 @@ export default function ExpenseDashboardPage() {
           className="w-[80vw] h-[90vh] col-span-2 justify-self-center"
         >
           <ExpenseDashboardTable
-            key={`${dataView}-${selectedBranch ?? "ALL"}-${YEAR}`}
-            expenseSummary={currentData.length ? currentData : expenseSummary} // fallback just in case
+            datasetKey={`${dataView}-${selectedBranch ?? "ALL"}-${YEAR}`}
+            expenseSummary={currentData.length ? currentData : expenseSummary}
+            title={
+              dataView === "ALL"
+                ? "สรุปค่าใช้จ่ายทั้งหมด"
+                : dataView === "ENTRIES"
+                ? "สรุปค่าใช้จ่ายเฉพาะบริษัท"
+                : "สรุปค่าใช้จ่ายเฉพาะทั่วไป"
+            }
           />
         </PersistedCard>
       </div>

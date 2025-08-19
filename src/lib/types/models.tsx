@@ -15,7 +15,7 @@ export type ExpenseReceiptType = {
   party_uuid: UUID;
   branch: BranchType;
   payment_method: PaymentMethodType;
-  supplier: PartyOption;
+  party: PartyOption;
   created_at: string;
   voucher_description: string;
   tax_exempt: number;

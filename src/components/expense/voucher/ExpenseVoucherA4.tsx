@@ -100,7 +100,7 @@ export default function ExpenseVoucherA4({
         {/* Payment to */}
         <div className="grid grid-cols-[1fr,auto] w-fit">
           <div className="pr-4">จ่ายให้</div>
-          <div>{selectedExtendedVoucher.supplier.party_name}</div>
+          <div>{selectedExtendedVoucher.party.party_name}</div>
           <div className="pr-4">โดย</div>
           <div>
             {selectedExtendedVoucher.payment_method.payment_description}
@@ -208,7 +208,7 @@ export default function ExpenseVoucherA4({
 
         <div className="flex flex-col gap-4">
           <div>หมายเหตุ</div>
-          <div className="grid grid-cols-3 w-fit">
+          <div className="grid grid-cols-3 w-fit gap-4">
             {groupVouchers.map((voucher) => (
               <React.Fragment key={voucher.receipt_uuid}>
                 {voucher.remark && (
