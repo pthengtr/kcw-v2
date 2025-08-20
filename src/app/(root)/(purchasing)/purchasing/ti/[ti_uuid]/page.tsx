@@ -80,6 +80,7 @@ export default async function EditTIPage({
       remark: header.remark ?? "",
     },
     lines: lines.map((r) => ({
+      ti_line_uuid: r.ti_line_uuid, // <- keep it
       line_no: r.line_no,
       sku_uuid: r.sku_uuid,
       qty: toNum(r.qty),

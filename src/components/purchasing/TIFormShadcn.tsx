@@ -26,6 +26,7 @@ import {
   upsertTI,
   postTI,
 } from "@/app/(root)/(purchasing)/purchasing/ti/actions";
+import MatchDNDrawer from "./MatchDNDrawer";
 
 /** --- Picker prop contracts (same pattern as DN) --- */
 export type BasePickerProps = {
@@ -44,6 +45,7 @@ export type SkuPickerProps = BasePickerProps & {
 
 /** --- Zod schemas --- */
 const LineSchema = z.object({
+  ti_line_uuid: z.string().uuid().optional(), // <- add this
   line_no: z.number().int().positive(),
   sku_uuid: z.string().uuid(),
   qty: z.number().positive(),
@@ -372,146 +374,169 @@ export default function TIFormShadcn({
           </div>
 
           <div className="grid grid-cols-12 gap-2">
-            {fields.map((f, idx) => (
-              <React.Fragment key={f.key}>
-                {/* SKU */}
-                <FormField
-                  control={form.control}
-                  name={`lines.${idx}.sku_uuid`}
-                  render={({ field, fieldState }) => (
-                    <FormItem className="col-span-5">
-                      <FormLabel>SKU</FormLabel>
-                      <FormControl>
-                        <Sku
-                          value={field.value ?? ""}
-                          onChange={(v) => field.onChange(v ?? "")}
-                          locationUuid={form.watch("header.location_uuid")}
-                          disabled={disabled}
-                          error={fieldState.error?.message}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            {fields.map((f, idx) => {
+              const tiLineUuid = f.ti_line_uuid; // from useFieldArray fields (typed now)
 
-                {/* Qty */}
-                <FormField
-                  control={form.control}
-                  name={`lines.${idx}.qty`}
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Qty</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.0001"
-                          value={
-                            Number.isFinite(field.value as number)
-                              ? (field.value as number)
-                              : 0
-                          }
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value || 0))
-                          }
-                          disabled={disabled}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+              return (
+                <React.Fragment key={f.key}>
+                  {/* SKU */}
+                  <FormField
+                    control={form.control}
+                    name={`lines.${idx}.sku_uuid`}
+                    render={({ field, fieldState }) => (
+                      <FormItem className="col-span-5">
+                        <FormLabel>SKU</FormLabel>
+                        <FormControl>
+                          <Sku
+                            value={field.value ?? ""}
+                            onChange={(v) => field.onChange(v ?? "")}
+                            locationUuid={form.watch("header.location_uuid")}
+                            disabled={disabled}
+                            error={fieldState.error?.message}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                {/* Unit cost */}
-                <FormField
-                  control={form.control}
-                  name={`lines.${idx}.unit_cost`}
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Unit Cost</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.000001"
-                          value={
-                            Number.isFinite(field.value as number)
-                              ? (field.value as number)
-                              : 0
-                          }
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value || 0))
-                          }
-                          disabled={disabled}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                  {/* Qty */}
+                  <FormField
+                    control={form.control}
+                    name={`lines.${idx}.qty`}
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Qty</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.0001"
+                            value={
+                              Number.isFinite(field.value as number)
+                                ? (field.value as number)
+                                : 0
+                            }
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value || 0))
+                            }
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-                {/* Discount */}
-                <FormField
-                  control={form.control}
-                  name={`lines.${idx}.line_discount_amount`}
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Discount</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={
-                            Number.isFinite(field.value as number)
-                              ? (field.value as number)
-                              : 0
-                          }
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value || 0))
-                          }
-                          disabled={disabled}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                  {/* Unit cost */}
+                  <FormField
+                    control={form.control}
+                    name={`lines.${idx}.unit_cost`}
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Unit Cost</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.000001"
+                            value={
+                              Number.isFinite(field.value as number)
+                                ? (field.value as number)
+                                : 0
+                            }
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value || 0))
+                            }
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-                {/* VAT % */}
-                <FormField
-                  control={form.control}
-                  name={`lines.${idx}.effective_tax_rate`}
-                  render={({ field }) => (
-                    <FormItem className="col-span-1">
-                      <FormLabel>VAT %</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={
-                            Number.isFinite(field.value as number)
-                              ? (field.value as number)
-                              : 0
-                          }
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value || 0))
-                          }
-                          disabled={disabled}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                  {/* Discount */}
+                  <FormField
+                    control={form.control}
+                    name={`lines.${idx}.line_discount_amount`}
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Discount</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={
+                              Number.isFinite(field.value as number)
+                                ? (field.value as number)
+                                : 0
+                            }
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value || 0))
+                            }
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-                <div className="col-span-12 -mt-1 flex justify-end">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="text-red-600"
-                    onClick={() => remove(idx)}
-                    disabled={disabled}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </React.Fragment>
-            ))}
+                  {/* VAT % */}
+                  <FormField
+                    control={form.control}
+                    name={`lines.${idx}.effective_tax_rate`}
+                    render={({ field }) => (
+                      <FormItem className="col-span-1">
+                        <FormLabel>VAT %</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={
+                              Number.isFinite(field.value as number)
+                                ? (field.value as number)
+                                : 0
+                            }
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value || 0))
+                            }
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <MatchDNDrawer
+                    tiLineUuid={tiLineUuid}
+                    skuUuid={form.watch(`lines.${idx}.sku_uuid`)}
+                    supplierUuid={form.watch("header.supplier_uuid")}
+                    locationUuid={form.watch("header.location_uuid")}
+                    tiLineUnitCost={Number(
+                      form.watch(`lines.${idx}.unit_cost`) || 0
+                    )}
+                    readOnly={
+                      !!readOnly ||
+                      !form.watch(
+                        `header.ti_uuid`
+                      ) /* require saved TI before matching */
+                    }
+                    onChanged={() => {
+                      // optional: you can refetch allocations summary for the line, or flash a toast
+                    }}
+                  />
+
+                  <div className="col-span-12 -mt-1 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="text-red-600"
+                      onClick={() => remove(idx)}
+                      disabled={disabled}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
 
