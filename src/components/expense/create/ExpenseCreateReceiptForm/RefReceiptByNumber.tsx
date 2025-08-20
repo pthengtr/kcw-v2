@@ -60,7 +60,7 @@ export default function RefReceiptByNumber({
 
       const query = supabase
         .from("expense_receipt")
-        .select(`*, supplier (*)`)
+        .select(`*, party (*)`)
         .eq("doc_type", "RECEIPT")
         .eq("branch_uuid", branch_uuid)
         .ilike("receipt_number", `%${text}%`)
