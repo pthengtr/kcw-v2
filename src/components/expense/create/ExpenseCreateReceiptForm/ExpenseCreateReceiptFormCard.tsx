@@ -22,7 +22,7 @@ export default function ExpenseCreateReceiptFormCard({
   useEffect(() => {
     if (update && selectedReceipt) {
       formExpenseReceipt.reset({
-        supplier_uuid: selectedReceipt.receipt_uuid,
+        party_uuid: selectedReceipt.receipt_uuid,
         payment_uuid: selectedReceipt.payment_uuid,
         receipt_number: selectedReceipt.receipt_number,
         receipt_date: new Date(selectedReceipt.receipt_date),

@@ -26,7 +26,7 @@ import { uploadReceiptFiles } from "@/lib/utils";
 export type ExpenseCreateReceiptFormDefaultType = {
   payment_uuid: string;
   remark: string;
-  supplier_uuid?: string;
+  party_uuid?: string;
   receipt_number: string;
   receipt_date: Date;
   vat: string;
@@ -49,7 +49,7 @@ export type ExpenseCreateCreditNoteFormDefaultType = {
 
 export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefaultType =
   {
-    supplier_uuid: "",
+    party_uuid: "",
     payment_uuid: "",
     receipt_number: "",
     receipt_date: new Date(),
@@ -74,7 +74,7 @@ export const expenseCreateCreditNoteFormDefaultValues: ExpenseCreateCreditNoteFo
   };
 
 const expenseCretaeReceiptFormFieldLabel = {
-  supplier_uuid: "ชื่อบริษัท",
+  party_uuid: "ชื่อบริษัท",
   receipt_number: "เลขที่เอกสาร",
   receipt_date: "วันที่",
   payment_uuid: "ชำระโดย",
