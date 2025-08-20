@@ -3,7 +3,6 @@ import { createContext, useCallback, useState } from "react";
 import React from "react";
 
 import { CheckedState } from "@radix-ui/react-checkbox";
-import { storageObjectType } from "../common/ImageCarousel";
 import {
   commonUploadFileProps,
   commonUploadFileReturn,
@@ -43,12 +42,6 @@ export type ReminderContextType = {
   setSupplierName: (supplierName: string) => void;
   selectedSupplier: PartyOption | undefined;
   setSelectedSupplier: (selectedSupplier: PartyOption | undefined) => void;
-  billImageArray: storageObjectType[] | undefined;
-  setBillImageArray: (billImageArray: storageObjectType[] | undefined) => void;
-  paymentImageArray: storageObjectType[] | undefined;
-  setPaymentImageArray: (
-    paymentImageArray: storageObjectType[] | undefined
-  ) => void;
   isAdmin: boolean;
   setIsAdmin: (open: boolean) => void;
   reminderUploadFile: ({
@@ -57,11 +50,6 @@ export type ReminderContextType = {
     imageFolder,
   }: commonUploadFileProps) => commonUploadFileReturn;
   getReminder: () => void;
-  reminderGetImageArray: (
-    imageFolder: string,
-    imageId: string,
-    setImageArray: (imageArray: storageObjectType[]) => void
-  ) => void;
   status: string;
   setStatus: (status: string) => void;
   updateSelectedRow?: (patch: Partial<PaymentReminderRow>) => void; // NEW
@@ -87,9 +75,6 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [selectedBankInfo, setSelectBankInfo] = useState<PartyBankInfo>();
   const [supplierName, setSupplierName] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState<PartyOption>();
-  const [billImageArray, setBillImageArray] = useState<storageObjectType[]>();
-  const [paymentImageArray, setPaymentImageArray] =
-    useState<storageObjectType[]>();
   const [isAdmin, setIsAdmin] = useState(false);
   const [status, setStatus] = useState("all");
 
@@ -173,51 +158,6 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     return { data };
   }
 
-  const reminderGetImageArray = useCallback(
-    async function (
-      imageFolder: string,
-      imageId: string,
-      setImageArray: (imageArray: storageObjectType[]) => void
-    ) {
-      const safeImageId = transliterateThaiConsonants(imageId);
-
-      const supabase = createClient();
-
-      const { data, error } = await supabase.storage
-        .from("pictures")
-        .list(`public/${imageFolder}`, {
-          limit: 100,
-          offset: 0,
-          search: safeImageId,
-          sortBy: { column: "updated_at", order: "asc" },
-        });
-
-      if (!!error) console.log(error);
-      if (!!data) {
-        if (
-          data.length === 0 &&
-          imageFolder === "reminder_payment" &&
-          selectedRow
-        ) {
-          const { data: dataUpdate, error: errorUpdate } = await supabase
-            .from("payment_reminder")
-            .update({ proof_of_payment: false })
-            .eq("reminder_uuid", selectedRow.reminder_uuid)
-            .select();
-
-          if (errorUpdate) console.log(errorUpdate);
-          if (dataUpdate) {
-            console.log(dataUpdate);
-            getReminder();
-          }
-        }
-        setImageArray(data);
-        //setCount(data.length + 1);
-      }
-    },
-    [getReminder, selectedRow]
-  );
-
   const value = {
     selectedRow,
     setSelectedRow,
@@ -246,17 +186,12 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setSupplierName,
     selectedSupplier,
     setSelectedSupplier,
-    billImageArray,
-    setBillImageArray,
-    paymentImageArray,
-    setPaymentImageArray,
     isAdmin,
     setIsAdmin,
     reminderUploadFile,
     getReminder,
     setStatus,
     status,
-    reminderGetImageArray,
     updateSelectedRow,
   };
 

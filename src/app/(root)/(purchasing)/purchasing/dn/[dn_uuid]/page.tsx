@@ -1,5 +1,8 @@
 // app/(purchasing)/purchasing/dn/[dn_uuid]/page.tsx
 import DNFormShadcn from "@/components/purchasing/DNFormShadcn";
+import LocationUuidPicker from "@/components/purchasing/LocationUuidPicker";
+import SKUUIDPicker from "@/components/purchasing/SKUUIDPicker";
+import SupplierPartyPicker from "@/components/purchasing/SupplierPartyPicker";
 import { createClient } from "@/lib/supabase/server";
 
 type Params = { dn_uuid: string };
@@ -27,5 +30,12 @@ export default async function EditDNPage({
     .order("line_no", { ascending: true });
   if (lErr) throw lErr;
 
-  return <DNFormShadcn initial={{ header, lines: lines ?? [] }} />;
+  return (
+    <DNFormShadcn
+      initial={{ header, lines: lines ?? [] }}
+      SupplierField={SupplierPartyPicker}
+      LocationField={LocationUuidPicker}
+      SKUField={SKUUIDPicker}
+    />
+  );
 }

@@ -23,6 +23,7 @@ import {
 } from "@/app/(root)/(purchasing)/purchasing/dn/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { DatePickerRHF } from "../common/DatePickerRHF";
 
 /** ---------- Domain Types (mirror DB) ---------- */
 export type DocStatus = "DRAFT" | "POSTED" | "VOID";
@@ -88,20 +89,32 @@ const FormSchema = z.object({
 export type DNFormValues = z.infer<typeof FormSchema>;
 
 /** ---------- Optional field component contracts ---------- */
-type PickerProps = {
+
+type SupplierPickerProps = {
   value?: string;
   onChange: (v: string) => void;
   disabled?: boolean;
+  error?: string;
+  placeholder?: string;
 };
-type SKUFieldProps = PickerProps & { index?: number };
+type LocationPickerProps = SupplierPickerProps;
 
+type SKUFieldProps = {
+  value?: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  index?: number;
+  locationUuid?: string;
+  error?: string;
+  placeholder?: string;
+};
 type Props = {
   initial?: {
     header: PurchaseDn;
     lines: PurchaseDnLine[];
   };
-  SupplierField?: React.ComponentType<PickerProps>;
-  LocationField?: React.ComponentType<PickerProps>;
+  SupplierField?: React.ComponentType<SupplierPickerProps>;
+  LocationField?: React.ComponentType<LocationPickerProps>;
   SKUField?: React.ComponentType<SKUFieldProps>;
 };
 
@@ -145,6 +158,8 @@ export default function DNFormShadcn({
         },
     mode: "onBlur",
   });
+
+  const locUuid = form.watch("location_uuid");
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -306,11 +321,11 @@ export default function DNFormShadcn({
           <FormField
             control={form.control}
             name="dn_date"
-            render={({ field }) => (
+            render={() => (
               <FormItem>
                 <FormLabel>DN Date</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} disabled={disabled} />
+                  <DatePickerRHF control={form.control} name="dn_date" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -376,11 +391,10 @@ export default function DNFormShadcn({
             >
               <div className="col-span-1 text-sm">{idx + 1}</div>
 
-              {/* SKU */}
               <FormField
                 control={form.control}
                 name={`lines.${idx}.sku_uuid`}
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem className="col-span-6">
                     <FormControl>
                       {SKUField ? (
@@ -389,6 +403,9 @@ export default function DNFormShadcn({
                           onChange={field.onChange}
                           disabled={disabled}
                           index={idx}
+                          locationUuid={locUuid}
+                          error={fieldState.error?.message}
+                          placeholder="เลือกสินค้า…"
                         />
                       ) : (
                         <Input
@@ -402,7 +419,6 @@ export default function DNFormShadcn({
                   </FormItem>
                 )}
               />
-
               {/* Qty (number as string in input, parse to number) */}
               <FormField
                 control={form.control}
@@ -431,7 +447,6 @@ export default function DNFormShadcn({
                   </FormItem>
                 )}
               />
-
               {/* Provisional cost (nullable number) */}
               <FormField
                 control={form.control}

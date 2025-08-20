@@ -7,7 +7,6 @@ import {
   useState,
 } from "react";
 import React from "react";
-import { storageObjectType } from "../common/ImageCarousel";
 import { createClient } from "@/lib/supabase/client";
 import { ColumnFiltersState } from "@tanstack/react-table";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,10 +59,6 @@ export type ExpenseContextType = {
   submitError: string | undefined;
   setSubmitError: (error: string | undefined) => void;
   handleSelectedReceipt: (row: ExpenseReceiptType) => void;
-  receiptImageArray: storageObjectType[] | undefined;
-  setReceiptImageArray: (
-    receiptImageArray: storageObjectType[] | undefined
-  ) => void;
   getCategory: () => Promise<void>;
   getItems: () => Promise<void>;
   getExpense: (branch: UUID) => Promise<void>;
@@ -250,9 +245,6 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [totalGeneralEntries, setTotalGeneralEntries] = useState<number>();
   const [totalTaxReport, setTotalTaxReport] = useState(0);
 
-  // image and misc
-  const [receiptImageArray, setReceiptImageArray] =
-    useState<storageObjectType[]>();
   const [submitError, setSubmitError] = useState<string>();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
@@ -495,8 +487,6 @@ export default function ExpenseProvider({ children }: ExpenseProviderProps) {
     // misc
     submitError,
     setSubmitError,
-    receiptImageArray,
-    setReceiptImageArray,
     handleSelectedReceipt,
     getCategory,
     getItems,
