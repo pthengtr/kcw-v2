@@ -5,10 +5,12 @@ import SupplierPartyPicker from "@/components/purchasing/SupplierPartyPicker";
 
 export default function NewDNPage() {
   return (
-    <DNForm
-      SupplierField={SupplierPartyPicker}
-      LocationField={LocationUuidPicker}
-      SKUField={SKUUIDPicker}
-    />
+    <section className="px-12">
+      <DNForm
+        SupplierField={SupplierPartyPicker}
+        LocationField={LocationUuidPicker}
+        SKUField={SKUUIDPicker}
+      />
+    </section>
   );
 }

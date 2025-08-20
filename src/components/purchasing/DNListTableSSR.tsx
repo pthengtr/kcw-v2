@@ -20,6 +20,14 @@ import {
 import { cn } from "@/lib/utils";
 import { SSRDatePicker } from "../common/SSRDatePicker";
 
+// put this near the top of DNListTableSSR.tsx (module scope is fine)
+const dateFmt = new Intl.DateTimeFormat("th-TH", {
+  timeZone: "UTC",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 export type DocStatus = "DRAFT" | "POSTED" | "VOID";
 
 export type VDnListRow = {
@@ -171,8 +179,9 @@ export default function DNListTableSSR(props: Props) {
           />
         ),
         cell: ({ row }) => {
-          const d = new Date(row.original.dn_date);
-          return <span>{d.toLocaleDateString()}</span>;
+          // dn_date is "YYYY-MM-DD" (no time)
+          const d = new Date(`${row.original.dn_date}T00:00:00Z`);
+          return <span>{dateFmt.format(d)}</span>; // always "DD/MM/YYYY"
         },
         size: 140,
       },

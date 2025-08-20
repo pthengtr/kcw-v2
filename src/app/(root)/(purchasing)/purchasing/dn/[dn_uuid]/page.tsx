@@ -31,11 +31,13 @@ export default async function EditDNPage({
   if (lErr) throw lErr;
 
   return (
-    <DNFormShadcn
-      initial={{ header, lines: lines ?? [] }}
-      SupplierField={SupplierPartyPicker}
-      LocationField={LocationUuidPicker}
-      SKUField={SKUUIDPicker}
-    />
+    <section className="px-12">
+      <DNFormShadcn
+        initial={{ header, lines: lines ?? [] }}
+        SupplierField={SupplierPartyPicker}
+        LocationField={LocationUuidPicker}
+        SKUField={SKUUIDPicker}
+      />
+    </section>
   );
 }

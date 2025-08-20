@@ -27,9 +27,9 @@ type SearchParams = {
 export default async function DNListPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>; // <-- Promise!
+  searchParams: Promise<SearchParams>;
 }) {
-  const sp = await searchParams; // <-- await it
+  const sp = await searchParams;
 
   const supabase = await createClient();
 
@@ -39,31 +39,39 @@ export default async function DNListPage({
     ? Number(sp.pageSize)
     : 20;
 
-  const q = (sp.q ?? "").trim();
+  const rawQ = (sp.q ?? "").trim();
+  const normQ = rawQ.replace(/[%_]/g, " ").trim(); // sanitize wildcards
+  const like = `%${normQ}%`;
+
   const status = (sp.status ?? "ALL") as DocStatus | "ALL";
   const sort = (sp.sort ?? "created_at") as NonNullable<SearchParams["sort"]>;
   const order = (sp.order ?? "desc") as NonNullable<SearchParams["order"]>;
   const dateFrom = (sp.from ?? "").trim();
   const dateTo = (sp.to ?? "").trim();
+
   const fromIdx = (page - 1) * pageSize;
   const toIdx = fromIdx + pageSize - 1;
 
-  // 2) COUNT query (head-only for speed)
+  // 2) COUNT (head only for speed)
   let countQuery = supabase
     .from("v_dn_list")
     .select("*", { count: "exact", head: true });
 
-  if (q) {
+  // Text search: ONLY text columns (no enums)
+  if (normQ) {
     countQuery = countQuery.or(
       [
-        `dn_number.ilike.%${q}%`,
-        `supplier_name.ilike.%${q}%`,
-        `location_code.ilike.%${q}%`,
-        `location_name.ilike.%${q}%`,
-        `status.ilike.%${q}%`,
+        `dn_number.ilike.${like}`,
+        `supplier_name.ilike.${like}`,
+        `location_code.ilike.${like}`,
+        `location_name.ilike.${like}`,
+        // If your view exposes status_text (status::text), you can add:
+        // `status_text.ilike.${like}`,
       ].join(",")
     );
   }
+
+  // Exact filters
   if (status !== "ALL") countQuery = countQuery.eq("status", status);
   if (dateFrom) countQuery = countQuery.gte("dn_date", dateFrom);
   if (dateTo) countQuery = countQuery.lte("dn_date", dateTo);
@@ -73,21 +81,22 @@ export default async function DNListPage({
   const totalCount = count ?? 0;
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  // 3) DATA query (paged + ordered)
+  // 3) DATA (paged + ordered)
   let dataQuery = supabase
     .from("v_dn_list")
     .select("*")
     .range(fromIdx, toIdx)
     .order(sort, { ascending: order === "asc", nullsFirst: false });
 
-  if (q) {
+  if (normQ) {
     dataQuery = dataQuery.or(
       [
-        `dn_number.ilike.%${q}%`,
-        `supplier_name.ilike.%${q}%`,
-        `location_code.ilike.%${q}%`,
-        `location_name.ilike.%${q}%`,
-        `status.ilike.%${q}%`,
+        `dn_number.ilike.${like}`,
+        `supplier_name.ilike.${like}`,
+        `location_code.ilike.${like}`,
+        `location_name.ilike.${like}`,
+        // If available in your view:
+        // `status_text.ilike.${like}`,
       ].join(",")
     );
   }
@@ -99,7 +108,7 @@ export default async function DNListPage({
   if (error) throw new Error(error.message);
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="py-6 px-12 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Goods Received (DN)</h1>
         <Link href="/purchasing/dn/new">
@@ -113,7 +122,7 @@ export default async function DNListPage({
         pageSize={pageSize}
         pageCount={pageCount}
         totalCount={totalCount}
-        q={q}
+        q={rawQ}
         status={status}
         sort={sort}
         order={order}
