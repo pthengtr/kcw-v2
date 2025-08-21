@@ -128,7 +128,7 @@ function getFormInput(
       return <DatePickerInput field={field} />;
       break;
 
-    case "supplier_uuid":
+    case "party_uuid":
       return <ExpenseSelectSupplierInput />;
 
     case "payment_uuid":
