@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 /* ---------------- constants & helpers ---------------- */
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 const iso = (d: Date | null | undefined) =>
-  d ? new Date(d).toISOString() : null;
+  d ? new Date(d).toLocaleString("en-US") : null;
 
 /* ---------------- Zod schema ---------------- */
 const FormSchema = z
@@ -307,8 +307,10 @@ export default function PaymentReminderForm({
   /* -------- submit -------- */
   const onSubmit = form.handleSubmit(async (v) => {
     setSubmitting(true);
+
+    console.log(v.kbiz_datetime);
     try {
-      const nowIso = new Date().toISOString();
+      const nowIso = new Date().toLocaleString("en-US");
 
       if (isEdit && value) {
         const update = {

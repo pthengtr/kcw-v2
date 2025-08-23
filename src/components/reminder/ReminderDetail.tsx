@@ -344,10 +344,7 @@ export default function ReminderDetail({ onDeleted }: Props) {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <FieldRow
-                label="มูลค่ารวม"
-                value={fmtAmount(selectedRow.total_amount)}
-              />
+              <FieldRow label="มูลค่ารวม" value={fmtAmount(netAmount)} />
               <FieldRow
                 label="ส่วนลด"
                 value={fmtAmount(selectedRow.discount)}
@@ -356,7 +353,9 @@ export default function ReminderDetail({ onDeleted }: Props) {
               <FieldRow
                 label="สุทธิ"
                 value={
-                  <span className="font-semibold">{fmtAmount(netAmount)}</span>
+                  <span className="font-semibold">
+                    {fmtAmount(selectedRow.total_amount)}
+                  </span>
                 }
               />
             </div>
