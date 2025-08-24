@@ -207,7 +207,7 @@ export default function ReminderDetail({ onDeleted }: Props) {
   const isPaid = !!selectedRow.payment_date;
   const hasProof = !!selectedRow.proof_of_payment;
   const netAmount =
-    (selectedRow.total_amount ?? 0) - (selectedRow.discount ?? 0);
+    (selectedRow.total_amount ?? 0) + (selectedRow.discount ?? 0);
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
