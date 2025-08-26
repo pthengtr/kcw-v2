@@ -14,13 +14,6 @@ export default function Home() {
           />
           <CardIcon href="/expense" label="ค่าใช้จ่าย" icon="Banknote" />
           <CardIcon href="/party" label="รายชื่อคู่ค้า" icon="Handshake" />
-          <CardIcon href="/product" label="สินค้า" icon="ShoppingBag" />
-          <CardIcon href="/pos" label="ขายหน้าร้าน" icon="SquareMenu" />
-          <CardIcon
-            href="/purchase/receive"
-            label="รับสินค้า"
-            icon="ClipboardList"
-          />
         </CardIconMenu>
       </div>
     </main>
