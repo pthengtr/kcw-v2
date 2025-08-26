@@ -65,7 +65,7 @@ export default function ExpenseUpdatePage() {
       const query = supabase
         .from("expense_receipt")
         .select(
-          "*, supplier(*), payment_method(*), expense_receipt:ref_receipt_uuid (*)"
+          "*, party(*), payment_method(*), expense_receipt:ref_receipt_uuid (*)"
         )
         .eq("receipt_uuid", receiptId)
         .overrideTypes<ExpenseReceiptType[], { merge: false }>();
