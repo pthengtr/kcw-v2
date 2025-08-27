@@ -61,7 +61,6 @@ export const expenseReceiptColumn: ColumnDef<ExpenseReceiptType>[] = [
   simpleText("branch.branch_name"),
   simpleText("remark"),
   simpleText("user_id"),
-  submitToAccount(),
   simpleText("doc_type"),
 ];
 
@@ -159,29 +158,6 @@ function totalNet() {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}
-        </div>
-      );
-    },
-  };
-}
-
-function submitToAccount() {
-  return {
-    id: "ส่งบัญชี",
-    accessorKey: "submit_to_account",
-    header: ({ column }: HeaderContext<ExpenseReceiptType, unknown>) => (
-      <DataTableColumnHeader column={column} title="ส่งบัญชี" />
-    ),
-    cell: (row: CellContext<ExpenseReceiptType, unknown>) => {
-      return (
-        <div className="text-right">
-          {row.getValue() ? (
-            <div className="flex justify-center">
-              <Check />
-            </div>
-          ) : (
-            ""
-          )}
         </div>
       );
     },
