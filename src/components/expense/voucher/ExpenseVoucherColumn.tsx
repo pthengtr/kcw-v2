@@ -8,6 +8,7 @@ import {
   HeaderContext,
   Row,
 } from "@tanstack/react-table";
+import { Check } from "lucide-react";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
@@ -37,6 +38,26 @@ export const expenseVoucherColumn: ColumnDef<ExtendedExpenseReceiptType>[] = [
   simpleTextFullWidth("voucher_description"),
   numberFloat("totalNet"),
   simpleText("doc_type"),
+  {
+    id: "มีรูป",
+    accessorKey: "has_images",
+    header: ({
+      column,
+    }: HeaderContext<ExtendedExpenseReceiptType, unknown>) => (
+      <DataTableColumnHeader column={column} title="มีรูป" />
+    ),
+    cell: ({ getValue }) => (
+      <div className="text-right">
+        {getValue() ? (
+          <div className="flex justify-center">
+            <Check className="h-4 w-4" />
+          </div>
+        ) : (
+          ""
+        )}
+      </div>
+    ),
+  },
 ];
 
 function simpleText(key: keyof typeof expenseVoucherFieldLabel) {

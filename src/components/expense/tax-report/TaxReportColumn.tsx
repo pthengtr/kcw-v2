@@ -9,6 +9,7 @@ import {
   CellContext,
 } from "@tanstack/react-table";
 import { TaxReportRow } from "@/lib/types/models";
+import { Check } from "lucide-react";
 
 export const defaultTaxReportColumnVisibility = {
   ลำดับที่: true,
@@ -48,6 +49,24 @@ export const taxReportColumn: ColumnDef<TaxReportRow>[] = [
   simpleTextFullWidth("voucher_description"),
   simpleText("remark"),
   simpleText("doc_type"),
+  {
+    id: "มีรูป",
+    accessorKey: "has_images",
+    header: ({ column }: HeaderContext<TaxReportRow, unknown>) => (
+      <DataTableColumnHeader column={column} title="มีรูป" />
+    ),
+    cell: ({ getValue }) => (
+      <div className="text-right">
+        {getValue() ? (
+          <div className="flex justify-center">
+            <Check className="h-4 w-4" />
+          </div>
+        ) : (
+          ""
+        )}
+      </div>
+    ),
+  },
 ];
 
 function simpleText<K extends keyof typeof taxReportFieldLabel>(key: K) {
