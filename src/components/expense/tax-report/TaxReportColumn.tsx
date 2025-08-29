@@ -27,7 +27,7 @@ export const defaultTaxReportColumnVisibility = {
 export const taxReportFieldLabel = {
   receipt_number: "เลขที่ใบกำกับภาษี",
   receipt_date: "วันที่",
-  supplier_name: "ชื่อผู้ขายสินค้า/บริการ",
+  party_name: "ชื่อผู้ขายสินค้า/บริการ",
   tax_payer_id: "เลขที่ผู้เสียภาษี",
   voucher_description: "รายการสินค้า",
   remark: "หมายเหตุ",
@@ -40,7 +40,7 @@ export const taxReportFieldLabel = {
 export const taxReportColumn: ColumnDef<TaxReportRow>[] = [
   simpleText("receipt_number"),
   dateThai("receipt_date"),
-  simpleTextFullWidth("supplier_name"),
+  simpleTextFullWidth("party_name"),
   simpleText("tax_payer_id"),
   moneyRight("total_before_tax", taxReportFieldLabel.total_before_tax),
   moneyRight("vat_only", taxReportFieldLabel.vat_only),
