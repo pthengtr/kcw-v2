@@ -1,9 +1,10 @@
 import React, { Ref, useContext } from "react";
 import Image from "next/image";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
-import { ExtendedExpenseReceiptType } from "@/lib/types/models";
+import { ExtendedExpenseReceiptType, UUID } from "@/lib/types/models";
 import { Separator } from "@/components/ui/separator";
 import { numberToThaiWords } from "@/lib/utils";
+import { useParams } from "next/navigation";
 
 type ExpenseVoucherA4Props = {
   printRef: Ref<HTMLDivElement> | undefined;
@@ -15,6 +16,8 @@ export default function ExpenseVoucherA4({
   extendedVouchers,
 }: ExpenseVoucherA4Props) {
   const { selectedVoucher } = useContext(ExpenseContext) as ExpenseContextType;
+
+  const { branch }: { branch: UUID } = useParams();
 
   const selectedExtendedVoucher = extendedVouchers.find(
     (voucher) => voucher.receipt_uuid === selectedVoucher?.receipt_uuid
@@ -69,12 +72,27 @@ export default function ExpenseVoucherA4({
                 priority
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <div>บริษัท เกียรติชัยอะไหล่ยนต์ 2007 จำกัด (สำนักงานใหญ่)</div>
-              <div>ที่อยู่ 305 ม.1 ต.ชุมแสง อ.วังจันทร์ จ.ระยอง 21210</div>
-              <div>โทร. 038-666-078</div>
-              <div className="mt-3">เลขประจำตัวผู้เสียภาษี 0215560000262</div>
-            </div>
+            {branch === "4975a5a1-90e6-443a-9921-c6c637f4631c" ? (
+              <div className="flex flex-col gap-2">
+                <div>
+                  บริษัท เกียรติชัยอะไหล่ยนต์ 2007 จำกัด (สาขาสี่แยกพัฒนา)
+                </div>
+                <div>
+                  ที่อยู่ 16/2 ม.2 ต.ห้วยทับมอญ อ.เขาชะเมา จ.ระยอง 21110
+                </div>
+                <div>โทร. 063-2655387, 038-015818</div>
+                <div className="mt-3">
+                  เลขประจำตัวผู้เสียภาษี 0215560000262 (สาขาที่ 00003)
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div>บริษัท เกียรติชัยอะไหล่ยนต์ 2007 จำกัด (สำนักงานใหญ่)</div>
+                <div>ที่อยู่ 305 ม.1 ต.ชุมแสง อ.วังจันทร์ จ.ระยอง 21210</div>
+                <div>โทร. 038-666-078</div>
+                <div className="mt-3">เลขประจำตัวผู้เสียภาษี 0215560000262</div>
+              </div>
+            )}
           </div>
           <div className="p-6 bg-slate-100 flex flex-col gap-4 items-center">
             <div className="text-2xl">ใบสำคัญจ่าย</div>
