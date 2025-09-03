@@ -72,6 +72,7 @@ export default function ExpenseVoucherTable({
           count: "exact",
         })
         .order("receipt_date", { ascending: true })
+        .order("receipt_number", { ascending: true }) // secondary sort
         .gte("created_at", fromDate)
         .lte("created_at", toDate)
         .limit(500);

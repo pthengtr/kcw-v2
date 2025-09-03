@@ -70,10 +70,11 @@ export default function ExpenseVoucherSearchForm({
 
     let query = supabase
       .from("expense_receipt")
-      .select("*, supplier(*), branch(*), payment_method(*)", {
+      .select("*, party(*), branch(*), payment_method(*)", {
         count: "exact",
       })
       .order("receipt_date", { ascending: true })
+      .order("receipt_number", { ascending: true }) // secondary sort
       .limit(500);
 
     const date = new Date(searchData.voucher_month);
