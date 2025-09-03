@@ -53,6 +53,28 @@ export default function ExpenseVoucherA4({
   const vouchersTotalNet =
     vouchersTotalAmount + vouchersVat - vouchersWithholding;
 
+  let voucherDate: string | undefined;
+
+  if (groupVouchers.length > 1) {
+    // Take receipt_date of the last voucher and move to the last day of that month
+    const d = new Date(groupVouchers.at(-1)?.receipt_date as string);
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0); // 0th day of next month
+    voucherDate = lastDay.toLocaleDateString("th-TH", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } else {
+    // Just use that receipt_date directly
+    voucherDate = new Date(
+      groupVouchers.at(-1)?.receipt_date as string
+    ).toLocaleDateString("th-TH", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  }
+
   return (
     <div
       ref={printRef}
@@ -87,6 +109,7 @@ export default function ExpenseVoucherA4({
               </div>
             ) : (
               <div className="flex flex-col gap-2">
+                ``
                 <div>บริษัท เกียรติชัยอะไหล่ยนต์ 2007 จำกัด (สำนักงานใหญ่)</div>
                 <div>ที่อยู่ 305 ม.1 ต.ชุมแสง อ.วังจันทร์ จ.ระยอง 21210</div>
                 <div>โทร. 038-666-078</div>
@@ -102,15 +125,7 @@ export default function ExpenseVoucherA4({
                 {selectedExtendedVoucher.voucherId}
               </div>
               <div>วันที่</div>
-              <div className="text-right">
-                {new Date(
-                  groupVouchers.at(-1)?.receipt_date as string
-                ).toLocaleDateString("th-TH", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
-              </div>
+              <div className="text-right">{voucherDate}</div>
             </div>
           </div>
         </div>
