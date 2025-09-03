@@ -162,6 +162,8 @@ export default function ExpenseVoucherTable({
     (voucher) => !skipVoucher.includes(voucher.payment_uuid)
   );
 
+  const branchPrefix =
+    branch === "4975a5a1-90e6-443a-9921-c6c637f4631c" ? "3" : "";
   // assign vocher id to inidividual type
   const individualVouchers = newVouchers
     .filter((voucher) => !groupVoucher.includes(voucher.payment_uuid))
@@ -169,7 +171,11 @@ export default function ExpenseVoucherTable({
       return {
         ...voucher,
         voucherId:
-          "PV" + voucherYY + voucherMM + String(index++).padStart(3, "0"),
+          branchPrefix +
+          "PV" +
+          voucherYY +
+          voucherMM +
+          String(index++).padStart(3, "0"),
       };
     });
 
