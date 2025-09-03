@@ -12,6 +12,8 @@ import { Search } from "lucide-react";
 import MonthPickerInput from "@/components/common/MonthPickerInput";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import { BILL_CYCLE_DATE } from "@/lib/utils";
+import { useParams } from "next/navigation";
+import { UUID } from "@/lib/types/models";
 
 const searchFormFieldLabel = {
   voucher_month: "สร้างบิลหลังวันที่ 10",
@@ -59,6 +61,8 @@ export default function ExpenseVoucherSearchForm({
     ExpenseContext
   ) as ExpenseContextType;
 
+  const { branch }: { branch: UUID } = useParams();
+
   async function searchVoucher(formData: FormData) {
     // type-casting here for convenience
     // in practice, you should validate your inputs
@@ -93,6 +97,10 @@ export default function ExpenseVoucherSearchForm({
     ).toLocaleString("en-US");
 
     query = query.gte("created_at", fromDate).lt("created_at", toDate);
+
+    if (branch !== "all") {
+      query = query.eq("branch_uuid", branch);
+    }
 
     const { data, error, count } = await query;
 
