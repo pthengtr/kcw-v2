@@ -55,20 +55,20 @@ export default function ExpenseVoucherA4({
 
   let voucherDate: string | undefined;
 
-  if (groupVouchers.length > 1) {
-    // Take receipt_date of the last voucher and move to the last day of that month
-    const d = new Date(groupVouchers.at(-1)?.receipt_date as string);
-    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0); // 0th day of next month
-    voucherDate = lastDay.toLocaleDateString("th-TH", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } else {
-    // Just use that receipt_date directly
-    voucherDate = new Date(
-      groupVouchers.at(-1)?.receipt_date as string
-    ).toLocaleDateString("th-TH", {
+  const lastVoucher = groupVouchers.at(-1);
+
+  if (lastVoucher) {
+    const d = new Date(lastVoucher.receipt_date as string);
+
+    const shouldUseLastDay =
+      groupVouchers.length > 1 ||
+      lastVoucher.payment_uuid === "e98a3376-9b5d-40f1-89be-298d5b99fcef";
+
+    const effectiveDate = shouldUseLastDay
+      ? new Date(d.getFullYear(), d.getMonth() + 1, 0) // last day of month
+      : d;
+
+    voucherDate = effectiveDate.toLocaleDateString("th-TH", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
