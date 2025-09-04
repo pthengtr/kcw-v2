@@ -71,6 +71,7 @@ export default function ExpenseVoucherTable({
         .select("*, party(*), branch(*), payment_method(*)", {
           count: "exact",
         })
+        .neq("doc_type", "CREDIT_NOTE")
         .order("receipt_date", { ascending: true })
         .order("receipt_number", { ascending: true }) // secondary sort
         .gte("created_at", fromDate)

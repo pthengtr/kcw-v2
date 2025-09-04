@@ -77,6 +77,7 @@ export default function ExpenseVoucherSearchForm({
       .select("*, party(*), branch(*), payment_method(*)", {
         count: "exact",
       })
+      .neq("doc_type", "CREDIT_NOTE")
       .order("receipt_date", { ascending: true })
       .order("receipt_number", { ascending: true }) // secondary sort
       .limit(500);
