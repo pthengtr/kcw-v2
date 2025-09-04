@@ -132,22 +132,6 @@ export default function ExpenseVoucherTable({
     getPayment();
   }, [branch, getPayment, getVouchers]);
 
-  let newVouchers = expenseVouchers.map((obj) => {
-    const taxOnly =
-      (obj.total_amount - obj.discount - obj.tax_exempt) * (obj.vat / 100);
-    const withholdingOnly =
-      (obj.total_amount - obj.discount - obj.tax_exempt) *
-      (obj.withholding / 100);
-    const totalNet =
-      obj.total_amount - obj.discount + taxOnly - withholdingOnly;
-    return {
-      ...obj,
-      receipt_number: obj.receipt_number.slice(-13),
-      totalNet: totalNet,
-      voucherId: "",
-    };
-  });
-
   const currentDate = getMonthBasedOn10th();
   const voucherMM = currentDate
     .toLocaleDateString("th-TH", { month: "2-digit" })
@@ -157,6 +141,30 @@ export default function ExpenseVoucherTable({
       year: "2-digit",
     })
     .slice(-2);
+
+  let newVouchers = expenseVouchers.map((obj) => {
+    const taxOnly =
+      (obj.total_amount - obj.discount - obj.tax_exempt) * (obj.vat / 100);
+    const withholdingOnly =
+      (obj.total_amount - obj.discount - obj.tax_exempt) *
+      (obj.withholding / 100);
+    const totalNet =
+      obj.total_amount - obj.discount + taxOnly - withholdingOnly;
+
+    // decide voucher_date
+    const voucher_date =
+      obj.payment_uuid === "e98a3376-9b5d-40f1-89be-298d5b99fcef"
+        ? new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0) // last day of month
+        : new Date(obj.receipt_date);
+
+    return {
+      ...obj,
+      receipt_number: obj.receipt_number.slice(-13),
+      totalNet,
+      voucherId: "",
+      voucher_date: voucher_date,
+    };
+  });
 
   let index = 1;
   // remove skip type

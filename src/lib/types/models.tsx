@@ -62,6 +62,7 @@ export type PaymentMethodType = {
 
 export type ExtendedExpenseReceiptType = ExpenseReceiptType & {
   voucherId: string;
+  voucher_date: Date;
   totalNet: number;
 };
 
