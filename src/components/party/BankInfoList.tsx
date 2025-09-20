@@ -38,7 +38,7 @@ export default function BankInfoList({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="font-medium">Bank Accounts</h4>
+        <h4 className="font-medium">ข้อมูลบัญชีธนาคาร</h4>
         <Button size="sm" onClick={() => setAdding((v) => !v)}>
           <Plus className="h-4 w-4 mr-1" /> เพิ่ม
         </Button>

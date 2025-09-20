@@ -83,6 +83,14 @@ type Actions = {
       address?: string | null;
     }
   ) => Promise<void>;
+  updateTaxInfo: (
+    tax_info_uuid: string,
+    patch: {
+      legal_name?: string | null;
+      tax_payer_id?: string | null;
+      address?: string | null;
+    }
+  ) => Promise<void>;
   deleteTaxInfo: (tax_info_uuid: string) => Promise<void>;
 
   addBank: (
@@ -233,6 +241,19 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
           address: input.address ?? null,
         },
       ]);
+      if (error) throw error;
+      await fetchData();
+    },
+
+    updateTaxInfo: async (tax_info_uuid, patch) => {
+      const { error } = await supabase
+        .from("party_tax_info")
+        .update({
+          legal_name: patch.legal_name ?? null,
+          tax_payer_id: patch.tax_payer_id ?? null,
+          address: patch.address ?? null,
+        })
+        .eq("tax_info_uuid", tax_info_uuid);
       if (error) throw error;
       await fetchData();
     },

@@ -134,6 +134,7 @@ export default function PartyScreen() {
                 onAdd={async (payload) =>
                   actions.addTaxInfo(state.selected!.party_uuid, payload)
                 }
+                onUpdate={actions.updateTaxInfo}
                 onDelete={actions.deleteTaxInfo}
               />
 
