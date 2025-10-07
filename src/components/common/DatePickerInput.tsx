@@ -45,6 +45,13 @@ export function DatePickerInput({
     setMinutes("0");
   }
 
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  // Define start and end month range
+  const startMonth = new Date(currentYear - 5, 0); // Jan (year - 5)
+  const endMonth = new Date(currentYear + 5, 11); // Dec (year + 5)
+
   return (
     <div className="flex gap-4">
       <div className="">
@@ -80,6 +87,8 @@ export function DatePickerInput({
                 selected?.setMinutes(parseInt(minutes));
                 field.onChange(selected);
               }}
+              startMonth={startMonth}
+              endMonth={endMonth}
               captionLayout="dropdown"
               formatters={{
                 formatCaption: (date) =>
