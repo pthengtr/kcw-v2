@@ -64,9 +64,10 @@ export default function ExpenseVoucherA4({
       groupVouchers.length > 1 ||
       lastVoucher.payment_uuid === "e98a3376-9b5d-40f1-89be-298d5b99fcef";
 
-    const effectiveDate = shouldUseLastDay
-      ? new Date(d.getFullYear(), d.getMonth() + 1, 0) // last day of month
-      : d;
+    const effectiveDate =
+      shouldUseLastDay && false
+        ? new Date(d.getFullYear(), d.getMonth() + 1, 0) // last day of month
+        : d;
 
     voucherDate = effectiveDate.toLocaleDateString("th-TH", {
       day: "2-digit",
