@@ -44,7 +44,7 @@ export default function ExpenseVoucherTable({
 
   const { branch }: { branch: UUID } = useParams();
 
-  const [groupVoucher, setGroupVoucher] = useState<UUID[]>([]);
+  // const [groupVoucher, setGroupVoucher] = useState<UUID[]>([]);
   const [skipVoucher, setSkipVoucher] = useState<UUID[]>([]);
 
   const supabase = createClient();
@@ -112,11 +112,11 @@ export default function ExpenseVoucherTable({
       }
 
       if (data) {
-        setGroupVoucher(
-          data
-            .filter((payment_method) => payment_method.voucher_type === "group")
-            .map((payment_method) => payment_method.payment_uuid)
-        );
+        // setGroupVoucher(
+        //   data
+        //     .filter((payment_method) => payment_method.voucher_type === "group")
+        //     .map((payment_method) => payment_method.payment_uuid)
+        // );
         setSkipVoucher(
           data
             .filter((payment_method) => payment_method.voucher_type === "skip")
@@ -174,45 +174,57 @@ export default function ExpenseVoucherTable({
 
   const branchPrefix =
     branch === "4975a5a1-90e6-443a-9921-c6c637f4631c" ? "3" : "";
-  // assign vocher id to inidividual type
-  const individualVouchers = newVouchers
-    .filter((voucher) => !groupVoucher.includes(voucher.payment_uuid))
-    .map((voucher) => {
-      return {
-        ...voucher,
-        voucherId:
-          branchPrefix +
-          "PV" +
-          voucherYY +
-          voucherMM +
-          String(index++).padStart(3, "0"),
-      };
-    });
+  // // assign vocher id to inidividual type
+  // const individualVouchers = newVouchers
+  //   .filter((voucher) => !groupVoucher.includes(voucher.payment_uuid))
+  //   .map((voucher) => {
+  //     return {
+  //       ...voucher,
+  //       voucherId:
+  //         branchPrefix +
+  //         "PV" +
+  //         voucherYY +
+  //         voucherMM +
+  //         String(index++).padStart(3, "0"),
+  //     };
+  //   });
 
-  let groupVouchers = newVouchers.filter((voucher) =>
-    groupVoucher.includes(voucher.payment_uuid)
-  );
+  // let groupVouchers = newVouchers.filter((voucher) =>
+  //   groupVoucher.includes(voucher.payment_uuid)
+  // );
 
-  const uniqueSuppliers = new Set(
-    groupVouchers.map((voucher) => voucher.party_uuid)
-  );
+  // const uniqueSuppliers = new Set(
+  //   groupVouchers.map((voucher) => voucher.party_uuid)
+  // );
 
-  uniqueSuppliers.forEach((unique_supplier_uuid) => {
-    groupVouchers = groupVouchers.map((voucher) => {
-      if (voucher.party_uuid === unique_supplier_uuid) {
-        return {
-          ...voucher,
-          voucherId:
-            "PV" + voucherYY + voucherMM + String(index).padStart(3, "0"),
-        };
-      }
-      return voucher;
-    });
+  // uniqueSuppliers.forEach((unique_supplier_uuid) => {
+  //   groupVouchers = groupVouchers.map((voucher) => {
+  //     if (voucher.party_uuid === unique_supplier_uuid) {
+  //       return {
+  //         ...voucher,
+  //         voucherId:
+  //           "PV" + voucherYY + voucherMM + String(index).padStart(3, "0"),
+  //       };
+  //     }
+  //     return voucher;
+  //   });
 
-    index++;
+  //   index++;
+  // });
+
+  // newVouchers = [...individualVouchers, ...groupVouchers];
+
+  newVouchers = newVouchers.map((voucher) => {
+    return {
+      ...voucher,
+      voucherId:
+        branchPrefix +
+        "PV" +
+        voucherYY +
+        voucherMM +
+        String(index++).padStart(3, "0"),
+    };
   });
-
-  newVouchers = [...individualVouchers, ...groupVouchers];
 
   newVouchers.sort((a, b) => a.voucherId.localeCompare(b.voucherId));
 
