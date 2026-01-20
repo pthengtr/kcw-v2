@@ -48,7 +48,7 @@ type BranchRow = {
 
 type DataView = "ALL" | "ENTRIES" | "GENERAL";
 
-const YEAR = 2025;
+const DEFAULT_YEAR = new Date().getFullYear();
 const TZ = "Asia/Bangkok";
 
 export default function ExpenseDashboardPage() {
@@ -64,6 +64,19 @@ export default function ExpenseDashboardPage() {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | undefined>();
+
+  const [year, setYear] = useState<number>(DEFAULT_YEAR);
+
+  // simple rolling list (adjust if you want)
+  const yearOptions = useMemo(() => {
+    const now = new Date().getFullYear();
+    const start = 2023;
+    const end = Math.max(now + 1, DEFAULT_YEAR); // includes next year
+    return Array.from(
+      { length: end - start + 1 },
+      (_, i) => start + i
+    ).reverse();
+  }, []);
 
   const supabase = createClient();
   const router = useRouter();
@@ -104,7 +117,7 @@ export default function ExpenseDashboardPage() {
     try {
       // All expense summary
       const { data, error } = await supabase.rpc("fn_item_year_summary_all", {
-        p_year: YEAR,
+        p_year: year,
         p_branch: pBranch,
         p_supplier: null,
         p_timezone: TZ,
@@ -116,7 +129,7 @@ export default function ExpenseDashboardPage() {
       const { data: dataCompany, error: errorCompany } = await supabase.rpc(
         "fn_item_year_summary_entries_fullmonths",
         {
-          p_year: YEAR,
+          p_year: year,
           p_branch: pBranch,
           p_supplier: null,
           p_timezone: TZ,
@@ -129,7 +142,7 @@ export default function ExpenseDashboardPage() {
       const { data: dataGeneral, error: errorGeneral } = await supabase.rpc(
         "fn_item_year_summary_general_fullmonths",
         {
-          p_year: YEAR,
+          p_year: year,
           p_branch: pBranch,
           p_timezone: TZ,
         }
@@ -142,7 +155,7 @@ export default function ExpenseDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase, pBranch]);
+  }, [supabase, pBranch, year]);
 
   // Initial load + reload when branch changes
   useEffect(() => {
@@ -172,14 +185,14 @@ export default function ExpenseDashboardPage() {
   const chartTitle = useMemo(() => {
     switch (dataView) {
       case "ENTRIES":
-        return `ค่าใช้จ่ายเฉพาะบริษัท (พ.ศ. ${YEAR + 543})`;
+        return `ค่าใช้จ่ายเฉพาะบริษัท (พ.ศ. ${year + 543})`;
       case "GENERAL":
-        return `ค่าใช้จ่ายเฉพาะทั่วไป (พ.ศ. ${YEAR + 543})`;
+        return `ค่าใช้จ่ายเฉพาะทั่วไป (พ.ศ. ${year + 543})`;
       case "ALL":
       default:
-        return `ค่าใช้จ่ายทั้งหมด (พ.ศ. ${YEAR + 543})`;
+        return `ค่าใช้จ่ายทั้งหมด (พ.ศ. ${year + 543})`;
     }
-  }, [dataView]);
+  }, [dataView, year]);
 
   const pieTitle = useMemo(() => {
     switch (dataView) {
@@ -249,6 +262,27 @@ export default function ExpenseDashboardPage() {
             </Select>
           </div>
 
+          {/* Year selector */}
+          <div className="grid gap-1">
+            <Label htmlFor="year">ปี</Label>
+            <Select
+              value={String(year)}
+              onValueChange={(v) => setYear(Number(v))}
+              disabled={loading}
+            >
+              <SelectTrigger id="year" className="w-28">
+                <SelectValue placeholder="เลือกปี" />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {`พ.ศ. ${y + 543}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button
             variant="secondary"
             onClick={() => fetchSummaries()}
@@ -305,7 +339,7 @@ export default function ExpenseDashboardPage() {
           className="w-[80vw] h-[90vh] col-span-2 justify-self-center"
         >
           <ExpenseDashboardTable
-            datasetKey={`${dataView}-${selectedBranch ?? "ALL"}-${YEAR}`}
+            datasetKey={`${dataView}-${selectedBranch ?? "ALL"}-${year}`}
             expenseSummary={currentData.length ? currentData : expenseSummary}
             title={
               dataView === "ALL"
