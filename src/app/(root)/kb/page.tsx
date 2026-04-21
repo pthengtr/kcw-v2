@@ -19,6 +19,10 @@ export default async function KbPage({ searchParams }: PageProps) {
   const mode = params.mode?.trim() ?? "";
   const selectedId = params.id ? Number(params.id) : null;
 
+  const RECENT_LIMIT = 10;
+  const FIXED_SEARCH_LIMIT = 5;
+  const SEMANTIC_SEARCH_LIMIT = 5;
+
   const [
     recentItems,
     fixedResults,
@@ -26,10 +30,12 @@ export default async function KbPage({ searchParams }: PageProps) {
     selectedItem,
     editorImages,
   ] = await Promise.all([
-    getRecentKbParts(20),
-    fixedQuery ? fixedTermSearchKbParts(fixedQuery, 20) : Promise.resolve([]),
+    getRecentKbParts(RECENT_LIMIT),
+    fixedQuery
+      ? fixedTermSearchKbParts(fixedQuery, FIXED_SEARCH_LIMIT)
+      : Promise.resolve([]),
     semanticQuery
-      ? semanticSearchKbParts(semanticQuery, 10)
+      ? semanticSearchKbParts(semanticQuery, SEMANTIC_SEARCH_LIMIT)
       : Promise.resolve([]),
     Number.isFinite(selectedId) && selectedId
       ? getKbPartById(selectedId)
