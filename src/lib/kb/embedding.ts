@@ -12,21 +12,15 @@ type OpenAIEmbeddingResponse = {
 type BuildKbEmbeddingInputArgs = {
   title?: string | null;
   keywords?: string | null;
-  content?: string | null;
-  related?: string | null;
 };
 
 export function buildKbEmbeddingInput({
   title,
   keywords,
-  content,
-  related,
 }: BuildKbEmbeddingInputArgs): string {
   return [
     title?.trim() ? `Title: ${title.trim()}` : "",
     keywords?.trim() ? `Keywords: ${keywords.trim()}` : "",
-    content?.trim() ? `Content: ${content.trim()}` : "",
-    related?.trim() ? `Related: ${related.trim()}` : "",
   ]
     .filter(Boolean)
     .join("\n\n");

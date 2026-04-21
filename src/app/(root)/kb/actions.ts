@@ -65,8 +65,6 @@ export async function upsertKbPartAction(formData: FormData) {
   const embeddingInput = buildKbEmbeddingInput({
     title,
     keywords,
-    content,
-    related,
   });
 
   const vector = embeddingInput
