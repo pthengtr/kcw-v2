@@ -1,7 +1,8 @@
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import { uploadKbImagesAction, deleteKbImageAction } from "../actions";
 import type { KbPartImage } from "../types";
+import { KbSubmitButton } from "./kb-submit-button";
+import { KbConfirmSubmitButton } from "./kb-confirm-submit-button";
 
 type KbImageManagerProps = {
   faqId?: number;
@@ -43,7 +44,11 @@ export function KbImageManager({ faqId, images }: KbImageManagerProps) {
             multiple
             className="block w-full text-sm"
           />
-          <Button type="submit">อัปโหลดรูปภาพ</Button>
+          <KbSubmitButton
+            type="submit"
+            idleText="อัปโหลดรูปภาพ"
+            pendingText="กำลังอัปโหลด..."
+          />
         </form>
       </div>
 
@@ -72,13 +77,25 @@ export function KbImageManager({ faqId, images }: KbImageManagerProps) {
                 </div>
               </div>
 
-              <form action={deleteKbImageAction}>
-                <input type="hidden" name="id" value={faqId} />
-                <input type="hidden" name="path" value={image.path} />
-                <Button type="submit" variant="destructive" size="sm">
-                  ลบรูปภาพ
-                </Button>
-              </form>
+              <>
+                <form
+                  id={`kb-delete-image-${faqId}-${image.name}`}
+                  action={deleteKbImageAction}
+                >
+                  <input type="hidden" name="id" value={faqId} />
+                  <input type="hidden" name="path" value={image.path} />
+                </form>
+
+                <KbConfirmSubmitButton
+                  formId={`kb-delete-image-${faqId}-${image.name}`}
+                  triggerText="ลบรูปภาพ"
+                  confirmText="ยืนยันการลบรูปภาพ"
+                  title="ลบรูปภาพนี้ใช่หรือไม่?"
+                  description={image.name}
+                  variant="destructive"
+                  size="sm"
+                />
+              </>
             </div>
           ))}
         </div>

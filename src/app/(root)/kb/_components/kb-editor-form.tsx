@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { deleteKbPartAction, upsertKbPartAction } from "../actions";
 import type { KbPartEditorItem, KbPartImage } from "../types";
 import { KbImageManager } from "./kb-image-manager";
+import { KbSubmitButton } from "./kb-submit-button";
+import { KbConfirmSubmitButton } from "./kb-confirm-submit-button";
 
 type KbEditorFormProps = {
   isNewMode: boolean;
@@ -172,21 +174,34 @@ export function KbEditorForm({
             <Link href="/kb?mode=new">ล้างฟอร์ม</Link>
           </Button>
 
-          <Button type="submit">
-            {editorItem?.id ? "บันทึก FAQ" : "สร้าง FAQ"}
-          </Button>
+          <KbSubmitButton
+            type="submit"
+            idleText={editorItem?.id ? "บันทึก FAQ" : "สร้าง FAQ"}
+            pendingText={editorItem?.id ? "กำลังบันทึก..." : "กำลังสร้าง..."}
+          />
         </div>
       </form>
 
       <KbImageManager faqId={editorItem?.id} images={images} />
 
       {!!editorItem?.id && (
-        <form action={deleteKbPartAction}>
-          <input type="hidden" name="id" value={editorItem.id} />
-          <Button type="submit" variant="destructive">
-            ลบ FAQ
-          </Button>
-        </form>
+        <>
+          <form
+            id={`kb-delete-faq-${editorItem.id}`}
+            action={deleteKbPartAction}
+          >
+            <input type="hidden" name="id" value={editorItem.id} />
+          </form>
+
+          <KbConfirmSubmitButton
+            formId={`kb-delete-faq-${editorItem.id}`}
+            triggerText="ลบ FAQ"
+            confirmText="ยืนยันการลบ FAQ"
+            title="ลบ FAQ นี้ใช่หรือไม่?"
+            description="การลบนี้ไม่สามารถย้อนกลับได้ และรูปภาพในรายการนี้จะถูกลบด้วย"
+            variant="destructive"
+          />
+        </>
       )}
     </div>
   );
