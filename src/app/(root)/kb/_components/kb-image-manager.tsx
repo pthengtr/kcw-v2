@@ -1,0 +1,88 @@
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { uploadKbImagesAction, deleteKbImageAction } from "../actions";
+import type { KbPartImage } from "../types";
+
+type KbImageManagerProps = {
+  faqId?: number;
+  images: KbPartImage[];
+};
+
+function formatBytes(bytes: number | null): string {
+  if (!bytes || bytes <= 0) return "-";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function KbImageManager({ faqId, images }: KbImageManagerProps) {
+  if (!faqId) {
+    return (
+      <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+        Save FAQ first before uploading images.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border p-4 space-y-3">
+        <div>
+          <div className="text-sm font-medium">Images</div>
+          <div className="text-xs text-muted-foreground">
+            Bucket path: <code>kb-parts/{faqId}/</code>
+          </div>
+        </div>
+
+        <form action={uploadKbImagesAction} className="space-y-3">
+          <input type="hidden" name="id" value={faqId} />
+          <input
+            type="file"
+            name="images"
+            accept="image/*"
+            multiple
+            className="block w-full text-sm"
+          />
+          <Button type="submit">Upload images</Button>
+        </form>
+      </div>
+
+      {images.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+          No images uploaded yet.
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {images.map((image) => (
+            <div key={image.path} className="rounded-lg border p-3 space-y-3">
+              <div className="relative aspect-square overflow-hidden rounded-md border bg-muted">
+                <Image
+                  src={image.publicUrl}
+                  alt={image.name}
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-sm font-medium">{image.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {formatBytes(image.size)}
+                </div>
+              </div>
+
+              <form action={deleteKbImageAction}>
+                <input type="hidden" name="id" value={faqId} />
+                <input type="hidden" name="path" value={image.path} />
+                <Button type="submit" variant="destructive" size="sm">
+                  Delete image
+                </Button>
+              </form>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

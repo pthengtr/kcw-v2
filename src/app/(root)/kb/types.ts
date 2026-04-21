@@ -13,6 +13,15 @@ export type KbPartEditorItem = {
   related?: string | null;
 } | null;
 
+export type KbPartImage = {
+  name: string;
+  path: string;
+  publicUrl: string;
+  size: number | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
 export type KbSemanticSearchResult = {
   id: number;
   title: string | null;
@@ -26,6 +35,8 @@ export type KbStatusState = {
   created?: string;
   saved?: string;
   deleted?: string;
+  image_uploaded?: string;
+  image_deleted?: string;
   error?: string;
 };
 
@@ -37,6 +48,8 @@ export type KbSearchParams = {
   created?: string;
   saved?: string;
   deleted?: string;
+  image_uploaded?: string;
+  image_deleted?: string;
   error?: string;
 };
 
@@ -49,5 +62,6 @@ export type KbAdminScreenProps = {
   selectedId: number | null;
   isNewMode: boolean;
   editorItem: KbPartEditorItem;
+  editorImages: KbPartImage[];
   status: KbStatusState;
 };

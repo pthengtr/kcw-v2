@@ -6,14 +6,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { KbEditorForm } from "./kb-editor-form";
-import type { KbPartEditorItem } from "../types";
+import type { KbPartEditorItem, KbPartImage } from "../types";
 
 type KbEditorCardProps = {
   isNewMode: boolean;
   editorItem: KbPartEditorItem;
+  images: KbPartImage[];
 };
 
-export function KbEditorCard({ isNewMode, editorItem }: KbEditorCardProps) {
+export function KbEditorCard({
+  isNewMode,
+  editorItem,
+  images,
+}: KbEditorCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -25,12 +30,16 @@ export function KbEditorCard({ isNewMode, editorItem }: KbEditorCardProps) {
               : "Editor"}
         </CardTitle>
         <CardDescription>
-          Images will live under <code>kb-parts/{"{faq_id}"}/</code>
+          Images live under <code>kb-parts/{"{faq_id}"}/</code>
         </CardDescription>
       </CardHeader>
 
       <CardContent>
-        <KbEditorForm isNewMode={isNewMode} editorItem={editorItem} />
+        <KbEditorForm
+          isNewMode={isNewMode}
+          editorItem={editorItem}
+          images={images}
+        />
       </CardContent>
     </Card>
   );

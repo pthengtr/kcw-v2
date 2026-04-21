@@ -3,6 +3,7 @@ import {
   fixedTermSearchKbParts,
   semanticSearchKbParts,
   getKbPartById,
+  listKbPartImages,
 } from "./queries";
 import { KbAdminScreen } from "./_components/kb-admin-screen";
 import type { KbSearchParams } from "./types";
@@ -18,17 +19,25 @@ export default async function KbPage({ searchParams }: PageProps) {
   const mode = params.mode?.trim() ?? "";
   const selectedId = params.id ? Number(params.id) : null;
 
-  const [recentItems, fixedResults, semanticResults, selectedItem] =
-    await Promise.all([
-      getRecentKbParts(20),
-      fixedQuery ? fixedTermSearchKbParts(fixedQuery, 20) : Promise.resolve([]),
-      semanticQuery
-        ? semanticSearchKbParts(semanticQuery, 10)
-        : Promise.resolve([]),
-      Number.isFinite(selectedId) && selectedId
-        ? getKbPartById(selectedId)
-        : Promise.resolve(null),
-    ]);
+  const [
+    recentItems,
+    fixedResults,
+    semanticResults,
+    selectedItem,
+    editorImages,
+  ] = await Promise.all([
+    getRecentKbParts(20),
+    fixedQuery ? fixedTermSearchKbParts(fixedQuery, 20) : Promise.resolve([]),
+    semanticQuery
+      ? semanticSearchKbParts(semanticQuery, 10)
+      : Promise.resolve([]),
+    Number.isFinite(selectedId) && selectedId
+      ? getKbPartById(selectedId)
+      : Promise.resolve(null),
+    Number.isFinite(selectedId) && selectedId && mode !== "new"
+      ? listKbPartImages(selectedId)
+      : Promise.resolve([]),
+  ]);
 
   const isNewMode = mode === "new";
   const editorItem = isNewMode
@@ -45,10 +54,13 @@ export default async function KbPage({ searchParams }: PageProps) {
       selectedId={selectedId}
       isNewMode={isNewMode}
       editorItem={editorItem}
+      editorImages={editorImages}
       status={{
         created: params.created,
         saved: params.saved,
         deleted: params.deleted,
+        image_uploaded: params.image_uploaded,
+        image_deleted: params.image_deleted,
         error: params.error,
       }}
     />

@@ -14,6 +14,7 @@ export function KbAdminScreen({
   selectedId,
   isNewMode,
   editorItem,
+  editorImages,
   status,
 }: KbAdminScreenProps) {
   return (
@@ -35,7 +36,11 @@ export function KbAdminScreen({
           isNewMode={isNewMode}
         />
 
-        <KbEditorCard isNewMode={isNewMode} editorItem={editorItem} />
+        <KbEditorCard
+          isNewMode={isNewMode}
+          editorItem={editorItem}
+          images={editorImages}
+        />
 
         <div className="space-y-6">
           <KbFixedSearchCard

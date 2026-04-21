@@ -2,14 +2,20 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { deleteKbPartAction, upsertKbPartAction } from "../actions";
-import type { KbPartEditorItem } from "../types";
+import type { KbPartEditorItem, KbPartImage } from "../types";
+import { KbImageManager } from "./kb-image-manager";
 
 type KbEditorFormProps = {
   isNewMode: boolean;
   editorItem: KbPartEditorItem;
+  images: KbPartImage[];
 };
 
-export function KbEditorForm({ isNewMode, editorItem }: KbEditorFormProps) {
+export function KbEditorForm({
+  isNewMode,
+  editorItem,
+  images,
+}: KbEditorFormProps) {
   const isEditorActive = isNewMode || !!editorItem;
 
   if (!isEditorActive) {
@@ -63,10 +69,6 @@ export function KbEditorForm({ isNewMode, editorItem }: KbEditorFormProps) {
           />
         </div>
 
-        <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-          Image upload/list area comes next, after text CRUD is stable.
-        </div>
-
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
             <Link href="/kb?mode=new">Reset to new</Link>
@@ -77,6 +79,8 @@ export function KbEditorForm({ isNewMode, editorItem }: KbEditorFormProps) {
           </Button>
         </div>
       </form>
+
+      <KbImageManager faqId={editorItem?.id} images={images} />
 
       {!!editorItem?.id && (
         <form action={deleteKbPartAction}>
