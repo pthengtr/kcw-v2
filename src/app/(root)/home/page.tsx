@@ -14,6 +14,7 @@ export default function Home() {
           />
           <CardIcon href="/expense" label="ค่าใช้จ่าย" icon="Banknote" />
           <CardIcon href="/party" label="รายชื่อคู่ค้า" icon="Handshake" />
+          <CardIcon href="/kb" label="จัดการ FAQ" icon="BookOpen" />
         </CardIconMenu>
       </div>
     </main>
