@@ -32,6 +32,18 @@ function getNextImageIndex(existingNames: string[]): number {
   return maxExisting + 1;
 }
 
+function validateKbDraft({
+  title,
+  content,
+}: {
+  title: string;
+  content: string;
+}): string | null {
+  if (!title) return "title_required";
+  if (!content) return "content_required";
+  return null;
+}
+
 export async function upsertKbPartAction(formData: FormData) {
   const supabase = await createClient();
 
@@ -40,6 +52,15 @@ export async function upsertKbPartAction(formData: FormData) {
   const keywords = toCleanString(formData.get("keywords"));
   const content = toCleanString(formData.get("content"));
   const related = toCleanString(formData.get("related"));
+
+  const validationError = validateKbDraft({ title, content });
+
+  if (validationError) {
+    if (idRaw) {
+      redirect(`/kb?id=${idRaw}&error=${validationError}`);
+    }
+    redirect(`/kb?mode=new&error=${validationError}`);
+  }
 
   const embeddingInput = buildKbEmbeddingInput({
     title,
@@ -53,9 +74,9 @@ export async function upsertKbPartAction(formData: FormData) {
     : null;
 
   const payload = {
-    title: title || null,
+    title,
     keywords: keywords || null,
-    content: content || null,
+    content,
     related: related || null,
     embedding: vector ? toPgVectorLiteral(vector) : null,
   };

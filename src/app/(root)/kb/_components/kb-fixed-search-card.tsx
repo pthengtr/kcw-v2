@@ -22,10 +22,9 @@ export function KbFixedSearchCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Fixed-term search tester</CardTitle>
+        <CardTitle>ทดสอบค้นหาแบบคำตรง</CardTitle>
         <CardDescription>
-          Deterministic text search against title / keywords / content /
-          related.
+          ค้นหาจาก title / keywords / content / related แบบตรงคำ
         </CardDescription>
       </CardHeader>
 
@@ -34,19 +33,19 @@ export function KbFixedSearchCard({
           <Input
             name="fixed_q"
             defaultValue={fixedQuery}
-            placeholder="search exact/fixed term"
+            placeholder="พิมพ์คำที่ต้องการค้นหา"
           />
-          <Button type="submit">Search</Button>
+          <Button type="submit">ค้นหา</Button>
         </form>
 
         {fixedQuery ? (
           <div className="space-y-3">
             <div className="text-sm text-muted-foreground">
-              Results for: <span className="font-medium">{fixedQuery}</span>
+              ผลลัพธ์สำหรับ: <span className="font-medium">{fixedQuery}</span>
             </div>
 
             {fixedResults.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No match found.</p>
+              <p className="text-sm text-muted-foreground">ไม่พบข้อมูล</p>
             ) : (
               fixedResults.map((item) => (
                 <Link
@@ -55,7 +54,7 @@ export function KbFixedSearchCard({
                   className="block rounded-lg border p-3 text-sm hover:bg-muted/30"
                 >
                   <div className="font-medium">
-                    #{item.id} {item.title || "(untitled)"}
+                    #{item.id} {item.title || "(ไม่มีชื่อ)"}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {item.keywords || "-"}
@@ -66,7 +65,7 @@ export function KbFixedSearchCard({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Enter a term to test deterministic retrieval.
+            พิมพ์คำเพื่อทดสอบการค้นหาแบบตรงคำ
           </p>
         )}
       </CardContent>

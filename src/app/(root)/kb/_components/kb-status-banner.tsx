@@ -9,20 +9,25 @@ export function KbStatusBanner({
   error,
 }: KbStatusState) {
   if (error) {
-    let message = "Something went wrong.";
+    let message = "เกิดข้อผิดพลาดบางอย่าง";
 
-    if (error === "create_failed") message = "Create failed.";
-    else if (error === "update_failed") message = "Update failed.";
-    else if (error === "delete_failed") message = "Delete failed.";
-    else if (error === "invalid_id") message = "Invalid FAQ id.";
-    else if (error === "invalid_delete_id") message = "Invalid delete id.";
-    else if (error === "no_images_selected") message = "No images selected.";
+    if (error === "create_failed") message = "สร้าง FAQ ไม่สำเร็จ";
+    else if (error === "update_failed") message = "บันทึก FAQ ไม่สำเร็จ";
+    else if (error === "delete_failed") message = "ลบ FAQ ไม่สำเร็จ";
+    else if (error === "invalid_id") message = "รหัส FAQ ไม่ถูกต้อง";
+    else if (error === "invalid_delete_id")
+      message = "รหัสสำหรับลบ FAQ ไม่ถูกต้อง";
+    else if (error === "title_required") message = "กรุณากรอกชื่อ FAQ";
+    else if (error === "content_required") message = "กรุณากรอกเนื้อหา FAQ";
+    else if (error === "no_images_selected")
+      message = "กรุณาเลือกรูปภาพอย่างน้อย 1 รูป";
     else if (error === "invalid_image_type")
-      message = "Only image files are allowed.";
-    else if (error === "image_upload_failed") message = "Image upload failed.";
-    else if (error === "image_delete_failed") message = "Image delete failed.";
+      message = "อัปโหลดได้เฉพาะไฟล์รูปภาพเท่านั้น";
+    else if (error === "image_upload_failed")
+      message = "อัปโหลดรูปภาพไม่สำเร็จ";
+    else if (error === "image_delete_failed") message = "ลบรูปภาพไม่สำเร็จ";
     else if (error === "invalid_image_delete")
-      message = "Invalid image delete request.";
+      message = "คำขอลบรูปภาพไม่ถูกต้อง";
 
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
@@ -34,7 +39,7 @@ export function KbStatusBanner({
   if (created) {
     return (
       <div className="rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-        FAQ created.
+        สร้าง FAQ เรียบร้อยแล้ว
       </div>
     );
   }
@@ -42,7 +47,7 @@ export function KbStatusBanner({
   if (saved) {
     return (
       <div className="rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-        FAQ saved.
+        บันทึก FAQ เรียบร้อยแล้ว
       </div>
     );
   }
@@ -50,7 +55,7 @@ export function KbStatusBanner({
   if (deleted) {
     return (
       <div className="rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-        FAQ deleted.
+        ลบ FAQ เรียบร้อยแล้ว
       </div>
     );
   }
@@ -58,7 +63,7 @@ export function KbStatusBanner({
   if (image_uploaded) {
     return (
       <div className="rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-        Image uploaded.
+        อัปโหลดรูปภาพเรียบร้อยแล้ว
       </div>
     );
   }
@@ -66,7 +71,7 @@ export function KbStatusBanner({
   if (image_deleted) {
     return (
       <div className="rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-        Image deleted.
+        ลบรูปภาพเรียบร้อยแล้ว
       </div>
     );
   }

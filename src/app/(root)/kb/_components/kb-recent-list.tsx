@@ -23,21 +23,21 @@ export function KbRecentList({
   return (
     <Card className="h-fit">
       <CardHeader>
-        <CardTitle>Recent FAQ</CardTitle>
+        <CardTitle>รายการ FAQ ล่าสุด</CardTitle>
         <CardDescription>
-          Reading from <code>kb.kb_parts</code>
+          อ่านข้อมูลจาก <code>kb.kb_parts</code>
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
         <div className="flex gap-2">
           <Button asChild>
-            <Link href="/kb?mode=new">New FAQ</Link>
+            <Link href="/kb?mode=new">สร้าง FAQ ใหม่</Link>
           </Button>
         </div>
 
         {recentItems.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No records yet.</p>
+          <p className="text-sm text-muted-foreground">ยังไม่มีข้อมูล FAQ</p>
         ) : (
           recentItems.map((item) => {
             const active = !isNewMode && selectedId === item.id;
@@ -51,13 +51,13 @@ export function KbRecentList({
                 }`}
               >
                 <div className="font-medium">
-                  #{item.id} {item.title || "(untitled)"}
+                  #{item.id} {item.title || "(ไม่มีชื่อ)"}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {item.keywords || "-"}
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground">
-                  Updated: {new Date(item.updated_at).toLocaleString()}
+                  อัปเดตล่าสุด: {new Date(item.updated_at).toLocaleString()}
                 </div>
               </Link>
             );

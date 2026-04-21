@@ -22,10 +22,10 @@ export function KbSemanticSearchCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Semantic search tester</CardTitle>
+        <CardTitle>ทดสอบค้นหาแบบความหมาย</CardTitle>
         <CardDescription>
-          Embeds the query, runs vector match on{" "}
-          <code>kb.kb_parts.embedding</code>, and shows the nearest rows.
+          แปลงคำค้นเป็น embedding แล้วเทียบกับ{" "}
+          <code>kb.kb_parts.embedding</code>
         </CardDescription>
       </CardHeader>
 
@@ -34,20 +34,21 @@ export function KbSemanticSearchCard({
           <Input
             name="semantic_q"
             defaultValue={semanticQuery}
-            placeholder="test semantic query"
+            placeholder="พิมพ์คำค้นแบบภาษาธรรมชาติ"
           />
-          <Button type="submit">Search</Button>
+          <Button type="submit">ค้นหา</Button>
         </form>
 
         {semanticQuery ? (
           <div className="space-y-3">
             <div className="text-sm text-muted-foreground">
-              Results for: <span className="font-medium">{semanticQuery}</span>
+              ผลลัพธ์สำหรับ:{" "}
+              <span className="font-medium">{semanticQuery}</span>
             </div>
 
             {semanticResults.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No semantic match found.
+                ไม่พบข้อมูลที่ใกล้เคียง
               </p>
             ) : (
               semanticResults.map((item) => (
@@ -58,10 +59,10 @@ export function KbSemanticSearchCard({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="font-medium">
-                      #{item.id} {item.title || "(untitled)"}
+                      #{item.id} {item.title || "(ไม่มีชื่อ)"}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {(item.similarity ?? 0).toFixed(4)}
+                      {item.similarity.toFixed(4)}
                     </div>
                   </div>
 
@@ -74,7 +75,7 @@ export function KbSemanticSearchCard({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Enter a natural-language query to test vector retrieval.
+            พิมพ์ประโยคหรือคำถามเพื่อทดสอบการค้นหาแบบความหมาย
           </p>
         )}
       </CardContent>

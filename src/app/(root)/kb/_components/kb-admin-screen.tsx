@@ -20,10 +20,10 @@ export function KbAdminScreen({
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">KB Admin</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">จัดการ FAQ</h1>
         <p className="text-sm text-muted-foreground">
-          Manage <code>kb.kb_parts</code>, test fixed-term search, and test
-          semantic retrieval.
+          จัดการข้อมูล <code>kb.kb_parts</code>{" "}
+          พร้อมทดสอบการค้นหาแบบคำตรงและแบบความหมาย
         </p>
       </div>
 

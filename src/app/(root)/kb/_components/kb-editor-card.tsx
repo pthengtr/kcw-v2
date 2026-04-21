@@ -24,13 +24,13 @@ export function KbEditorCard({
       <CardHeader>
         <CardTitle>
           {isNewMode
-            ? "New FAQ"
+            ? "สร้าง FAQ ใหม่"
             : editorItem?.id
-              ? `Edit FAQ #${editorItem.id}`
-              : "Editor"}
+              ? `แก้ไข FAQ #${editorItem.id}`
+              : "แก้ไข FAQ"}
         </CardTitle>
         <CardDescription>
-          Images live under <code>kb-parts/{"{faq_id}"}/</code>
+          รูปภาพจะถูกเก็บไว้ที่ <code>kb-parts/{"{faq_id}"}/</code>
         </CardDescription>
       </CardHeader>
 

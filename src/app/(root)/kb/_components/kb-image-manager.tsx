@@ -19,7 +19,7 @@ export function KbImageManager({ faqId, images }: KbImageManagerProps) {
   if (!faqId) {
     return (
       <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-        Save FAQ first before uploading images.
+        กรุณาบันทึก FAQ ก่อน แล้วจึงอัปโหลดรูปภาพ
       </div>
     );
   }
@@ -28,9 +28,9 @@ export function KbImageManager({ faqId, images }: KbImageManagerProps) {
     <div className="space-y-4">
       <div className="rounded-lg border p-4 space-y-3">
         <div>
-          <div className="text-sm font-medium">Images</div>
+          <div className="text-sm font-medium">รูปภาพ</div>
           <div className="text-xs text-muted-foreground">
-            Bucket path: <code>kb-parts/{faqId}/</code>
+            ที่เก็บไฟล์: <code>kb-parts/{faqId}/</code>
           </div>
         </div>
 
@@ -43,13 +43,13 @@ export function KbImageManager({ faqId, images }: KbImageManagerProps) {
             multiple
             className="block w-full text-sm"
           />
-          <Button type="submit">Upload images</Button>
+          <Button type="submit">อัปโหลดรูปภาพ</Button>
         </form>
       </div>
 
       {images.length === 0 ? (
         <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-          No images uploaded yet.
+          ยังไม่มีรูปภาพ
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -76,7 +76,7 @@ export function KbImageManager({ faqId, images }: KbImageManagerProps) {
                 <input type="hidden" name="id" value={faqId} />
                 <input type="hidden" name="path" value={image.path} />
                 <Button type="submit" variant="destructive" size="sm">
-                  Delete image
+                  ลบรูปภาพ
                 </Button>
               </form>
             </div>
