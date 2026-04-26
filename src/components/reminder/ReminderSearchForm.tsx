@@ -1,7 +1,9 @@
 "use client";
 
 import * as z from "zod";
+
 import { createClient } from "@/lib/supabase/client";
+
 import Form from "../common/Form";
 import { FieldValues, UseFormReturn } from "react-hook-form";
 import { useContext } from "react";
@@ -52,7 +54,6 @@ function getFormInput(
 }
 
 function cleanSearchText(value: string) {
-  // Supabase .or() uses comma syntax, so remove characters that can break it.
   return value.replace(/[(),]/g, " ").trim();
 }
 
@@ -76,7 +77,7 @@ export default function ReminderSearchForm({
     let query = supabase
       .from("payment_reminder")
       .select("*, party(*)", { count: "exact" })
-      .order("id", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(500);
 
     if (searchData.party_search) {
