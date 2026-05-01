@@ -20,6 +20,11 @@ export default function Home() {
             label="สินค้าที่ซื้อด้วยกัน"
             icon="Link2"
           />
+          <CardIcon
+            href="/product-images"
+            label="จัดการรูปสินค้า"
+            icon="Images"
+          />
         </CardIconMenu>
       </div>
     </main>
