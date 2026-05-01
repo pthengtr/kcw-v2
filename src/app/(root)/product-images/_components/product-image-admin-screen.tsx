@@ -3,7 +3,6 @@ import {
   ImageIcon,
   PackageSearch,
   RefreshCw,
-  Trash2,
   Upload,
 } from "lucide-react";
 import type { ProductImageSlot, ProductInfo } from "../types";
@@ -14,6 +13,8 @@ import {
   uploadProductImageAutoAction,
 } from "../actions";
 import Image from "next/image";
+import { PendingSubmitButton } from "./pending-submit-button";
+import { DeleteImageForm } from "./delete-image-form";
 
 type ProductImageAdminScreenProps = {
   bcode: string;
@@ -184,13 +185,13 @@ function UploadAutoCard({ bcode }: { bcode: string }) {
           className="block w-full rounded-xl border border-dashed p-3 text-sm"
           required
         />
-        <button
-          type="submit"
+        <PendingSubmitButton
+          pendingText="กำลังอัปโหลด..."
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-white"
         >
           <Camera className="h-4 w-4" />
           เพิ่มรูป
-        </button>
+        </PendingSubmitButton>
       </form>
     </div>
   );
@@ -259,6 +260,7 @@ function ProductImageSlotCard({
           <input type="hidden" name="bcode" value={bcode} />
           <input type="hidden" name="path" value={slot.path} />
           <input type="hidden" name="slotNo" value={String(slot.slotNo)} />
+
           <input
             type="file"
             name="image"
@@ -266,28 +268,23 @@ function ProductImageSlotCard({
             className="block w-full rounded-xl border border-dashed p-2 text-xs"
             required
           />
-          <button
-            type="submit"
+
+          <PendingSubmitButton
+            pendingText={slot.exists ? "กำลังแทนที่..." : "กำลังอัปโหลด..."}
             className="flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium"
           >
             <RefreshCw className="h-4 w-4" />
             {slot.exists ? "แทนที่" : "อัปโหลดช่องนี้"}
-          </button>
+          </PendingSubmitButton>
         </form>
 
         {slot.exists ? (
-          <form action={deleteProductImageSlotAction}>
-            <input type="hidden" name="bcode" value={bcode} />
-            <input type="hidden" name="path" value={slot.path} />
-            <input type="hidden" name="slotNo" value={String(slot.slotNo)} />
-            <button
-              type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600"
-            >
-              <Trash2 className="h-4 w-4" />
-              ลบ
-            </button>
-          </form>
+          <DeleteImageForm
+            action={deleteProductImageSlotAction}
+            bcode={bcode}
+            path={slot.path}
+            slotNo={slot.slotNo}
+          />
         ) : null}
       </div>
     </div>
@@ -338,13 +335,13 @@ export function ProductImageAdminScreen({
                 className="w-full rounded-xl border px-4 py-3 text-lg outline-none ring-slate-900/10 focus:ring-4"
                 autoComplete="off"
               />
-              <button
-                type="submit"
+              <PendingSubmitButton
+                pendingText="กำลังค้นหา..."
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-white"
               >
                 <PackageSearch className="h-4 w-4" />
                 ค้นหา
-              </button>
+              </PendingSubmitButton>
             </form>
           </div>
 
@@ -370,7 +367,7 @@ export function ProductImageAdminScreen({
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
                 {slots.map((slot) => (
                   <ProductImageSlotCard
                     key={slot.path}
