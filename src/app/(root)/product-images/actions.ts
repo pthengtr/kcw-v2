@@ -79,13 +79,6 @@ async function uploadToPath({
   revalidatePath("/product-images");
 }
 
-export async function searchProductImageAction(formData: FormData) {
-  const bcode = normalizeBcode(clean(formData.get("bcode")));
-  if (!bcode) redirect("/product-images?error=missing_bcode");
-
-  redirect(`/product-images?bcode=${encodeURIComponent(bcode)}`);
-}
-
 export async function uploadProductImageAutoAction(formData: FormData) {
   const bcode = normalizeBcode(clean(formData.get("bcode")));
   const file = formData.get("image");

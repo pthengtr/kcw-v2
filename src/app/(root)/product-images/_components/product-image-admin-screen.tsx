@@ -1,12 +1,9 @@
-import { PackageSearch } from "lucide-react";
-
 import type { ProductImageSlot, ProductInfo } from "../types";
-import { searchProductImageAction } from "../actions";
-import { PendingSubmitButton } from "./pending-submit-button";
 import { ProductHeaderCard } from "./product-header-card";
 import { ProductImageSlotCard } from "./product-image-slot-card";
 import { ProductImageStatusAlert } from "./product-image-status-alert";
 import { UploadAutoCard } from "./upload-auto-card";
+import { ProductImageSearchForm } from "./product-image-search-form";
 
 type ProductImageAdminScreenProps = {
   bcode: string;
@@ -41,29 +38,7 @@ export function ProductImageAdminScreen({
 
       <section className="grid gap-5 lg:grid-cols-[340px_1fr]">
         <aside className="space-y-5">
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <form action={searchProductImageAction} className="space-y-3">
-              <label className="text-sm font-medium text-slate-700">
-                ค้นหารหัสสินค้า / BCODE
-              </label>
-
-              <input
-                name="bcode"
-                defaultValue={bcode}
-                placeholder="เช่น 01010019"
-                className="w-full rounded-xl border px-4 py-3 text-lg outline-none ring-slate-900/10 focus:ring-4"
-                autoComplete="off"
-              />
-
-              <PendingSubmitButton
-                pendingText="กำลังค้นหา..."
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-white"
-              >
-                <PackageSearch className="h-4 w-4" />
-                ค้นหา
-              </PendingSubmitButton>
-            </form>
-          </div>
+          <ProductImageSearchForm bcode={bcode} />
 
           <ProductHeaderCard bcode={bcode} product={product} />
 
