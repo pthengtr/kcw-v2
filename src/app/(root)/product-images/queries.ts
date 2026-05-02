@@ -14,10 +14,10 @@ export function getExpectedProductImageFilenames(bcode: string): string[] {
 
   return [
     `${clean}.jpg`,
-    `${clean}_1.jpg`,
     `${clean}_2.jpg`,
     `${clean}_3.jpg`,
     `${clean}_4.jpg`,
+    `${clean}_5.jpg`,
   ];
 }
 
