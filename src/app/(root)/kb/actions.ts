@@ -211,16 +211,24 @@ export async function uploadKbImagesAction(formData: FormData) {
     const ext = getFileExtension(file.name);
     const filename = `${String(nextIndex + i).padStart(3, "0")}.${ext}`;
     const path = `${id}/${filename}`;
+    const arrayBuffer = await file.arrayBuffer();
 
     const { error: uploadError } = await supabase.storage
       .from(KB_IMAGE_BUCKET)
-      .upload(path, file, {
+      .upload(path, arrayBuffer, {
         upsert: false,
         contentType: file.type || undefined,
+        cacheControl: "3600",
       });
 
     if (uploadError) {
-      console.error("uploadKbImagesAction upload error", uploadError);
+      console.error("uploadKbImagesAction upload error", {
+        path,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        error: uploadError,
+      });
       redirect(`/kb?id=${id}&error=image_upload_failed`);
     }
   }
