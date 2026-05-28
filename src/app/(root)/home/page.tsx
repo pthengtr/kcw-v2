@@ -25,6 +25,11 @@ export default function Home() {
             label="จัดการรูปสินค้า"
             icon="Images"
           />
+          <CardIcon
+            href="/bank-statement-sync"
+            label="Bank Statement"
+            icon="ArrowRightLeft"
+          />
         </CardIconMenu>
       </div>
     </main>
