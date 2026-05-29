@@ -76,7 +76,7 @@ export async function GET(req: Request) {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (account_no) query = query.ilike("account_no", `%${account_no}%`);
+  if (account_no) query = query.eq("account_no", account_no);
   if (bank_name) query = query.ilike("bank_name", `%${bank_name}%`);
   if (direction) query = query.eq("direction", direction);
   if (match_status) query = query.eq("match_status", match_status);
