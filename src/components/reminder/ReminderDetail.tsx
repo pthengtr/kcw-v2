@@ -91,10 +91,15 @@ function FieldRow({
 }) {
   return (
     <div className="grid grid-cols-12 gap-2 py-1">
-      <div className="col-span-4 md:col-span-3 text-muted-foreground">
+      <div className="col-span-4 md:col-span-3 text-xs sm:text-sm text-muted-foreground">
         {label}
       </div>
-      <div className={cn("col-span-8 md:col-span-9", mono && "font-mono")}>
+      <div
+        className={cn(
+          "col-span-8 md:col-span-9 min-w-0 break-words text-sm",
+          mono && "font-mono break-all"
+        )}
+      >
         {value}
       </div>
     </div>
@@ -263,13 +268,16 @@ export default function ReminderDetail({ onDeleted }: Props) {
                   ลบ
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="w-[calc(100vw-1.5rem)] max-w-lg">
                 <AlertDialogHeader>
                   <AlertDialogTitle>ลบรายการนี้หรือไม่?</AlertDialogTitle>
                   <AlertDialogDescription>
                     การลบจะไม่สามารถกู้คืนได้ คุณต้องการลบรายการเตือนโอนเลขที่{" "}
-                    <span className="font-medium">{selectedRow.note_id}</span>{" "}
-                    จริงหรือไม่ (คู่ค้า: {selectedRow.party_uuid})?
+                    <span className="font-medium break-all">
+                      {selectedRow.note_id}
+                    </span>{" "}
+                    จริงหรือไม่ (คู่ค้า:{" "}
+                    <span className="break-all">{selectedRow.party_uuid}</span>)?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

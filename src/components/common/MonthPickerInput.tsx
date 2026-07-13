@@ -30,7 +30,7 @@ export default function MonthPickerInput({
       defaultValue={includeAllOption ? "all" : ""}
       onValueChange={field.onChange}
     >
-      <SelectTrigger className="w-32">
+      <SelectTrigger className="w-full sm:w-32">
         <SelectValue placeholder="เลือกเดือน">
           {field.value === "all"
             ? "ทั้งหมด"

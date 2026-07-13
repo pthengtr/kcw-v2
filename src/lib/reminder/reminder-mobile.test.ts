@@ -41,4 +41,22 @@ describe("Reminder mobile layout", () => {
     expect(manager).toContain("w-[calc(100vw-1rem)]");
     expect(manager).toContain("h-[90dvh]");
   });
+
+  it("keeps create/edit controls fluid under md without changing desktop widths", () => {
+    const datePicker = read("src/components/common/DatePickerInput.tsx");
+    expect(datePicker).toContain("w-full min-w-0 pl-3 text-left font-normal sm:w-[240px]");
+    expect(datePicker).toContain("flex flex-col gap-2 min-w-0 sm:flex-row");
+
+    const party = read("src/components/common/PartySelect.tsx");
+    expect(party).toContain("w-[min(480px,calc(100vw-2rem))]");
+
+    const bank = read("src/components/common/BankAccountPicker.tsx");
+    expect(bank).toContain("w-[min(520px,calc(100vw-2rem))]");
+
+    const form = read("src/components/reminder/PaymentReminderForm.tsx");
+    expect(form).toContain("grid-cols-1 sm:grid-cols-2 md:grid-cols-4");
+
+    const dialog = read("src/components/reminder/ReminderFormDialog.tsx");
+    expect(dialog).toContain("overflow-x-hidden");
+  });
 });
