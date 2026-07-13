@@ -60,7 +60,7 @@ export default function ReminderFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
-      <DialogContent className="max-w-fit  h-5/6">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg h-[90dvh] sm:max-w-3xl sm:w-[90vw] md:max-w-5xl md:w-[60vw] md:h-5/6">
         <DialogHeader className="grid place-content-center py-4">
           <DialogTitle>{dialogHeader}</DialogTitle>
         </DialogHeader>
@@ -69,11 +69,11 @@ export default function ReminderFormDialog({
             {submitError}
           </div>
         )}
-        <div className="w-[60vw] h-full overflow-y-auto">
+        <div className="w-full h-full overflow-y-auto">
           {currentUserId && (
             <PaymentReminderForm
               open={open}
-              className="flex flex-col gap-6 items-stretch p-8"
+              className="flex flex-col gap-6 items-stretch p-4 sm:p-8"
               currentUserId={currentUserId}
               defaultPartyKind="SUPPLIER"
               onSaved={(row) => handleOnsavedForm(row)}

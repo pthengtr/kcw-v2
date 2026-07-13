@@ -91,10 +91,10 @@ export default function Reminder() {
   }, [setIsAdmin]);
 
   return (
-    <section className="h-[90vh]">
+    <section className="h-[calc(100dvh-4rem)] md:h-[90vh] min-h-0">
       {/* Table now uses full width/height */}
       {columnVisibility && paginationPageSize && (
-        <div className="h-[80vh] px-8">
+        <div className="h-full md:h-[80vh] px-4 sm:px-8 min-h-0">
           <ReminderTable
             columnVisibility={columnVisibility}
             paginationPageSize={paginationPageSize}
@@ -112,7 +112,7 @@ export default function Reminder() {
         {/* Keep padding zero so the detail component controls its layout */}
         <SheetContent
           side="right"
-          className="w-full min-w-[80vw] p-8 overflow-auto"
+          className="w-screen max-w-none p-4 overflow-auto md:w-full md:min-w-[80vw] md:p-8"
         >
           {/* Visually hidden, satisfies a11y */}
           <SheetHeader className="sr-only">

@@ -162,7 +162,7 @@ export default function ReminderSearchForm({
       onSubmit={onSubmit}
       getFieldLabel={getFieldLabel}
       getFormInput={getFormInput}
-      className="flex justify-center items-end gap-4 pxs-12"
+      className="flex flex-col sm:flex-row flex-wrap justify-center items-stretch sm:items-end gap-3 sm:gap-4 w-full"
       submitLabel={<Search />}
     />
   );
