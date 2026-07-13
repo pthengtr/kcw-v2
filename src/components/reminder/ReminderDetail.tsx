@@ -213,14 +213,14 @@ export default function ReminderDetail({ onDeleted }: Props) {
     <div className="flex flex-col gap-6 p-4 md:p-6">
       {/* ===== Sticky header ===== */}
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b">
-        <div className="flex items-center justify-between px-3 py-3 md:px-6">
-          <div className="flex items-center gap-3">
-            <Receipt className="h-5 w-5 text-muted-foreground" />
-            <div className="flex flex-col">
-              <span className="text-lg font-semibold">
+        <div className="flex flex-wrap items-start justify-between gap-3 px-3 py-3 md:px-6">
+          <div className="flex items-center gap-3 min-w-0">
+            <Receipt className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-lg font-semibold break-all">
                 {selectedRow.note_id || "—"}
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge
                   variant={isPaid ? "default" : "secondary"}
                   className="gap-1"
@@ -240,7 +240,7 @@ export default function ReminderDetail({ onDeleted }: Props) {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <ReminderFormDialog
               update
               open={openUpdateDialog}
