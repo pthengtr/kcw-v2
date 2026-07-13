@@ -35,21 +35,23 @@ function listFiles(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Tiger Pay integration placement", () => {
-  it("appears inside the existing bank statement sync structure", () => {
-    const page = read("src/components/bank/BankStatementSyncPage.tsx");
-    expect(page).toContain('value="tiger-pay"');
+  it("appears as a top-level page beside Bank Statement Sync", () => {
+    const page = read("src/components/bank/TigerPayPage.tsx");
     expect(page).toContain("TigerPayTab");
     expect(page).toContain("Tiger Pay");
+
+    const route = read("src/app/(root)/tiger-pay/page.tsx");
+    expect(route).toContain("TigerPayPage");
+
+    const home = read("src/app/(root)/home/page.tsx");
+    expect(home).toContain('href="/tiger-pay"');
+    expect(home).toContain("Tiger Pay");
   });
 
-  it("does not create a standalone Tiger Pay navigation page", () => {
-    const pageFiles = listFiles(path.join(ROOT, "src/app")).filter((file) =>
-      /page\.tsx?$/.test(file)
-    );
-    const standalonePages = pageFiles.filter((file) =>
-      /tiger[-_]?pay/i.test(path.relative(path.join(ROOT, "src/app"), file))
-    );
-    expect(standalonePages).toEqual([]);
+  it("is not nested inside Bank Statement Sync", () => {
+    const bankPage = read("src/components/bank/BankStatementSyncPage.tsx");
+    expect(bankPage).not.toContain("TigerPayTab");
+    expect(bankPage).not.toContain("tiger-pay");
 
     const navbar = read("src/components/nav/Navbar.tsx");
     expect(navbar.toLowerCase()).not.toContain("tiger");
