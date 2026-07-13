@@ -47,14 +47,14 @@ export function TigerPayStatusBadge({
     <Badge
       variant={presentation.variant}
       className={cn(
-        "gap-1 font-medium",
+        "gap-1 font-medium max-w-full whitespace-normal text-left",
         toneClass[presentation.tone],
         className
       )}
       title={status ?? undefined}
     >
-      <Icon className="h-3.5 w-3.5" aria-hidden />
-      <span>{presentation.label}</span>
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span className="break-words">{presentation.label}</span>
       <span className="sr-only">({status ?? "unknown"})</span>
     </Badge>
   );

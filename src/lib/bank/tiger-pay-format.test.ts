@@ -56,6 +56,13 @@ describe("Tiger Pay integration placement", () => {
     const navbar = read("src/components/nav/Navbar.tsx");
     expect(navbar.toLowerCase()).not.toContain("tiger");
   });
+
+  it("renders a mobile card list instead of forcing wide table scrolling", () => {
+    const tab = read("src/components/bank/TigerPayTab.tsx");
+    expect(tab).toContain("md:hidden");
+    expect(tab).toContain("MobileTransactionCard");
+    expect(tab).toContain("hidden md:block");
+  });
 });
 
 describe("Tiger Pay query schema usage", () => {
