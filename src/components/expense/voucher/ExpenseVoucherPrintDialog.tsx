@@ -41,7 +41,7 @@ export default function ExpenseVoucherPrintDialog({
           </Button>
         </DialogTrigger>
 
-        <DialogContent className="max-w-4xl w-[90vw] h-[90vh] overflow-auto">
+        <DialogContent className="h-[90dvh] w-[min(90vw,calc(100vw-1rem))] max-w-4xl overflow-auto">
           <DialogHeader>
             <DialogTitle className="text-center">ตัวอย่างก่อนพิมพ์</DialogTitle>
           </DialogHeader>

@@ -290,7 +290,7 @@ export default function StatementLinesTab({
     <div className="flex flex-col gap-3">
       <div className="rounded-md border p-4 bg-slate-50 flex flex-col gap-4">
         <div className="flex flex-wrap items-end gap-4">
-          <div className="min-w-[280px] flex-1">
+          <div className="min-w-0 flex-1 basis-full sm:min-w-[280px] sm:basis-auto">
             <div className="text-xs text-muted-foreground mb-1">บัญชี</div>
             <Select
               value={accountNo || undefined}
@@ -381,7 +381,7 @@ export default function StatementLinesTab({
         )}
 
         <div className="flex flex-wrap items-end gap-3 pt-1 border-t border-slate-200">
-          <div className="min-w-[140px]">
+          <div className="min-w-0 flex-1 sm:min-w-[140px] sm:flex-none">
             <div className="text-xs text-muted-foreground mb-1">direction</div>
             <Select
               value={direction}
@@ -390,7 +390,7 @@ export default function StatementLinesTab({
                 setDirection(v);
               }}
             >
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-full sm:w-[140px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -400,7 +400,7 @@ export default function StatementLinesTab({
               </SelectContent>
             </Select>
           </div>
-          <div className="min-w-[160px]">
+          <div className="min-w-0 flex-1 sm:min-w-[160px] sm:flex-none">
             <div className="text-xs text-muted-foreground mb-1">
               match_status
             </div>
@@ -411,7 +411,7 @@ export default function StatementLinesTab({
                 setMatchStatus(v);
               }}
             >
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

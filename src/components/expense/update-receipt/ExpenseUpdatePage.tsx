@@ -110,24 +110,23 @@ export default function ExpenseUpdatePage() {
     <>
       {selectedReceipt && (
         <section className="flex flex-col items-center p-2">
-          <div className="flex w-full p-2">
-            <div className="flex-1 flex gap-2">
+          <div className="flex w-full min-w-0 flex-col gap-2 p-2 sm:flex-row sm:items-center">
+            <div className="flex flex-1 gap-2">
               <Button variant="outline" onClick={() => router.back()}>
                 <ArrowBigLeftDash strokeWidth={1} />
                 กลับ
               </Button>
-              {/* </Link> */}
             </div>
-            <h1 className="text-2xl font-bold tracking-wider">
+            <h1 className="min-w-0 break-words text-center text-lg font-bold tracking-wider sm:text-2xl">
               {selectedRefReceipt
                 ? `แก้ไขใบลดหนี้ ${branchName}`
                 : `แก้ไขบิลค่าใชัจ่าย ${branchName}`}
             </h1>
-            <div className="flex-1 flex justify-end gap-2"></div>
+            <div className="hidden flex-1 justify-end gap-2 sm:flex"></div>
           </div>
 
-          <div className="flex w-full justify-center h-[80vh]">
-            <div className="p-2 h-full flex flex-col gap-4">
+          <div className="flex h-auto w-full min-w-0 flex-col justify-center gap-4 md:h-[80vh] md:flex-row">
+            <div className="flex h-full min-w-0 flex-col gap-4 p-2">
               <ExpenseCreateReceiptFormCard update />
               <LocalImageDropzone
                 value={pendingFiles}
@@ -135,14 +134,14 @@ export default function ExpenseUpdatePage() {
                 multiple
               />
             </div>
-            <div className="p-2 flex flex-col gap-2 h-full">
+            <div className="flex h-full min-w-0 flex-col gap-2 p-2">
               <ExpenseCreateEntryTable
                 columnVisibility={defaultCreateEntryColumnVisibility}
                 paginationPageSize={10}
                 update
               >
-                <div className="flex flex-1 justify-start items-center gap-2">
-                  <h2 className="text-xl pr-2">
+                <div className="flex flex-1 flex-wrap items-center justify-start gap-2">
+                  <h2 className="pr-2 text-lg sm:text-xl">
                     <ExpenseCreateBillHeader />
                   </h2>
                   <ExpenseAddEntryFormDialog />
@@ -163,7 +162,7 @@ export default function ExpenseUpdatePage() {
                   )}
                 </div>
               </ExpenseCreateEntryTable>
-              <div className="flex p-4 h-fit justify-end mr-8">
+              <div className="mr-0 flex h-fit justify-end p-2 sm:mr-8 sm:p-4">
                 <ExpenseCreateReceiptSummary />
               </div>
             </div>

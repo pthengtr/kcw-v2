@@ -131,7 +131,7 @@ export default function ExpenseVoucherSearchForm({
       onSubmit={onSubmit}
       getFieldLabel={getFieldLabel}
       getFormInput={getFormInput}
-      className="flex justify-start items-end gap-4 px-12"
+      className="flex flex-col items-end justify-start gap-4 px-2 sm:flex-row sm:px-4 md:px-12"
       submitLabel={<Search />}
     />
   );

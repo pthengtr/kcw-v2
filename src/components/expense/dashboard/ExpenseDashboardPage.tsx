@@ -207,20 +207,22 @@ export default function ExpenseDashboardPage() {
   }, [dataView]);
 
   return (
-    <section className="flex flex-col justify-center items-center p-4">
-      <div className="flex w-full px-2 items-center gap-2">
-        <div className="flex-1 flex gap-2">
+    <section className="flex flex-col items-center justify-center p-2 sm:p-4">
+      <div className="flex w-full min-w-0 flex-col gap-3 px-2 sm:flex-row sm:items-center sm:gap-2">
+        <div className="flex flex-1 gap-2">
           <Button variant="outline" onClick={() => router.back()}>
             <ArrowBigLeftDash strokeWidth={1} />
             กลับ
           </Button>
         </div>
 
-        <h1 className="text-2xl font-bold tracking-wider">ภาพรวมค่าใช้จ่าย</h1>
+        <h1 className="min-w-0 break-words text-center text-lg font-bold tracking-wider sm:text-2xl">
+          ภาพรวมค่าใช้จ่าย
+        </h1>
 
-        <div className="flex-1 flex justify-end gap-3 items-end">
+        <div className="flex flex-1 flex-wrap items-end justify-start gap-3 sm:justify-end">
           {/* Branch selector */}
-          <div className="grid gap-1">
+          <div className="grid min-w-0 flex-1 gap-1 sm:flex-none">
             <Label htmlFor="branch">สาขา</Label>
             <Select
               value={selectedBranch}
@@ -229,7 +231,7 @@ export default function ExpenseDashboardPage() {
               }
               disabled={branchesLoading}
             >
-              <SelectTrigger id="branch" className="w-44">
+              <SelectTrigger id="branch" className="w-full sm:w-44">
                 <SelectValue placeholder="เลือกสาขา" />
               </SelectTrigger>
               <SelectContent>
@@ -244,14 +246,14 @@ export default function ExpenseDashboardPage() {
           </div>
 
           {/* New: Data view selector */}
-          <div className="grid gap-1">
+          <div className="grid min-w-0 flex-1 gap-1 sm:flex-none">
             <Label htmlFor="dataview">มุมมองข้อมูล</Label>
             <Select
               value={dataView}
               onValueChange={(v) => setDataView(v as DataView)}
               disabled={loading}
             >
-              <SelectTrigger id="dataview" className="w-44">
+              <SelectTrigger id="dataview" className="w-full sm:w-44">
                 <SelectValue placeholder="เลือกมุมมองข้อมูล" />
               </SelectTrigger>
               <SelectContent>
@@ -297,7 +299,7 @@ export default function ExpenseDashboardPage() {
         <div className="mt-2 text-sm text-destructive">{errorMsg}</div>
       )}
 
-      <div className="w-fit grid grid-cols-2 gap-8 p-8 justify-center items-center">
+      <div className="grid w-full max-w-full grid-cols-1 items-center justify-center gap-4 p-2 sm:gap-8 sm:p-8 lg:w-fit lg:grid-cols-2">
         {/* Single pair of charts: use the selected dataset */}
         <PersistedCard loading={loading} skeletonBars={4}>
           <ExpenseSummaryLineChartCard
@@ -319,7 +321,7 @@ export default function ExpenseDashboardPage() {
         <PersistedCard
           loading={loading}
           skeletonBars={6}
-          className="col-span-2"
+          className="lg:col-span-2"
         >
           {companySummary.length > 0 && generalSummary.length > 0 ? (
             <ExpenseSummaryStackedChartCard
@@ -329,14 +331,14 @@ export default function ExpenseDashboardPage() {
               yTickFormatter={thb}
             />
           ) : (
-            <div className="h-[360px] w-[1000px]" />
+            <div className="h-[360px] w-full max-w-full" />
           )}
         </PersistedCard>
 
         {/* Table follows currentData; keep mounted */}
         <PersistedCard
           loading={loading}
-          className="w-[80vw] h-[90vh] col-span-2 justify-self-center"
+          className="h-auto w-full max-w-full justify-self-center lg:col-span-2 lg:h-[90vh] lg:w-[80vw]"
         >
           <ExpenseDashboardTable
             datasetKey={`${dataView}-${selectedBranch ?? "ALL"}-${year}`}

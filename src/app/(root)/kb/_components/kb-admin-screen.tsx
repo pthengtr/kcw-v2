@@ -18,9 +18,11 @@ export function KbAdminScreen({
   status,
 }: KbAdminScreenProps) {
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-3 sm:p-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">จัดการ FAQ</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+          จัดการ FAQ
+        </h1>
         <p className="text-sm text-muted-foreground">
           จัดการข้อมูล <code>kb.kb_parts</code>{" "}
           พร้อมทดสอบการค้นหาแบบคำตรงและแบบความหมาย
@@ -29,7 +31,7 @@ export function KbAdminScreen({
 
       <KbStatusBanner {...status} />
 
-      <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)_420px]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[320px_minmax(0,1fr)_420px]">
         <KbRecentList
           recentItems={recentItems}
           selectedId={selectedId}

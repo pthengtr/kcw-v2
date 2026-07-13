@@ -111,7 +111,7 @@ export default function ProductRelatedScreen() {
   }, [addTarget, state.relatedUnion]);
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-6 p-6">
+    <main className="mx-auto w-full max-w-7xl space-y-6 p-3 sm:p-6">
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">
           จัดการสินค้าที่ซื้อด้วยกัน
@@ -147,11 +147,12 @@ export default function ProductRelatedScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <form className="flex gap-2" onSubmit={handlePickSearch}>
+            <form className="flex min-w-0 flex-col gap-2 sm:flex-row" onSubmit={handlePickSearch}>
               <Input
                 value={pickQuery}
                 onChange={(e) => setPickQuery(e.target.value)}
                 placeholder="เช่น BCODE หรือชื่อสินค้า"
+                className="min-w-0 flex-1"
               />
               <Button type="submit" disabled={pickLoading}>
                 {pickLoading ? (
@@ -213,7 +214,7 @@ export default function ProductRelatedScreen() {
         ) : (
           <div className="space-y-6">
             <Card>
-              <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <CardHeader className="flex flex-col items-start justify-between gap-4 sm:flex-row">
                 <div className="space-y-2">
                   <CardTitle>สินค้าที่เลือก</CardTitle>
                   <div className="flex flex-wrap items-center gap-2">

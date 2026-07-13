@@ -85,22 +85,22 @@ export default function ExpenseSummaryPage() {
   return (
     <section className="flex flex-col items-center p-2">
       <ExpensePageHeader pageTitle={`จัดการค่าใช้จ่าย ${branchName}`} />
-      <div className="flex flex-col w-fit">
-        <div className="p-2 h-[80vh]">
+      <div className="flex w-full min-w-0 max-w-full flex-col">
+        <div className="h-auto min-h-[50vh] p-2 md:h-[80vh]">
           {columnVisibility && paginationPageSize && (
             <ExpenseReceiptTable
               columnVisibility={columnVisibility}
               paginationPageSize={paginationPageSize}
             >
-              <div className="flex gap-2 flex-1 justify-between items-center">
-                <div className="flex gap-2 items-center px-4">
-                  <h2 className="text-xl font-bold ">{`รายการบิลค่าใช้จ่าย`}</h2>
+              <div className="flex flex-1 flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2 px-2 sm:px-4">
+                  <h2 className="text-lg font-bold sm:text-xl">{`รายการบิลค่าใช้จ่าย`}</h2>
                   <ResetTableCookiesDropdown
                     handleResetCookies={handleResetCookies}
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <ExpenseReceiptSearchForm
                     defaultValues={{
                       receipt_month: "all",
@@ -111,7 +111,7 @@ export default function ExpenseSummaryPage() {
             </ExpenseReceiptTable>
           )}
         </div>
-        <div className="p-2 flex-1">
+        <div className="flex-1 p-2">
           <ExpenseReceiptDetail />
         </div>
       </div>

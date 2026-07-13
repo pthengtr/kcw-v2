@@ -136,7 +136,7 @@ export default function RefReceiptByNumber({
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent className="w-[28rem]">
+        <DropdownMenuContent className="w-[min(28rem,calc(100vw-2rem))]">
           <DropdownMenuLabel>
             <div className="p-2">
               <Input

@@ -18,12 +18,14 @@ export default function ExpenseGeneralPage() {
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   return (
-    <section className="flex flex-col justify-center items-center w-full ">
-      <div className="h-[90vh] p-8">
+    <section className="flex w-full flex-col items-center justify-center">
+      <div className="h-auto w-full min-w-0 p-2 sm:h-[90vh] sm:p-8">
         <ExpenseGeneralTable>
-          <div className="flex w-full justify-start items-center">
-            <h2 className="text-xl font-semibold px-4">ค่าใช้จ่ายทั่วไป</h2>
-            <div>
+          <div className="flex w-full min-w-0 flex-col items-stretch justify-start gap-2 sm:flex-row sm:items-center">
+            <h2 className="px-2 text-lg font-semibold sm:px-4 sm:text-xl">
+              ค่าใช้จ่ายทั่วไป
+            </h2>
+            <div className="min-w-0">
               <ExpenseGeneralSearchForm
                 defaultValues={{
                   general_entries_month: "",

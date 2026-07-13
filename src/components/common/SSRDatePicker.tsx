@@ -144,7 +144,7 @@ export function SSRDatePicker({
             type="button"
             variant="outline"
             className={cn(
-              "h-9 w-[240px] pl-3 justify-between text-left font-normal",
+              "h-9 w-full min-w-0 pl-3 justify-between text-left font-normal sm:w-[240px]",
               className
             )}
             aria-label={name}

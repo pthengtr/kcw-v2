@@ -53,13 +53,13 @@ export default function ExpenseSummaryDetail() {
         paginationPageSize={paginationPageSize}
       />
       {selectedReceipt && columnVisibility && paginationPageSize && (
-        <div className="self-end flex gap-4">
-          <div className="grid grid-cols-2 gap-2  p-8 border rounded-md">
+        <div className="flex w-full flex-col gap-4 self-stretch sm:w-auto sm:flex-row sm:self-end">
+          <div className="grid grid-cols-1 gap-2 rounded-md border p-4 sm:grid-cols-2 sm:p-8">
             <ExpenseCommonReceiptSummaryDebug
               selectedReceipt={selectedReceipt}
             />
           </div>
-          <div className="grid grid-cols-2 gap-2  p-8 border rounded-md">
+          <div className="grid grid-cols-1 gap-2 rounded-md border p-4 sm:grid-cols-2 sm:p-8">
             <ExpenseCommonReceiptSummary
               entries={receiptEntries}
               vatInput={selectedReceipt.vat}

@@ -31,12 +31,14 @@ export default function ExpenseVoucherPage() {
   }, [branch]);
 
   return (
-    <section className="flex flex-col items-center gap-2 h-[90vh] p-4">
+    <section className="flex h-auto min-h-[calc(100dvh-4rem)] flex-col items-center gap-2 p-2 sm:h-[90vh] sm:p-4">
       <ExpensePageHeader pageTitle={`ใบสำคัญจ่าย ${branchName}`} />
-      <ExpenseVoucherTable
-        paginationPageSize={500}
-        columnVisibility={defaultExpenseVoucherColumnVisibility}
-      ></ExpenseVoucherTable>
+      <div className="w-full min-w-0 overflow-x-auto">
+        <ExpenseVoucherTable
+          paginationPageSize={500}
+          columnVisibility={defaultExpenseVoucherColumnVisibility}
+        ></ExpenseVoucherTable>
+      </div>
     </section>
   );
 }

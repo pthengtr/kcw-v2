@@ -33,17 +33,19 @@ export default function Branch() {
     <>
       {branches && (
         <>
-          <div className="flex">
-            <div className="flex-1 flex">
-              <Link className="p-16" href={`/home`} passHref>
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+            <div className="flex flex-1">
+              <Link className="p-4 sm:p-8 md:p-16" href={`/home`} passHref>
                 <Button variant="outline">
                   <ArrowBigLeftDash strokeWidth={1} />
                   กลับ
                 </Button>
               </Link>
             </div>
-            <h1 className="text-6xl p-12 text-center">ค่าใช้จ่าย</h1>
-            <div className="flex-1"></div>
+            <h1 className="p-4 text-center text-3xl sm:p-8 sm:text-5xl md:p-12 md:text-6xl">
+              ค่าใช้จ่าย
+            </h1>
+            <div className="hidden flex-1 sm:block"></div>
           </div>
           <CardIconMenu>
             <CardIcon

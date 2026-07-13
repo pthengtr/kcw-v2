@@ -31,9 +31,9 @@ export default function TaxReportPage() {
   }, [branch]);
 
   return (
-    <section className="flex flex-col items-center p-4">
+    <section className="flex flex-col items-center p-2 sm:p-4">
       <ExpensePageHeader pageTitle={`รายงานภาษีซื้อ ${branchName}`} />
-      <div className="w-fit h-[90vh] p-8">
+      <div className="h-auto w-full min-w-0 max-w-full p-2 sm:h-[90vh] sm:w-fit sm:p-8">
         <TaxReportTable
           columnVisibility={defaultTaxReportColumnVisibility}
           paginationPageSize={500}

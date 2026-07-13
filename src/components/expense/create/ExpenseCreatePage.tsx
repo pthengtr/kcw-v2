@@ -58,7 +58,7 @@ export default function ExpenseCreatePage() {
   }, [resetCreateReceiptForm]);
 
   return (
-    <section className="flex flex-col items-center p-4 gap-4">
+    <section className="flex flex-col items-center gap-4 p-2 sm:p-4">
       <ExpensePageHeader
         pageTitle={
           pathName.includes("/credit-note")
@@ -66,8 +66,8 @@ export default function ExpenseCreatePage() {
             : `สร้างบิลค่าใช้จ่ายบริษัท ${branchName}`
         }
       />
-      <div className="flex w-full justify-center h-[80vh]">
-        <div className="p-2 h-full flex flex-col gap-4">
+      <div className="flex h-auto w-full min-w-0 flex-col justify-center gap-4 md:h-[80vh] md:flex-row">
+        <div className="flex h-full min-w-0 flex-col gap-4 p-2 md:w-auto">
           <ExpenseCreateReceiptFormCard />
           <LocalImageDropzone
             value={pendingFiles}
@@ -75,13 +75,13 @@ export default function ExpenseCreatePage() {
             multiple
           />
         </div>
-        <div className="p-2 flex flex-col gap-2 h-full">
+        <div className="flex h-full min-w-0 flex-col gap-2 p-2 md:w-auto">
           <ExpenseCreateEntryTable
             columnVisibility={defaultCreateEntryColumnVisibility}
             paginationPageSize={10}
           >
-            <div className="flex flex-1 justify-start items-center gap-2">
-              <h2 className="text-xl pr-2">
+            <div className="flex flex-1 flex-wrap items-center justify-start gap-2">
+              <h2 className="pr-2 text-lg sm:text-xl">
                 <ExpenseCreateBillHeader />
               </h2>
               <ExpenseAddEntryFormDialog />
@@ -99,7 +99,7 @@ export default function ExpenseCreatePage() {
               )}
             </div>
           </ExpenseCreateEntryTable>
-          <div className="flex p-4 h-fit justify-end mr-8">
+          <div className="mr-0 flex h-fit justify-end p-2 sm:mr-8 sm:p-4">
             <ExpenseCreateReceiptSummary />
           </div>
         </div>

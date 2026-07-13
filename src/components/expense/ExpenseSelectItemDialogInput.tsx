@@ -88,7 +88,7 @@ export default function ExpenseSelectItemDialogInput({
           <div className="max-h-96 overflow-y-auto">
             {sortedExpenseItemOptions.map((item) => (
               <DropdownMenuItem
-                className="grid grid-cols-2"
+                className="grid grid-cols-1 gap-1 sm:grid-cols-2"
                 key={item.item_name}
                 onClick={() => handleSupplierChange(item.item_uuid)}
               >
