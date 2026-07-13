@@ -210,10 +210,11 @@ export default function ReminderDetail({ onDeleted }: Props) {
     (selectedRow.total_amount ?? 0) + (selectedRow.discount ?? 0);
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <div className="flex flex-col gap-6 pt-10 px-1 pb-4 md:p-6 md:pt-10">
       {/* ===== Sticky header ===== */}
+      {/* Keep right padding clear of the Sheet close (X) button */}
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b">
-        <div className="flex flex-wrap items-start justify-between gap-3 px-3 py-3 md:px-6">
+        <div className="flex flex-wrap items-start justify-between gap-3 pr-10 pl-1 py-3 md:px-6 md:pr-12">
           <div className="flex items-center gap-3 min-w-0">
             <Receipt className="h-5 w-5 shrink-0 text-muted-foreground" />
             <div className="flex flex-col min-w-0">

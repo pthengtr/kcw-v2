@@ -21,4 +21,13 @@ describe("Reminder mobile layout", () => {
     expect(page).toContain("w-screen");
     expect(page).toContain("md:min-w-[80vw]");
   });
+
+  it("keeps the sheet close button above sticky detail content", () => {
+    const sheet = read("src/components/ui/sheet.tsx");
+    expect(sheet).toContain("SheetPrimitive.Close");
+    expect(sheet).toMatch(/SheetPrimitive\.Close[^>]*z-50/);
+
+    const detail = read("src/components/reminder/ReminderDetail.tsx");
+    expect(detail).toContain("pr-10");
+  });
 });
