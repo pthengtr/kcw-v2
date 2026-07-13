@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ImportFilesTab from "@/components/bank/ImportFilesTab";
 import StatementLinesTab from "@/components/bank/StatementLinesTab";
+import TigerPayTab from "@/components/bank/TigerPayTab";
 
 async function isAdminUser(): Promise<boolean> {
   try {
@@ -23,9 +24,9 @@ async function isAdminUser(): Promise<boolean> {
 }
 
 export default function BankStatementSyncPage() {
-  const [tab, setTab] = useState<"import-files" | "statement-lines">(
-    "import-files"
-  );
+  const [tab, setTab] = useState<
+    "import-files" | "statement-lines" | "tiger-pay"
+  >("import-files");
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
 
@@ -69,6 +70,7 @@ export default function BankStatementSyncPage() {
         <TabsList>
           <TabsTrigger value="import-files">Import Files</TabsTrigger>
           <TabsTrigger value="statement-lines">Statement Lines</TabsTrigger>
+          <TabsTrigger value="tiger-pay">Tiger Pay</TabsTrigger>
         </TabsList>
 
         <TabsContent value="import-files" className="mt-4">
@@ -76,6 +78,9 @@ export default function BankStatementSyncPage() {
         </TabsContent>
         <TabsContent value="statement-lines" className="mt-4">
           <StatementLinesTab refreshToken={refreshToken} />
+        </TabsContent>
+        <TabsContent value="tiger-pay" className="mt-4">
+          <TigerPayTab refreshToken={refreshToken} />
         </TabsContent>
       </Tabs>
     </div>

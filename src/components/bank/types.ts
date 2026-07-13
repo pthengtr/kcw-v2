@@ -30,3 +30,11 @@ export type StatementLineRow = {
   source_file_id: string | null;
 };
 
+export type {
+  TigerPayTransaction,
+  TigerPayWebhookEvent,
+  TigerPayStatusGroup,
+  TigerPayPaymentTypeFilter,
+  TigerPaySummary,
+} from "@/lib/bank/tiger-pay-types";
+
