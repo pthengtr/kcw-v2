@@ -237,9 +237,9 @@ export default function CommonImageDropzone({
           (isDragging ? "ring-2 ring-offset-2 ring-primary" : "hover:shadow-sm")
         }
       >
-        <CardContent className="py-10 flex flex-col items-center text-center gap-2">
+        <CardContent className="py-8 sm:py-10 flex flex-col items-center text-center gap-2 px-4">
           <Images className="h-10 w-10" />
-          <div className="text-lg font-medium">วางไฟล์ที่นี่...</div>
+          <div className="text-base sm:text-lg font-medium">วางไฟล์ที่นี่...</div>
           <div className="text-sm text-muted-foreground">
             หรือ คลิกเพื่อเลือกไฟล์
           </div>
@@ -255,12 +255,19 @@ export default function CommonImageDropzone({
             onChange={onInputChange}
           />
         </CardContent>
-        <CardFooter className="justify-center gap-2 pb-6">
-          <Button size="sm" variant="secondary">
+        <CardFooter className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-2 pb-6 px-4">
+          <Button size="sm" variant="secondary" type="button">
             <ImagePlus className="mr-2 h-4 w-4" /> เลือกไฟล์รูปภาพ
           </Button>
-          <Separator orientation="vertical" className="h-6" />
-          <Badge variant="outline">
+          <Separator
+            orientation="vertical"
+            className="h-6 hidden sm:block"
+          />
+          <Badge
+            variant="outline"
+            className="max-w-full truncate font-mono text-[10px] sm:text-xs"
+            title={`/${bucket}/${folder}/${receiptUuid}`}
+          >
             /{bucket}/{folder}/{receiptUuid}
           </Badge>
         </CardFooter>
@@ -322,7 +329,7 @@ export default function CommonImageDropzone({
       )}
 
       {/* Actions */}
-      <div className="flex justify-center items-center gap-2">
+      <div className="flex flex-wrap justify-center items-center gap-2">
         <Button type="button" disabled={!canUpload} onClick={startUpload}>
           <Upload className="mr-2 h-4 w-4" /> อัพโหลด
         </Button>

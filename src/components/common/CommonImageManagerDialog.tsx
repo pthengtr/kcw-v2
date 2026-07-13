@@ -78,15 +78,15 @@ export default function CommonImageManagerDialog({
         )}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-3xl h-[80vh] overflow-auto">
-        <DialogHeader>
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-lg sm:max-w-3xl h-[90dvh] sm:h-[80vh] overflow-y-auto p-4 sm:p-6 gap-3">
+        <DialogHeader className="pr-8 text-left">
           <DialogTitle>{title}</DialogTitle>
           {description ? (
             <DialogDescription>{description}</DialogDescription>
           ) : null}
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
           <CommonImagesCarousel
             folder={folder}
             receiptUuid={receiptUuid}
@@ -105,7 +105,7 @@ export default function CommonImageManagerDialog({
           />
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="sm:justify-end">
           <Button variant="secondary" onClick={() => handleOpenChange(false)}>
             ปิด
           </Button>

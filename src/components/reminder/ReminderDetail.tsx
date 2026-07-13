@@ -427,44 +427,48 @@ export default function ReminderDetail({ onDeleted }: Props) {
       </Card>
 
       {/* ===== Images: Bill ===== */}
-      <Card>
+      <Card className="min-w-0 overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">รูปบิล / ใบวางบิล</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3  grid place-content-center">
-          <div className="w-full md:w-[420px]">
+        <CardContent className="space-y-3 flex flex-col items-stretch min-w-0">
+          <div className="w-full max-w-full min-w-0 md:max-w-[420px] md:mx-auto">
             <CommonImagesCarousel
               folder="public/reminder_bill"
               receiptUuid={selectedRow.reminder_uuid}
               bucket="pictures"
             />
           </div>
-          <CommonImageManagerDialog
-            folder="public/reminder_bill"
-            receiptUuid={selectedRow.reminder_uuid}
-            bucket="pictures"
-          />
+          <div className="flex justify-center">
+            <CommonImageManagerDialog
+              folder="public/reminder_bill"
+              receiptUuid={selectedRow.reminder_uuid}
+              bucket="pictures"
+            />
+          </div>
         </CardContent>
       </Card>
 
       {/* ===== Images: Payment Proof ===== */}
-      <Card>
+      <Card className="min-w-0 overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">รูปหลักฐานการชำระเงิน</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 grid place-content-center">
-          <div className="w-full md:w-[420px]">
+        <CardContent className="space-y-3 flex flex-col items-stretch min-w-0">
+          <div className="w-full max-w-full min-w-0 md:max-w-[420px] md:mx-auto">
             <CommonImagesCarousel
               folder="public/reminder_payment"
               receiptUuid={selectedRow.reminder_uuid}
               bucket="pictures"
             />
           </div>
-          <CommonImageManagerDialog
-            folder="public/reminder_payment"
-            receiptUuid={selectedRow.reminder_uuid}
-            bucket="pictures"
-          />
+          <div className="flex justify-center">
+            <CommonImageManagerDialog
+              folder="public/reminder_payment"
+              receiptUuid={selectedRow.reminder_uuid}
+              bucket="pictures"
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

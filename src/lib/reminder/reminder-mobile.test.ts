@@ -30,4 +30,15 @@ describe("Reminder mobile layout", () => {
     const detail = read("src/components/reminder/ReminderDetail.tsx");
     expect(detail).toContain("pr-10");
   });
+
+  it("keeps image carousel controls usable on narrow screens", () => {
+    const carousel = read("src/components/common/CommonImageCaroussel.tsx");
+    expect(carousel).toContain('CarouselPrevious className="left-2');
+    expect(carousel).toContain('CarouselNext className="right-2');
+    expect(carousel).toContain("w-[calc(100vw-1rem)]");
+
+    const manager = read("src/components/common/CommonImageManagerDialog.tsx");
+    expect(manager).toContain("w-[calc(100vw-1rem)]");
+    expect(manager).toContain("h-[90dvh]");
+  });
 });
