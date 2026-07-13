@@ -30,6 +30,7 @@ export default function Home() {
             label="Bank Statement"
             icon="ArrowRightLeft"
           />
+          <CardIcon href="/tiger-pay" label="Tiger Pay" icon="Wallet" />
         </CardIconMenu>
       </div>
     </main>

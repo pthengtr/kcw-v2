@@ -3,15 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCcw } from "lucide-react";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import ImportFilesTab from "@/components/bank/ImportFilesTab";
-import StatementLinesTab from "@/components/bank/StatementLinesTab";
+import TigerPayTab from "@/components/bank/TigerPayTab";
 
 async function isAdminUser(): Promise<boolean> {
   try {
-    const res = await fetch("/api/bank/import-files?limit=1&offset=0", {
+    const res = await fetch("/api/bank/tiger-pay/transactions?limit=1&offset=0", {
       method: "GET",
       headers: { "content-type": "application/json" },
       cache: "no-store",
@@ -22,14 +20,12 @@ async function isAdminUser(): Promise<boolean> {
   }
 }
 
-export default function BankStatementSyncPage() {
-  const [tab, setTab] = useState<"import-files" | "statement-lines">(
-    "import-files"
-  );
+export default function TigerPayPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
 
   const refresh = useCallback(() => setRefreshToken((x) => x + 1), []);
+  const title = useMemo(() => "Tiger Pay", []);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,8 +36,6 @@ export default function BankStatementSyncPage() {
       cancelled = true;
     };
   }, []);
-
-  const title = useMemo(() => "Bank Statement Sync", []);
 
   if (isAdmin === false) {
     return (
@@ -65,19 +59,7 @@ export default function BankStatementSyncPage() {
         </Button>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-        <TabsList>
-          <TabsTrigger value="import-files">Import Files</TabsTrigger>
-          <TabsTrigger value="statement-lines">Statement Lines</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="import-files" className="mt-4">
-          <ImportFilesTab refreshToken={refreshToken} />
-        </TabsContent>
-        <TabsContent value="statement-lines" className="mt-4">
-          <StatementLinesTab refreshToken={refreshToken} />
-        </TabsContent>
-      </Tabs>
+      <TigerPayTab refreshToken={refreshToken} />
     </div>
   );
 }
