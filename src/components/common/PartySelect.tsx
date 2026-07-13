@@ -184,7 +184,7 @@ export default function PartySelect({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-[480px]">
+        <PopoverContent className="p-0 w-[min(480px,calc(100vw-2rem))]">
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="พิมพ์เพื่อค้นหา…"

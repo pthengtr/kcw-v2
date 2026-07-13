@@ -197,7 +197,7 @@ export default function BankAccountPicker({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-[520px]">
+        <PopoverContent className="p-0 w-[min(520px,calc(100vw-2rem))]">
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="พิมพ์เพื่อค้นหา…"
@@ -272,7 +272,7 @@ export default function BankAccountPicker({
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg p-4 sm:p-6 overflow-y-auto max-h-[90dvh]">
           <DialogHeader>
             <DialogTitle>เพิ่มบัญชีธนาคาร</DialogTitle>
           </DialogHeader>

@@ -109,7 +109,7 @@ function MobileReminderCard({
           <div className="font-medium break-words">{partyName}</div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <div className="text-xs text-muted-foreground">เลขที่เอกสาร</div>
             <div className="text-sm break-all">{row.note_id || "—"}</div>
@@ -261,11 +261,23 @@ export default function ReminderTable({
   function renderStatusToolbar() {
     return (
       <>
-        <Tabs value={status} onValueChange={setStatus}>
-          <TabsList>
-            <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
-            <TabsTrigger value="unpaid">ค้างชำระ</TabsTrigger>
-            <TabsTrigger value="paid">จ่ายแล้ว</TabsTrigger>
+        <Tabs value={status} onValueChange={setStatus} className="min-w-0">
+          <TabsList className="h-auto w-full flex-wrap justify-start md:w-auto md:flex-nowrap">
+            <TabsTrigger value="all" className="text-xs px-2 sm:text-sm sm:px-3">
+              ทั้งหมด
+            </TabsTrigger>
+            <TabsTrigger
+              value="unpaid"
+              className="text-xs px-2 sm:text-sm sm:px-3"
+            >
+              ค้างชำระ
+            </TabsTrigger>
+            <TabsTrigger
+              value="paid"
+              className="text-xs px-2 sm:text-sm sm:px-3"
+            >
+              จ่ายแล้ว
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         <Button

@@ -53,15 +53,15 @@ export function DatePickerInput({
   const endMonth = new Date(currentYear + 5, 11); // Dec (year + 5)
 
   return (
-    <div className="flex gap-4">
-      <div className="">
+    <div className="flex flex-col gap-2 min-w-0 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+      <div className="w-full min-w-0 sm:w-auto">
         <Popover modal>
           <PopoverTrigger asChild>
             <FormControl>
               <Button
                 variant={"outline"}
                 className={cn(
-                  "w-[240px] pl-3 text-left font-normal",
+                  "w-full min-w-0 pl-3 text-left font-normal sm:w-[240px]",
                   !field.value && "text-muted-foreground"
                 )}
               >
@@ -78,7 +78,10 @@ export function DatePickerInput({
               </Button>
             </FormControl>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent
+            className="w-auto max-w-[calc(100vw-2rem)] p-0"
+            align="start"
+          >
             <Calendar
               mode="single"
               selected={field.value}
@@ -117,8 +120,8 @@ export function DatePickerInput({
         </Popover>
       </div>
       {timePicker && (
-        <div className="flex gap-2 items-center">
-          <span>เวลา</span>
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="shrink-0">เวลา</span>
           <Select
             disabled={!field.value}
             value={hours}
@@ -128,7 +131,7 @@ export function DatePickerInput({
               field.onChange(field.value);
             }}
           >
-            <SelectTrigger className="[&_svg]:hidden">
+            <SelectTrigger className="w-[4.5rem] [&_svg]:hidden">
               <SelectValue placeholder="HH" />
             </SelectTrigger>
             <SelectContent>
@@ -149,7 +152,7 @@ export function DatePickerInput({
               field.onChange(field.value);
             }}
           >
-            <SelectTrigger className="[&_svg]:hidden">
+            <SelectTrigger className="w-[4.5rem] [&_svg]:hidden">
               <SelectValue placeholder="MM" />
             </SelectTrigger>
             <SelectContent>
@@ -163,7 +166,7 @@ export function DatePickerInput({
         </div>
       )}
       {optional && (
-        <Button type="reset" onClick={handleClearSelect}>
+        <Button type="reset" onClick={handleClearSelect} className="shrink-0">
           <Trash />
         </Button>
       )}
