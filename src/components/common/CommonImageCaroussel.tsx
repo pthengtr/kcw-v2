@@ -249,11 +249,11 @@ export default function CommonImagesCarousel({
       ) : !hasImages ? (
         <div className="text-sm text-muted-foreground">ไม่พบรูปภาพ...</div>
       ) : (
-        <Carousel className="w-full max-w-xl mx-auto">
+        <Carousel className="w-full max-w-xl mx-auto px-0">
           <CarouselContent>
             {images.map((item, idx) => (
               <CarouselItem key={item.path}>
-                <Card>
+                <Card className="overflow-hidden">
                   <CardContent className="p-0">
                     <button
                       type="button"
@@ -264,7 +264,7 @@ export default function CommonImagesCarousel({
                       <img
                         src={item.url}
                         alt={item.name}
-                        className="h-64 w-full object-contain"
+                        className="h-48 sm:h-64 w-full object-contain"
                       />
                     </button>
                   </CardContent>
@@ -272,14 +272,15 @@ export default function CommonImagesCarousel({
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious />
-          <CarouselNext />
+          {/* Keep arrows inside the frame — default -left/right-12 clips under ~530px */}
+          <CarouselPrevious className="left-2 z-10 bg-background/90" />
+          <CarouselNext className="right-2 z-10 bg-background/90" />
         </Carousel>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-4xl p-4 sm:p-6 gap-3 overflow-y-auto max-h-[92dvh]">
+          <DialogHeader className="pr-8">
             <DialogTitle>
               {hasImages ? `${index + 1} / ${images.length}` : ""}
             </DialogTitle>
@@ -287,13 +288,13 @@ export default function CommonImagesCarousel({
 
           {hasImages && current && (
             <>
-              <div className="relative w-full flex items-center justify-center">
+              <div className="relative w-full min-w-0 flex items-center justify-center">
                 <Button
                   type="button"
                   onClick={prev}
                   variant="outline"
                   size="icon"
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full"
+                  className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 rounded-full z-10 bg-background/90"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
@@ -301,20 +302,20 @@ export default function CommonImagesCarousel({
                 <img
                   src={current.url}
                   alt={current.name}
-                  className="max-h-[80vh] w-auto object-contain"
+                  className="max-h-[55dvh] sm:max-h-[80vh] max-w-full w-auto object-contain"
                 />
                 <Button
                   type="button"
                   onClick={next}
                   variant="outline"
                   size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full"
+                  className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 rounded-full z-10 bg-background/90"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Button>
               </div>
 
-              <div className="flex flex-wrap justify-center gap-4">
+              <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
                 <a
                   href={current.url}
                   target="_blank"
@@ -348,12 +349,14 @@ export default function CommonImagesCarousel({
                         ลบ
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="w-[calc(100vw-1.5rem)] max-w-lg">
                       <AlertDialogHeader>
                         <AlertDialogTitle>ลบรูปภาพนี้?</AlertDialogTitle>
                         <AlertDialogDescription>
                           การกระทำนี้จะลบ{" "}
-                          <span className="font-medium">{current.name}</span>{" "}
+                          <span className="font-medium break-all">
+                            {current.name}
+                          </span>{" "}
                           ออกจาก <code>{bucket}</code> อย่างถาวร
                           และไม่สามารถกู้คืนได้
                         </AlertDialogDescription>
