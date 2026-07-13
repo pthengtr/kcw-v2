@@ -45,15 +45,15 @@ export function ServerPagedTable<T>({
   const canNext = total !== null ? offset + limit < total : rows.length === limit;
 
   return (
-    <div className="rounded-md border p-4 flex flex-col gap-3 h-full">
-      <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
-        <div className="flex-1">
+    <div className="rounded-md border p-3 sm:p-4 flex flex-col gap-3 h-full">
+      <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex-1 min-w-0">
           {total !== null
             ? `แสดง ${rows.length} จากทั้งหมด ${total} รายการ`
             : `แสดง ${rows.length} รายการ`}
         </div>
-        <div className="flex items-center gap-2">
-          <span>รายการ/หน้า</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="whitespace-nowrap">รายการ/หน้า</span>
           <Select
             value={String(limit)}
             onValueChange={(v) => {
@@ -73,7 +73,7 @@ export function ServerPagedTable<T>({
               ))}
             </SelectContent>
           </Select>
-          <div className="px-2">
+          <div className="px-2 whitespace-nowrap">
             หน้า {pageIndex + 1}
             {pageCount !== null ? ` / ${pageCount}` : ""}
           </div>
@@ -96,40 +96,42 @@ export function ServerPagedTable<T>({
         </div>
       </div>
 
-      <Table className="overflow-scroll relative">
-        <TableHeader className="sticky top-0 bg-white [&_tr]:border-b-0 z-10 shadow-sm">
-          <TableRow>
-            {columns.map((c) => (
-              <TableHead key={c.key} className={c.className}>
-                {c.header}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length ? (
-            rows.map((row, idx) => (
-              <TableRow
-                key={idx}
-                className={onRowClick ? "cursor-pointer" : undefined}
-                onClick={() => onRowClick?.(row)}
-              >
-                {columns.map((c) => (
-                  <TableCell key={c.key} className={c.className}>
-                    {c.render(row)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
+      <div className="overflow-x-auto -mx-3 sm:mx-0">
+        <Table className="relative min-w-full">
+          <TableHeader className="sticky top-0 bg-white [&_tr]:border-b-0 z-10 shadow-sm">
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                ไม่พบข้อมูล
-              </TableCell>
+              {columns.map((c) => (
+                <TableHead key={c.key} className={c.className}>
+                  {c.header}
+                </TableHead>
+              ))}
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {rows.length ? (
+              rows.map((row, idx) => (
+                <TableRow
+                  key={idx}
+                  className={onRowClick ? "cursor-pointer" : undefined}
+                  onClick={() => onRowClick?.(row)}
+                >
+                  {columns.map((c) => (
+                    <TableCell key={c.key} className={c.className}>
+                      {c.render(row)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  ไม่พบข้อมูล
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

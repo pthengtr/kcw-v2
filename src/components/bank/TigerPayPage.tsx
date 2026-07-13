@@ -39,7 +39,7 @@ export default function TigerPayPage() {
 
   if (isAdmin === false) {
     return (
-      <div className="px-8 py-6">
+      <div className="px-4 py-4 sm:px-8 sm:py-6">
         <Card>
           <CardHeader>
             <CardTitle>{title}</CardTitle>
@@ -51,11 +51,12 @@ export default function TigerPayPage() {
   }
 
   return (
-    <div className="px-8 py-6">
-      <div className="flex items-center gap-4 mb-4">
-        <h2 className="text-2xl font-bold flex-1">{title}</h2>
-        <Button variant="outline" size="sm" onClick={refresh}>
-          <RefreshCcw strokeWidth={1} /> รีเฟรช
+    <div className="px-4 py-4 sm:px-8 sm:py-6">
+      <div className="flex items-center gap-3 mb-4">
+        <h2 className="text-xl sm:text-2xl font-bold flex-1">{title}</h2>
+        <Button variant="outline" size="sm" onClick={refresh} className="shrink-0 gap-1">
+          <RefreshCcw strokeWidth={1} className="h-4 w-4" />
+          <span>รีเฟรช</span>
         </Button>
       </div>
 

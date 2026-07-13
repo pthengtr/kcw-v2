@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TigerPayStatusBadge } from "@/components/bank/TigerPayStatusBadge";
@@ -85,7 +84,7 @@ function JsonViewer({ value, collapsedDefault = true }: { value: unknown; collap
 
   return (
     <div className="rounded-md border">
-      <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
         <Button
           type="button"
           variant="ghost"
@@ -116,9 +115,11 @@ function JsonViewer({ value, collapsedDefault = true }: { value: unknown; collap
         </Button>
       </div>
       {!collapsed && (
-        <ScrollArea className="h-[320px] w-full">
-          <pre className="overflow-x-auto p-3 text-xs whitespace-pre">{text}</pre>
-        </ScrollArea>
+        <div className="max-h-[40vh] overflow-auto sm:max-h-[320px]">
+          <pre className="min-w-0 p-3 text-xs whitespace-pre-wrap break-all sm:whitespace-pre sm:break-normal">
+            {text}
+          </pre>
+        </div>
       )}
     </div>
   );
@@ -700,10 +701,18 @@ export default function TigerPayTransactionDetail({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[96vw] max-h-[92vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent
+        className={[
+          "flex flex-col gap-3 overflow-hidden",
+          // Mobile: nearly full viewport
+          "left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-4",
+          // Desktop / tablet
+          "sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[92vh] sm:w-[96vw] sm:max-w-5xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:border sm:p-6",
+        ].join(" ")}
+      >
+        <DialogHeader className="pr-8 text-left">
           <DialogTitle>Tiger Pay transaction</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="break-words">
             {row
               ? `${row.payment_no} · ${formatPaymentType(row.payment_type)}`
               : ""}
@@ -718,15 +727,25 @@ export default function TigerPayTransactionDetail({
           <div className="text-sm text-red-600">{detailError}</div>
         ) : (
           <Tabs defaultValue="overview" className="flex-1 min-h-0 flex flex-col">
-            <TabsList className="w-full justify-start overflow-x-auto">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="payment">Payment details</TabsTrigger>
-              <TabsTrigger value="events">Event history</TabsTrigger>
-              <TabsTrigger value="raw">Raw data</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto -mx-1 px-1">
+              <TabsList className="inline-flex h-auto min-w-full w-max justify-start gap-1 p-1">
+                <TabsTrigger value="overview" className="shrink-0">
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="payment" className="shrink-0">
+                  Payment
+                </TabsTrigger>
+                <TabsTrigger value="events" className="shrink-0">
+                  Events
+                </TabsTrigger>
+                <TabsTrigger value="raw" className="shrink-0">
+                  Raw data
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-            <ScrollArea className="mt-3 h-[65vh] pr-3">
-              <TabsContent value="overview" className="mt-0 grid gap-6">
+            <div className="mt-3 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1 sm:max-h-[65vh]">
+              <TabsContent value="overview" className="mt-0 grid gap-6 pb-6">
                 <div className="flex flex-wrap items-center gap-2">
                   <TigerPayStatusBadge status={row.status} />
                   <span className="text-sm text-muted-foreground">
@@ -796,7 +815,7 @@ export default function TigerPayTransactionDetail({
                 </Section>
               </TabsContent>
 
-              <TabsContent value="payment" className="mt-0">
+              <TabsContent value="payment" className="mt-0 pb-6">
                 {detail ? (
                   <PaymentDetailsPanel
                     payload={detail.payload}
@@ -809,7 +828,7 @@ export default function TigerPayTransactionDetail({
                 )}
               </TabsContent>
 
-              <TabsContent value="events" className="mt-0">
+              <TabsContent value="events" className="mt-0 pb-6">
                 <EventHistoryPanel
                   events={events}
                   lastEventId={row.last_event_id}
@@ -818,7 +837,7 @@ export default function TigerPayTransactionDetail({
                 />
               </TabsContent>
 
-              <TabsContent value="raw" className="mt-0 grid gap-3">
+              <TabsContent value="raw" className="mt-0 grid gap-3 pb-6">
                 <p className="text-sm text-muted-foreground">
                   Latest sanitized transaction payload. Sensitive values are
                   redacted.
@@ -831,7 +850,7 @@ export default function TigerPayTransactionDetail({
                   </div>
                 )}
               </TabsContent>
-            </ScrollArea>
+            </div>
           </Tabs>
         )}
       </DialogContent>
