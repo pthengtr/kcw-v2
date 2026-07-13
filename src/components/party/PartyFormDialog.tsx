@@ -59,7 +59,7 @@ export default function PartyFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "เพิ่มคู่ค้า" : "แก้ไขคู่ค้า"}
@@ -94,7 +94,7 @@ export default function PartyFormDialog({
           }}
         >
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label htmlFor="party_name">ชื่อ</Label>
                 <Input name="party_name" defaultValue={defaults.party_name} />
@@ -108,7 +108,7 @@ export default function PartyFormDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>ประเภท</Label>
                 <Select

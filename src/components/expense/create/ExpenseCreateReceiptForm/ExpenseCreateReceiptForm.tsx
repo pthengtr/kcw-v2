@@ -361,7 +361,7 @@ export default function ExpenseCreateReceiptForm({
         onSubmit={onSubmit}
         getFieldLabel={getFieldLabel}
         getFormInput={getFormInput}
-        className="grid grid-cols-2 justify-items-center justify-center items-start gap-y-6 gap-x-4"
+        className="grid grid-cols-1 justify-items-center justify-center items-start gap-y-6 gap-x-4 sm:grid-cols-2"
       />
     </>
   );

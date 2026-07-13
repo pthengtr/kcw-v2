@@ -65,8 +65,8 @@ export default function ExpensePageHeader({
   ];
 
   return (
-    <div className="flex w-full px-2 items-center">
-      <div className="flex-1 flex gap-2">
+    <div className="flex w-full min-w-0 flex-col gap-3 px-2 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 flex-wrap gap-2">
         <TooltipProvider delayDuration={200}>
           {links.map(({ href, label, icon }) => (
             <Tooltip key={href}>
@@ -85,8 +85,10 @@ export default function ExpensePageHeader({
         </TooltipProvider>
       </div>
 
-      <h1 className="text-2xl font-bold tracking-wider">{pageTitle}</h1>
-      <div className="flex-1" />
+      <h1 className="min-w-0 break-words text-center text-lg font-bold tracking-wider sm:text-2xl">
+        {pageTitle}
+      </h1>
+      <div className="hidden flex-1 sm:block" />
     </div>
   );
 }

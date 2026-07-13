@@ -405,7 +405,7 @@ export default function SKUSelect({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-[560px]">
+        <PopoverContent className="w-[min(560px,calc(100vw-2rem))] p-0">
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="พิมพ์/สแกนเพื่อค้นหา…"

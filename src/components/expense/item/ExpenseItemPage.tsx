@@ -48,8 +48,8 @@ export default function ExpenseItemPage() {
       : expenseCategoryFormDefaultValues;
 
   return (
-    <section className="flex flex-col items-center p-4">
-      <div className="flex-1 self-start px-8">
+    <section className="flex w-full flex-col items-center p-2 sm:p-4">
+      <div className="flex-1 self-start px-2 sm:px-8">
         <Link className="" href={`/home`} passHref>
           <Button variant="outline">
             <ArrowBigLeftDash strokeWidth={1} />
@@ -59,17 +59,17 @@ export default function ExpenseItemPage() {
       </div>
       <Tabs
         defaultValue="expense-item"
-        className="w-fit flex flex-col items-center"
+        className="flex w-full max-w-full flex-col items-center sm:w-fit"
       >
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="expense-item">ประเภทค่าใช้จ่าย</TabsTrigger>
           <TabsTrigger value="expense-category">หมวดค่าใช้จ่าย</TabsTrigger>
         </TabsList>
-        <TabsContent value="expense-item">
-          <div className="h-[90vh] flex flex-col justify-center items-center p-4 gap-2">
+        <TabsContent value="expense-item" className="w-full">
+          <div className="flex h-auto min-h-[60vh] flex-col items-center justify-center gap-2 p-2 sm:h-[90vh] sm:p-4">
             <ExpenseItemTable>
-              <div className="flex gap-4 justify-start items-center flex-1">
-                <h2 className="font-bold text-2xl">ประเภทค่าใช้จ่าย</h2>
+              <div className="flex flex-1 flex-wrap items-center justify-start gap-2 sm:gap-4">
+                <h2 className="text-xl font-bold sm:text-2xl">ประเภทค่าใช้จ่าย</h2>
                 <ExpenseItemFormDialog
                   open={openAddItemDialog}
                   setOpen={setOpenAddItemDialog}
@@ -89,11 +89,11 @@ export default function ExpenseItemPage() {
             </ExpenseItemTable>
           </div>
         </TabsContent>
-        <TabsContent value="expense-category">
-          <div className="h-[90vh] flex flex-col justify-center items-center p-4 gap-2">
+        <TabsContent value="expense-category" className="w-full">
+          <div className="flex h-auto min-h-[60vh] flex-col items-center justify-center gap-2 p-2 sm:h-[90vh] sm:p-4">
             <ExpenseCategoryTable>
-              <div className="flex gap-4 justify-start items-center flex-1">
-                <h2 className="font-bold text-2xl">หมวดค่าใช้จ่าย</h2>
+              <div className="flex flex-1 flex-wrap items-center justify-start gap-2 sm:gap-4">
+                <h2 className="text-xl font-bold sm:text-2xl">หมวดค่าใช้จ่าย</h2>
                 <ExpenseCategoryFormDialog
                   open={openAddCategoryDialog}
                   setOpen={setOpenAddCategoryDialog}

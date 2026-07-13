@@ -45,7 +45,7 @@ export default function BankStatementSyncPage() {
 
   if (isAdmin === false) {
     return (
-      <div className="px-8 py-6">
+      <div className="px-4 py-4 sm:px-8 sm:py-6">
         <Card>
           <CardHeader>
             <CardTitle>{title}</CardTitle>
@@ -57,16 +57,16 @@ export default function BankStatementSyncPage() {
   }
 
   return (
-    <div className="px-8 py-6">
-      <div className="flex items-center gap-4 mb-4">
-        <h2 className="text-2xl font-bold flex-1">{title}</h2>
+    <div className="px-4 py-4 sm:px-8 sm:py-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <h2 className="flex-1 text-xl font-bold sm:text-2xl">{title}</h2>
         <Button variant="outline" size="sm" onClick={refresh}>
           <RefreshCcw strokeWidth={1} /> รีเฟรช
         </Button>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-        <TabsList>
+        <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
           <TabsTrigger value="import-files">Import Files</TabsTrigger>
           <TabsTrigger value="statement-lines">Statement Lines</TabsTrigger>
         </TabsList>

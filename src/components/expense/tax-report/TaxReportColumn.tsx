@@ -91,7 +91,7 @@ function simpleTextFullWidth<K extends keyof typeof taxReportFieldLabel>(
       <DataTableColumnHeader column={column} title={title} />
     ),
     cell: (ctx: CellContext<TaxReportRow, unknown>) => {
-      return <div className="min-w-72 w-full">{ctx.getValue() as string}</div>;
+      return <div className="min-w-0 w-full max-w-72 break-words sm:min-w-48">{ctx.getValue() as string}</div>;
     },
   } as ColumnDef<TaxReportRow>;
 }

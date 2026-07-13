@@ -163,7 +163,7 @@ export default function LocationSelect({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-[460px]">
+        <PopoverContent className="w-[min(460px,calc(100vw-2rem))] p-0">
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="พิมพ์เพื่อค้นหา…"

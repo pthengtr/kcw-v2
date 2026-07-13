@@ -181,7 +181,7 @@ export default function ImportFilesTab({ refreshToken }: { refreshToken: number 
         <div className="min-w-[160px]">
           <div className="text-xs text-muted-foreground mb-1">status</div>
           <Select value={status} onValueChange={(v) => { setOffset(0); setStatus(v); }}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full min-w-0 sm:w-[180px]">
               <SelectValue placeholder="status" />
             </SelectTrigger>
             <SelectContent>
@@ -193,13 +193,13 @@ export default function ImportFilesTab({ refreshToken }: { refreshToken: number 
             </SelectContent>
           </Select>
         </div>
-        <div>
+        <div className="min-w-0 flex-1 sm:flex-none">
           <div className="text-xs text-muted-foreground mb-1">bank_name</div>
-          <Input value={bankName} onChange={(e) => { setOffset(0); setBankName(e.target.value); }} className="w-[220px]" />
+          <Input value={bankName} onChange={(e) => { setOffset(0); setBankName(e.target.value); }} className="w-full sm:w-[220px]" />
         </div>
-        <div>
+        <div className="min-w-0 flex-1 sm:flex-none">
           <div className="text-xs text-muted-foreground mb-1">account_no</div>
-          <Input value={accountNo} onChange={(e) => { setOffset(0); setAccountNo(e.target.value); }} className="w-[220px]" />
+          <Input value={accountNo} onChange={(e) => { setOffset(0); setAccountNo(e.target.value); }} className="w-full sm:w-[220px]" />
         </div>
         <div>
           <div className="text-xs text-muted-foreground mb-1">last_seen_at from</div>

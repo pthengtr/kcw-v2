@@ -26,7 +26,7 @@ export default function PartyScreen() {
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-end gap-2 flex-wrap">
-        <div className="flex-1 min-w-[220px]">
+        <div className="min-w-0 flex-1 basis-full sm:min-w-[220px] sm:basis-auto">
           <label className="text-xs text-muted-foreground">ค้นหา</label>
           <Input
             value={state.q}
@@ -35,7 +35,7 @@ export default function PartyScreen() {
           />
         </div>
 
-        <div className="min-w-[180px]">
+        <div className="min-w-0 flex-1 basis-full sm:min-w-[180px] sm:basis-auto">
           <label className="text-xs text-muted-foreground">ประเภท</label>
           <Select
             value={state.kind}

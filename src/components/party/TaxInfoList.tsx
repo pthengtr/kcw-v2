@@ -140,7 +140,7 @@ function AddTaxInfoForm({
 
   return (
     <form className="grid gap-2 border rounded p-3" onSubmit={handleSubmit}>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div>
           <Label>ชื่อผู้เสียภาษี</Label>
           <Input name="legal_name" />
@@ -189,7 +189,7 @@ function EditTaxInfoForm({
         await onSubmit(form);
       }}
     >
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div>
           <Label>Legal name</Label>
           <Input

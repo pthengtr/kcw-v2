@@ -55,7 +55,7 @@ export default function ExpenseGeneralFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
-      <DialogContent className="min-w-96">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg sm:min-w-96">
         <DialogHeader className="grid place-content-center py-4">
           <DialogTitle>{dialogHeader}</DialogTitle>
         </DialogHeader>
@@ -64,7 +64,7 @@ export default function ExpenseGeneralFormDialog({
             {submitError}
           </div>
         )}
-        <div className=" h-full overflow-y-auto px-12">
+        <div className="h-full overflow-y-auto px-2 sm:px-12">
           <ExpenseGeneralCreateForm
             defaultValues={defaultValues}
             update={update}

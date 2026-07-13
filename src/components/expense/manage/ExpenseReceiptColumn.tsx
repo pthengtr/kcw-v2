@@ -206,7 +206,7 @@ function simpleTextFullWidth(key: keyof typeof expenseReceiptFieldLabel) {
       />
     ),
     cell: (row: CellContext<ExpenseReceiptType, unknown>) => {
-      return <div className="min-w-96 w-full">{row.getValue() as string}</div>;
+      return <div className="min-w-0 w-full max-w-96 break-words sm:min-w-48">{row.getValue() as string}</div>;
     },
   };
 }

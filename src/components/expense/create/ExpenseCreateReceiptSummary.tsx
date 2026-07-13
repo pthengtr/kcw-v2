@@ -13,7 +13,7 @@ export default function ExpenseCreateReceiptSummary() {
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
       <ExpenseCommonReceiptSummary
         entries={createEntries}
         vatInput={parseInt(vatInput)}
@@ -22,7 +22,7 @@ export default function ExpenseCreateReceiptSummary() {
         taxExemptInput={parseFloat(taxExemptInput)}
       />
 
-      <div className="col-span-2 justify-self-center">
+      <div className="justify-self-center sm:col-span-2">
         <ExpenseCreateReceiptFormSubmit />
       </div>
     </div>

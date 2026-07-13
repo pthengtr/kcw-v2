@@ -29,7 +29,7 @@ export default function UserTable({ setSelectedUser }: UserTableType) {
   }, []);
 
   return (
-    <div className="w-full h-[90vh]">
+    <div className="h-[calc(100dvh-4rem)] w-full min-w-0 overflow-auto md:h-[90vh]">
       {!!users && (
         <DataTable
           columns={userColumns}
