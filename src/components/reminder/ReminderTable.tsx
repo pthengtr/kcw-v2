@@ -319,8 +319,8 @@ export default function ReminderTable({
   }
 
   return (
-    <div className="flex flex-col gap-2 p-2 h-full min-h-0">
-      <div className="flex flex-col shrink-0 sm:flex-row sm:justify-center sm:items-end p-2 sm:p-4 gap-3 sm:gap-4">
+    <div className="flex flex-col gap-2 p-2 md:h-full md:min-h-0">
+      <div className="flex flex-col sm:flex-row sm:justify-center sm:items-end p-2 sm:p-4 gap-3 sm:gap-4 md:shrink-0">
         <div className="w-full sm:w-auto min-w-0">
           <ReminderSearchForm
             defaultValues={{
@@ -345,11 +345,11 @@ export default function ReminderTable({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="md:flex-1 md:min-h-0 md:overflow-hidden">
         {!!reminders && (
           <>
             {/* Mobile card list */}
-            <div className="md:hidden h-full overflow-y-auto flex flex-col gap-3">
+            <div className="md:hidden flex flex-col gap-3 pb-4">
               <div className="rounded-md border bg-slate-50 p-3 flex flex-col gap-3">
                 <h2 className="text-xl font-bold">รายการเตือนชำระเงิน</h2>
                 <div className="flex flex-wrap items-center gap-2">

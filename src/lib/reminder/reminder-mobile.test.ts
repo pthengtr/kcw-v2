@@ -28,6 +28,19 @@ describe("Reminder mobile layout", () => {
     );
   });
 
+  it("lets mobile cards scroll with the page instead of trapping under a sticky header", () => {
+    const page = read("src/app/(root)/(reminder)/reminder/page.tsx");
+    const table = read("src/components/reminder/ReminderTable.tsx");
+
+    expect(page).not.toMatch(/h-\[calc\(100dvh-4rem\)\]/);
+    expect(page).toContain("md:h-[90vh]");
+    expect(page).toContain("md:overflow-hidden");
+
+    expect(table).toContain("md:flex-1 md:min-h-0 md:overflow-hidden");
+    expect(table).toContain('className="md:hidden flex flex-col gap-3 pb-4"');
+    expect(table).not.toContain("md:hidden h-full overflow-y-auto");
+  });
+
   it("keeps the search form in a single row on desktop", () => {
     const search = read("src/components/reminder/ReminderSearchForm.tsx");
     expect(search).toContain("sm:flex-row sm:flex-nowrap");
