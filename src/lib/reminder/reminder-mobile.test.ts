@@ -16,10 +16,36 @@ describe("Reminder mobile layout", () => {
     expect(table).toContain("hidden md:block");
   });
 
+  it("keeps the desktop table toolbar free of mobile wrap styles", () => {
+    const table = read("src/components/reminder/ReminderTable.tsx");
+    expect(table).toContain("renderDesktopStatusToolbar");
+    expect(table).toContain("renderMobileStatusToolbar");
+    expect(table).toMatch(
+      /function renderDesktopStatusToolbar\(\)[\s\S]*?<TabsList>/,
+    );
+    expect(table).toMatch(
+      /function renderMobileStatusToolbar\(\)[\s\S]*?flex-wrap justify-start/,
+    );
+  });
+
+  it("keeps the search form in a single row on desktop", () => {
+    const search = read("src/components/reminder/ReminderSearchForm.tsx");
+    expect(search).toContain("sm:flex-row sm:flex-nowrap");
+    expect(search).not.toMatch(/(?<!sm:flex-no)flex-wrap/);
+  });
+
   it("uses a responsive detail sheet on the reminder page", () => {
     const page = read("src/app/(root)/(reminder)/reminder/page.tsx");
     expect(page).toContain("w-screen");
     expect(page).toContain("md:min-w-[80vw]");
+    expect(page).toContain("md:max-w-none");
+  });
+
+  it("restores the original desktop create/edit dialog width", () => {
+    const dialog = read("src/components/reminder/ReminderFormDialog.tsx");
+    expect(dialog).toContain("md:max-w-fit");
+    expect(dialog).toContain("md:w-[60vw]");
+    expect(dialog).toContain("overflow-x-hidden");
   });
 
   it("keeps the sheet close button above sticky detail content", () => {
@@ -44,7 +70,9 @@ describe("Reminder mobile layout", () => {
 
   it("keeps create/edit controls fluid under md without changing desktop widths", () => {
     const datePicker = read("src/components/common/DatePickerInput.tsx");
-    expect(datePicker).toContain("w-full min-w-0 pl-3 text-left font-normal sm:w-[240px]");
+    expect(datePicker).toContain(
+      "w-full min-w-0 pl-3 text-left font-normal sm:w-[240px]",
+    );
     expect(datePicker).toContain("flex flex-col gap-2 min-w-0 sm:flex-row");
 
     const party = read("src/components/common/PartySelect.tsx");

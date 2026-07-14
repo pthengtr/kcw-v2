@@ -258,11 +258,11 @@ export default function ReminderTable({
     getReminder();
   }
 
-  function renderStatusToolbar() {
+  function renderMobileStatusToolbar() {
     return (
       <>
         <Tabs value={status} onValueChange={setStatus} className="min-w-0">
-          <TabsList className="h-auto w-full flex-wrap justify-start md:w-auto md:flex-nowrap">
+          <TabsList className="h-auto w-full flex-wrap justify-start">
             <TabsTrigger value="all" className="text-xs px-2 sm:text-sm sm:px-3">
               ทั้งหมด
             </TabsTrigger>
@@ -294,10 +294,34 @@ export default function ReminderTable({
     );
   }
 
+  function renderDesktopStatusToolbar() {
+    return (
+      <>
+        <Tabs value={status} onValueChange={setStatus}>
+          <TabsList>
+            <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
+            <TabsTrigger value="unpaid">ค้างชำระ</TabsTrigger>
+            <TabsTrigger value="paid">จ่ายแล้ว</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            getReminder();
+          }}
+        >
+          <RefreshCcw strokeWidth={1} /> รีเฟรช
+        </Button>
+        <ResetTableCookiesDropdown handleResetCookies={handleResetCookies} />
+      </>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2 p-2 h-full min-h-0">
-      <div className="flex flex-col sm:flex-row sm:justify-center sm:items-end p-2 sm:p-4 gap-3 sm:gap-4">
-        <div className="w-full sm:w-auto min-w-0 flex-1">
+      <div className="flex flex-col shrink-0 sm:flex-row sm:justify-center sm:items-end p-2 sm:p-4 gap-3 sm:gap-4">
+        <div className="w-full sm:w-auto min-w-0">
           <ReminderSearchForm
             defaultValues={{
               search_supplier_name: "",
@@ -321,15 +345,15 @@ export default function ReminderTable({
         </div>
       </div>
 
-      <div className="h-full min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {!!reminders && (
           <>
             {/* Mobile card list */}
-            <div className="md:hidden flex flex-col gap-3">
+            <div className="md:hidden h-full overflow-y-auto flex flex-col gap-3">
               <div className="rounded-md border bg-slate-50 p-3 flex flex-col gap-3">
                 <h2 className="text-xl font-bold">รายการเตือนชำระเงิน</h2>
                 <div className="flex flex-wrap items-center gap-2">
-                  {renderStatusToolbar()}
+                  {renderMobileStatusToolbar()}
                 </div>
               </div>
 
@@ -359,7 +383,7 @@ export default function ReminderTable({
             </div>
 
             {/* Desktop / tablet table */}
-            <div className="hidden md:block h-full">
+            <div className="hidden md:block h-full min-h-0">
               <DataTable
                 tableName="reminder"
                 columns={reminderColumns}
@@ -375,11 +399,11 @@ export default function ReminderTable({
                 }}
                 totalAmountKey={["จำนวนเงิน (หักส่วนลดแล้ว)", "ส่วนลด"]}
               >
-                <div className="flex gap-4 mr-auto px-8">
+                <div className="flex gap-4 mr-auto px-8 items-center">
                   <h2 className="text-2xl font-bold flex-1">
                     รายการเตือนชำระเงิน
                   </h2>
-                  {renderStatusToolbar()}
+                  {renderDesktopStatusToolbar()}
                 </div>
               </DataTable>
             </div>
