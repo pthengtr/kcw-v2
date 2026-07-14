@@ -91,10 +91,10 @@ export default function Reminder() {
   }, [setIsAdmin]);
 
   return (
-    <section className="h-[calc(100dvh-4rem)] md:h-[90vh] min-h-0 overflow-hidden">
+    <section className="min-h-0 md:h-[90vh] md:overflow-hidden">
       {/* Table now uses full width/height */}
       {columnVisibility && paginationPageSize && (
-        <div className="h-full md:h-[80vh] px-4 sm:px-8 min-h-0">
+        <div className="px-4 sm:px-8 min-h-0 md:h-[80vh]">
           <ReminderTable
             columnVisibility={columnVisibility}
             paginationPageSize={paginationPageSize}
