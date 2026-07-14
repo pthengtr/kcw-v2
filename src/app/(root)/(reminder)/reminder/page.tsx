@@ -91,7 +91,7 @@ export default function Reminder() {
   }, [setIsAdmin]);
 
   return (
-    <section className="h-[calc(100dvh-4rem)] md:h-[90vh] min-h-0">
+    <section className="h-[calc(100dvh-4rem)] md:h-[90vh] min-h-0 overflow-hidden">
       {/* Table now uses full width/height */}
       {columnVisibility && paginationPageSize && (
         <div className="h-full md:h-[80vh] px-4 sm:px-8 min-h-0">
@@ -112,7 +112,7 @@ export default function Reminder() {
         {/* Keep padding zero so the detail component controls its layout */}
         <SheetContent
           side="right"
-          className="w-screen max-w-none p-4 overflow-auto md:w-full md:min-w-[80vw] md:p-8"
+          className="w-screen max-w-none p-4 overflow-auto md:w-full md:max-w-none md:min-w-[80vw] md:p-8"
         >
           {/* Visually hidden, satisfies a11y */}
           <SheetHeader className="sr-only">
