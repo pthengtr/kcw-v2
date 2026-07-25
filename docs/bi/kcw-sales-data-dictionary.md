@@ -599,10 +599,81 @@ VAT vs non-VAT split at bill level:
   - VAT: TAD, TD, TR, legacy UNKNOWN IV/TA, VAT CN/DN (or join lines.ISVAT)
 ```
 
-### 8.3 Bill count — TBD
+### 8.3 Canonical revenue SQL for interactive dashboards
+
+**Idea:** the “canonical” query is **not** one hardcoded grand total.  
+It is a **base grain** (usually line-level) that already applies *invariant* business rules, and exposes dimensions the dashboard can toggle.
 
 ```text
-TBD: count distinct (BRANCH, BILLNO) with filters …
+Invariant rules (always applied in the base):
+  - revenue = net / before tax
+  - JOURMODE <> '0'
+  - exclude TF, TFV, TAR
+  - CANCELED = 'N' (+ IS_VALID on lines)
+  - bill deduct/discount allocated (or documented gap handling)
+  - /1.07 only when ISVAT='Y' AND TAXIC='Y'
+
+Interactive filters (applied by the dashboard, NOT baked as one total):
+  - sales_type: VAT | NON_VAT | both (no filter)
+  - BRANCH, date range, BILLTYPE_STD, salesman, product, …
+```
+
+#### Recommended shape: curated view / CTE with dimensions + measure
+
+```sql
+-- Conceptual; implement later as curated_kcw.fact_sales_revenue_lines
+SELECT
+  l."BRANCH",
+  l."BILLDATE"::date AS bill_date,
+  l."BILLNO",
+  b."BILLTYPE_STD",
+  l."BCODE",
+  l."ISVAT",
+  CASE WHEN l."ISVAT" = 'Y' THEN 'VAT' ELSE 'NON_VAT' END AS sales_type,
+  l."TAXIC",
+  /* net line revenue after VAT strip + bill-gap allocation */
+  net_line_amount AS revenue_net
+FROM /* lines joined bills, filters, alloc… */ ;
+```
+
+#### How the VAT toggle works
+
+| Dashboard control | SQL effect on the same base |
+|-------------------|-----------------------------|
+| **Both** | no filter on `sales_type` → `sum(revenue_net)` |
+| **VAT only** | `WHERE sales_type = 'VAT'` |
+| **Non-VAT only** | `WHERE sales_type = 'NON_VAT'` |
+| Split chart | `GROUP BY sales_type` |
+
+Same pattern for branch, month, product, online vs counter (`TAD` vs `UNKNOWN`), etc.
+
+#### Why not three separate revenue definitions?
+
+If you write `revenue_vat_sql`, `revenue_nonvat_sql`, `revenue_all_sql` separately, filters drift.  
+One base + dimensions keeps:
+
+- one definition of “net”
+- one exclude list
+- toggles as plain filters / group-bys
+
+#### Bill-level vs line-level base
+
+| Base grain | Best for | VAT toggle source |
+|------------|----------|-------------------|
+| **Line** (preferred for product dashboards) | product mix, margin later, `ISVAT` native | `sales_type` from line `ISVAT` |
+| **Bill** | company totals, AR | derive `sales_type` from billtype/billno or from lines |
+
+For an interactive BI app: materialize/filter the **line base**, then aggregate in the UI/API:
+
+```text
+GET /api/bi/sales/summary?from=&to=&branch=&sales_type=VAT|NON_VAT|ALL
+→ SUM(revenue_net) WHERE … optional sales_type
+```
+
+### 8.4 Bill count — TBD
+
+```text
+count distinct (BRANCH, BILLNO) on the same filtered base as revenue
 ```
 
 ### 8.4 Gross margin — TBD
