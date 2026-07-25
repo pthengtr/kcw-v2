@@ -91,7 +91,7 @@ One row per product (or charge line) on a sales bill. Use for product mix, quant
 | `DETAIL` | Product description | Confirmed | Thai/English text |
 | `QTY` | Quantity sold | Confirmed | Text numeric |
 | `UI` | Unit of measure | Confirmed | e.g. `หน่วย`, `ชุด` |
-| `MTP` | Multiplier / packing factor? | TBD | Often `1.0` |
+| `MTP` | Pack multiplier → count of **smallest units** per sold UI | Confirmed | e.g. box of 10 ⇒ `MTP=10`, UI=`กล่อง`/`ลัง`/`คู่`. Most lines `MTP=1`. See note below |
 | `PRICE` | Unit selling price | Confirmed (name) | Text; also `PRICE_NUM` |
 | `XPRICE` | Appears related to cost/ref price | Inferred | Often close to `LAST_PURCHASE_COST` |
 | `DISCNT1`…`DISCNT4` | Line discounts | Confirmed (DISCNT1) | `DISCNT1` is **percent off**. Already baked into `AMOUNT` (`AMOUNT ≈ QTY*PRICE*(1-DISCNT1/100)`). `DISCNT2–4` almost unused |
@@ -123,15 +123,29 @@ One row per product (or charge line) on a sales bill. Use for product mix, quant
 | `True` | — | Confirmed (~529k rows) |
 | `False` | `CANCELED`, `BAD_BCODE`, `BAD_AMOUNT`, `BAD_PRICE` | Confirmed |
 
-**TBD — default BI filter for “good sales lines”:**
+**`MTP` usage (Confirmed — owner + samples)**
 
-```sql
--- PROPOSED (not locked):
-WHERE "IS_VALID" = 'True'
-  AND "CANCELED" = 'N'
+`PRICE` / `AMOUNT` are for the **sold unit** (`UI`: ลัง, โหล, กล่อง, คู่, …).  
+`MTP` converts that pack to base pieces:
+
+```text
+base_qty              = QTY * MTP
+unit_price_smallest   = PRICE / MTP
+                      = AMOUNT / (QTY * MTP)   -- same when AMOUNT = QTY * PRICE
 ```
 
-Owner: confirm whether `STATUS`, `JOURMODE`, and `BILLTYPE_STD` must also be filtered.
+Examples: `UI=ลัง`, `MTP=20`, `PRICE=1350` → 67.5 per piece; `UI=คู่`, `MTP=2`, `PRICE=590` → 295 each.
+
+**Do not** use `AMOUNT / MTP` alone when `QTY > 1` (that understates pieces).  
+**Revenue still uses `AMOUNT` / net line amount** — `MTP` is for unit price and quantity-in-pieces analytics, not for changing sales revenue.
+
+**Default BI filter for “good sales lines”** (see also §8 revenue filters):
+
+```sql
+WHERE "IS_VALID" = 'True'
+  AND "CANCELED" = 'N'
+  -- plus JOURMODE / BILLTYPE_STD rules at bill join
+```
 
 ---
 
@@ -397,7 +411,7 @@ Until this allocation is implemented in curated SQL/views, **bill `BEFORETAX` is
 |-----------|------------|----------:|--------|
 | **`CN`** | **Original bill number** being credited | 975/977 (99.8%) | Confirmed |
 | **`TAD`** | **Original online transaction id** | 11,767/11,969 (98.3%); from 2025-01 onward | Confirmed |
-| `TF` / `TFV` | Often filled (transfer cross-ref?) | ~97–99% | TBD meaning |
+| `TF` / `TFV` | Almost always literal `BRANCH` | ~97–99% | **Not meaningful** as a join key (branch-transfer marker only) |
 | `TD` | Sometimes filled | ~51% | TBD |
 | Others | Usually empty | — | — |
 
@@ -676,17 +690,19 @@ GET /api/bi/sales/summary?from=&to=&branch=&sales_type=VAT|NON_VAT|ALL
 count distinct (BRANCH, BILLNO) on the same filtered base as revenue
 ```
 
-### 8.4 Gross margin — TBD
+### 8.5 Gross margin — TBD
 
 ```text
 TBD: e.g. AMOUNT_NUM - (QTY * LAST_PURCHASE_COST) or XPRICE
 Only where COST_STATUS = 'OK'? TBD
+-- add as another measure on the same canonical line base
 ```
 
-### 8.5 Paid vs credit — TBD
+### 8.6 Paid vs credit — TBD
 
 ```text
 TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
+-- prefer bill grain or bill attributes joined onto the line base
 ```
 
 ---
@@ -701,6 +717,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 - [ ] How to classify **bill-level** VAT vs non-VAT (no `ISVAT` on bills) — can use `BILLTYPE_STD`/`TAXIC`/`ISVAT` from lines
 - [x] Legacy `UNKNOWN` `IV…`/`TA…` count as VAT revenue (historical; not recent)
 - [x] `PO` on `CN` = original bill; `PO` on `TAD` = online transaction id
+- [x] `MTP` = smallest-unit multiplier; unit price = `PRICE/MTP` or `AMOUNT/(QTY*MTP)`
 - [x] `ISVAT=N` + `TAXIC=Y` — invalid; ignore `TAXIC` (Confirmed)
 - [x] Line discounts already in `AMOUNT`; bill `DEDUCT`/`DISCOUNT` must be allocated to lines (Confirmed need)
 - [x] Allocation = proportional by line `AMOUNT`; `DEDUCT` on `TAXIC=Y` is **gross**; CN uses same method via **gap** (not blind `DEDUCT`)
@@ -729,6 +746,8 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 | 2026-07-25 | Lock BILLTYPE_STD meanings, revenue include/exclude, JOURMODE=0 exclude; TD/TR vs CASHED confirmed | Owner + data |
 | 2026-07-25 | Legacy IV/TA UNKNOWN = VAT revenue; TAR/CNTAR scripted & not recent | Owner + data |
 | 2026-07-25 | PO meanings: CN→original bill; TAD→online txn id | Owner + data |
+| 2026-07-25 | Clarify canonical revenue SQL as filterable base grain for VAT toggles | Cursor |
+| 2026-07-25 | MTP = pack→smallest-unit multiplier; unit price = PRICE/MTP | Owner + data |
 
 ---
 
