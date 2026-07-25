@@ -3,7 +3,7 @@
 import * as React from "react";
 import { DataTable } from "@/components/common/DataTable";
 import { itemYearColumns } from "./ExpenseDashboardColumn";
-import type { ItemYearRow } from "../ExpenseDashboardPage";
+import type { ItemYearRow } from "../ExpenseDashboardPageV2";
 
 type ExpenseDashboardTableProps = {
   /** The rows to render */

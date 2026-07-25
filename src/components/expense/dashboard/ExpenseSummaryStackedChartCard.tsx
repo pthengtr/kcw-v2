@@ -18,7 +18,7 @@ import {
   Legend,
 } from "recharts";
 import type { ValueType } from "recharts/types/component/DefaultTooltipContent";
-import { ItemYearRow } from "./ExpenseDashboardPage";
+import type { ItemYearRow } from "./ExpenseDashboardPageV2";
 
 // ------------- Types -------------
 export type MonthEn =
@@ -142,11 +142,15 @@ export default function ExpenseSummaryStackedChartCard({
   );
 
   return (
-    <Card className="w-full max-w-3xl mx-auto rounded-2xl shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xl">{title}</CardTitle>
-        <Select value={selected} onValueChange={setSelected}>
-          <SelectTrigger className="w-56 h-9">
+    <Card className="mx-auto w-full rounded-2xl shadow-sm">
+      <CardHeader className="flex flex-col gap-3 space-y-0 pb-2 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="text-lg sm:text-xl">{title}</CardTitle>
+        <Select
+          value={selected}
+          onValueChange={setSelected}
+          disabled={!itemNames.length}
+        >
+          <SelectTrigger className="h-9 w-full sm:w-56">
             <SelectValue placeholder="เลือกหมวดหมู่" />
           </SelectTrigger>
           <SelectContent align="end">
@@ -160,7 +164,7 @@ export default function ExpenseSummaryStackedChartCard({
       </CardHeader>
 
       <CardContent className="pt-2">
-        <div className="h-[60vh]">
+        <div className="h-[320px] sm:h-[420px] lg:h-[520px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
