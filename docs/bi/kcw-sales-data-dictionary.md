@@ -176,7 +176,7 @@ One row per bill. Use for bill count, bill totals (before/after tax), payment st
 | `ACCTNO` | Customer account code | TBD | |
 | `ACCTNAME` | Customer / payer name | Confirmed (name) | e.g. `เงินสด`, person/company names |
 | `ADDR1` / `ADDR2` | Address | TBD | |
-| `PO` | PO reference | TBD | |
+| `PO` | Context-dependent reference (not always a purchase order) | Confirmed (CN, TAD) | See [§6.8](#68-po-column-meanings) |
 | `SALE` | Salesperson code | Confirmed (name) | e.g. `NUY`, `JEAB`, `NONG` |
 | `RE` | ? | TBD | |
 | `TERM` | Credit term (days?) | TBD | e.g. `30.0` |
@@ -388,6 +388,32 @@ CN check (negative `AFTERTAX`, `DEDUCT ≠ 0`):
 **Rule:** for CN/negative bills, usually **allocate nothing** (`gap≈0`); still use the same proportional machinery so odd cases with a real gap are handled.
 
 Until this allocation is implemented in curated SQL/views, **bill `BEFORETAX` is safer for company totals**.
+
+### 6.8 `PO` column meanings
+
+`PO` is reused for different references by bill type (not a classic purchase-order field in these flows).
+
+| Bill type | `PO` means | Fill rate | Status |
+|-----------|------------|----------:|--------|
+| **`CN`** | **Original bill number** being credited | 975/977 (99.8%) | Confirmed |
+| **`TAD`** | **Original online transaction id** | 11,767/11,969 (98.3%); from 2025-01 onward | Confirmed |
+| `TF` / `TFV` | Often filled (transfer cross-ref?) | ~97–99% | TBD meaning |
+| `TD` | Sometimes filled | ~51% | TBD |
+| Others | Usually empty | — | — |
+
+**CN → original bill**
+
+- Example: `CNTAD6907-030`.`PO` = `TAD6907-460`
+- Join: `cn.PO = original.BILLNO` (same branch) matches **963/975** (~98.8%)
+- Use for: credit-note linkage, returns analysis, net revenue by original sale
+
+**TAD → online txn id**
+
+- Examples: `09052426866208`, `260725JNY055U6` (platform order/txn ids — not internal `BILLNO`)
+- Use for: reconcile online channel orders to VAT invoices
+- Present on recent TAD docs (through current month)
+
+Case note: CN `PO` values occasionally differ in casing (`tfv6808-012` vs `TFV…`); prefer case-insensitive join when linking.
 
 ### 6.1 `BILLTYPE` (raw)
 
@@ -603,6 +629,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 - [x] `TD` = VAT credit (`CASHED=N`); `TR` = VAT cash (`CASHED=Y`) — Confirmed
 - [ ] How to classify **bill-level** VAT vs non-VAT (no `ISVAT` on bills) — can use `BILLTYPE_STD`/`TAXIC`/`ISVAT` from lines
 - [x] Legacy `UNKNOWN` `IV…`/`TA…` count as VAT revenue (historical; not recent)
+- [x] `PO` on `CN` = original bill; `PO` on `TAD` = online transaction id
 - [x] `ISVAT=N` + `TAXIC=Y` — invalid; ignore `TAXIC` (Confirmed)
 - [x] Line discounts already in `AMOUNT`; bill `DEDUCT`/`DISCOUNT` must be allocated to lines (Confirmed need)
 - [x] Allocation = proportional by line `AMOUNT`; `DEDUCT` on `TAXIC=Y` is **gross**; CN uses same method via **gap** (not blind `DEDUCT`)
@@ -630,6 +657,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 | 2026-07-25 | Lock deduct alloc: proportional by `AMOUNT`; VAT-bill deduct is gross; CN allocate observed gap only | Owner + data |
 | 2026-07-25 | Lock BILLTYPE_STD meanings, revenue include/exclude, JOURMODE=0 exclude; TD/TR vs CASHED confirmed | Owner + data |
 | 2026-07-25 | Legacy IV/TA UNKNOWN = VAT revenue; TAR/CNTAR scripted & not recent | Owner + data |
+| 2026-07-25 | PO meanings: CN→original bill; TAD→online txn id | Owner + data |
 
 ---
 
