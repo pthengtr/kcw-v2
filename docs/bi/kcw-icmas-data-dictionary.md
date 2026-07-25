@@ -115,7 +115,71 @@ Still TBD: exact difference vs `OEM` flag / `XCODE` / `ACODE`.
 
 ---
 
-## 5. Other ICMAS codes (queue)
+## 5. Units & prices: `UI*` / `MTP*` / `PRICE*` / `PRICEM*` (Confirmed)
+
+Pack hierarchy on the product master:
+
+| Field | Meaning | Status |
+|-------|---------|--------|
+| `UI1` | **Smallest unit** name (ชิ้น/ตัว/แผ่น/…) | Confirmed |
+| `UI2` | **Large unit** name (กล่อง/ลัง/ถุง/…) | Confirmed |
+| `MTP2` | How many **small units** in one **large unit** (`UI2`) | Confirmed |
+| `PRICE1`…`PRICE5` (`PRICEx`) | Price for the **small unit** (`UI1`) | Confirmed (family) |
+| `PRICEM1`…`PRICEM5` (`PRICEMx`) | Price for the **large unit** (`UI2`) | Confirmed (family) |
+
+```text
+1 × UI2  =  MTP2 × UI1
+PRICEMx  ≈  price of one large pack
+PRICEx   ≈  price of one small unit
+```
+
+Example: `UI1=ชุด`, `UI2=กล่อง`, `MTP2=10`, `PRICE1=25`, `PRICEM1=170`  
+→ box of 10; small unit 25; box 170.
+
+### Relation to sales fact `UI` / `MTP`
+
+Sales line `"UI"` / `"MTP"` (see sales dictionary) are the **sold** pack on the bill.  
+ICMAS `UI1`/`UI2`/`MTP2` are the **master** pack definition. They often align but are not guaranteed identical on every bill line.
+
+### Still TBD in this family
+
+| Field | Question |
+|-------|----------|
+| `UI3` / `UI4`, `MTP3` / `MTP4` | Extra pack levels? |
+| Which of `PRICE1`…`PRICE5` is the “list” price vs tier | Price list levels |
+| When `MTP2=0` or `PRICEM*=0` / null | Treat as unused large-pack slot |
+
+---
+
+## 6. `SIZE1` / `SIZE2` / `SIZE3` by `CODE1` (Confirmed)
+
+Size columns are **dimension slots**; their meaning depends on `CODE1`.
+
+| CODE1 | Category | SIZE1 | SIZE2 | SIZE3 | Status |
+|-------|----------|-------|-------|-------|--------|
+| `A` | ถ่าน | สูง | กว้าง | — | Confirmed |
+| `C` | ซีล | ใน | นอก | หนา | Confirmed |
+| `D` | บู๊ช | ใน | นอก | หนา | Confirmed |
+| `E` | ลูกปืนเข็ม/กรงนก | ใน | นอก | หนา | Confirmed |
+| `F` | ไส้กรองอากาศ | ใน | นอก | สูง | Confirmed |
+| `G` | ยอยกากบาท | ปลอก | ยาว | — | Confirmed |
+| `I` | ลูกปืนตลับ | ใน | นอก | หนา | Confirmed |
+| `K` | จานคลัช | ยาว(นิ้ว) | ฟัน | ขนาดรูเฟือง | Confirmed |
+| `L` | สายอ่อน | หัวสาย 1 | หัวสาย 2 | ยาว | Confirmed |
+| `O` | โอริง | ใน | หนา | — | Confirmed |
+| `P` | ไส้กรองน้ำมันเครื่อง | ใน | นอก | สูง | Confirmed |
+| `Q` | ลูกหมาก | TBD | TBD | TBD | TBD |
+| `R` | ลูกยาง | TBD | TBD | TBD | TBD |
+
+`—` = slot not used for that part type.
+
+**BI tip:** when showing sizes, label columns from `CODE1` (e.g. for `C`: `SIZE1`→ใน, `SIZE2`→นอก, `SIZE3`→หนา). Do not use one global “size1/2/3” label across all products.
+
+Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 / นอก 46 / หนา 7.
+
+---
+
+## 7. Other ICMAS codes (queue)
 
 | Field | Meaning | Status |
 |-------|---------|--------|
@@ -123,25 +187,29 @@ Still TBD: exact difference vs `OEM` flag / `XCODE` / `ACODE`.
 | `XCODE` / `ACODE` | TBD | TBD |
 | `MAIN` / `SUB` / `PART` | Aligns with BCODE structure; names TBD | Inferred |
 | `CATEGORY_CODE` (Drive dim) | `left(BCODE,2)` | Confirmed pattern; **labels TBD** |
-| `UI1`…`UI4`, `MTP2`…`MTP4` | Pack units / multipliers | Related to sales line `UI` / `MTP` — detail TBD |
 | `DESCR`, `BRAND`, `MODEL` | Description / brand / model | Confirmed (name) |
 
 ---
 
-## 6. Open questions
+## 8. Open questions
 
 - [x] `CODE1` letter meanings (A/C/D/E/F/G/I/K/L/O/P/Q/R) — Confirmed
 - [x] `PCODE` = เบอร์แท้; `MCODE` = เบอร์โรงงาน — Confirmed
+- [x] `UI1`/`UI2`/`MTP2` + `PRICEx`/`PRICEMx` pack & price rules — Confirmed
+- [x] `SIZE1–3` meanings by `CODE1` (A/C/D/E/F/G/I/K/L/O/P) — Confirmed
+- [ ] `SIZE*` meanings for `CODE1` = `Q`, `R`
 - [ ] Thai/English names for `CATEGORY_CODE` (`01`…`91`)
 - [ ] Meanings of `CODE2`–`CODE4`, `XCODE`, `ACODE`
+- [ ] `UI3`/`UI4`/`MTP3`/`MTP4` and price-tier roles of `PRICE1`…`PRICE5`
 - [ ] Which master to prefer when HQ and SYP ICMAS disagree on the same `BCODE`
-- [ ] Whether to curate `dim_code1` into Supabase `curated_kcw`
+- [ ] Whether to curate `dim_code1` / size labels into Supabase `curated_kcw`
 
 ---
 
-## 7. Changelog
+## 9. Changelog
 
 | Date | Change | By |
 |------|--------|----|
 | 2026-07-26 | Start ICMAS dictionary; lock `CODE1` category letters | Owner |
 | 2026-07-26 | Lock `PCODE`=เบอร์แท้, `MCODE`=เบอร์โรงงาน | Owner |
+| 2026-07-26 | Lock UI/MTP/PRICE pack rules + SIZE1–3 meanings by CODE1 | Owner |
