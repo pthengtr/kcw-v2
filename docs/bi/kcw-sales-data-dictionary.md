@@ -402,7 +402,7 @@ Until this allocation is implemented in curated SQL/views, **bill `BEFORETAX` is
 
 | Code | Meaning | Revenue? | Data check |
 |------|---------|----------|------------|
-| `UNKNOWN` | Non-VAT retail/counter sales when billno like `6K…` / `8K…` (and similar K-series). Also other unmapped prefixes | **Include** (as non-VAT sales) unless excluded by other rules | K-series ≈ all `TAXIC=N`. C-series (`8C…`/`2C…`) ≈ non-VAT **credit** (`CASHED=N`) |
+| `UNKNOWN` | Mixed unmapped docs — see billno families below | **Include** (split VAT vs non-VAT by family / `TAXIC`/`ISVAT`) | K/C = non-VAT; legacy `IV…`/`TA…` = VAT |
 | `TAD` | **Online sales** | **Include** | Mostly `TAXIC=Y`, `CASHED=N`, has `DUEAMT`/`TERM` |
 | `TD` | **VAT credit sales** | **Include** | **100% `CASHED=N`** (2,557/2,557); usually `TERM≈30`, `DUEAMT>0` |
 | `TR` | **VAT cash sales** | **Include** | **100% `CASHED=Y`** (1,255/1,255); `DUEAMT=0` |
@@ -420,7 +420,15 @@ Until this allocation is implemented in curated SQL/views, **bill `BEFORETAX` is
 | Prefix `3…` on std types (`3TR`, `3TAR`, `3TF`, …) | **SYP** branch document | Confirmed |
 | `6K…` / `8K…` / other `*K…` + `BILLTYPE_STD=UNKNOWN` | Non-VAT sales (cash-heavy) | Confirmed |
 | `*C…` + `UNKNOWN` | Non-VAT credit-like | Inferred (`CASHED=N`) |
-| `IV…` / `TA…` + `UNKNOWN` | Often `TAXIC=Y` but not mapped to `TR`/`TD`/`TAD` | TBD — count as VAT revenue? |
+| `IV…` / `TA…` + `UNKNOWN` | Legacy VAT docs (pre-std `TR`/`TD`/`TAD` naming) | **Include as VAT revenue** (Confirmed). Not recent: `IV` max `2024-12-30`, `TA` max `2024-12-31` |
+
+**Legacy / scripted docs (not in recent ops)**
+
+| Family | In recent month (as of 2026-07)? | Note |
+|--------|----------------------------------|------|
+| `TAR` | No — max billdate `2026-02-28` | Script-generated reopen; still **exclude** from revenue |
+| `CNTAR` | None found in bills | Script-side; exclude if/when present |
+| `IV…` / `TA…` UNKNOWN | No — ended 2024-12 | Historical VAT; **keep & count as VAT** |
 
 ### 6.2.1 Revenue include / exclude (Confirmed)
 
@@ -434,13 +442,12 @@ EXCLUDE from sales revenue:
   - (lines) IS_VALID <> 'True' when using line grain
 
 INCLUDE (net BEFORETAX / net line amount):
-  - UNKNOWN (non-VAT counter/credit)
+  - UNKNOWN K/C series (non-VAT counter/credit)
+  - UNKNOWN IV/TA series (legacy VAT — count as VAT)
   - TAD (online)
   - TD (VAT credit), TR (VAT cash)
-  - DN / CN (with natural sign)
+  - DN / CN (with natural sign; not TAR-reopen family)
 ```
-
-Still TBD: unmapped `UNKNOWN` with `IV…`/`TA…` (VAT-ish) — include as VAT sales or fix mapping first?
 
 ### 6.3 `JOURMODE`
 
@@ -562,8 +569,8 @@ vat_collected (separate) = sum("TAX"::numeric) on VAT docs only
 do NOT use "VAT" as money (it is the 7% rate)
 
 VAT vs non-VAT split at bill level:
-  - NON_VAT: BILLTYPE_STD = 'UNKNOWN' (K/C series) and other TAXIC=N includes
-  - VAT: TAD, TD, TR, and VAT CN/DN (or join lines.ISVAT)
+  - NON_VAT: UNKNOWN K/C series (and other TAXIC=N / ISVAT=N includes)
+  - VAT: TAD, TD, TR, legacy UNKNOWN IV/TA, VAT CN/DN (or join lines.ISVAT)
 ```
 
 ### 8.3 Bill count — TBD
@@ -595,7 +602,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 - [x] Always exclude `JOURMODE=0` — Confirmed; maps mainly to `TAR` reopen
 - [x] `TD` = VAT credit (`CASHED=N`); `TR` = VAT cash (`CASHED=Y`) — Confirmed
 - [ ] How to classify **bill-level** VAT vs non-VAT (no `ISVAT` on bills) — can use `BILLTYPE_STD`/`TAXIC`/`ISVAT` from lines
-- [ ] Should `UNKNOWN` + `IV…`/`TA…` (TAXIC=Y) count as VAT revenue or be remapped?
+- [x] Legacy `UNKNOWN` `IV…`/`TA…` count as VAT revenue (historical; not recent)
 - [x] `ISVAT=N` + `TAXIC=Y` — invalid; ignore `TAXIC` (Confirmed)
 - [x] Line discounts already in `AMOUNT`; bill `DEDUCT`/`DISCOUNT` must be allocated to lines (Confirmed need)
 - [x] Allocation = proportional by line `AMOUNT`; `DEDUCT` on `TAXIC=Y` is **gross**; CN uses same method via **gap** (not blind `DEDUCT`)
@@ -622,6 +629,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 | 2026-07-25 | Bill `DEDUCT`/`DISCOUNT` not in line `AMOUNT`; must allocate to lines for reconcile | Owner |
 | 2026-07-25 | Lock deduct alloc: proportional by `AMOUNT`; VAT-bill deduct is gross; CN allocate observed gap only | Owner + data |
 | 2026-07-25 | Lock BILLTYPE_STD meanings, revenue include/exclude, JOURMODE=0 exclude; TD/TR vs CASHED confirmed | Owner + data |
+| 2026-07-25 | Legacy IV/TA UNKNOWN = VAT revenue; TAR/CNTAR scripted & not recent | Owner + data |
 
 ---
 
