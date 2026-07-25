@@ -21,6 +21,7 @@ import {
   splitAmount,
 } from "@/lib/bi/sales-format";
 import {
+  bangkokCurrentMonthIso,
   bangkokTodayIso,
   formatThaiDateRange,
   periodLabel,
@@ -59,14 +60,22 @@ export default function SalesOverviewPage() {
   const [customMode, setCustomMode] = useState<BiCustomDateMode>("single");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [customMonth, setCustomMonth] = useState("");
   const [overview, setOverview] = useState<BiSalesOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const range = useMemo(
     () =>
-      resolvePeriodRange(preset, customFrom, customTo, new Date(), customMode),
-    [preset, customFrom, customTo, customMode]
+      resolvePeriodRange(
+        preset,
+        customFrom,
+        customTo,
+        new Date(),
+        customMode,
+        customMonth
+      ),
+    [preset, customFrom, customTo, customMode, customMonth]
   );
 
   const load = useCallback(async () => {
@@ -108,6 +117,7 @@ export default function SalesOverviewPage() {
     const today = bangkokTodayIso();
     setCustomFrom((prev) => prev || today);
     setCustomTo((prev) => prev || today);
+    setCustomMonth((prev) => prev || bangkokCurrentMonthIso());
   }, [preset]);
 
   const useDaily = preferDailyBreakdown(range.from, range.to);
@@ -230,40 +240,56 @@ export default function SalesOverviewPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="single">วันเดียว</SelectItem>
+                      <SelectItem value="month">เดือน</SelectItem>
                       <SelectItem value="range">ช่วงวันที่</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="bi-from">
-                    {customMode === "single" ? "วันที่" : "จากวันที่"}
-                  </Label>
-                  <input
-                    id="bi-from"
-                    type="date"
-                    value={customFrom}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setCustomFrom(value);
-                      if (customMode === "single") setCustomTo(value);
-                    }}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-
-                {customMode === "range" ? (
-                  <div className="space-y-1.5 sm:col-start-1 lg:col-start-auto">
-                    <Label htmlFor="bi-to">ถึงวันที่</Label>
+                {customMode === "month" ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bi-month">เดือน</Label>
                     <input
-                      id="bi-to"
-                      type="date"
-                      value={customTo}
-                      onChange={(e) => setCustomTo(e.target.value)}
+                      id="bi-month"
+                      type="month"
+                      value={customMonth}
+                      onChange={(e) => setCustomMonth(e.target.value)}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     />
                   </div>
-                ) : null}
+                ) : (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="bi-from">
+                        {customMode === "single" ? "วันที่" : "จากวันที่"}
+                      </Label>
+                      <input
+                        id="bi-from"
+                        type="date"
+                        value={customFrom}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setCustomFrom(value);
+                          if (customMode === "single") setCustomTo(value);
+                        }}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {customMode === "range" ? (
+                      <div className="space-y-1.5 sm:col-start-1 lg:col-start-auto">
+                        <Label htmlFor="bi-to">ถึงวันที่</Label>
+                        <input
+                          id="bi-to"
+                          type="date"
+                          value={customTo}
+                          onChange={(e) => setCustomTo(e.target.value)}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                )}
               </>
             ) : null}
           </div>

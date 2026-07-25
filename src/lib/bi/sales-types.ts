@@ -2,7 +2,7 @@ export type BiBranchFilter = "ALL" | "HQ" | "SYP" | "ONLINE";
 
 export type BiPeriodPreset = "month" | "ytd" | "custom";
 
-export type BiCustomDateMode = "single" | "range";
+export type BiCustomDateMode = "single" | "month" | "range";
 
 export type BiSplitRow = {
   key: string;
@@ -14,6 +14,9 @@ export type BiTrendRow = {
   period: string;
   revenue_net: number;
   bill_count: number;
+  hq_revenue_net: number;
+  syp_revenue_net: number;
+  online_revenue_net: number;
 };
 
 export type BiSalesSummary = {

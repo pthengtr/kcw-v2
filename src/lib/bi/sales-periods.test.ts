@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   bangkokTodayIso,
+  monthRange,
   preferDailyBreakdown,
   preferDailyTrend,
   resolvePeriodRange,
@@ -25,6 +26,34 @@ describe("sales period helpers", () => {
     expect(
       resolvePeriodRange("custom", "2026-07-18", undefined, new Date(), "single")
     ).toEqual({ from: "2026-07-18", to: "2026-07-18" });
+  });
+
+  it("supports custom month selection", () => {
+    const now = new Date("2026-07-25T03:00:00.000Z");
+    expect(
+      resolvePeriodRange(
+        "custom",
+        undefined,
+        undefined,
+        now,
+        "month",
+        "2026-06"
+      )
+    ).toEqual({ from: "2026-06-01", to: "2026-06-30" });
+    expect(
+      resolvePeriodRange(
+        "custom",
+        undefined,
+        undefined,
+        now,
+        "month",
+        "2026-07"
+      )
+    ).toEqual({ from: "2026-07-01", to: "2026-07-25" });
+    expect(monthRange("2026-02", now)).toEqual({
+      from: "2026-02-01",
+      to: "2026-02-28",
+    });
   });
 
   it("swaps inverted custom ranges", () => {

@@ -37,6 +37,9 @@ function parseTrendRows(value: unknown): BiTrendRow[] {
       period: asString(r.period),
       revenue_net: asNumber(r.revenue_net),
       bill_count: asNumber(r.bill_count),
+      hq_revenue_net: asNumber(r.hq_revenue_net),
+      syp_revenue_net: asNumber(r.syp_revenue_net),
+      online_revenue_net: asNumber(r.online_revenue_net),
     };
   });
 }
