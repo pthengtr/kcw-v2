@@ -21,13 +21,15 @@ import {
   splitAmount,
 } from "@/lib/bi/sales-format";
 import {
+  bangkokTodayIso,
   formatThaiDateRange,
   periodLabel,
-  preferDailyTrend,
+  preferDailyBreakdown,
   resolvePeriodRange,
 } from "@/lib/bi/sales-periods";
 import type {
   BiBranchFilter,
+  BiCustomDateMode,
   BiPeriodPreset,
   BiSalesOverview,
 } from "@/lib/bi/sales-types";
@@ -45,14 +47,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import SalesBilltypeTable from "./SalesBilltypeTable";
 import SalesKpiCard from "./SalesKpiCard";
+import SalesPeriodTable from "./SalesPeriodTable";
 import SalesSplitChart from "./SalesSplitChart";
 import SalesTrendChart from "./SalesTrendChart";
 
-const PERIODS: BiPeriodPreset[] = ["today", "month", "ytd", "custom"];
+const PERIODS: BiPeriodPreset[] = ["month", "ytd", "custom"];
 
 export default function SalesOverviewPage() {
   const [preset, setPreset] = useState<BiPeriodPreset>("month");
   const [branch, setBranch] = useState<BiBranchFilter>("ALL");
+  const [customMode, setCustomMode] = useState<BiCustomDateMode>("single");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [overview, setOverview] = useState<BiSalesOverview | null>(null);
@@ -60,8 +64,9 @@ export default function SalesOverviewPage() {
   const [error, setError] = useState<string | null>(null);
 
   const range = useMemo(
-    () => resolvePeriodRange(preset, customFrom, customTo),
-    [preset, customFrom, customTo]
+    () =>
+      resolvePeriodRange(preset, customFrom, customTo, new Date(), customMode),
+    [preset, customFrom, customTo, customMode]
   );
 
   const load = useCallback(async () => {
@@ -99,19 +104,19 @@ export default function SalesOverviewPage() {
   }, [load]);
 
   useEffect(() => {
-    if (preset === "custom" && (!customFrom || !customTo)) {
-      const defaults = resolvePeriodRange("month");
-      setCustomFrom((prev) => prev || defaults.from);
-      setCustomTo((prev) => prev || defaults.to);
-    }
-  }, [preset, customFrom, customTo]);
+    if (preset !== "custom") return;
+    const today = bangkokTodayIso();
+    setCustomFrom((prev) => prev || today);
+    setCustomTo((prev) => prev || today);
+  }, [preset]);
 
-  const useDaily = preferDailyTrend(range.from, range.to);
+  const useDaily = preferDailyBreakdown(range.from, range.to);
   const trendRows = overview
     ? useDaily
       ? overview.trend_daily
       : overview.trend_monthly
     : [];
+  const periodRows = trendRows;
 
   const revenueDelta = overview
     ? pctChange(
@@ -212,25 +217,52 @@ export default function SalesOverviewPage() {
             {preset === "custom" ? (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="bi-from">จากวันที่</Label>
+                  <Label htmlFor="bi-custom-mode">รูปแบบวันที่</Label>
+                  <Select
+                    value={customMode}
+                    onValueChange={(v) =>
+                      setCustomMode(v as BiCustomDateMode)
+                    }
+                  >
+                    <SelectTrigger id="bi-custom-mode" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">วันเดียว</SelectItem>
+                      <SelectItem value="range">ช่วงวันที่</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="bi-from">
+                    {customMode === "single" ? "วันที่" : "จากวันที่"}
+                  </Label>
                   <input
                     id="bi-from"
                     type="date"
                     value={customFrom}
-                    onChange={(e) => setCustomFrom(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setCustomFrom(value);
+                      if (customMode === "single") setCustomTo(value);
+                    }}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="bi-to">ถึงวันที่</Label>
-                  <input
-                    id="bi-to"
-                    type="date"
-                    value={customTo}
-                    onChange={(e) => setCustomTo(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
+
+                {customMode === "range" ? (
+                  <div className="space-y-1.5 sm:col-start-1 lg:col-start-auto">
+                    <Label htmlFor="bi-to">ถึงวันที่</Label>
+                    <input
+                      id="bi-to"
+                      type="date"
+                      value={customTo}
+                      onChange={(e) => setCustomTo(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                ) : null}
               </>
             ) : null}
           </div>
@@ -306,11 +338,7 @@ export default function SalesOverviewPage() {
           <section className="grid grid-cols-1 gap-3 xl:grid-cols-5">
             <div className="xl:col-span-3">
               <SalesTrendChart
-                title={
-                  useDaily
-                    ? "แนวโน้มรายวัน"
-                    : "แนวโน้มรายเดือน"
-                }
+                title={useDaily ? "แนวโน้มรายวัน" : "แนวโน้มรายเดือน"}
                 rows={trendRows}
                 mode={useDaily ? "daily" : "monthly"}
               />
@@ -318,6 +346,13 @@ export default function SalesOverviewPage() {
             <div className="xl:col-span-2">
               <SalesBilltypeTable rows={overview.by_billtype} />
             </div>
+          </section>
+
+          <section>
+            <SalesPeriodTable
+              rows={periodRows}
+              mode={useDaily ? "daily" : "monthly"}
+            />
           </section>
 
           <section className="rounded-xl border border-slate-200/80 bg-white/90 p-4 text-sm shadow-sm">

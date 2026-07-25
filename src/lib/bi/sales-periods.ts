@@ -1,4 +1,4 @@
-import type { BiPeriodPreset } from "./sales-types";
+import type { BiCustomDateMode, BiPeriodPreset } from "./sales-types";
 
 export type DateRange = {
   from: string;
@@ -21,13 +21,10 @@ export function resolvePeriodRange(
   preset: BiPeriodPreset,
   customFrom?: string,
   customTo?: string,
-  now = new Date()
+  now = new Date(),
+  customMode: BiCustomDateMode = "range"
 ): DateRange {
   const today = bangkokTodayIso(now);
-
-  if (preset === "today") {
-    return { from: today, to: today };
-  }
 
   if (preset === "month") {
     return { from: `${today.slice(0, 7)}-01`, to: today };
@@ -37,8 +34,12 @@ export function resolvePeriodRange(
     return { from: `${today.slice(0, 4)}-01-01`, to: today };
   }
 
-  const from = customFrom?.trim() || `${today.slice(0, 7)}-01`;
-  const to = customTo?.trim() || today;
+  const from = customFrom?.trim() || today;
+  if (customMode === "single" || !customTo?.trim()) {
+    return { from, to: from };
+  }
+
+  const to = customTo.trim();
   if (from > to) {
     return { from: to, to: from };
   }
@@ -47,8 +48,6 @@ export function resolvePeriodRange(
 
 export function periodLabel(preset: BiPeriodPreset): string {
   switch (preset) {
-    case "today":
-      return "วันนี้";
     case "month":
       return "เดือนนี้";
     case "ytd":
@@ -74,10 +73,28 @@ export function formatThaiDateRange(from: string, to: string): string {
   return `${fmt(from)} – ${fmt(to)}`;
 }
 
+export function formatThaiPeriodLabel(
+  period: string,
+  mode: "daily" | "monthly"
+): string {
+  if (mode === "monthly") {
+    const [y, m] = period.split("-").map(Number);
+    if (!y || !m) return period;
+    const date = new Date(Date.UTC(y, m - 1, 1));
+    return new Intl.DateTimeFormat("th-TH", {
+      timeZone: "UTC",
+      month: "short",
+      year: "numeric",
+    }).format(date);
+  }
+  return formatThaiDateRange(period, period);
+}
+
+/** Same calendar month → daily breakdown; otherwise monthly. */
+export function preferDailyBreakdown(from: string, to: string): boolean {
+  return from.slice(0, 7) === to.slice(0, 7);
+}
+
 export function preferDailyTrend(from: string, to: string): boolean {
-  const start = Date.parse(`${from}T00:00:00Z`);
-  const end = Date.parse(`${to}T00:00:00Z`);
-  if (!Number.isFinite(start) || !Number.isFinite(end)) return true;
-  const days = (end - start) / (24 * 60 * 60 * 1000) + 1;
-  return days <= 62;
+  return preferDailyBreakdown(from, to);
 }

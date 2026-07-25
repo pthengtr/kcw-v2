@@ -97,5 +97,11 @@ describe("Webapp mobile layout", () => {
     expect(sales).toContain("sm:grid-cols-2");
     expect(sales).toContain("xl:grid-cols-4");
     expect(sales).not.toContain("w-[1000px]");
+    expect(sales).not.toContain('"today"');
+    expect(sales).toContain("SalesPeriodTable");
+
+    const split = read("src/components/bi/sales/SalesSplitChart.tsx");
+    expect(split).not.toContain("<Legend");
+    expect(split).toContain("whitespace-nowrap");
   });
 });
