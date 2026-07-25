@@ -391,34 +391,70 @@ Until this allocation is implemented in curated SQL/views, **bill `BEFORETAX` is
 
 ### 6.1 `BILLTYPE` (raw)
 
-| Code | Meaning | Include in revenue? | Status |
-|------|---------|---------------------|--------|
-| `0` | TBD | TBD | TBD |
-| `1` | TBD (majority) | TBD | TBD |
-| `2` | TBD (often with `CN`) | TBD | TBD |
-| `R` | TBD (orphan-like headers, `&…` bill nos) | TBD | TBD |
+| Code | Meaning | Status |
+|------|---------|--------|
+| `0` | Often with `DN` | Inferred |
+| `1` | Normal sales docs (majority) | Inferred |
+| `2` | Credit-note family (`CN`) | Confirmed pattern |
+| `R` | Orphan-like headers (`&…` bill nos) | Inferred — usually exclude |
 
-### 6.2 `BILLTYPE_STD`
+### 6.2 `BILLTYPE_STD` (Confirmed — owner + data)
 
-| Code | Meaning | Include in revenue? | Status |
-|------|---------|---------------------|--------|
-| `UNKNOWN` | Not standardized / default | TBD | Confirmed value exists (large share) |
-| `TAR` | TBD | TBD | TBD |
-| `TF` | TBD | TBD | TBD |
-| `TFV` | TBD | TBD | TBD |
-| `TAD` | TBD | TBD | TBD |
-| `TD` | TBD | TBD | TBD |
-| `TR` | TBD | TBD | TBD |
-| `DN` | Debit note? | TBD | Inferred name only |
-| `CN` | Credit note? | TBD | Inferred name only |
+| Code | Meaning | Revenue? | Data check |
+|------|---------|----------|------------|
+| `UNKNOWN` | Non-VAT retail/counter sales when billno like `6K…` / `8K…` (and similar K-series). Also other unmapped prefixes | **Include** (as non-VAT sales) unless excluded by other rules | K-series ≈ all `TAXIC=N`. C-series (`8C…`/`2C…`) ≈ non-VAT **credit** (`CASHED=N`) |
+| `TAD` | **Online sales** | **Include** | Mostly `TAXIC=Y`, `CASHED=N`, has `DUEAMT`/`TERM` |
+| `TD` | **VAT credit sales** | **Include** | **100% `CASHED=N`** (2,557/2,557); usually `TERM≈30`, `DUEAMT>0` |
+| `TR` | **VAT cash sales** | **Include** | **100% `CASHED=Y`** (1,255/1,255); `DUEAMT=0` |
+| `DN` | Debit note | **Include** (sign +) | Confirmed name |
+| `CN` | Credit note | **Include** (sign −) | Confirmed name; subtypes in billno: `CNTAD`, `CNTF…`, plain `CN…` |
+| `TF` | Transfer HQ ↔ SYP | **Exclude** | Non-VAT (`ISVAT` mostly N); not customer revenue |
+| `TFV` | Transfer HQ ↔ SYP (VAT-tagged variant) | **Exclude** | Same — inter-branch transfer |
+| `TAR` | Reopen non-VAT bill into VAT doc (no new economic sale) | **Exclude** | All on `JOURMODE=0`; almost all `TAXIC=Y` |
+| `CNTAR` | Credit/reopen pair for TAR family | **Exclude** | Owner rule; exact `CNTAR…` billnos currently **0** in bills (may appear as other CN naming) |
+
+**Billno conventions**
+
+| Pattern | Meaning | Status |
+|---------|---------|--------|
+| Prefix `3…` on std types (`3TR`, `3TAR`, `3TF`, …) | **SYP** branch document | Confirmed |
+| `6K…` / `8K…` / other `*K…` + `BILLTYPE_STD=UNKNOWN` | Non-VAT sales (cash-heavy) | Confirmed |
+| `*C…` + `UNKNOWN` | Non-VAT credit-like | Inferred (`CASHED=N`) |
+| `IV…` / `TA…` + `UNKNOWN` | Often `TAXIC=Y` but not mapped to `TR`/`TD`/`TAD` | TBD — count as VAT revenue? |
+
+### 6.2.1 Revenue include / exclude (Confirmed)
+
+```text
+EXCLUDE from sales revenue:
+  - JOURMODE = '0'                  -- owner rule (see §6.3)
+  - BILLTYPE_STD IN ('TF','TFV')    -- inter-branch transfers
+  - BILLTYPE_STD IN ('TAR')         -- VAT reopen of non-VAT (no revenue impact)
+  - CNTAR / TAR-reopen family       -- same economic reason
+  - CANCELED = 'Y'
+  - (lines) IS_VALID <> 'True' when using line grain
+
+INCLUDE (net BEFORETAX / net line amount):
+  - UNKNOWN (non-VAT counter/credit)
+  - TAD (online)
+  - TD (VAT credit), TR (VAT cash)
+  - DN / CN (with natural sign)
+```
+
+Still TBD: unmapped `UNKNOWN` with `IV…`/`TA…` (VAT-ish) — include as VAT sales or fix mapping first?
 
 ### 6.3 `JOURMODE`
 
-| Code | Meaning | Status |
-|------|---------|--------|
-| `0` | TBD | TBD |
-| `1` | TBD | TBD |
-| `2` | TBD (majority on both tables) | TBD |
+Owner rule: **always exclude `JOURMODE = 0`**.
+
+| Code | Inferred meaning | Typical contents | Status |
+|------|------------------|------------------|--------|
+| `0` | VAT reopen / non-economic tax journal | Almost all `TAR` (+ some `UNKNOWN`/`TAD`/`TR`); **99.9% `TAXIC=Y`**; ends 2026-02 in current load | **Exclude** (Confirmed) |
+| `1` | VAT / formal tax documents | `TAD`, `TD`, `TR`, `TFV`, `CN`, `DN` | Keep (Inferred label) |
+| `2` | Day-to-day sales journal (mostly non-VAT) | Vast `UNKNOWN` K-series + `TF` transfers | Keep but still exclude `TF` by billtype |
+
+Line `JOURMODE` always matches bill `JOURMODE` in current data.
+
+**Why JOURMODE 0 ↔ TAR fits:** excluding mode `0` removes the TAR reopen amounts so they don’t inflate VAT-era revenue after converting old non-VAT bills.
 
 ### 6.4 `JOURTYPE` (bills)
 
@@ -504,25 +540,30 @@ revenue = sum(net_line_amount)
 split by: sales_type   -- ISVAT, not TAXIC
 
 Also subtract allocated bill DISCOUNT+DEDUCT (see §6.7) or line totals will not match bill BEFORETAX.
-Filters: TBD (IS_VALID, CANCELED, BILLTYPE_STD, JOURMODE, …)
-Sign rules for CN/returns: TBD
+Filters (Confirmed core):
+  IS_VALID = 'True', CANCELED = 'N',
+  JOURMODE <> '0',
+  BILLTYPE_STD NOT IN ('TF','TFV','TAR')
+Sign: CN negative amounts already in data; keep natural sign.
 ```
 
-### 8.2 Revenue (bill-based) — Confirmed net; VAT split TBD at bill grain
+### 8.2 Revenue (bill-based) — Confirmed net + filters
 
 ```text
 revenue = sum("BEFORETAX"::numeric)
   -- already net of bill DISCOUNT/DEDUCT
 
-vat_collected (separate) = sum("TAX"::numeric)
+Filters (Confirmed):
+  CANCELED = 'N',
+  JOURMODE <> '0',
+  BILLTYPE_STD NOT IN ('TF','TFV','TAR')
+
+vat_collected (separate) = sum("TAX"::numeric) on VAT docs only
 do NOT use "VAT" as money (it is the 7% rate)
 
-VAT vs non-VAT split at bill level: TBD
-  -- bills have TAXIC but not ISVAT
-  -- options: join lines and use ISVAT, or derive bill flag in curation
-
-Filters: TBD (CANCELED, BILLTYPE_STD, …)
-Until bill adj is allocated to lines, prefer this grain for company totals.
+VAT vs non-VAT split at bill level:
+  - NON_VAT: BILLTYPE_STD = 'UNKNOWN' (K/C series) and other TAXIC=N includes
+  - VAT: TAD, TD, TR, and VAT CN/DN (or join lines.ISVAT)
 ```
 
 ### 8.3 Bill count — TBD
@@ -550,9 +591,11 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 
 - [x] `TAXIC` = keyed incl/excl VAT; `ISVAT` = VAT vs non-VAT sale — Confirmed in §6.0
 - [x] Official revenue KPI = **net / before tax**; split by **`ISVAT`** — Confirmed in §8.0
-- [ ] Exact meaning of each `BILLTYPE` / `BILLTYPE_STD` code and which count as sales revenue
-- [ ] Meaning of `JOURMODE` 0/1/2 and whether BI should filter to one mode
-- [ ] How to classify **bill-level** VAT vs non-VAT (no `ISVAT` on bills)
+- [x] `BILLTYPE_STD` meanings + revenue include/exclude (TF/TFV/TAR out; TAD/TD/TR/UNKNOWN/CN/DN in) — Confirmed §6.2
+- [x] Always exclude `JOURMODE=0` — Confirmed; maps mainly to `TAR` reopen
+- [x] `TD` = VAT credit (`CASHED=N`); `TR` = VAT cash (`CASHED=Y`) — Confirmed
+- [ ] How to classify **bill-level** VAT vs non-VAT (no `ISVAT` on bills) — can use `BILLTYPE_STD`/`TAXIC`/`ISVAT` from lines
+- [ ] Should `UNKNOWN` + `IV…`/`TA…` (TAXIC=Y) count as VAT revenue or be remapped?
 - [x] `ISVAT=N` + `TAXIC=Y` — invalid; ignore `TAXIC` (Confirmed)
 - [x] Line discounts already in `AMOUNT`; bill `DEDUCT`/`DISCOUNT` must be allocated to lines (Confirmed need)
 - [x] Allocation = proportional by line `AMOUNT`; `DEDUCT` on `TAXIC=Y` is **gross**; CN uses same method via **gap** (not blind `DEDUCT`)
@@ -578,6 +621,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 | 2026-07-25 | Rule: if `ISVAT=N`, `TAXIC` must be `N` or ignored; never `/1.07` on non-VAT lines | Owner |
 | 2026-07-25 | Bill `DEDUCT`/`DISCOUNT` not in line `AMOUNT`; must allocate to lines for reconcile | Owner |
 | 2026-07-25 | Lock deduct alloc: proportional by `AMOUNT`; VAT-bill deduct is gross; CN allocate observed gap only | Owner + data |
+| 2026-07-25 | Lock BILLTYPE_STD meanings, revenue include/exclude, JOURMODE=0 exclude; TD/TR vs CASHED confirmed | Owner + data |
 
 ---
 
