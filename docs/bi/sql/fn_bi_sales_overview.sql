@@ -1,6 +1,7 @@
--- Applied via Supabase migration: fn_bi_sales_overview
+-- Applied via Supabase migration: fn_bi_sales_overview (+ ONLINE branch + trend splits)
 -- Sales BI overview: bill-grain net revenue (BEFORETAX) with confirmed filters.
 -- See docs/bi/kcw-sales-data-dictionary.md §8.
+-- Reporting branch: TAD/CNTAD count as ONLINE (not HQ store).
 
 CREATE OR REPLACE FUNCTION public.fn_bi_sales_overview(
   p_from date,
@@ -131,15 +132,25 @@ BEGIN
     GROUP BY 1
   ),
   daily AS (
-    SELECT bill_date::text AS period, sum(revenue_net) AS revenue_net, count(*)::int AS bill_count
+    SELECT
+      bill_date::text AS period,
+      sum(revenue_net) AS revenue_net,
+      count(*)::int AS bill_count,
+      COALESCE(sum(revenue_net) FILTER (WHERE branch = 'HQ'), 0) AS hq_revenue_net,
+      COALESCE(sum(revenue_net) FILTER (WHERE branch = 'SYP'), 0) AS syp_revenue_net,
+      COALESCE(sum(revenue_net) FILTER (WHERE branch = 'ONLINE'), 0) AS online_revenue_net
     FROM filtered
     GROUP BY 1
     ORDER BY 1
   ),
   monthly AS (
-    SELECT to_char(date_trunc('month', bill_date), 'YYYY-MM') AS period,
-           sum(revenue_net) AS revenue_net,
-           count(*)::int AS bill_count
+    SELECT
+      to_char(date_trunc('month', bill_date), 'YYYY-MM') AS period,
+      sum(revenue_net) AS revenue_net,
+      count(*)::int AS bill_count,
+      COALESCE(sum(revenue_net) FILTER (WHERE branch = 'HQ'), 0) AS hq_revenue_net,
+      COALESCE(sum(revenue_net) FILTER (WHERE branch = 'SYP'), 0) AS syp_revenue_net,
+      COALESCE(sum(revenue_net) FILTER (WHERE branch = 'ONLINE'), 0) AS online_revenue_net
     FROM filtered
     GROUP BY 1
     ORDER BY 1
@@ -191,13 +202,23 @@ BEGIN
     ), '[]'::jsonb),
     'trend_daily', COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
-        'period', period, 'revenue_net', revenue_net, 'bill_count', bill_count
+        'period', period,
+        'revenue_net', revenue_net,
+        'bill_count', bill_count,
+        'hq_revenue_net', hq_revenue_net,
+        'syp_revenue_net', syp_revenue_net,
+        'online_revenue_net', online_revenue_net
       ) ORDER BY period)
       FROM daily
     ), '[]'::jsonb),
     'trend_monthly', COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
-        'period', period, 'revenue_net', revenue_net, 'bill_count', bill_count
+        'period', period,
+        'revenue_net', revenue_net,
+        'bill_count', bill_count,
+        'hq_revenue_net', hq_revenue_net,
+        'syp_revenue_net', syp_revenue_net,
+        'online_revenue_net', online_revenue_net
       ) ORDER BY period)
       FROM monthly
     ), '[]'::jsonb)
