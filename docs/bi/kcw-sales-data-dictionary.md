@@ -320,32 +320,74 @@ sum(line_net_after_bill_alloc)  =  BEFORETAX
 Rough reconcile check on bills with `DEDUCT ≠ 0` and `TAXIC=N`:  
 `sum(line AMOUNT) − DEDUCT − DISCOUNT ≈ BEFORETAX` on ~9.1k / ~10.5k bills.
 
-#### Required curation rule (Confirmed need; method proposed)
+#### Required curation rule (Confirmed)
 
-**Confirmed:** bill-level `DISCOUNT` + `DEDUCT` must be **broken down onto lines** before product/line dashboards, so line sums match bill net totals.
+**Confirmed:** bill-level `DISCOUNT` + `DEDUCT` must be **broken down onto lines** (when they actually reduce the bill vs line sum) so line totals match bill `BEFORETAX` / `AFTERTAX`.
 
-**Proposed allocation** (not locked — confirm with owner):
+##### Locked method
+
+1. **Allocation weight:** proportional by line `"AMOUNT"` share within the bill  
+2. **Credit notes:** same method — but only allocate the **real gap** (see below)  
+3. **VAT basis of `DEDUCT`:** data-confirmed
+
+| Bill `TAXIC` | What `DEDUCT`/`DISCOUNT` units are | Evidence |
+|--------------|-------------------------------------|----------|
+| `N` | Same as line `AMOUNT` / `BEFORETAX` / `AFTERTAX` | ~8.9k/8.9k positive bills: `sum(lines) − adj ≈ BEFORETAX` |
+| `Y` | **Gross / VAT-inclusive** (same as keyed line `AMOUNT`) | All 20 positive `TAXIC=Y`+`DEDUCT` bills: `sum(lines) − DEDUCT = AFTERTAX`, then `/1.07 = BEFORETAX` |
+
+Example (`TAXIC=Y`, `TAR6806-001`):
 
 ```text
-bill_adj = coalesce(DISCOUNT,0) + coalesce(DEDUCT,0)
-
--- allocate proportionally by line AMOUNT (same sign as bill currency basis)
-line_share = line_AMOUNT / nullif(sum(line_AMOUNT over bill), 0)
-line_bill_adj = bill_adj * line_share
-
-net_line_revenue =
-  (CASE WHEN ISVAT='Y' AND TAXIC='Y' THEN AMOUNT/1.07 ELSE AMOUNT END)
-  - allocated_bill_adj_in_net_terms
+sum(lines) = 11352.8
+DEDUCT     = 2.8          -- gross baht
+AFTERTAX   = 11350.0      -- 11352.8 - 2.8
+BEFORETAX  = 10607.48     -- 11350 / 1.07
 ```
 
-**TBD to lock:**
+##### Robust allocate formula (prefer this over blind field subtract)
 
-1. Allocate on **gross** (`AMOUNT`) or **net** (`BEFORETAX` basis)?
-2. For `TAXIC=Y` bills, is `DEDUCT` stored incl-VAT or excl-VAT?
-3. Credit notes / negative bills — `DEDUCT` sometimes equals abs(net) differently; confirm sign rules
-4. Prefer proportional by `AMOUNT` vs equal split vs attach to last line?
+On credit notes / some `BILLTYPE=2` rows, `"DEDUCT"` is often **not** an extra haircut on lines:
 
-Until allocation is curated, **bill-level revenue (`BEFORETAX`) is safer for total sales**; line-level product mix will be slightly high on bills that have `DEDUCT`/`DISCOUNT`.
+- Lines already equal `AFTERTAX` / net `BEFORETAX`
+- `"DEDUCT"` may equal `abs(BEFORETAX)` (VAT CN) or another reference amount
+- Subtracting it again would **break** the reconcile
+
+So allocate the **observed gap**, not raw `DEDUCT` blindly:
+
+```text
+line_gross_sum = sum(AMOUNT over bill)          -- as keyed
+
+-- bill target in same basis as keyed lines:
+bill_target_gross = AFTERTAX
+  -- (for TAXIC=N, AFTERTAX ≈ BEFORETAX)
+
+gap_gross = line_gross_sum - bill_target_gross
+  -- normal sale with deduct: gap ≈ DISCOUNT + DEDUCT
+  -- typical credit note:      gap ≈ 0  (even if DEDUCT field is large)
+
+line_share = AMOUNT / nullif(line_gross_sum, 0)
+line_gap_alloc_gross = gap_gross * line_share
+
+line_amount_after_bill_adj_gross = AMOUNT - line_gap_alloc_gross
+
+net_line_revenue =
+  CASE
+    WHEN ISVAT='Y' AND TAXIC='Y'
+      THEN line_amount_after_bill_adj_gross / 1.07
+    ELSE line_amount_after_bill_adj_gross
+  END
+```
+
+CN check (negative `AFTERTAX`, `DEDUCT ≠ 0`):
+
+| `TAXIC` | Lines already = bill total (no adj) | Blind `lines − DEDUCT` matches |
+|---------|------------------------------------:|-------------------------------:|
+| `Y` | 648 / 648 | 0 / 648 |
+| `N` | ~1250–1360 / 1387 | ~28 / 1387 |
+
+**Rule:** for CN/negative bills, usually **allocate nothing** (`gap≈0`); still use the same proportional machinery so odd cases with a real gap are handled.
+
+Until this allocation is implemented in curated SQL/views, **bill `BEFORETAX` is safer for company totals**.
 
 ### 6.1 `BILLTYPE` (raw)
 
@@ -418,6 +460,7 @@ Until allocation is curated, **bill-level revenue (`BEFORETAX`) is safer for tot
 10. **Cost gaps** — `COST_STATUS = UNKNOWN` (~13k lines); margin metrics need a policy.
 11. **Staging tables** — do not report from `*_stg`.
 12. **Bill has no `ISVAT`** — for bill-level VAT vs non-VAT split, derive from lines (e.g. any/all `ISVAT=Y`) or use a curated rule (TBD).
+13. **Bill `DEDUCT`/`DISCOUNT` not in lines** — sum(line `AMOUNT`) can exceed `BEFORETAX`; allocate before product-level revenue.
 
 ---
 
@@ -460,6 +503,7 @@ sales_type =
 revenue = sum(net_line_amount)
 split by: sales_type   -- ISVAT, not TAXIC
 
+Also subtract allocated bill DISCOUNT+DEDUCT (see §6.7) or line totals will not match bill BEFORETAX.
 Filters: TBD (IS_VALID, CANCELED, BILLTYPE_STD, JOURMODE, …)
 Sign rules for CN/returns: TBD
 ```
@@ -468,6 +512,7 @@ Sign rules for CN/returns: TBD
 
 ```text
 revenue = sum("BEFORETAX"::numeric)
+  -- already net of bill DISCOUNT/DEDUCT
 
 vat_collected (separate) = sum("TAX"::numeric)
 do NOT use "VAT" as money (it is the 7% rate)
@@ -477,6 +522,7 @@ VAT vs non-VAT split at bill level: TBD
   -- options: join lines and use ISVAT, or derive bill flag in curation
 
 Filters: TBD (CANCELED, BILLTYPE_STD, …)
+Until bill adj is allocated to lines, prefer this grain for company totals.
 ```
 
 ### 8.3 Bill count — TBD
@@ -508,6 +554,8 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 - [ ] Meaning of `JOURMODE` 0/1/2 and whether BI should filter to one mode
 - [ ] How to classify **bill-level** VAT vs non-VAT (no `ISVAT` on bills)
 - [x] `ISVAT=N` + `TAXIC=Y` — invalid; ignore `TAXIC` (Confirmed)
+- [x] Line discounts already in `AMOUNT`; bill `DEDUCT`/`DISCOUNT` must be allocated to lines (Confirmed need)
+- [x] Allocation = proportional by line `AMOUNT`; `DEDUCT` on `TAXIC=Y` is **gross**; CN uses same method via **gap** (not blind `DEDUCT`)
 - [ ] Credit note / debit note sign handling (`CN`, `DN`)
 - [ ] `PAYSTAT` legend and AR aging rules
 - [ ] Difference between `PRICE` / `XPRICE` / `LAST_PURCHASE_COST`
@@ -528,6 +576,8 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 | 2026-07-25 | Confirmed dashboard revenue = before tax; split VAT vs non-VAT sales; tax reported separately | Owner |
 | 2026-07-25 | Correction: sales type = `ISVAT`; `TAXIC` only means keyed incl/excl VAT (not the VAT-sales flag) | Owner |
 | 2026-07-25 | Rule: if `ISVAT=N`, `TAXIC` must be `N` or ignored; never `/1.07` on non-VAT lines | Owner |
+| 2026-07-25 | Bill `DEDUCT`/`DISCOUNT` not in line `AMOUNT`; must allocate to lines for reconcile | Owner |
+| 2026-07-25 | Lock deduct alloc: proportional by `AMOUNT`; VAT-bill deduct is gross; CN allocate observed gap only | Owner + data |
 
 ---
 
