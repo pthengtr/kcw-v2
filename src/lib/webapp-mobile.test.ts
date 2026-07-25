@@ -84,4 +84,18 @@ describe("Webapp mobile layout", () => {
     expect(layout).toContain("export const viewport");
     expect(layout).toContain('width: "device-width"');
   });
+
+  it("keeps BI shell and sales overview usable on narrow screens", () => {
+    const shell = read("src/components/bi/BiShell.tsx");
+    expect(shell).toContain("md:hidden");
+    expect(shell).toContain("hidden w-64 shrink-0 md:block");
+    expect(shell).toContain('aria-label="เปิดรายการรายงาน"');
+    expect(shell).toContain("SheetContent");
+
+    const sales = read("src/components/bi/sales/SalesOverviewPage.tsx");
+    expect(sales).toContain("grid-cols-1");
+    expect(sales).toContain("sm:grid-cols-2");
+    expect(sales).toContain("xl:grid-cols-4");
+    expect(sales).not.toContain("w-[1000px]");
+  });
 });
