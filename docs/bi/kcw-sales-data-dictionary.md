@@ -88,7 +88,7 @@ One row per product (or charge line) on a sales bill. Use for product mix, quant
 | `BILLTYPE` | Raw bill type code | TBD | Seen: `0`, `1`, `2` (and rare others on bills) |
 | `BILLTYPE_STD` | Standardized bill type | TBD | Seen: `TAR`, `TF`, `TFV`, `TAD`, `TD`, `TR`, `DN`, `CN`, `UNKNOWN` — meanings TBD |
 | `JOURMODE` | Journal / posting mode | TBD | Seen: `0`, `1`, `2` |
-| `BCODE` | Product / item code | Confirmed (name) | Item SKU-like code |
+| `BCODE` | Product / item code | Confirmed (name) | Item SKU-like code. First 2 digits = category; see [ICMAS dictionary](./kcw-icmas-data-dictionary.md) for `CODE1` part-type letters |
 | `DETAIL` | Product description | Confirmed | Thai/English text |
 | `QTY` | Quantity sold | Confirmed | Text numeric |
 | `UI` | Unit of measure | Confirmed | e.g. `หน่วย`, `ชุด` |
