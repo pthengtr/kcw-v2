@@ -7,6 +7,13 @@ Living docs for BI dashboards built on Supabase schemas `raw_kcw` and `curated_k
 | File | Purpose |
 |------|---------|
 | [kcw-sales-data-dictionary.md](./kcw-sales-data-dictionary.md) | Sales naming, grain, joins, codes, billing rules |
+| [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` overview dashboard |
+
+## App entry
+
+- UI: `/bi/sales` (shell + side panel for future reports)
+- API: `GET /api/bi/sales/overview?from=&to=&branch=`
+- Auth: admin-only (`requireAdmin` + service role RPC)
 
 ## How we maintain this
 

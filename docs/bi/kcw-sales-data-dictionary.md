@@ -608,9 +608,17 @@ Filters (Confirmed):
 vat_collected (separate) = sum("TAX"::numeric) on VAT docs only
 do NOT use "VAT" as money (it is the 7% rate)
 
-VAT vs non-VAT split at bill level:
-  - NON_VAT: UNKNOWN K/C series (and other TAXIC=N / ISVAT=N includes)
-  - VAT: TAD, TD, TR, legacy UNKNOWN IV/TA, VAT CN/DN (or join lines.ISVAT)
+VAT vs non-VAT split at bill level (dashboard v1 — Confirmed for overview RPC):
+  - VAT: BILLTYPE_STD IN (TAD, TD, TR)
+        OR CN/DN with bill TAX <> 0
+        OR UNKNOWN billno ~* '^(IV|TA)'
+  - NON_VAT: everything else in the revenue include set (mainly UNKNOWN K/C)
+
+Channel (dashboard v1):
+  - ONLINE: TAD, or CN with billno ~* '^CNTAD'
+  - COUNTER: other included bill types
+
+RPC: public.fn_bi_sales_overview(from, to, branch) — see docs/bi/sql/
 ```
 
 ### 8.3 Canonical revenue SQL for interactive dashboards
@@ -748,6 +756,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 | 2026-07-25 | PO meanings: CN→original bill; TAD→online txn id | Owner + data |
 | 2026-07-25 | Clarify canonical revenue SQL as filterable base grain for VAT toggles | Cursor |
 | 2026-07-25 | MTP = pack→smallest-unit multiplier; unit price = PRICE/MTP | Owner + data |
+| 2026-07-25 | Ship sales overview dashboard + `fn_bi_sales_overview` (bill BEFORETAX; VAT/branch/channel splits) | Cursor |
 
 ---
 

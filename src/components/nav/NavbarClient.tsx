@@ -28,6 +28,7 @@ const navLinks = [
   { href: "/home", label: "หน้าแรก" },
   { href: "/reminder", label: "เตือนโอน" },
   { href: "/party", label: "รายชื่อคู่ค้า" },
+  { href: "/bi/sales", label: "BI" },
 ];
 
 const expenseLinks = (branches: BranchType[]) => [
