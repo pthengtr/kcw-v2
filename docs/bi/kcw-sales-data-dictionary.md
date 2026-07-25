@@ -257,15 +257,17 @@ vat_baht        = AMOUNT_NUM - amount_excl_vat
 - `sum(line AMOUNT)` matches either before or after (they are nearly equal)
 - Bill `"VAT"` / `"TAX"` usually 0
 
-#### BI implication (proposed, not fully locked)
+#### BI implication (Confirmed — owner, 2026-07-25)
 
-| Need | Prefer |
-|------|--------|
-| Revenue **including VAT** (gross) | Line `AMOUNT_NUM`, or bill `AFTERTAX` |
-| Revenue **excluding VAT** (net) | Bill `BEFORETAX`, or `AMOUNT_NUM / 1.07` when `TAXIC=Y`, else `AMOUNT_NUM` |
-| VAT baht | Bill `TAX` (not `"VAT"`) |
+| Need | Prefer | Status |
+|------|--------|--------|
+| **Official sales revenue** | Always **net / before VAT** | Confirmed |
+| Bill-level revenue | `BEFORETAX` | Confirmed |
+| Line-level revenue | `CASE WHEN TAXIC='Y' THEN AMOUNT_NUM/1.07 ELSE AMOUNT_NUM END` | Confirmed |
+| VAT baht (separate concern) | Bill `TAX` (not `"VAT"`) — report separately, not inside revenue | Confirmed |
+| Sales type split | **VAT sales** vs **non-VAT sales** (see §8.0) | Confirmed |
 
-**Still TBD:** which of gross vs net is the official “sales revenue” KPI for the dashboard.
+Dashboard must show revenue as before-tax and break sales into VAT / non-VAT types. Tax collection is a separate metric/problem from revenue.
 
 ### 6.1 `BILLTYPE` (raw)
 
@@ -328,12 +330,14 @@ vat_baht        = AMOUNT_NUM - amount_excl_vat
 
 1. **Text numerics** — Always cast; do not sum text blindly in some tools.
 2. **Quoted identifiers** — `"BRANCH"`, `"BILLNO"`, etc.
-3. **`BILLTYPE_STD = UNKNOWN` is common** — do not treat “UNKNOWN” as rare dirty data without a rule.
-4. **Bill orphans (29 HQ)** — headers with no lines: many `BILLTYPE = R` / `&…` numbers, or `LINES = 0` / null amounts. Decide whether to exclude from bill counts.
-5. **`ACCTNO` vs `ACCT_NO` on lines** — two similarly named fields; meanings TBD.
-6. **Cash customers** — bill `ACCTNAME = 'เงินสด'` often appears on cash sales.
-7. **Cost gaps** — `COST_STATUS = UNKNOWN` (~13k lines); margin metrics need a policy.
-8. **Staging tables** — do not report from `*_stg`.
+3. **`"VAT"` is the rate; `"TAX"` is baht** — easy to misuse in VAT reports.
+4. **`TAXIC=Y` line `AMOUNT` is gross** — divide by 1.07 for net; do not also subtract bill `"VAT"`.
+5. **`BILLTYPE_STD = UNKNOWN` is common** — do not treat “UNKNOWN” as rare dirty data without a rule.
+6. **Bill orphans (29 HQ)** — headers with no lines: many `BILLTYPE = R` / `&…` numbers, or `LINES = 0` / null amounts. Decide whether to exclude from bill counts.
+7. **`ACCTNO` vs `ACCT_NO` on lines** — two similarly named fields; meanings TBD.
+8. **Cash customers** — bill `ACCTNAME = 'เงินสด'` often appears on cash sales.
+9. **Cost gaps** — `COST_STATUS = UNKNOWN` (~13k lines); margin metrics need a policy.
+10. **Staging tables** — do not report from `*_stg`.
 
 ---
 
@@ -341,24 +345,51 @@ vat_baht        = AMOUNT_NUM - amount_excl_vat
 
 > Fill formulas here as we agree. Until marked **Confirmed**, do not treat as official KPIs.
 
-### 8.1 Revenue (line-based) — TBD (VAT mechanics Confirmed)
+### 8.0 Official sales principles (Confirmed)
+
+1. **Revenue = before tax (net).** Never use `AFTERTAX` / raw tax-included `AMOUNT` as the main sales KPI.
+2. **Tax is separate.** VAT baht (`TAX`) may appear on a tax report / secondary card, not mixed into revenue.
+3. **Two sales types must be visible:** VAT sales vs non-VAT sales (driven by `TAXIC`).
+
+| Sales type | Rule | Revenue expression |
+|------------|------|--------------------|
+| **VAT sales** | `TAXIC = 'Y'` | Bill: `BEFORETAX`. Line: `AMOUNT_NUM / 1.07` |
+| **Non-VAT sales** | `TAXIC = 'N'` (or not `Y`) | Bill: `BEFORETAX` (≈ `AFTERTAX`). Line: `AMOUNT_NUM` |
+
+Recommended dashboard cuts:
+
+- Total net revenue
+- Net revenue — VAT sales
+- Net revenue — non-VAT sales
+- (Optional, separate) VAT collected = `sum(TAX)` on VAT bills
+
+### 8.1 Revenue (line-based) — Confirmed net formula; filters TBD
 
 ```text
-Gross (incl VAT):  sum(AMOUNT_NUM)
-Net (excl VAT):    sum( CASE WHEN TAXIC='Y' THEN AMOUNT_NUM/1.07 ELSE AMOUNT_NUM END )
-                   -- or join bill TAXIC if using bill flag
+net_line_amount =
+  CASE WHEN "TAXIC" = 'Y' THEN "AMOUNT_NUM"::numeric / 1.07
+       ELSE "AMOUNT_NUM"::numeric
+  END
+
+revenue = sum(net_line_amount)
+split by: CASE WHEN "TAXIC" = 'Y' THEN 'VAT' ELSE 'NON_VAT' END
+
 Filters: TBD (IS_VALID, CANCELED, BILLTYPE_STD, JOURMODE, …)
 Sign rules for CN/returns: TBD
-Official KPI = gross or net?: TBD
+Prefer bill TAXIC when reconciling to bill headers if line/bill flags disagree.
 ```
 
-### 8.2 Revenue (bill-based) — TBD (VAT mechanics Confirmed)
+### 8.2 Revenue (bill-based) — Confirmed net formula; filters TBD
 
 ```text
-Gross: sum(AFTERTAX)
-Net:   sum(BEFORETAX)
-VAT:   sum(TAX)          -- NOT sum(VAT); VAT is the rate
-When to use bill vs line totals: TBD (should reconcile when TAXIC handled correctly)
+revenue = sum("BEFORETAX"::numeric)
+split by: CASE WHEN "TAXIC" = 'Y' THEN 'VAT' ELSE 'NON_VAT' END
+
+vat_collected (separate) = sum("TAX"::numeric)   -- only meaningful for TAXIC=Y
+do NOT use "VAT" as money (it is the 7% rate)
+
+Filters: TBD (CANCELED, BILLTYPE_STD, …)
+Bill vs line: both should use net; expect close reconcile when filters align.
 ```
 
 ### 8.3 Bill count — TBD
@@ -385,10 +416,10 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 ## 9. Open questions (working list)
 
 - [x] `TAXIC` / `ISVAT` vs `BEFORETAX` / `AFTERTAX` / line `AMOUNT` — Confirmed in §6.0
+- [x] Official revenue KPI = **net / before tax**; split VAT vs non-VAT sales — Confirmed in §8.0
 - [ ] Exact meaning of each `BILLTYPE` / `BILLTYPE_STD` code and which count as sales revenue
 - [ ] Meaning of `JOURMODE` 0/1/2 and whether BI should filter to one mode
-- [ ] Official revenue KPI: **gross** (`AFTERTAX` / incl-VAT `AMOUNT`) vs **net** (`BEFORETAX`)
-- [ ] How to treat ~12k lines with `TAXIC=N` but `ISVAT=Y`
+- [ ] How to treat ~12k lines with `TAXIC=N` but `ISVAT=Y` (classify as VAT or non-VAT?)
 - [ ] Credit note / debit note sign handling (`CN`, `DN`)
 - [ ] `PAYSTAT` legend and AR aging rules
 - [ ] Difference between `PRICE` / `XPRICE` / `LAST_PURCHASE_COST`
@@ -406,6 +437,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 | 2026-07-25 | Initial dictionary from `fact_sales_all` + `fact_sales_bills_all` inspection | Cursor + owner |
 | 2026-07-25 | Rechecked bills after upload fix: SYP headers present; join coverage complete for both branches | Cursor |
 | 2026-07-25 | Confirmed VAT/TAXIC rules: `TAXIC=Y` ⇒ line `AMOUNT` is VAT-inclusive; bill `"VAT"` is rate, `"TAX"` is baht | Cursor + owner |
+| 2026-07-25 | Confirmed dashboard revenue = before tax; split VAT vs non-VAT sales; tax reported separately | Owner |
 
 ---
 
