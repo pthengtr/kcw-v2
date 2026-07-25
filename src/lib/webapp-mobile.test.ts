@@ -99,6 +99,8 @@ describe("Webapp mobile layout", () => {
     expect(sales).not.toContain("w-[1000px]");
     expect(sales).not.toContain('"today"');
     expect(sales).toContain("SalesPeriodTable");
+    expect(sales).toContain('value="month"');
+    expect(sales).toContain('type="month"');
 
     const split = read("src/components/bi/sales/SalesSplitChart.tsx");
     expect(split).not.toContain("<Legend");

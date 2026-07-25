@@ -17,12 +17,34 @@ export function bangkokTodayIso(now = new Date()): string {
   return bangkokDateFmt.format(now);
 }
 
+export function bangkokCurrentMonthIso(now = new Date()): string {
+  return bangkokTodayIso(now).slice(0, 7);
+}
+
+/** Inclusive end date for YYYY-MM, capped at Bangkok today for the current month. */
+export function monthRange(monthIso: string, now = new Date()): DateRange {
+  const match = /^(\d{4})-(\d{2})$/.exec(monthIso.trim());
+  const today = bangkokTodayIso(now);
+  if (!match) {
+    return { from: `${today.slice(0, 7)}-01`, to: today };
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const from = `${match[1]}-${match[2]}-01`;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const monthEnd = `${match[1]}-${match[2]}-${String(lastDay).padStart(2, "0")}`;
+  const to = monthIso === today.slice(0, 7) && monthEnd > today ? today : monthEnd;
+  return { from, to };
+}
+
 export function resolvePeriodRange(
   preset: BiPeriodPreset,
   customFrom?: string,
   customTo?: string,
   now = new Date(),
-  customMode: BiCustomDateMode = "range"
+  customMode: BiCustomDateMode = "range",
+  customMonth?: string
 ): DateRange {
   const today = bangkokTodayIso(now);
 
@@ -32,6 +54,10 @@ export function resolvePeriodRange(
 
   if (preset === "ytd") {
     return { from: `${today.slice(0, 4)}-01-01`, to: today };
+  }
+
+  if (customMode === "month") {
+    return monthRange(customMonth || bangkokCurrentMonthIso(now), now);
   }
 
   const from = customFrom?.trim() || today;

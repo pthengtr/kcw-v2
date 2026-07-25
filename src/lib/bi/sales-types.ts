@@ -2,7 +2,7 @@ export type BiBranchFilter = "ALL" | "HQ" | "SYP" | "ONLINE";
 
 export type BiPeriodPreset = "month" | "ytd" | "custom";
 
-export type BiCustomDateMode = "single" | "range";
+export type BiCustomDateMode = "single" | "month" | "range";
 
 export type BiSplitRow = {
   key: string;
