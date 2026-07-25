@@ -204,7 +204,28 @@ ICMAS `UI1`/`UI2`/`MTP2` are the **master** pack definition. They often align bu
 
 ---
 
-## 6. `SIZE1` / `SIZE2` / `SIZE3` by `CODE1` (Confirmed)
+## 6. On-hand stock: `QTYOH*` (Confirmed)
+
+| Field | Meaning | Status | Notes |
+|-------|---------|--------|-------|
+| **`QTYOH2`** | **Remaining stock / คงเหลือ** (use this) | Confirmed | Sole field for on-hand inventory KPIs |
+| `QTYOH1` | Not used for remaining stock | Confirmed (do not use) | Populated on many HQ rows, but **not** the business remaining-stock quantity |
+| `QTYOHA` / `QTYOHB` / `QTYOHC` | Unused for remaining stock | Confirmed (do not use) | Effectively empty / zero in HQ ICMAS |
+
+```sql
+on_hand = nullif(trim("QTYOH2"), '')::numeric   -- remaining stock only
+-- do NOT sum/prefer QTYOH1, QTYOHA, QTYOHB, QTYOHC for คงเหลือ
+```
+
+Notes:
+
+- Stock is per ICMAS branch master: HQ rows → HQ on-hand; SYP rows → SYP on-hand. Do not mix without labeling branch.
+- Unit of `QTYOH2` relative to `UI1`/`UI2` — still **TBD** (treat as the system’s working balance; do not convert via `MTP2` unless confirmed later).
+- Related unused/TBD qty family: `QTYBEG*`, `QTYMIN`, `QTYMAX`, `QTYGET`, `QTYPUT`.
+
+---
+
+## 7. `SIZE1` / `SIZE2` / `SIZE3` by `CODE1` (Confirmed)
 
 Size columns are **dimension slots**; their meaning depends on `CODE1`.
 
@@ -232,7 +253,7 @@ Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 /
 
 ---
 
-## 7. Other ICMAS codes (queue)
+## 8. Other ICMAS codes (queue)
 
 | Field | Meaning | Status |
 |-------|---------|--------|
@@ -240,17 +261,20 @@ Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 /
 | `XCODE` / `ACODE` | TBD | TBD |
 | `MAIN` / `SUB` / `PART` | Aligns with BCODE structure; names TBD | Inferred |
 | `CATEGORY_CODE` / `left(BCODE,2)` | หมวดสินค้า KACC9 | Confirmed — full legend in §2.1 |
+| `QTYOH2` | Remaining stock / คงเหลือ | Confirmed — §6 |
 | `DESCR`, `BRAND`, `MODEL` | Description / brand / model | Confirmed (name) |
 
 ---
 
-## 8. Open questions
+## 9. Open questions
 
 - [x] `CODE1` letter meanings (A/C/D/E/F/G/I/K/L/O/P/Q/R) — Confirmed
 - [x] `PCODE` = เบอร์แท้; `MCODE` = เบอร์โรงงาน — Confirmed
 - [x] `UI1`/`UI2`/`MTP2` + `PRICEx`/`PRICEMx` pack & price rules — Confirmed
 - [x] `SIZE1–3` meanings by `CODE1` (A/C/D/E/F/G/I/K/L/O/P) — Confirmed
 - [x] หมวดสินค้า `CATEGORY_CODE` / first 2 digits of `BCODE` (KACC9) — Confirmed §2.1
+- [x] Remaining stock = `QTYOH2` only — Confirmed §6
+- [ ] Unit of `QTYOH2` vs `UI1` / `UI2` / `MTP2`
 - [ ] `SIZE*` meanings for `CODE1` = `Q`, `R`
 - [ ] Name for rare code `88` (in Drive dim, not in KACC9 list)
 - [ ] Meanings of `CODE2`–`CODE4`, `XCODE`, `ACODE`
@@ -260,7 +284,7 @@ Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 /
 
 ---
 
-## 9. Changelog
+## 10. Changelog
 
 | Date | Change | By |
 |------|--------|----|
@@ -268,3 +292,4 @@ Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 /
 | 2026-07-26 | Lock `PCODE`=เบอร์แท้, `MCODE`=เบอร์โรงงาน | Owner |
 | 2026-07-26 | Lock UI/MTP/PRICE pack rules + SIZE1–3 meanings by CODE1 | Owner |
 | 2026-07-26 | Lock KACC9 หมวดสินค้า names for BCODE first 2 digits | Owner |
+| 2026-07-26 | Lock remaining stock = `QTYOH2` only | Owner |
