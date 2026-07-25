@@ -95,11 +95,32 @@ END AS code1_category
 
 ---
 
-## 4. Other ICMAS codes (queue)
+## 4. Part numbers: `PCODE` / `MCODE` (Confirmed)
+
+| Field | Meaning | Status | Notes |
+|-------|---------|--------|-------|
+| `PCODE` | **เบอร์แท้** (genuine / OEM / maker part no.) | Confirmed | Often looks like OEM catalog no. (`203-07150B`, `1121210010`). Some dirty values exist (`ราคา 09/2008`, `69ซม.`) — treat as free text, not always a clean PN |
+| `MCODE` | **เบอร์โรงงาน** (factory / internal supplier part no.) | Confirmed | Factory/cross-ref number (`HTC105-135-14`, `01A-BAD146-4B`) |
+
+Examples (HQ ICMAS):
+
+| BCODE | DESCR | PCODE (เบอร์แท้) | MCODE (เบอร์โรงงาน) |
+|-------|-------|------------------|---------------------|
+| 01010044 | ซีลข้อเหวี่ยง | MO-1484S | HTC105-135-14 |
+| 01010045 | หม้อลมเบรค | 203-07150B | 01A-BAD146-4B |
+| 01010080 | ซีลล้อหน้า | AAA077-AO | TAY75-115-20.5 |
+
+**BI use:** search / match alternate part numbers; do not use as grain key (use `BCODE`).  
+Still TBD: exact difference vs `OEM` flag / `XCODE` / `ACODE`.
+
+---
+
+## 5. Other ICMAS codes (queue)
 
 | Field | Meaning | Status |
 |-------|---------|--------|
 | `CODE2` / `CODE3` / `CODE4` | TBD | TBD |
+| `XCODE` / `ACODE` | TBD | TBD |
 | `MAIN` / `SUB` / `PART` | Aligns with BCODE structure; names TBD | Inferred |
 | `CATEGORY_CODE` (Drive dim) | `left(BCODE,2)` | Confirmed pattern; **labels TBD** |
 | `UI1`…`UI4`, `MTP2`…`MTP4` | Pack units / multipliers | Related to sales line `UI` / `MTP` — detail TBD |
@@ -107,18 +128,20 @@ END AS code1_category
 
 ---
 
-## 5. Open questions
+## 6. Open questions
 
 - [x] `CODE1` letter meanings (A/C/D/E/F/G/I/K/L/O/P/Q/R) — Confirmed
+- [x] `PCODE` = เบอร์แท้; `MCODE` = เบอร์โรงงาน — Confirmed
 - [ ] Thai/English names for `CATEGORY_CODE` (`01`…`91`)
-- [ ] Meanings of `CODE2`–`CODE4`
+- [ ] Meanings of `CODE2`–`CODE4`, `XCODE`, `ACODE`
 - [ ] Which master to prefer when HQ and SYP ICMAS disagree on the same `BCODE`
 - [ ] Whether to curate `dim_code1` into Supabase `curated_kcw`
 
 ---
 
-## 6. Changelog
+## 7. Changelog
 
 | Date | Change | By |
 |------|--------|----|
 | 2026-07-26 | Start ICMAS dictionary; lock `CODE1` category letters | Owner |
+| 2026-07-26 | Lock `PCODE`=เบอร์แท้, `MCODE`=เบอร์โรงงาน | Owner |
