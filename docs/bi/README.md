@@ -7,6 +7,7 @@ Living docs for BI dashboards built on Supabase schemas `raw_kcw` and `curated_k
 | File | Purpose |
 |------|---------|
 | [kcw-sales-data-dictionary.md](./kcw-sales-data-dictionary.md) | Sales naming, grain, joins, codes, billing rules |
+| [kcw-icmas-data-dictionary.md](./kcw-icmas-data-dictionary.md) | Product master (ICMAS): `BCODE`, `CODE1`, categories |
 | [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` overview dashboard |
 
 ## App entry
