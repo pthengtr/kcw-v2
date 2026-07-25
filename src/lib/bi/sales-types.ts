@@ -1,6 +1,8 @@
 export type BiBranchFilter = "ALL" | "HQ" | "SYP";
 
-export type BiPeriodPreset = "today" | "month" | "ytd" | "custom";
+export type BiPeriodPreset = "month" | "ytd" | "custom";
+
+export type BiCustomDateMode = "single" | "range";
 
 export type BiSplitRow = {
   key: string;
