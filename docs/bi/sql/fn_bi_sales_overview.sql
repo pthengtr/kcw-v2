@@ -23,7 +23,7 @@ BEGIN
     RAISE EXCEPTION 'Invalid date range';
   END IF;
 
-  IF p_branch IS NOT NULL AND p_branch NOT IN ('HQ', 'SYP') THEN
+  IF p_branch IS NOT NULL AND p_branch NOT IN ('HQ', 'SYP', 'ONLINE') THEN
     RAISE EXCEPTION 'Invalid branch';
   END IF;
 
@@ -34,7 +34,13 @@ BEGIN
   WITH base AS (
     SELECT
       left(b."BILLDATE", 10)::date AS bill_date,
-      b."BRANCH" AS branch,
+      -- BI reporting branch: TAD/CNTAD are ONLINE, not HQ store
+      CASE
+        WHEN COALESCE(b."BILLTYPE_STD", '') = 'TAD' THEN 'ONLINE'
+        WHEN COALESCE(b."BILLTYPE_STD", '') = 'CN'
+          AND b."BILLNO" ~* '^CNTAD' THEN 'ONLINE'
+        ELSE b."BRANCH"
+      END AS branch,
       b."BILLNO" AS bill_no,
       COALESCE(NULLIF(b."BILLTYPE_STD", ''), 'UNKNOWN') AS billtype_std,
       CASE
@@ -59,10 +65,19 @@ BEGIN
       AND COALESCE(b."BILLTYPE_STD", '') NOT IN ('TF', 'TFV', 'TAR')
       AND b."BILLDATE" >= p_from::text
       AND b."BILLDATE" < (p_to + 1)::text
-      AND (p_branch IS NULL OR b."BRANCH" = p_branch)
   ),
-  prev AS (
+  filtered AS (
+    SELECT * FROM base
+    WHERE p_branch IS NULL OR branch = p_branch
+  ),
+  prev_base AS (
     SELECT
+      CASE
+        WHEN COALESCE(b."BILLTYPE_STD", '') = 'TAD' THEN 'ONLINE'
+        WHEN COALESCE(b."BILLTYPE_STD", '') = 'CN'
+          AND b."BILLNO" ~* '^CNTAD' THEN 'ONLINE'
+        ELSE b."BRANCH"
+      END AS branch,
       COALESCE(NULLIF(replace(b."BEFORETAX", ',', ''), '')::numeric, 0) AS revenue_net,
       COALESCE(NULLIF(replace(b."TAX", ',', ''), '')::numeric, 0) AS vat_baht
     FROM curated_kcw.fact_sales_bills_all b
@@ -71,7 +86,11 @@ BEGIN
       AND COALESCE(b."BILLTYPE_STD", '') NOT IN ('TF', 'TFV', 'TAR')
       AND b."BILLDATE" >= v_prev_from::text
       AND b."BILLDATE" < (v_prev_to + 1)::text
-      AND (p_branch IS NULL OR b."BRANCH" = p_branch)
+  ),
+  prev AS (
+    SELECT revenue_net, vat_baht
+    FROM prev_base
+    WHERE p_branch IS NULL OR branch = p_branch
   ),
   summary AS (
     SELECT
@@ -82,7 +101,7 @@ BEGIN
         THEN COALESCE(sum(revenue_net), 0) / count(*)
         ELSE 0
       END AS avg_bill
-    FROM base
+    FROM filtered
   ),
   prev_summary AS (
     SELECT
@@ -93,27 +112,27 @@ BEGIN
   ),
   by_sales_type AS (
     SELECT sales_type AS key, sum(revenue_net) AS revenue_net, count(*)::int AS bill_count
-    FROM base
+    FROM filtered
     GROUP BY 1
   ),
   by_branch AS (
     SELECT branch AS key, sum(revenue_net) AS revenue_net, count(*)::int AS bill_count
-    FROM base
+    FROM filtered
     GROUP BY 1
   ),
   by_channel AS (
     SELECT channel AS key, sum(revenue_net) AS revenue_net, count(*)::int AS bill_count
-    FROM base
+    FROM filtered
     GROUP BY 1
   ),
   by_billtype AS (
     SELECT billtype_std AS key, sum(revenue_net) AS revenue_net, count(*)::int AS bill_count
-    FROM base
+    FROM filtered
     GROUP BY 1
   ),
   daily AS (
     SELECT bill_date::text AS period, sum(revenue_net) AS revenue_net, count(*)::int AS bill_count
-    FROM base
+    FROM filtered
     GROUP BY 1
     ORDER BY 1
   ),
@@ -121,7 +140,7 @@ BEGIN
     SELECT to_char(date_trunc('month', bill_date), 'YYYY-MM') AS period,
            sum(revenue_net) AS revenue_net,
            count(*)::int AS bill_count
-    FROM base
+    FROM filtered
     GROUP BY 1
     ORDER BY 1
   )
@@ -189,7 +208,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fn_bi_sales_overview(date, date, text) IS
-  'Sales BI overview: net BEFORETAX revenue with VAT/branch/channel splits per docs/bi.';
+  'Sales BI overview: net BEFORETAX; reporting_branch HQ/SYP/ONLINE (TAD/CNTAD not in HQ).';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_sales_overview(date, date, text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.fn_bi_sales_overview(date, date, text) TO authenticated;

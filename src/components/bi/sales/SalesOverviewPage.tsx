@@ -205,6 +205,7 @@ export default function SalesOverviewPage() {
                   <SelectItem value="ALL">ทุกสาขา</SelectItem>
                   <SelectItem value="HQ">HQ</SelectItem>
                   <SelectItem value="SYP">SYP</SelectItem>
+                  <SelectItem value="ONLINE">ออนไลน์</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -292,7 +293,7 @@ export default function SalesOverviewPage() {
               labels={SALES_TYPE_LABELS}
             />
             <SalesSplitChart
-              title="HQ vs SYP"
+              title="HQ / SYP / ออนไลน์"
               rows={overview.by_branch}
               labels={BRANCH_LABELS}
             />
@@ -347,9 +348,14 @@ export default function SalesOverviewPage() {
                 <span className="font-medium text-slate-800">
                   {formatBaht(splitAmount(overview.by_branch, "SYP"))}
                 </span>
+                {" · "}
+                ออนไลน์{" "}
+                <span className="font-medium text-slate-800">
+                  {formatBaht(splitAmount(overview.by_branch, "ONLINE"))}
+                </span>
               </li>
               <li>
-                ออนไลน์{" "}
+                ช่องทาง ออนไลน์{" "}
                 <span className="font-medium text-slate-800">
                   {formatBaht(splitAmount(overview.by_channel, "ONLINE"))}
                 </span>

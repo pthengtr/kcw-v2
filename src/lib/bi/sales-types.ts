@@ -1,4 +1,4 @@
-export type BiBranchFilter = "ALL" | "HQ" | "SYP";
+export type BiBranchFilter = "ALL" | "HQ" | "SYP" | "ONLINE";
 
 export type BiPeriodPreset = "today" | "month" | "ytd" | "custom";
 

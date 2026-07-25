@@ -62,7 +62,8 @@ Bill headers with **no** matching lines: **29** (all HQ). Mostly odd headers —
 | Column casing | Business columns are **UPPERCASE**; quote in SQL: `"BILLNO"` | Confirmed |
 | Data types | Nearly all business fields stored as **`text`** (including amounts) | Confirmed |
 | Numeric use | Cast with care, e.g. `"AMOUNT"::numeric`; prefer `"AMOUNT_NUM"` / `"PRICE_NUM"` on lines when present | Confirmed / prefer |
-| Branches | Known values: `HQ`, `SYP` | Confirmed |
+| Branches (source) | Stored values: `HQ`, `SYP` | Confirmed |
+| Branches (BI reporting) | `HQ`, `SYP`, **`ONLINE`** | Confirmed — see [§6.2.2](#622-reporting-branch-online-vs-hq) |
 | Staging vs prod | Report from non-`_stg` tables | Confirmed |
 | RLS | Currently **disabled** on curated sales tables — treat as private BI data | Confirmed (security follow-up TBD) |
 
@@ -443,7 +444,7 @@ Case note: CN `PO` values occasionally differ in casing (`tfv6808-012` vs `TFV�
 | Code | Meaning | Revenue? | Data check |
 |------|---------|----------|------------|
 | `UNKNOWN` | Mixed unmapped docs — see billno families below | **Include** (split VAT vs non-VAT by family / `TAXIC`/`ISVAT`) | K/C = non-VAT; legacy `IV…`/`TA…` = VAT |
-| `TAD` | **Online sales** | **Include** | Mostly `TAXIC=Y`, `CASHED=N`, has `DUEAMT`/`TERM` |
+| `TAD` | **Online sales** | **Include** as **`ONLINE` reporting branch** (not HQ) | Stored `BRANCH=HQ` in source, but BI must **remove from HQ** so store sales are not overstated. Mostly `TAXIC=Y`, `CASHED=N` |
 | `TD` | **VAT credit sales** | **Include** | **100% `CASHED=N`** (2,557/2,557); usually `TERM≈30`, `DUEAMT>0` |
 | `TR` | **VAT cash sales** | **Include** | **100% `CASHED=Y`** (1,255/1,255); `DUEAMT=0` |
 | `DN` | Debit note | **Include** (sign +) | Confirmed name |
@@ -469,6 +470,29 @@ Case note: CN `PO` values occasionally differ in casing (`tfv6808-012` vs `TFV�
 | `TAR` | No — max billdate `2026-02-28` | Script-generated reopen; still **exclude** from revenue |
 | `CNTAR` | None found in bills | Script-side; exclude if/when present |
 | `IV…` / `TA…` UNKNOWN | No — ended 2024-12 | Historical VAT; **keep & count as VAT** |
+
+### 6.2.2 Reporting branch: ONLINE vs HQ (Confirmed)
+
+Source data stores all `TAD` (and related `CNTAD…` credit notes) as `"BRANCH" = 'HQ'`, but economically they are **online channel sales**, not HQ counter/store sales.
+
+| Source | BI `reporting_branch` | In HQ store total? |
+|--------|----------------------|--------------------|
+| `BILLTYPE_STD = 'TAD'` | **`ONLINE`** | **No** |
+| `CN` with billno `CNTAD…` | **`ONLINE`** | **No** |
+| Other included HQ bills | `HQ` | Yes |
+| SYP bills | `SYP` | n/a |
+
+```text
+reporting_branch =
+  CASE
+    WHEN BILLTYPE_STD = 'TAD' THEN 'ONLINE'
+    WHEN BILLTYPE_STD = 'CN' AND BILLNO ~* '^CNTAD' THEN 'ONLINE'
+    ELSE BRANCH   -- HQ or SYP
+  END
+```
+
+Dashboard branch filter / HQ vs SYP cards must use **`reporting_branch`**, not raw `"BRANCH"`.  
+Company-wide total (All) still includes ONLINE + HQ + SYP.
 
 ### 6.2.1 Revenue include / exclude (Confirmed)
 
@@ -614,11 +638,15 @@ VAT vs non-VAT split at bill level (dashboard v1 — Confirmed for overview RPC)
         OR UNKNOWN billno ~* '^(IV|TA)'
   - NON_VAT: everything else in the revenue include set (mainly UNKNOWN K/C)
 
-Channel (dashboard v1):
-  - ONLINE: TAD, or CN with billno ~* '^CNTAD'
-  - COUNTER: other included bill types
+Reporting branch (dashboard v1 — Confirmed):
+  - ONLINE: TAD, or CN with billno ~* '^CNTAD'  (even though source BRANCH=HQ)
+  - HQ / SYP: raw BRANCH for everything else
+  - Branch filter + by_branch splits use reporting_branch so HQ is not inflated
 
-RPC: public.fn_bi_sales_overview(from, to, branch) — see docs/bi/sql/
+Channel (optional dual view):
+  - ONLINE vs COUNTER (same ONLINE rule); COUNTER = HQ+SYP store docs
+
+RPC: public.fn_bi_sales_overview(from, to, branch) — branch in (HQ, SYP, ONLINE); see docs/bi/sql/
 ```
 
 ### 8.3 Canonical revenue SQL for interactive dashboards
@@ -726,6 +754,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 - [x] Legacy `UNKNOWN` `IV…`/`TA…` count as VAT revenue (historical; not recent)
 - [x] `PO` on `CN` = original bill; `PO` on `TAD` = online transaction id
 - [x] `MTP` = smallest-unit multiplier; unit price = `PRICE/MTP` or `AMOUNT/(QTY*MTP)`
+- [x] `TAD` / `CNTAD` → BI reporting branch `ONLINE` (exclude from HQ store sales)
 - [x] `ISVAT=N` + `TAXIC=Y` — invalid; ignore `TAXIC` (Confirmed)
 - [x] Line discounts already in `AMOUNT`; bill `DEDUCT`/`DISCOUNT` must be allocated to lines (Confirmed need)
 - [x] Allocation = proportional by line `AMOUNT`; `DEDUCT` on `TAXIC=Y` is **gross**; CN uses same method via **gap** (not blind `DEDUCT`)
@@ -756,6 +785,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 | 2026-07-25 | PO meanings: CN→original bill; TAD→online txn id | Owner + data |
 | 2026-07-25 | Clarify canonical revenue SQL as filterable base grain for VAT toggles | Cursor |
 | 2026-07-25 | MTP = pack→smallest-unit multiplier; unit price = PRICE/MTP | Owner + data |
+| 2026-07-25 | TAD/CNTAD reporting_branch=ONLINE; remove from HQ totals | Owner |
 | 2026-07-25 | Ship sales overview dashboard + `fn_bi_sales_overview` (bill BEFORETAX; VAT/branch/channel splits) | Cursor |
 
 ---
