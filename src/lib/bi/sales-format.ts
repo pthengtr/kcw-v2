@@ -70,6 +70,7 @@ export const SALES_TYPE_LABELS: Record<string, string> = {
 export const BRANCH_LABELS: Record<string, string> = {
   HQ: "HQ",
   SYP: "SYP",
+  ONLINE: "ออนไลน์",
 };
 
 export const CHANNEL_LABELS: Record<string, string> = {
