@@ -21,7 +21,7 @@ Last reviewed: 2026-07-26
 | `raw_kcw.raw_hq_icmas_products` | 1 row ≈ 1 product (`BCODE`) at HQ | Product attributes, prices, costs, pack MTPs |
 | `raw_kcw.raw_syp_icmas_products` | same for SYP | Branch product master |
 | Drive `dim_product.csv` | curated product dim | `BCODE`, `DETAIL`, `UI`, `CATEGORY_CODE` |
-| Drive `dim_category.csv` | category codes only | `CATEGORY_CODE` = first 2 digits of `BCODE` — **names TBD** (file has codes only) |
+| Drive `dim_category.csv` | category codes | `CATEGORY_CODE` = first 2 digits of `BCODE`; **names in §2.1** (KACC9) |
 
 Join to sales lines: `fact_sales_all."BCODE" = icmas."BCODE"` (prefer HQ master unless SYP-only item).
 
@@ -31,10 +31,63 @@ Join to sales lines: `fact_sales_all."BCODE" = icmas."BCODE"` (prefer HQ master 
 
 | Part | Meaning | Status |
 |------|---------|--------|
-| Digits 1–2 | `CATEGORY_CODE` / aligns with ICMAS `MAIN` | Confirmed (pattern) |
+| Digits 1–2 | `CATEGORY_CODE` / หมวดสินค้า (KACC9) — aligns with ICMAS `MAIN` | Confirmed |
 | Rest | Item identity within category | TBD detail |
 
-Drive `dim_category.csv` lists codes (`01`…`35`, `40`, `70`, `88`, `91`) but **no Thai labels yet**.
+Drive `dim_category.csv` has codes only; **names below are the business legend** (KACC9).
+
+### 2.1 หมวดสินค้า / `CATEGORY_CODE` = `left(BCODE, 2)` (Confirmed)
+
+| Code | หมวดสินค้า (KACC9) | Status |
+|------|-------------------|--------|
+| `01` | TX จิ๊ป แลนด์ | Confirmed |
+| `02` | I/S JCM FV FXZ DECA TX บรรทุก 10 ล้อ | Confirmed |
+| `03` | I/S KBZ TFR D-MAX กระบะ | Confirmed |
+| `04` | I/S ELF-KS NPR NKR NQR บรรทุก 4-6 ล้อ | Confirmed |
+| `05` | NISSAN (D/S) กระบะ เก๋ง | Confirmed |
+| `06` | NISSAN UD CW CMA บรรทุก 6-10 ล้อ | Confirmed |
+| `07` | MAZDA FORD กระบะ เก๋ง | Confirmed |
+| `08` | TOYOTA กระบะ เก๋ง | Confirmed |
+| `09` | HINO | Confirmed |
+| `10` | FUSO | Confirmed |
+| `11` | MITSUBISHI กระบะ เก๋ง | Confirmed |
+| `12` | รถไถ FORD JOHNDEERE | Confirmed |
+| `13` | ทั่วไป โช้คอัพ ไฟ ยาง | Confirmed |
+| `14` | เครื่องเหล็ก เครื่องมือ | Confirmed |
+| `15` | ลูกปืน | Confirmed |
+| `16` | HONDA รถญี่ปุ่น เกาหลี ทั่วไป | Confirmed |
+| `17` | สกรู MIC ดำ | Confirmed |
+| `18` | สกรู NF ละเอียด | Confirmed |
+| `19` | สกรู NC หยาบ | Confirmed |
+| `20` | สกรู MIC ขาว | Confirmed |
+| `21` | แบตเตอรี่ น้ำกรด น้ำกลั่น | Confirmed |
+| `22` | น้ำมัน จารบี น้ำยา | Confirmed |
+| `23` | รถยุโรป BENZ BMW | Confirmed |
+| `24` | อะไหล่เก่า เชียงกง | Confirmed |
+| `25` | ยางโอริง | Confirmed |
+| `26` | สายอ่อน | Confirmed |
+| `27` | บัส | Confirmed |
+| `28` | พ่วง เทลเลอร์ ดั๊ม | Confirmed |
+| `29` | ประดับยนต์ | Confirmed |
+| `30` | รถไถ KUBOTA | Confirmed |
+| `31` | รถไถ MASSEY (แมสซี่ย์) | Confirmed |
+| `32` | แม็คโคร | Confirmed |
+| `33` | อัดสายไฮดรอลิค | Confirmed |
+| `34` | โฟคลิฟ รถยก | Confirmed |
+| `35` | รถไถ ยันม่าร์ อิเซกิ ฮิโนโมโต้ แชมป์ | Confirmed |
+| `40` | ค่าแรง | Confirmed |
+| `70` | ค่าใช้จ่าย เทิร์นแบตเก่า | Confirmed |
+| `91` | โปรโมชั่น / พิเศษ | Confirmed |
+
+```sql
+category_code = lpad(left("BCODE", 2), 2, '0')  -- or left(BCODE,2) when already zero-padded
+-- label: join dim / CASE map above
+```
+
+Notes:
+
+- Drive `dim_category.csv` also lists `88` (rare in ICMAS) — **name TBD** (not in KACC9 list above).
+- Prefer labeling sales/product reports with this หมวด, not only raw `BCODE` prefix.
 
 ---
 
@@ -186,7 +239,7 @@ Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 /
 | `CODE2` / `CODE3` / `CODE4` | TBD | TBD |
 | `XCODE` / `ACODE` | TBD | TBD |
 | `MAIN` / `SUB` / `PART` | Aligns with BCODE structure; names TBD | Inferred |
-| `CATEGORY_CODE` (Drive dim) | `left(BCODE,2)` | Confirmed pattern; **labels TBD** |
+| `CATEGORY_CODE` / `left(BCODE,2)` | หมวดสินค้า KACC9 | Confirmed — full legend in §2.1 |
 | `DESCR`, `BRAND`, `MODEL` | Description / brand / model | Confirmed (name) |
 
 ---
@@ -197,8 +250,9 @@ Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 /
 - [x] `PCODE` = เบอร์แท้; `MCODE` = เบอร์โรงงาน — Confirmed
 - [x] `UI1`/`UI2`/`MTP2` + `PRICEx`/`PRICEMx` pack & price rules — Confirmed
 - [x] `SIZE1–3` meanings by `CODE1` (A/C/D/E/F/G/I/K/L/O/P) — Confirmed
+- [x] หมวดสินค้า `CATEGORY_CODE` / first 2 digits of `BCODE` (KACC9) — Confirmed §2.1
 - [ ] `SIZE*` meanings for `CODE1` = `Q`, `R`
-- [ ] Thai/English names for `CATEGORY_CODE` (`01`…`91`)
+- [ ] Name for rare code `88` (in Drive dim, not in KACC9 list)
 - [ ] Meanings of `CODE2`–`CODE4`, `XCODE`, `ACODE`
 - [ ] `UI3`/`UI4`/`MTP3`/`MTP4` and price-tier roles of `PRICE1`…`PRICE5`
 - [ ] Which master to prefer when HQ and SYP ICMAS disagree on the same `BCODE`
@@ -213,3 +267,4 @@ Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 /
 | 2026-07-26 | Start ICMAS dictionary; lock `CODE1` category letters | Owner |
 | 2026-07-26 | Lock `PCODE`=เบอร์แท้, `MCODE`=เบอร์โรงงาน | Owner |
 | 2026-07-26 | Lock UI/MTP/PRICE pack rules + SIZE1–3 meanings by CODE1 | Owner |
+| 2026-07-26 | Lock KACC9 หมวดสินค้า names for BCODE first 2 digits | Owner |
