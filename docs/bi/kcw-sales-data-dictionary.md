@@ -94,8 +94,8 @@ One row per product (or charge line) on a sales bill. Use for product mix, quant
 | `MTP` | Multiplier / packing factor? | TBD | Often `1.0` |
 | `PRICE` | Unit selling price | Confirmed (name) | Text; also `PRICE_NUM` |
 | `XPRICE` | Appears related to cost/ref price | Inferred | Often close to `LAST_PURCHASE_COST` |
-| `DISCNT1`…`DISCNT4` | Discount fields | TBD | Meaning of each slot TBD |
-| `DED` | Deduction | TBD | |
+| `DISCNT1`…`DISCNT4` | Line discounts | Confirmed (DISCNT1) | `DISCNT1` is **percent off**. Already baked into `AMOUNT` (`AMOUNT ≈ QTY*PRICE*(1-DISCNT1/100)`). `DISCNT2–4` almost unused |
+| `DED` | Line deduction (baht?) | Inferred | Sparse (~2k lines). Owner: line-level adjustments are already reflected in `AMOUNT` — safe for revenue |
 | `VAT` | VAT amount on line | TBD | Often null on samples |
 | `AMOUNT` | Line extended amount as keyed | Confirmed | Prefer `AMOUNT_NUM`. Almost always `QTY * PRICE`. Incl/excl VAT depends on `TAXIC` — see [§6.0](#60-vat--taxic--isvat-rules-confirmed) |
 | `PRICE_NUM` | Numeric price helper | Confirmed | Text still; curated helper |
@@ -159,8 +159,8 @@ One row per bill. Use for bill count, bill totals (before/after tax), payment st
 | `BILLNO` | Bill number | Confirmed | Join key with `BRANCH` |
 | `LINES` | Number of lines on bill | Confirmed (name) | Text; can be `0` / null on orphans |
 | `TAXIC` | How operator keyed amounts on the bill | Confirmed | Same as line `TAXIC` (incl vs excl VAT keying). Bill has no `ISVAT` column — VAT sales type lives on lines |
-| `DISCOUNT` | Bill discount | TBD | |
-| `DEDUCT` | Bill deduction | TBD | |
+| `DISCOUNT` | Bill-level discount (baht) | Confirmed (rare) | Almost unused (~7 bills). **Not** in line `AMOUNT` — must allocate to lines for line↔bill match |
+| `DEDUCT` | Bill-level deduction (baht) | Confirmed | Common (~11k bills, ~6.8M baht). **Not** in line `AMOUNT` — must allocate to lines. See [§6.7](#67-discount--deduct-line-vs-bill) |
 | `BEFORETAX` | Bill total **excluding VAT** | Confirmed | Net of VAT |
 | `VAT` (bill) | **VAT rate %** (not baht) | Confirmed | On `TAXIC=Y` bills almost always `7.0` |
 | `TAX` | **VAT amount in baht** | Confirmed | On `TAXIC=Y`: `AFTERTAX - BEFORETAX` (= `BEFORETAX * 0.07`) |
@@ -279,6 +279,73 @@ sales_type = CASE WHEN "ISVAT" = 'Y' THEN 'VAT' ELSE 'NON_VAT' END
 | **VAT vs non-VAT split** | Use **`ISVAT`**, not `TAXIC` | Confirmed |
 | `ISVAT=N` + `TAXIC=Y` | Invalid combo — ignore `TAXIC` | Confirmed |
 | VAT baht (separate) | Bill `TAX` — not inside revenue | Confirmed |
+
+### 6.7 Discount / Deduct (line vs bill)
+
+Owner rule + data check (2026-07-25):
+
+#### Line level — already in `AMOUNT` (OK as-is)
+
+| Field | Role | Status |
+|-------|------|--------|
+| `DISCNT1` | **Percent** discount on the line | Confirmed — `AMOUNT ≈ QTY × PRICE × (1 − DISCNT1/100)` on ~2218/2219 rows |
+| `DISCNT2–4` | Extra discount slots | Almost unused |
+| `DED` | Line deduction | Sparse; treat as already reflected in `AMOUNT` per owner |
+
+**Do not** subtract line `DISCNT*` / `DED` again when summing revenue from `AMOUNT_NUM`.
+
+#### Bill level — NOT in line `AMOUNT` (must allocate)
+
+| Field | Frequency | Role |
+|-------|----------:|------|
+| `DISCOUNT` | ~7 bills | Bill discount baht |
+| `DEDUCT` | ~11,207 bills | Bill deduction baht (main case) |
+
+These reduce the bill total **after** lines are summed. Example (`TAXIC=N`):
+
+```text
+sum(line AMOUNT) = 4494
+DEDUCT           = 4
+BEFORETAX        = 4490   (= 4494 - 4)
+```
+
+So for line-level BI to reconcile to bill `BEFORETAX` / `AFTERTAX`:
+
+```text
+sum(line_net_after_bill_alloc)  =  BEFORETAX
+-- and after VAT rules:
+-- TAXIC/ISVAT handling still applies on top of keyed amounts
+```
+
+Rough reconcile check on bills with `DEDUCT ≠ 0` and `TAXIC=N`:  
+`sum(line AMOUNT) − DEDUCT − DISCOUNT ≈ BEFORETAX` on ~9.1k / ~10.5k bills.
+
+#### Required curation rule (Confirmed need; method proposed)
+
+**Confirmed:** bill-level `DISCOUNT` + `DEDUCT` must be **broken down onto lines** before product/line dashboards, so line sums match bill net totals.
+
+**Proposed allocation** (not locked — confirm with owner):
+
+```text
+bill_adj = coalesce(DISCOUNT,0) + coalesce(DEDUCT,0)
+
+-- allocate proportionally by line AMOUNT (same sign as bill currency basis)
+line_share = line_AMOUNT / nullif(sum(line_AMOUNT over bill), 0)
+line_bill_adj = bill_adj * line_share
+
+net_line_revenue =
+  (CASE WHEN ISVAT='Y' AND TAXIC='Y' THEN AMOUNT/1.07 ELSE AMOUNT END)
+  - allocated_bill_adj_in_net_terms
+```
+
+**TBD to lock:**
+
+1. Allocate on **gross** (`AMOUNT`) or **net** (`BEFORETAX` basis)?
+2. For `TAXIC=Y` bills, is `DEDUCT` stored incl-VAT or excl-VAT?
+3. Credit notes / negative bills — `DEDUCT` sometimes equals abs(net) differently; confirm sign rules
+4. Prefer proportional by `AMOUNT` vs equal split vs attach to last line?
+
+Until allocation is curated, **bill-level revenue (`BEFORETAX`) is safer for total sales**; line-level product mix will be slightly high on bills that have `DEDUCT`/`DISCOUNT`.
 
 ### 6.1 `BILLTYPE` (raw)
 
