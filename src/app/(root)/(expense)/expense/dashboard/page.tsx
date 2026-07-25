@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 
 const ExpenseDashboardPage = dynamic(
-  () => import("@/components/expense/dashboard/ExpenseDashboardPage"),
+  () => import("@/components/expense/dashboard/ExpenseDashboardPageV2"),
   {
     ssr: false, // ⛔ disables server-side rendering
     loading: () => (

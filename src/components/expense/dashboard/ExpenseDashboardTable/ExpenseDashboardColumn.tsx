@@ -2,7 +2,7 @@
 
 import { ColumnDef, HeaderContext } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "@/components/common/DataTableColumnHeader";
-import { ItemYearRow } from "../ExpenseDashboardPage";
+import type { ItemYearRow } from "../ExpenseDashboardPageV2";
 
 // ---- Labels (Thai display) ----
 export const itemYearFieldLabel = {
