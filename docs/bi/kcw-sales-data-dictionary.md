@@ -208,12 +208,19 @@ Owner correction + data recheck (2026-07-25): **do not confuse these two flags**
 | Flag | Job | Values |
 |------|-----|--------|
 | **`ISVAT`** | **What kind of sale** (VAT vs non-VAT) | `Y` = VAT sale; `N` = non-VAT sale |
-| **`TAXIC`** | **How the operator keyed the bill/line amount** | `Y` = keyed amount **includes** VAT; `N` = keyed amount **excludes** VAT |
+| **`TAXIC`** | **How the operator keyed the amount** (only meaningful when `ISVAT=Y`) | `Y` = keyed amount **includes** VAT; `N` = keyed amount **excludes** VAT |
 
 `ISVAT` is the dashboard classifier for VAT vs non-VAT sales.  
-`TAXIC` only tells you whether you must strip VAT out of `AMOUNT` to get net revenue.
+`TAXIC` only matters for **VAT sales** (`ISVAT=Y`): whether you must strip VAT out of `AMOUNT`.
 
-These often match, but **not always** — especially `TAXIC=N` + `ISVAT=Y` (~12k lines / ~3.6k bills): VAT sale keyed **excluding** VAT.
+**Valid combinations**
+
+| `ISVAT` | `TAXIC` | Valid? | Notes |
+|---------|---------|--------|-------|
+| `Y` | `Y` | Yes | VAT sale, keyed inclusive |
+| `Y` | `N` | Yes | VAT sale, keyed exclusive (~12k lines / ~3.6k bills) |
+| `N` | `N` | Yes | Non-VAT sale |
+| `N` | `Y` | **No — ignore `TAXIC`** | Should not happen. ~160 lines / ~19 bills (often `TFV`); bill header is `TAXIC=N`, `BEFORETAX=AFTERTAX`, line `"VAT"=0`. Treat as non-VAT and **do not** `/1.07` |
 
 #### Critical naming trap
 
@@ -232,7 +239,7 @@ These often match, but **not always** — especially `TAXIC=N` + `ISVAT=Y` (~12k
 | `Y` | `Y` | **Includes** VAT | `AMOUNT / 1.07` | sum(lines) ≈ `AFTERTAX`; `/1.07` ≈ `BEFORETAX` |
 | `Y` | `N` | **Excludes** VAT | `AMOUNT` as-is | sum(lines) ≈ `BEFORETAX`; `AMOUNT*1.07` ≈ `AFTERTAX` |
 | `N` | `N` | No VAT | `AMOUNT` as-is | `BEFORETAX ≈ AFTERTAX ≈` sum(lines) |
-| `N` | `Y` | Rare / odd | TBD | Very few rows (~156) — investigate if seen in reports |
+| `N` | `Y` | **Ignore `TAXIC`** | `AMOUNT` as-is (same as non-VAT) | Bill side shows no VAT; stripping would understate revenue |
 
 #### Bill identities when VAT applies (`ISVAT=Y` bills)
 
@@ -248,12 +255,15 @@ bill "VAT" = 7.0                 -- rate, not amount
 ```text
 net_line_amount =
   CASE
-    WHEN "TAXIC" = 'Y' THEN "AMOUNT_NUM"::numeric / 1.07   -- keyed incl VAT → strip
-    ELSE "AMOUNT_NUM"::numeric                             -- keyed excl VAT (or non-VAT)
+    WHEN "ISVAT" = 'Y' AND "TAXIC" = 'Y'
+      THEN "AMOUNT_NUM"::numeric / 1.07   -- VAT sale keyed inclusive → strip
+    ELSE "AMOUNT_NUM"::numeric            -- VAT excl, or non-VAT (ignore bogus TAXIC)
   END
 ```
 
-Sales-type label (separate from the strip rule):
+Only strip when **both** `ISVAT=Y` and `TAXIC=Y`. If `ISVAT=N`, ignore `TAXIC`.
+
+Sales-type label:
 
 ```text
 sales_type = CASE WHEN "ISVAT" = 'Y' THEN 'VAT' ELSE 'NON_VAT' END
@@ -265,8 +275,9 @@ sales_type = CASE WHEN "ISVAT" = 'Y' THEN 'VAT' ELSE 'NON_VAT' END
 |------|--------|--------|
 | **Official sales revenue** | Always **net / before VAT** | Confirmed |
 | Bill-level revenue | `BEFORETAX` | Confirmed |
-| Line-level revenue | Strip VAT only when `TAXIC=Y` (formula above) | Confirmed |
+| Line-level revenue | `/1.07` only when `ISVAT=Y` **and** `TAXIC=Y` | Confirmed |
 | **VAT vs non-VAT split** | Use **`ISVAT`**, not `TAXIC` | Confirmed |
+| `ISVAT=N` + `TAXIC=Y` | Invalid combo — ignore `TAXIC` | Confirmed |
 | VAT baht (separate) | Bill `TAX` — not inside revenue | Confirmed |
 
 ### 6.1 `BILLTYPE` (raw)
@@ -331,8 +342,8 @@ sales_type = CASE WHEN "ISVAT" = 'Y' THEN 'VAT' ELSE 'NON_VAT' END
 1. **Text numerics** — Always cast; do not sum text blindly in some tools.
 2. **Quoted identifiers** — `"BRANCH"`, `"BILLNO"`, etc.
 3. **`"VAT"` is the rate; `"TAX"` is baht** — easy to misuse in VAT reports.
-4. **`ISVAT` ≠ `TAXIC`** — `ISVAT` = VAT sale type; `TAXIC` = keyed incl/excl. Do not split sales by `TAXIC`.
-5. **Only strip `/1.07` when `TAXIC=Y`** — if `TAXIC=N` and `ISVAT=Y`, `AMOUNT` is already net.
+4. **`ISVAT` ≠ `TAXIC`** — `ISVAT` = VAT sale type; `TAXIC` = keyed incl/excl (only if `ISVAT=Y`). Do not split sales by `TAXIC`.
+5. **Only strip `/1.07` when `ISVAT=Y` and `TAXIC=Y`** — if `ISVAT=N`, ignore `TAXIC` (even if wrongly `Y`).
 6. **`BILLTYPE_STD = UNKNOWN` is common** — do not treat “UNKNOWN” as rare dirty data without a rule.
 7. **Bill orphans (29 HQ)** — headers with no lines: many `BILLTYPE = R` / `&…` numbers, or `LINES = 0` / null amounts. Decide whether to exclude from bill counts.
 8. **`ACCTNO` vs `ACCT_NO` on lines** — two similarly named fields; meanings TBD.
@@ -352,12 +363,13 @@ sales_type = CASE WHEN "ISVAT" = 'Y' THEN 'VAT' ELSE 'NON_VAT' END
 1. **Revenue = before tax (net).** Never use `AFTERTAX` as the main sales KPI.
 2. **Tax is separate.** VAT baht (`TAX`) may appear on a tax report / secondary card, not mixed into revenue.
 3. **Two sales types must be visible:** VAT vs non-VAT, classified by **`ISVAT`** (not `TAXIC`).
-4. **`TAXIC` only adjusts the line math** (strip `/1.07` when keyed inclusive).
+4. **`TAXIC` only adjusts VAT-sale line math** (strip `/1.07` only when `ISVAT=Y` and keyed inclusive).
+5. **If `ISVAT=N`, ignore `TAXIC`** (combo `ISVAT=N`+`TAXIC=Y` is invalid noise).
 
 | Sales type | Classifier | Net revenue from line | Net revenue from bill |
 |------------|------------|-----------------------|-----------------------|
 | **VAT sales** | `ISVAT = 'Y'` | `AMOUNT/1.07` if `TAXIC=Y`, else `AMOUNT` | `BEFORETAX` (when bill is VAT) |
-| **Non-VAT sales** | `ISVAT = 'N'` | `AMOUNT` | `BEFORETAX` (≈ `AFTERTAX`) |
+| **Non-VAT sales** | `ISVAT = 'N'` | `AMOUNT` (ignore `TAXIC`) | `BEFORETAX` (≈ `AFTERTAX`) |
 
 Recommended dashboard cuts:
 
@@ -370,8 +382,9 @@ Recommended dashboard cuts:
 
 ```text
 net_line_amount =
-  CASE WHEN "TAXIC" = 'Y' THEN "AMOUNT_NUM"::numeric / 1.07
-       ELSE "AMOUNT_NUM"::numeric
+  CASE
+    WHEN "ISVAT" = 'Y' AND "TAXIC" = 'Y' THEN "AMOUNT_NUM"::numeric / 1.07
+    ELSE "AMOUNT_NUM"::numeric
   END
 
 sales_type =
@@ -427,7 +440,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 - [ ] Exact meaning of each `BILLTYPE` / `BILLTYPE_STD` code and which count as sales revenue
 - [ ] Meaning of `JOURMODE` 0/1/2 and whether BI should filter to one mode
 - [ ] How to classify **bill-level** VAT vs non-VAT (no `ISVAT` on bills)
-- [ ] Rare rows `TAXIC=Y` + `ISVAT=N` — treat as data error or real case?
+- [x] `ISVAT=N` + `TAXIC=Y` — invalid; ignore `TAXIC` (Confirmed)
 - [ ] Credit note / debit note sign handling (`CN`, `DN`)
 - [ ] `PAYSTAT` legend and AR aging rules
 - [ ] Difference between `PRICE` / `XPRICE` / `LAST_PURCHASE_COST`
@@ -447,6 +460,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 | 2026-07-25 | Confirmed VAT/TAXIC rules: `TAXIC=Y` ⇒ line `AMOUNT` is VAT-inclusive; bill `"VAT"` is rate, `"TAX"` is baht | Cursor + owner |
 | 2026-07-25 | Confirmed dashboard revenue = before tax; split VAT vs non-VAT sales; tax reported separately | Owner |
 | 2026-07-25 | Correction: sales type = `ISVAT`; `TAXIC` only means keyed incl/excl VAT (not the VAT-sales flag) | Owner |
+| 2026-07-25 | Rule: if `ISVAT=N`, `TAXIC` must be `N` or ignored; never `/1.07` on non-VAT lines | Owner |
 
 ---
 
