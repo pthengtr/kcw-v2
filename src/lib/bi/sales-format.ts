@@ -71,6 +71,7 @@ export const BRANCH_LABELS: Record<string, string> = {
   HQ: "HQ",
   SYP: "SYP",
   ONLINE: "ออนไลน์",
+  OTHER: "อื่น ๆ",
 };
 
 export const CHANNEL_LABELS: Record<string, string> = {

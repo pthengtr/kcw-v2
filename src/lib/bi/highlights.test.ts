@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildCustomerHighlights,
   buildExpenseHighlights,
+  buildIncomeHighlights,
   buildProductHighlights,
   buildSalesHighlights,
 } from "./highlights";
 import type { BiCustomerOverview } from "./customer-types";
 import type { BiExpenseOverview } from "./expense-types";
+import type { BiIncomeOverview } from "./income-types";
 import type { BiProductOverview } from "./product-types";
 import type { BiSalesOverview } from "./sales-types";
 
@@ -280,5 +282,58 @@ describe("BI highlight builders", () => {
     expect(lines.some((l) => l.includes("ค่าไฟ"))).toBe(true);
     expect(lines.some((l) => l.includes("สาธารณูปโภค"))).toBe(true);
     expect(lines.some((l) => l.includes("สำนักงานใหญ่"))).toBe(true);
+  });
+
+  it("builds income highlight lines with gross and net", () => {
+    const incomeBase: BiIncomeOverview = {
+      from: "2026-07-01",
+      to: "2026-07-25",
+      branch: null,
+      previous_from: "2026-06-06",
+      previous_to: "2026-06-30",
+      summary: {
+        revenue_net: 6_500_000,
+        cogs: 4_800_000,
+        gross_profit: 1_700_000,
+        gross_margin_pct: 26.15,
+        opex: 500_000,
+        net_income: 1_200_000,
+        net_margin_pct: 18.46,
+        bill_count: 1200,
+        line_count: 14000,
+        blank_cost_line_count: 67,
+      },
+      previous_summary: {
+        revenue_net: 6_000_000,
+        cogs: 4_500_000,
+        gross_profit: 1_500_000,
+        gross_margin_pct: 25,
+        opex: 480_000,
+        net_income: 1_020_000,
+        net_margin_pct: 17,
+      },
+      by_branch: [
+        {
+          key: "HQ",
+          revenue_net: 5_000_000,
+          cogs: 3_700_000,
+          gross_profit: 1_300_000,
+          opex: 350_000,
+          net_income: 950_000,
+          bill_count: 900,
+        },
+      ],
+      opex_by_category: [],
+      trend_daily: [],
+      trend_monthly: [],
+    };
+
+    const lines = buildIncomeHighlights(incomeBase);
+    expect(lines[0]).toContain("กำไรขั้นต้น");
+    expect(lines[1]).toContain("กำไรสุทธิ");
+    expect(lines.some((l) => l.includes("HQ"))).toBe(true);
+    expect(lines.some((l) => l.includes("ต้นทุนว่าง") || l.includes("ไม่มีต้นทุน"))).toBe(
+      true
+    );
   });
 });

@@ -118,3 +118,4 @@ BI uses `fn_bi_expense_overview` (date range + admin API). The old `/expense/das
 | 2026-07-26 | Initial dictionary; ship `fn_bi_expense_overview` + `/bi/expenses` |
 | 2026-07-26 | Remove `/expense/dashboard` UI; expense analytics live under `/bi/expenses` |
 | 2026-07-26 | YTD year selector + item×month compare table (`month_columns` / `by_item_month`) |
+| 2026-07-26 | Income BI maps HQ category `ออนไลน์` → reporting branch ONLINE (see income dictionary) |
