@@ -341,6 +341,9 @@ export default function CustomerOverviewPage() {
             <CustomerRankTable
               rows={overview.top_customers}
               totalRevenue={overview.summary.revenue_net}
+              branchFilter={branch}
+              onBranchFilterChange={setBranch}
+              description="กรอง HQ / SYP / ออนไลน์ เพื่อจัดอันดับใหม่ · ชื่อจาก public.party เป็นหลัก"
             />
           </section>
 
