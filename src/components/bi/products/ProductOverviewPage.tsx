@@ -9,6 +9,7 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { buildProductHighlights } from "@/lib/bi/highlights";
 import type { BiProductOverview } from "@/lib/bi/product-types";
 import { formatBaht, formatCount, pctChange } from "@/lib/bi/sales-format";
 import {
@@ -24,6 +25,7 @@ import type {
   BiPeriodPreset,
 } from "@/lib/bi/sales-types";
 import { cn } from "@/lib/utils";
+import BiHighlightsCard from "@/components/bi/BiHighlightsCard";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -124,6 +126,10 @@ export default function ProductOverviewPage() {
   const qtyDelta = overview
     ? pctChange(overview.summary.base_qty, overview.previous_summary.base_qty)
     : null;
+  const highlightLines = useMemo(
+    () => (overview ? buildProductHighlights(overview) : []),
+    [overview]
+  );
 
   return (
     <div className="space-y-4 pb-8 md:space-y-5">
@@ -343,6 +349,10 @@ export default function ProductOverviewPage() {
               rows={overview.top_products}
               totalRevenue={overview.summary.revenue_net}
             />
+          </section>
+
+          <section>
+            <BiHighlightsCard lines={highlightLines} />
           </section>
         </>
       ) : null}
