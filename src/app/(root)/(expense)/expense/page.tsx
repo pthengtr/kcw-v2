@@ -49,11 +49,6 @@ export default function Branch() {
           </div>
           <CardIconMenu>
             <CardIcon
-              href="/expense/dashboard"
-              label="ภาพรวม"
-              icon="ChartLine"
-            />
-            <CardIcon
               href="/expense/company"
               label="ค่าใช้จ่ายบริษัท"
               icon="Building2"

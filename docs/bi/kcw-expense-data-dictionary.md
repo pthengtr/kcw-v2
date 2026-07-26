@@ -97,14 +97,15 @@ Previous-period comparison uses an equal-length window immediately before `from`
 
 ---
 
-## 5. Relation to `/expense/dashboard`
+## 5. Relation to year-summary RPCs
 
-| | Expense dashboard | BI `/bi/expenses` |
-|--|-------------------|-------------------|
-| Grain of control | Calendar **year** | **Date range** |
-| RPCs | `fn_item_year_summary_*` | `fn_bi_expense_overview` |
-| Amount math | Same | Same |
-| Auth path | Client Supabase | Admin API + service role |
+Legacy calendar-year helpers still exist in the DB for reference:
+
+- `fn_item_year_summary_all`
+- `fn_item_year_summary_entries_fullmonths`
+- `fn_item_year_summary_general_fullmonths`
+
+BI uses `fn_bi_expense_overview` (date range + admin API). The old `/expense/dashboard` UI was removed; use `/bi/expenses`.
 
 ---
 
@@ -113,3 +114,4 @@ Previous-period comparison uses an equal-length window immediately before `from`
 | Date | Change |
 |------|--------|
 | 2026-07-26 | Initial dictionary; ship `fn_bi_expense_overview` + `/bi/expenses` |
+| 2026-07-26 | Remove `/expense/dashboard` UI; expense analytics live under `/bi/expenses` |

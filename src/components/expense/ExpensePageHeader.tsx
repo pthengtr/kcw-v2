@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  ChartLine,
   ClipboardList,
   ClipboardPlus,
   FilePlus2,
@@ -27,11 +26,6 @@ export default function ExpensePageHeader({
   const { branch } = useParams<{ branch: string }>();
 
   const links = [
-    {
-      href: `/expense/dashboard`,
-      label: "ภาพรวม",
-      icon: <ChartLine className="h-4 w-4" />,
-    },
     {
       href: `/expense/company/${branch}/create`,
       label: "สร้างบิลใหม่",

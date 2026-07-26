@@ -163,7 +163,7 @@ export default function ExpenseOverviewPage() {
               ภาพรวมค่าใช้จ่าย
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              จากแอปค่าใช้จ่าย · บริษัท + ทั่วไป · สูตรเดียวกับ /expense/dashboard
+              จากแอปค่าใช้จ่าย · บริษัท + ทั่วไป · ก่อน VAT/หลังหัก ณ ที่จ่ายตามสูตรบิล
             </p>
             <p className="mt-2 text-xs text-slate-600 sm:text-sm">
               ช่วง{" "}
