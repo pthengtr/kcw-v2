@@ -11,8 +11,10 @@ const rows: BiCustomerRankRow[] = [
   {
     acctno: "A",
     customer_name: "Alpha",
+    name_source: "party",
     bill_acctname: null,
     in_party: true,
+    in_armas: true,
     party_kind: "CUSTOMER",
     revenue_net: 100,
     bill_count: 3,
@@ -24,8 +26,10 @@ const rows: BiCustomerRankRow[] = [
   {
     acctno: "B",
     customer_name: "Beta",
+    name_source: "party",
     bill_acctname: null,
     in_party: true,
+    in_armas: true,
     party_kind: "CUSTOMER",
     revenue_net: 90,
     bill_count: 2,
@@ -37,8 +41,10 @@ const rows: BiCustomerRankRow[] = [
   {
     acctno: "C",
     customer_name: "Gamma Shop",
+    name_source: "armas",
     bill_acctname: null,
     in_party: false,
+    in_armas: true,
     party_kind: null,
     revenue_net: 50,
     bill_count: 1,
