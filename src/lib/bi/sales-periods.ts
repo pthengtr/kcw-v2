@@ -38,13 +38,32 @@ export function monthRange(monthIso: string, now = new Date()): DateRange {
   return { from, to };
 }
 
+/** YTD for a chosen calendar year (Bangkok). Caps at today when year is current. */
+export function ytdRangeForYear(year: number, now = new Date()): DateRange {
+  const today = bangkokTodayIso(now);
+  const currentYear = Number(today.slice(0, 4));
+  const safeYear =
+    Number.isFinite(year) && year >= 2000 && year <= 2100
+      ? Math.trunc(year)
+      : currentYear;
+  const from = `${safeYear}-01-01`;
+  if (safeYear < currentYear) {
+    return { from, to: `${safeYear}-12-31` };
+  }
+  if (safeYear > currentYear) {
+    return { from, to: from };
+  }
+  return { from, to: today };
+}
+
 export function resolvePeriodRange(
   preset: BiPeriodPreset,
   customFrom?: string,
   customTo?: string,
   now = new Date(),
   customMode: BiCustomDateMode = "range",
-  customMonth?: string
+  customMonth?: string,
+  ytdYear?: number
 ): DateRange {
   const today = bangkokTodayIso(now);
 
@@ -53,7 +72,8 @@ export function resolvePeriodRange(
   }
 
   if (preset === "ytd") {
-    return { from: `${today.slice(0, 4)}-01-01`, to: today };
+    const year = ytdYear ?? Number(today.slice(0, 4));
+    return ytdRangeForYear(year, now);
   }
 
   if (customMode === "month") {

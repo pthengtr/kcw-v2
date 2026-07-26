@@ -41,6 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import ExpenseGroupChart from "./ExpenseGroupChart";
 import ExpenseItemTable from "./ExpenseItemTable";
+import ExpenseMonthCompareTable from "./ExpenseMonthCompareTable";
 import ExpenseTrendChart from "./ExpenseTrendChart";
 
 const PERIODS: BiPeriodPreset[] = ["month", "ytd", "custom"];
@@ -51,8 +52,18 @@ const SOURCE_LABEL: Record<BiExpenseSourceFilter, string> = {
   GENERAL: "ทั่วไป",
 };
 
+function bangkokYearOptions(now = new Date()): number[] {
+  const current = Number(bangkokTodayIso(now).slice(0, 4));
+  const start = 2023;
+  const end = Math.max(current, start);
+  return Array.from({ length: end - start + 1 }, (_, i) => end - i);
+}
+
 export default function ExpenseOverviewPage() {
   const [preset, setPreset] = useState<BiPeriodPreset>("month");
+  const [ytdYear, setYtdYear] = useState(() =>
+    Number(bangkokTodayIso().slice(0, 4))
+  );
   const [branch, setBranch] = useState<string>("ALL");
   const [source, setSource] = useState<BiExpenseSourceFilter>("ALL");
   const [customMode, setCustomMode] = useState<BiCustomDateMode>("single");
@@ -63,6 +74,8 @@ export default function ExpenseOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const yearOptions = useMemo(() => bangkokYearOptions(), []);
+
   const range = useMemo(
     () =>
       resolvePeriodRange(
@@ -71,9 +84,10 @@ export default function ExpenseOverviewPage() {
         customTo,
         new Date(),
         customMode,
-        customMonth
+        customMonth,
+        ytdYear
       ),
-    [preset, customFrom, customTo, customMode, customMonth]
+    [preset, customFrom, customTo, customMode, customMonth, ytdYear]
   );
 
   const load = useCallback(async () => {
@@ -217,6 +231,27 @@ export default function ExpenseOverviewPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {preset === "ytd" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="bi-expense-year">ปี</Label>
+                <Select
+                  value={String(ytdYear)}
+                  onValueChange={(v) => setYtdYear(Number(v))}
+                >
+                  <SelectTrigger id="bi-expense-year" className="w-full">
+                    <SelectValue placeholder="ปี" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={String(year)}>
+                        {year + 543} ({year})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
             <div className="space-y-1.5">
               <Label htmlFor="bi-expense-branch">สาขา</Label>
               <Select value={branch} onValueChange={setBranch}>
@@ -382,6 +417,15 @@ export default function ExpenseOverviewPage() {
               rows={overview.trend_monthly}
             />
           </section>
+
+          {preset === "ytd" ? (
+            <section>
+              <ExpenseMonthCompareTable
+                monthColumns={overview.month_columns}
+                rows={overview.by_item_month}
+              />
+            </section>
+          ) : null}
 
           <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <ExpenseGroupChart

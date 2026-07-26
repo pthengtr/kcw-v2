@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   BiExpenseBranchOption,
   BiExpenseCategoryRow,
+  BiExpenseItemMonthRow,
   BiExpenseItemRow,
   BiExpenseOverview,
   BiExpenseSplitRow,
@@ -98,6 +99,30 @@ function parseBranches(value: unknown): BiExpenseBranchOption[] {
   });
 }
 
+function parseMonthColumns(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((v) => asString(v)).filter(Boolean);
+}
+
+function parseItemMonthRows(value: unknown): BiExpenseItemMonthRow[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    const monthsRaw = (r.months ?? {}) as Record<string, unknown>;
+    const months: Record<string, number> = {};
+    for (const [period, amount] of Object.entries(monthsRaw)) {
+      months[period] = asNumber(amount);
+    }
+    return {
+      key: asString(r.key),
+      label: asString(r.label) || asString(r.key),
+      category_name: asString(r.category_name),
+      total: asNumber(r.total),
+      months,
+    };
+  });
+}
+
 export function normalizeExpenseOverview(raw: unknown): BiExpenseOverview {
   const data = (raw ?? {}) as Record<string, unknown>;
   const summary = (data.summary ?? {}) as Record<string, unknown>;
@@ -132,6 +157,8 @@ export function normalizeExpenseOverview(raw: unknown): BiExpenseOverview {
     by_category: parseCategoryRows(data.by_category),
     top_items: parseItemRows(data.top_items),
     trend_monthly: parseTrendRows(data.trend_monthly),
+    month_columns: parseMonthColumns(data.month_columns),
+    by_item_month: parseItemMonthRows(data.by_item_month),
     branches: parseBranches(data.branches),
   };
 }
