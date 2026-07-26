@@ -52,6 +52,9 @@ export type BiProductMovement = {
   branch: string | null;
   stock_limit: number;
   dead_limit: number;
+  dead_offset: number;
+  dead_returned_count: number;
+  dead_has_more: boolean;
   summary: BiProductMovementSummary;
   stock_more: BiStockMoreRow[];
   dead_stock: BiDeadStockRow[];

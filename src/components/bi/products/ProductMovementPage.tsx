@@ -10,10 +10,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 
-import type {
-  BiDeadTier,
-  BiProductMovement,
-} from "@/lib/bi/product-movement-types";
+import type { BiProductMovement } from "@/lib/bi/product-movement-types";
 import { formatCount } from "@/lib/bi/sales-format";
 import {
   bangkokCurrentMonthIso,
@@ -44,6 +41,7 @@ import DeadStockTable from "./DeadStockTable";
 import StockMoreTable from "./StockMoreTable";
 
 const PERIODS: BiPeriodPreset[] = ["month", "ytd", "custom"];
+const DEAD_PAGE_SIZE = 100;
 
 type TabId = "stock-more" | "dead";
 
@@ -55,7 +53,7 @@ export default function ProductMovementPage() {
   const [customTo, setCustomTo] = useState("");
   const [customMonth, setCustomMonth] = useState("");
   const [tab, setTab] = useState<TabId>("stock-more");
-  const [deadTier, setDeadTier] = useState<"ALL" | BiDeadTier>("ALL");
+  const [deadOffset, setDeadOffset] = useState(0);
   const [overview, setOverview] = useState<BiProductMovement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +79,8 @@ export default function ProductMovementPage() {
         from: range.from,
         to: range.to,
         stock_limit: "50",
-        dead_limit: "200",
+        dead_limit: String(DEAD_PAGE_SIZE),
+        dead_offset: String(deadOffset),
       });
       if (branch !== "ALL") params.set("branch", branch);
 
@@ -105,11 +104,15 @@ export default function ProductMovementPage() {
     } finally {
       setLoading(false);
     }
-  }, [range.from, range.to, branch]);
+  }, [range.from, range.to, branch, deadOffset]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setDeadOffset(0);
+  }, [range.from, range.to, branch]);
 
   useEffect(() => {
     if (preset !== "custom") return;
@@ -118,6 +121,14 @@ export default function ProductMovementPage() {
     setCustomTo((prev) => prev || today);
     setCustomMonth((prev) => prev || bangkokCurrentMonthIso());
   }, [preset]);
+
+  const onDeadPrev = useCallback(() => {
+    setDeadOffset((prev) => Math.max(0, prev - DEAD_PAGE_SIZE));
+  }, []);
+
+  const onDeadNext = useCallback(() => {
+    setDeadOffset((prev) => prev + DEAD_PAGE_SIZE);
+  }, []);
 
   return (
     <div className="space-y-4 pb-8 md:space-y-5">
@@ -336,35 +347,18 @@ export default function ProductMovementPage() {
             </Button>
           </div>
 
-          {tab === "dead" ? (
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  ["ALL", "ทั้งหมด"],
-                  ["red", "แดง ≥1 ปี"],
-                  ["orange", "ส้ม ≥6 ด."],
-                  ["yellow", "เหลือง ≥3 ด."],
-                ] as const
-              ).map(([key, label]) => (
-                <Button
-                  key={key}
-                  type="button"
-                  size="sm"
-                  variant={deadTier === key ? "default" : "outline"}
-                  onClick={() => setDeadTier(key)}
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
-          ) : null}
-
           {tab === "stock-more" ? (
             <StockMoreTable rows={overview.stock_more} />
           ) : (
             <DeadStockTable
               rows={overview.dead_stock}
-              tierFilter={deadTier}
+              totalCount={overview.summary.dead_total_count}
+              offset={overview.dead_offset}
+              pageSize={overview.dead_limit || DEAD_PAGE_SIZE}
+              hasMore={overview.dead_has_more}
+              loading={loading}
+              onPrev={onDeadPrev}
+              onNext={onDeadNext}
             />
           )}
         </>

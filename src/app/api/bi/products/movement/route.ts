@@ -11,6 +11,7 @@ const QuerySchema = z.object({
   branch: z.enum(["HQ", "SYP", "ONLINE"]).optional(),
   stock_limit: z.coerce.number().int().min(1).max(200).optional(),
   dead_limit: z.coerce.number().int().min(1).max(500).optional(),
+  dead_offset: z.coerce.number().int().min(0).optional(),
 });
 
 export async function GET(req: Request) {
@@ -29,6 +30,7 @@ export async function GET(req: Request) {
     branch: url.searchParams.get("branch") || undefined,
     stock_limit: url.searchParams.get("stock_limit") || undefined,
     dead_limit: url.searchParams.get("dead_limit") || undefined,
+    dead_offset: url.searchParams.get("dead_offset") || undefined,
   });
 
   if (!parsed.success) {
@@ -49,7 +51,8 @@ export async function GET(req: Request) {
       to: parsed.data.to,
       branch: parsed.data.branch ?? null,
       stockLimit: parsed.data.stock_limit ?? 50,
-      deadLimit: parsed.data.dead_limit ?? 200,
+      deadLimit: parsed.data.dead_limit ?? 100,
+      deadOffset: parsed.data.dead_offset ?? 0,
     });
     return NextResponse.json({ overview });
   } catch (error) {

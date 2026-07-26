@@ -70,9 +70,11 @@ Universe for dead list: has `last_purchase_date`, **`on_hand_qty > 0`**, and
 
 | Piece | Detail |
 |-------|--------|
-| RPC | `public.fn_bi_product_movement(from, to, branch, stock_limit, dead_limit)` |
-| UI | `/bi/product-movement` |
-| API | `GET /api/bi/products/movement?from=&to=&branch=&stock_limit=&dead_limit=` |
+| RPC | `public.fn_bi_product_movement(from, to, branch, stock_limit, dead_limit, dead_offset)` |
+| Dead list order | **Yellow (3m) → orange (6m) → red (1y+)**; within tier `days_since_purchase ASC` |
+| Pagination | `dead_offset` + `dead_limit` (default 100); response includes `dead_has_more` |
+| UI | `/bi/product-movement` — row highlight by tier; prev/next on dead list (no color filter chips) |
+| API | `GET /api/bi/products/movement?from=&to=&branch=&stock_limit=&dead_limit=&dead_offset=` |
 
 ---
 
@@ -80,4 +82,5 @@ Universe for dead list: has `last_purchase_date`, **`on_hand_qty > 0`**, and
 
 | Date | Change |
 |------|--------|
+| 2026-07-26 | Dead list: yellow-first sort + offset pagination; remove tier filter chips |
 | 2026-07-26 | Lock stock-more rank + dead tiers 90/180/365; HQ purchases; ship report |

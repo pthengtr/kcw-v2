@@ -1,12 +1,16 @@
 -- Product movement BI: stock-more (sell qty rank) + dead-stock aging from last HQ buy.
 -- See docs/bi/kcw-product-movement-data-dictionary.md and kcw-purchase-data-dictionary.md.
 
+DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer);
+DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer, integer);
+
 CREATE OR REPLACE FUNCTION public.fn_bi_product_movement(
   p_from date,
   p_to date,
   p_branch text DEFAULT NULL,
   p_stock_limit integer DEFAULT 50,
-  p_dead_limit integer DEFAULT 200
+  p_dead_limit integer DEFAULT 100,
+  p_dead_offset integer DEFAULT 0
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -17,6 +21,7 @@ AS $$
 DECLARE
   v_stock_limit int;
   v_dead_limit int;
+  v_dead_offset int;
 BEGIN
   IF p_from IS NULL OR p_to IS NULL OR p_from > p_to THEN
     RAISE EXCEPTION 'Invalid date range';
@@ -27,7 +32,8 @@ BEGIN
   END IF;
 
   v_stock_limit := GREATEST(1, LEAST(COALESCE(p_stock_limit, 50), 200));
-  v_dead_limit := GREATEST(1, LEAST(COALESCE(p_dead_limit, 200), 500));
+  v_dead_limit := GREATEST(1, LEAST(COALESCE(p_dead_limit, 100), 500));
+  v_dead_offset := GREATEST(0, COALESCE(p_dead_offset, 0));
 
   RETURN (
     WITH sales_bills AS (
@@ -146,65 +152,6 @@ BEGIN
       WHERE nullif(btrim(i."BCODE"), '') IS NOT NULL
       GROUP BY 1
     ),
-    category_dim AS (
-      SELECT * FROM (VALUES
-      ('01', 'TX จิ๊ป แลนด์'),
-      ('02', 'I/S JCM FV FXZ DECA TX บรรทุก 10 ล้อ'),
-      ('03', 'I/S KBZ TFR D-MAX กระบะ'),
-      ('04', 'I/S ELF-KS NPR NKR NQR บรรทุก 4-6 ล้อ'),
-      ('05', 'NISSAN (D/S) กระบะ เก๋ง'),
-      ('06', 'NISSAN UD CW CMA บรรทุก 6-10 ล้อ'),
-      ('07', 'MAZDA FORD กระบะ เก๋ง'),
-      ('08', 'TOYOTA กระบะ เก๋ง'),
-      ('09', 'HINO'),
-      ('10', 'FUSO'),
-      ('11', 'MITSUBISHI กระบะ เก๋ง'),
-      ('12', 'รถไถ FORD JOHNDEERE'),
-      ('13', 'ทั่วไป โช้คอัพ ไฟ ยาง'),
-      ('14', 'เครื่องเหล็ก เครื่องมือ'),
-      ('15', 'ลูกปืน'),
-      ('16', 'HONDA รถญี่ปุ่น เกาหลี ทั่วไป'),
-      ('17', 'สกรู MIC ดำ'),
-      ('18', 'สกรู NF ละเอียด'),
-      ('19', 'สกรู NC หยาบ'),
-      ('20', 'สกรู MIC ขาว'),
-      ('21', 'แบตเตอรี่ น้ำกรด น้ำกลั่น'),
-      ('22', 'น้ำมัน จารบี น้ำยา'),
-      ('23', 'รถยุโรป BENZ BMW'),
-      ('24', 'อะไหล่เก่า เชียงกง'),
-      ('25', 'ยางโอริง'),
-      ('26', 'สายอ่อน'),
-      ('27', 'บัส'),
-      ('28', 'พ่วง เทลเลอร์ ดั๊ม'),
-      ('29', 'ประดับยนต์'),
-      ('30', 'รถไถ KUBOTA'),
-      ('31', 'รถไถ MASSEY (แมสซี่ย์)'),
-      ('32', 'แม็คโคร'),
-      ('33', 'อัดสายไฮดรอลิค'),
-      ('34', 'โฟคลิฟ รถยก'),
-      ('35', 'รถไถ ยันม่าร์ อิเซกิ ฮิโนโมโต้ แชมป์'),
-      ('40', 'ค่าแรง'),
-      ('70', 'ค่าใช้จ่าย เทิร์นแบตเก่า'),
-      ('91', 'โปรโมชั่น / พิเศษ')
-    ) AS t(category_code, category_name)
-    ),
-    code1_dim AS (
-      SELECT * FROM (VALUES
-      ('A', 'ถ่าน'),
-      ('C', 'ซีล'),
-      ('D', 'บู๊ช'),
-      ('E', 'ลูกปืนเข็ม/กรงนก'),
-      ('F', 'ไส้กรองอากาศ'),
-      ('G', 'ยอยกากบาท'),
-      ('I', 'ลูกปืนตลับ / ลูกปืน'),
-      ('K', 'จานคลัช'),
-      ('L', 'สายอ่อน'),
-      ('O', 'โอริง'),
-      ('P', 'ไส้กรองน้ำมันเครื่อง'),
-      ('Q', 'ลูกหมาก'),
-      ('R', 'ลูกยาง')
-    ) AS t(code1, code1_name)
-    ),
     dead_base AS (
       SELECT
         lp.bcode,
@@ -311,15 +258,17 @@ BEGIN
       FROM dead_filtered d
       LEFT JOIN sales_period sp ON sp.bcode = d.bcode
       LEFT JOIN purchase_period pp ON pp.bcode = d.bcode
+      -- 3m (yellow) first, then 6m, then 1y+; within tier shorter age first → pagination goes deeper
       ORDER BY
         CASE d.dead_tier
-          WHEN 'red' THEN 1
+          WHEN 'yellow' THEN 1
           WHEN 'orange' THEN 2
-          WHEN 'yellow' THEN 3
+          WHEN 'red' THEN 3
           ELSE 4
         END,
-        d.days_since_purchase DESC NULLS LAST,
+        d.days_since_purchase ASC NULLS LAST,
         d.bcode
+      OFFSET v_dead_offset
       LIMIT v_dead_limit
     ),
     summary AS (
@@ -339,6 +288,12 @@ BEGIN
       'branch', p_branch,
       'stock_limit', v_stock_limit,
       'dead_limit', v_dead_limit,
+      'dead_offset', v_dead_offset,
+      'dead_returned_count', (SELECT count(*)::int FROM dead_list),
+      'dead_has_more', (
+        (v_dead_offset + (SELECT count(*)::int FROM dead_list))
+        < (SELECT dead_total_count FROM summary)
+      ),
       'summary', (SELECT jsonb_build_object(
         'sold_sku_count', sold_sku_count,
         'sell_qty', sell_qty,
@@ -354,9 +309,9 @@ BEGIN
           'bcode', sm.bcode,
           'detail', sm.detail,
           'category_code', sm.category_code,
-          'category_name', COALESCE(cd.category_name, sm.category_code),
+          'category_name', sm.category_code,
           'code1', sm.code1,
-          'code1_name', c1.code1_name,
+          'code1_name', sm.code1,
           'sell_qty', sm.sell_qty,
           'sell_bills', sm.sell_bills,
           'sell_days', sm.sell_days,
@@ -367,17 +322,15 @@ BEGIN
           'last_purchase_date', sm.last_purchase_date
         ) ORDER BY sm.sell_qty DESC, sm.sell_bills DESC, sm.bcode)
         FROM stock_more sm
-        LEFT JOIN category_dim cd ON cd.category_code = sm.category_code
-        LEFT JOIN code1_dim c1 ON c1.code1 = sm.code1
       ), '[]'::jsonb),
       'dead_stock', COALESCE((
         SELECT jsonb_agg(jsonb_build_object(
           'bcode', dl.bcode,
           'detail', dl.detail,
           'category_code', dl.category_code,
-          'category_name', COALESCE(cd.category_name, dl.category_code),
+          'category_name', dl.category_code,
           'code1', dl.code1,
-          'code1_name', c1.code1_name,
+          'code1_name', dl.code1,
           'on_hand_qty', dl.on_hand_qty,
           'last_purchase_date', dl.last_purchase_date,
           'last_sale_date', dl.last_sale_date,
@@ -389,25 +342,23 @@ BEGIN
           'buy_qty_period', dl.buy_qty_period
         ) ORDER BY
           CASE dl.dead_tier
-            WHEN 'red' THEN 1
+            WHEN 'yellow' THEN 1
             WHEN 'orange' THEN 2
-            WHEN 'yellow' THEN 3
+            WHEN 'red' THEN 3
             ELSE 4
           END,
-          dl.days_since_purchase DESC NULLS LAST,
+          dl.days_since_purchase ASC NULLS LAST,
           dl.bcode
         )
         FROM dead_list dl
-        LEFT JOIN category_dim cd ON cd.category_code = dl.category_code
-        LEFT JOIN code1_dim c1 ON c1.code1 = dl.code1
       ), '[]'::jsonb)
     )
   );
 END;
 $$;
 
-COMMENT ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer) IS
-  'Product movement: stock-more by sell_qty; dead stock 90/180/365 from last HQ buy + never sold; buys always HQ.';
+COMMENT ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer) IS
+  'Product movement: stock-more by sell_qty; dead list yellow→orange→red with offset pagination; buys always HQ.';
 
-GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer) TO authenticated;

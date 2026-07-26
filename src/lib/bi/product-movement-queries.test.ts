@@ -9,7 +9,10 @@ describe("normalizeProductMovement", () => {
       to: "2026-07-25",
       branch: null,
       stock_limit: 50,
-      dead_limit: 200,
+      dead_limit: 100,
+      dead_offset: 0,
+      dead_returned_count: 1,
+      dead_has_more: true,
       summary: {
         sold_sku_count: 100,
         sell_qty: 5000,
@@ -61,5 +64,8 @@ describe("normalizeProductMovement", () => {
     expect(overview.stock_more[0]?.code1_name).toContain("ลูกปืน");
     expect(overview.dead_stock[0]?.dead_tier).toBe("red");
     expect(overview.summary.dead_total_count).toBe(17);
+    expect(overview.dead_offset).toBe(0);
+    expect(overview.dead_returned_count).toBe(1);
+    expect(overview.dead_has_more).toBe(true);
   });
 });
