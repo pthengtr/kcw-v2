@@ -55,7 +55,7 @@ export async function GET(req: Request) {
       stockLimit: parsed.data.stock_limit ?? 50,
       deadLimit: parsed.data.dead_limit ?? 100,
       deadOffset: parsed.data.dead_offset ?? 0,
-      deadSort: parsed.data.dead_sort ?? "recent",
+      deadSort: parsed.data.dead_sort ?? "deep",
     });
     return NextResponse.json({ overview });
   } catch (error) {

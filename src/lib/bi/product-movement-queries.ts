@@ -163,7 +163,7 @@ export async function fetchProductMovement(
     p_stock_limit: params.stockLimit ?? 50,
     p_dead_limit: params.deadLimit ?? 100,
     p_dead_offset: params.deadOffset ?? 0,
-    p_dead_sort: params.deadSort ?? "recent",
+    p_dead_sort: params.deadSort ?? "deep",
   });
 
   if (error) {
