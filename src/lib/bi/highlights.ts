@@ -1,3 +1,4 @@
+import type { BiCustomerOverview } from "./customer-types";
 import type { BiProductOverview } from "./product-types";
 import {
   BRANCH_LABELS,
@@ -147,6 +148,50 @@ export function buildProductHighlights(overview: BiProductOverview): string[] {
   if (topCode1) {
     lines.push(
       `ชนิดชิ้นส่วนนำ (CODE1): ${topCode1.key} ${topCode1.label} · ${formatBaht(topCode1.revenue_net)} · ${shareOf(topCode1.revenue_net, total).toFixed(0)}%`
+    );
+  }
+
+  return lines;
+}
+
+export function buildCustomerHighlights(overview: BiCustomerOverview): string[] {
+  const lines: string[] = [];
+  const total = overview.summary.revenue_net;
+  const revenueDelta = pctChange(
+    overview.summary.revenue_net,
+    overview.previous_summary.revenue_net
+  );
+  const customerDelta = pctChange(
+    overview.summary.customer_count,
+    overview.previous_summary.customer_count
+  );
+
+  lines.push(
+    `ยอดลูกค้าที่จัดอันดับ ${formatBaht(total)} (${changePhrase(revenueDelta)}) · ${formatCount(overview.summary.customer_count)} รหัส (${changePhrase(customerDelta)}) · ${formatCount(overview.summary.bill_count)} บิล`
+  );
+
+  const top = overview.top_customers[0];
+  if (top) {
+    const name =
+      top.customer_name.length > 36
+        ? `${top.customer_name.slice(0, 36)}…`
+        : top.customer_name;
+    lines.push(
+      `ลูกค้าอันดับ 1: ${top.acctno} (${name}) · ${formatBaht(top.revenue_net)} · ${shareOf(top.revenue_net, total).toFixed(1)}% ของยอดจัดอันดับ`
+    );
+  }
+
+  if (overview.summary.unmatched_customer_count > 0) {
+    lines.push(
+      `รอ sync เข้า party: ${formatCount(overview.summary.unmatched_customer_count)} รหัส · มีใน party แล้ว ${formatCount(overview.summary.matched_customer_count)} รหัส`
+    );
+  } else if (overview.summary.customer_count > 0) {
+    lines.push("ทุกรหัสในช่วงนี้มีใน party master แล้ว");
+  }
+
+  if (overview.walkin_summary.bill_count > 0) {
+    lines.push(
+      `ตัด walk-in (ไม่มี ACCTNO): ${formatCount(overview.walkin_summary.bill_count)} บิล · ${formatBaht(overview.walkin_summary.revenue_net)}`
     );
   }
 

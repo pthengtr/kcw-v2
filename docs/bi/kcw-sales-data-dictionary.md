@@ -10,7 +10,7 @@ Status legend:
 - **TBD** — needs owner confirmation before using in metrics
 - **Inferred** — looks true from data patterns; not yet locked
 
-Last reviewed: 2026-07-25
+Last reviewed: 2026-07-26
 
 ---
 
@@ -25,7 +25,8 @@ Last reviewed: 2026-07-25
 
 **Confirmed:** Use final tables (`fact_sales_all`, `fact_sales_bills_all`) for dashboards, not `_stg`.
 
-**TBD:** Full inventory of other `curated_kcw` / `raw_kcw` objects relevant to BI (products, customers, purchases, etc.).
+**Customer master:** `public.party` (+ tax/bank/contact) — see [§6.9](#69-acctno-acct_no--customer-party-confirmed).  
+**TBD:** Full inventory of other `curated_kcw` / `raw_kcw` objects relevant to BI (purchases, etc.).
 
 ---
 
@@ -104,8 +105,8 @@ One row per product (or charge line) on a sales bill. Use for product mix, quant
 | `TAXIC` | How operator keyed the amount | Confirmed | `Y` = line amount **includes** VAT; `N` = line amount **excludes** VAT. Not the VAT-sales classifier |
 | `ISVAT` | Whether this is a **VAT sale** line | Confirmed | `Y` = VAT sales; `N` = non-VAT sales. Dashboard sales-type split uses this |
 | `VAT` (line) | **VAT rate %**, not baht amount | Confirmed | Typically `7.0` when `ISVAT=Y`; `0`/null when `ISVAT=N` |
-| `ACCTNO` | Account / customer short name? | TBD | Sometimes Thai nickname |
-| `ACCT_NO` | Alternate account field | TBD | Differs from `ACCTNO` — clarify |
+| `ACCTNO` | **Customer (AR)** code — same as bill `ACCTNO` when filled | Confirmed | July 2026: when filled, always equals bill `ACCTNO`. Do **not** confuse with line `ACCT_NO` |
+| `ACCT_NO` | **Supplier / source (AP-leaning)** code on the line | Confirmed | Joins `party.party_code` mostly as `SUPPLIER` (e.g. `7SSY`, `CRRK`). Never equals bill customer `ACCTNO`. **Not** for customer ranking |
 | `PAID` | Paid flag on line | TBD | Seen `Y` |
 | `STATUS` | Line/bill status | TBD | Seen `1.0`, `8.0` |
 | `DONE` | Done flag | TBD | Mostly `N` |
@@ -188,8 +189,8 @@ One row per bill. Use for bill count, bill totals (before/after tax), payment st
 | `CHKAMT` | Check / transfer amount? | TBD | Often used when paid non-cash-label |
 | `DUEAMT` | Amount still due | TBD | |
 | `PAYSTAT` | Payment status code | TBD | Seen: null, `$`, `=`, `%`, `&` |
-| `ACCTNO` | Customer account code | TBD | |
-| `ACCTNAME` | Customer / payer name | Confirmed (name) | e.g. `เงินสด`, person/company names |
+| `ACCTNO` | **Customer (AR)** account code | Confirmed | Join key → `public.party.party_code`. Blank = walk-in / cash — **exclude from customer ranking** |
+| `ACCTNAME` | Name keyed on the bill | Confirmed | Fallback display only. **`party.party_name` takes priority** when party exists. Often `เงินสด` on walk-in |
 | `ADDR1` / `ADDR2` | Address | TBD | |
 | `PO` | Context-dependent reference (not always a purchase order) | Confirmed (CN, TAD) | See [§6.8](#68-po-column-meanings) |
 | `SALE` | Salesperson code | Confirmed (name) | e.g. `NUY`, `JEAB`, `NONG` |
@@ -430,6 +431,35 @@ Until this allocation is implemented in curated SQL/views, **bill `BEFORETAX` is
 
 Case note: CN `PO` values occasionally differ in casing (`tfv6808-012` vs `TFV…`); prefer case-insensitive join when linking.
 
+### 6.9 `ACCTNO` / `ACCT_NO` + customer / party (Confirmed)
+
+Field names look alike (`ACCTNO`, `ACCT_NO`, sometimes spoken as “accno”) but **roles differ by table**. Owner rule for customer ranking: use **bill `ACCTNO` (AR)** only.
+
+#### Field map
+
+| Field | Table | Role | Joins `party.party_code` as | Use for customer ranking? |
+|-------|-------|------|-----------------------------|---------------------------|
+| `"ACCTNO"` | `fact_sales_bills_all` | **Customer (AR)** | Mostly `CUSTOMER` | **Yes** — primary key |
+| `"ACCTNO"` | `fact_sales_all` | Same customer code as bill when filled | Same as bill | Redundant; prefer bill |
+| `"ACCT_NO"` | `fact_sales_all` | **Supplier / source (AP-leaning)** on the line | Mostly `SUPPLIER` | **No** |
+| `"ACCTNO"` | `raw_hq_pidet_purchase_lines` | **Supplier (AP)** on purchase | Mostly `SUPPLIER` / `BOTH` | **No** (AP) |
+| `"ACCT_NO"` | `raw_hq_pidet_purchase_lines` | Mixed — often expense/GL-like codes (`5209` ค่าขนส่ง) or supplier | Sparse; not reliable customer | **No** |
+
+**Mnemonic:** sales bill/line **`ACCTNO` = AR customer**; sales line **`ACCT_NO` = AP/supplier**; purchase **`ACCTNO` = AP supplier**.
+
+July 2026 check (revenue filters): line `ACCTNO` equals bill `ACCTNO` whenever filled; line `ACCT_NO` equals bill `ACCTNO` **0** times.
+
+#### Customer ranking rules (Confirmed — owner)
+
+1. **Grain:** bill header · revenue = `BEFORETAX` · same filters as sales overview (`CANCELED=N`, `JOURMODE<>0`, exclude `TF`/`TFV`/`TAR`; reporting branch `ONLINE` for TAD/CNTAD).
+2. **Exclude blank `ACCTNO`** — walk-in / random cash customers (often `ACCTNAME='เงินสด'`). Do not rank them.
+3. **Join:** `bill.ACCTNO = public.party.party_code` (left join).
+4. **Display name priority:** `party.party_name` → else bill `ACCTNAME` → else `ACCTNO`. Party is master.
+5. **Unmatched:** keep the `ACCTNO` (and bill name if any); do **not** invent party rows. UI may show the full unmatched list so operators can add/sync into party.
+6. **Related party tables:** `party`, `party_tax_info`, `party_bank_info`, `party_contact` (`kind`: `CUSTOMER` / `SUPPLIER` / `BOTH`).
+
+RPC: `public.fn_bi_customer_overview` · UI `/bi/customers`.
+
 ### 6.1 `BILLTYPE` (raw)
 
 | Code | Meaning | Status |
@@ -562,8 +592,8 @@ Line `JOURMODE` always matches bill `JOURMODE` in current data.
 5. **Only strip `/1.07` when `ISVAT=Y` and `TAXIC=Y`** — if `ISVAT=N`, ignore `TAXIC` (even if wrongly `Y`).
 6. **`BILLTYPE_STD = UNKNOWN` is common** — do not treat “UNKNOWN” as rare dirty data without a rule.
 7. **Bill orphans (29 HQ)** — headers with no lines: many `BILLTYPE = R` / `&…` numbers, or `LINES = 0` / null amounts. Decide whether to exclude from bill counts.
-8. **`ACCTNO` vs `ACCT_NO` on lines** — two similarly named fields; meanings TBD.
-9. **Cash customers** — bill `ACCTNAME = 'เงินสด'` often appears on cash sales.
+8. **`ACCTNO` vs `ACCT_NO`** — different roles (AR customer vs AP/supplier). See [§6.9](#69-acctno-acct_no--customer-party-confirmed).
+9. **Walk-in / blank `ACCTNO`** — exclude from customer ranking; often `ACCTNAME = 'เงินสด'`.
 10. **Cost gaps** — `COST_STATUS = UNKNOWN` (~13k lines); margin metrics need a policy.
 11. **Staging tables** — do not report from `*_stg`.
 12. **Bill has no `ISVAT`** — for bill-level VAT vs non-VAT split, derive from lines (e.g. any/all `ISVAT=Y`) or use a curated rule (TBD).
@@ -741,6 +771,21 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 -- prefer bill grain or bill attributes joined onto the line base
 ```
 
+### 8.7 Customer ranking — Confirmed
+
+```text
+Key: bill "ACCTNO"  (AR customer; NOT line "ACCT_NO", NOT purchase ACCTNO)
+Exclude: blank / null / whitespace ACCTNO  (walk-in)
+
+revenue_net = sum(BEFORETAX)  -- same bill filters as §8 sales overview
+customer_count = count distinct ACCTNO
+bill_count = count bills with ACCTNO
+display_name = coalesce(party.party_name, bill.ACCTNAME, ACCTNO)
+
+Unmatched (no party row): still ranked by ACCTNO; expose list for party sync.
+Walk-in totals may be reported separately but are outside the ranking set.
+```
+
 ---
 
 ## 9. Open questions (working list)
@@ -761,10 +806,11 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 - [ ] Credit note / debit note sign handling (`CN`, `DN`)
 - [ ] `PAYSTAT` legend and AR aging rules
 - [ ] Difference between `PRICE` / `XPRICE` / `LAST_PURCHASE_COST`
-- [ ] Difference between line `ACCTNO` and `ACCT_NO`
+- [x] Line `ACCTNO` = customer (AR, = bill); line `ACCT_NO` = supplier (AP-leaning) — Confirmed §6.9
+- [x] Customer ranking key = bill `ACCTNO` → `party.party_code`; blank excluded; party name master — Confirmed §6.9 / §8.7
 - [ ] Whether `BILLTYPE = R` headers should appear in any dashboard
 - [ ] Default timezone / business day cutoff for `BILLDATE`
-- [ ] Product / customer dimension tables to join next
+- [ ] Richer customer dims from `party_tax_info` / `party_contact` (tax id, phone) on ranking UI
 
 ---
 
@@ -787,6 +833,7 @@ TBD: rules using PAID, CASHED, DUEAMT, PAYSTAT, TERM, ACCTNAME
 | 2026-07-25 | MTP = pack→smallest-unit multiplier; unit price = PRICE/MTP | Owner + data |
 | 2026-07-25 | TAD/CNTAD reporting_branch=ONLINE; remove from HQ totals | Owner |
 | 2026-07-25 | Ship sales overview dashboard + `fn_bi_sales_overview` (bill BEFORETAX; VAT/branch/channel splits) | Cursor |
+| 2026-07-26 | Confirm ACCTNO (AR customer) vs ACCT_NO (AP/supplier); customer ranking rules + party master; ship `fn_bi_customer_overview` | Owner + Cursor |
 
 ---
 
