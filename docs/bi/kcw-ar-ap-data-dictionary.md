@@ -75,9 +75,9 @@ Examples (ARMAS/APMAS): company accounts with `MOBILE` = 13-digit tax id while `
 ## 4. Open questions
 
 - [x] `MOBILE` = tax id (not phone) — Confirmed §2
+- [x] Prefer `public.party` as display master, then ARMAS `"ACCTNAME"`, else blank (customer ranking) — Confirmed
 - [ ] Full `ACCTTYPE` / `JOURMODE` legend for masters
 - [ ] Exact meaning of `ALLOW`, `ATPRICE`, `MARKUP`
-- [ ] Whether to prefer ARMAS/APMAS vs `public.party` + `party_tax_info` as display master
 - [ ] Ingest AR/AP **transaction** ledgers if needed for aging
 
 ---
@@ -87,3 +87,4 @@ Examples (ARMAS/APMAS): company accounts with `MOBILE` = 13-digit tax id while `
 | Date | Change | By |
 |------|--------|----|
 | 2026-07-27 | Start AR/AP master dictionary; lock `MOBILE` = tax id | Owner |
+| 2026-07-27 | Customer BI uses party first, then ARMAS name fallback | Owner + Cursor |

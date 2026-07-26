@@ -6,7 +6,10 @@ import {
   CUSTOMER_RANK_BRANCH_FILTERS,
   customerRankAmount,
 } from "@/lib/bi/customer-rank-filter";
-import type { BiCustomerRankRow } from "@/lib/bi/customer-types";
+import type {
+  BiCustomerNameSource,
+  BiCustomerRankRow,
+} from "@/lib/bi/customer-types";
 import {
   formatBaht,
   formatCount,
@@ -29,11 +32,23 @@ type CustomerRankTableProps = {
   onBranchFilterChange?: (branch: BiBranchFilter) => void;
 };
 
+const NAME_SOURCE_LABEL: Record<BiCustomerNameSource, string> = {
+  party: "party",
+  armas: "ARMAS",
+  none: "ไม่มีชื่อ",
+};
+
+const NAME_SOURCE_TONE: Record<BiCustomerNameSource, string> = {
+  party: "text-emerald-700",
+  armas: "text-sky-700",
+  none: "text-amber-700",
+};
+
 export default function CustomerRankTable({
   rows,
   totalRevenue,
   title = "อันดับลูกค้า (ตามยอดสุทธิ)",
-  description = "ชื่อจาก public.party เป็นหลัก · ไม่มีใน party แสดงรหัส ACCTNO / ชื่อจากบิล",
+  description = "ชื่อจาก party → ARMAS (raw_kcw) · ไม่มีทั้งคู่แสดงว่าง · แสดงแหล่งที่มาของชื่อ",
   emptyLabel = "ไม่มีข้อมูล",
   branchFilter = "ALL",
   onBranchFilterChange,
@@ -51,6 +66,7 @@ export default function CustomerRankTable({
         row.customer_name,
         row.bill_acctname ?? "",
         row.party_kind ?? "",
+        NAME_SOURCE_LABEL[row.name_source],
       ]
         .join(" ")
         .toLowerCase();
@@ -104,7 +120,7 @@ export default function CustomerRankTable({
             <tr className="border-b text-xs text-muted-foreground">
               <th className="py-2 pr-2 font-medium">#</th>
               <th className="py-2 pr-3 font-medium">ลูกค้า</th>
-              <th className="py-2 pr-3 font-medium">Party</th>
+              <th className="py-2 pr-3 font-medium">แหล่งชื่อ</th>
               <th className="py-2 pr-3 text-right font-medium">
                 {activeBranch === "ALL"
                   ? "ยอดสุทธิ"
@@ -144,22 +160,23 @@ export default function CustomerRankTable({
                         {row.acctno}
                       </span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        {row.customer_name}
+                        {row.customer_name || "—"}
                       </span>
-                      {!row.in_party && row.bill_acctname ? (
-                        <span className="block truncate text-[11px] text-amber-700">
-                          ชื่อจากบิล: {row.bill_acctname}
-                        </span>
-                      ) : null}
                     </td>
                     <td className="whitespace-nowrap py-2.5 pr-3 text-xs">
-                      {row.in_party ? (
-                        <span className="text-emerald-700">
-                          {row.party_kind ?? "มีใน party"}
+                      <span className={NAME_SOURCE_TONE[row.name_source]}>
+                        {NAME_SOURCE_LABEL[row.name_source]}
+                      </span>
+                      {!row.in_party && row.in_armas ? (
+                        <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                          รอ sync party
                         </span>
-                      ) : (
-                        <span className="text-amber-700">ยังไม่มีใน party</span>
-                      )}
+                      ) : null}
+                      {!row.in_party && !row.in_armas ? (
+                        <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                          ไม่มีใน party/ARMAS
+                        </span>
+                      ) : null}
                     </td>
                     <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums font-medium">
                       {formatBaht(amount)}

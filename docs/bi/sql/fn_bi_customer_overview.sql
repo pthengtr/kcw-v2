@@ -1,6 +1,7 @@
 -- Customer BI overview: bill-grain net revenue ranked by bill ACCTNO (AR customer).
--- Blank ACCTNO excluded (walk-in / cash). public.party is name master.
--- See docs/bi/kcw-sales-data-dictionary.md §6.9 and §8.7.
+-- Blank ACCTNO excluded (walk-in / cash).
+-- Display name: public.party → raw_kcw ARMAS → blank (only when both missing).
+-- See docs/bi/kcw-sales-data-dictionary.md §6.9 / §8.7 and kcw-ar-ap-data-dictionary.md.
 
 CREATE OR REPLACE FUNCTION public.fn_bi_customer_overview(
   p_from date,
@@ -12,7 +13,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public, curated_kcw
+SET search_path = public, curated_kcw, raw_kcw
 AS $$
 DECLARE
   v_result jsonb;
@@ -105,12 +106,36 @@ BEGIN
     FROM ranked
     GROUP BY acctno
   ),
+  armas AS (
+    SELECT DISTINCT ON (nullif(btrim(COALESCE(a."ACCTNO"::text, '')), ''))
+      nullif(btrim(COALESCE(a."ACCTNO"::text, '')), '') AS acctno,
+      nullif(btrim(COALESCE(a."ACCTNAME"::text, '')), '') AS armas_name
+    FROM raw_kcw.raw_hq_armas_receivable a
+    WHERE nullif(btrim(COALESCE(a."ACCTNO"::text, '')), '') IS NOT NULL
+      AND COALESCE(a."CANCELED", 'N') <> 'Y'
+    ORDER BY
+      nullif(btrim(COALESCE(a."ACCTNO"::text, '')), ''),
+      CASE WHEN nullif(btrim(COALESCE(a."ACCTNAME"::text, '')), '') IS NOT NULL
+        THEN 0 ELSE 1 END
+  ),
   enriched AS (
     SELECT
       a.acctno,
-      COALESCE(p.party_name, a.bill_acctname, a.acctno) AS customer_name,
+      CASE
+        WHEN nullif(btrim(COALESCE(p.party_name, '')), '') IS NOT NULL
+          THEN btrim(p.party_name)
+        WHEN nullif(btrim(COALESCE(ar.armas_name, '')), '') IS NOT NULL
+          THEN btrim(ar.armas_name)
+        ELSE NULL
+      END AS customer_name,
+      CASE
+        WHEN nullif(btrim(COALESCE(p.party_name, '')), '') IS NOT NULL THEN 'party'
+        WHEN nullif(btrim(COALESCE(ar.armas_name, '')), '') IS NOT NULL THEN 'armas'
+        ELSE 'none'
+      END AS name_source,
       a.bill_acctname,
       (p.party_code IS NOT NULL) AS in_party,
+      (ar.acctno IS NOT NULL) AS in_armas,
       p.kind AS party_kind,
       a.revenue_net,
       a.bill_count,
@@ -120,6 +145,7 @@ BEGIN
       a.online_revenue_net
     FROM customer_agg a
     LEFT JOIN public.party p ON p.party_code = a.acctno
+    LEFT JOIN armas ar ON ar.acctno = a.acctno
   ),
   summary AS (
     SELECT
@@ -209,8 +235,10 @@ BEGIN
       SELECT jsonb_agg(jsonb_build_object(
         'acctno', acctno,
         'customer_name', customer_name,
+        'name_source', name_source,
         'bill_acctname', bill_acctname,
         'in_party', in_party,
+        'in_armas', in_armas,
         'party_kind', party_kind,
         'revenue_net', revenue_net,
         'bill_count', bill_count,
@@ -225,8 +253,10 @@ BEGIN
       SELECT jsonb_agg(jsonb_build_object(
         'acctno', acctno,
         'customer_name', customer_name,
+        'name_source', name_source,
         'bill_acctname', bill_acctname,
         'in_party', in_party,
+        'in_armas', in_armas,
         'party_kind', party_kind,
         'revenue_net', revenue_net,
         'bill_count', bill_count,
@@ -244,7 +274,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fn_bi_customer_overview(date, date, text, integer) IS
-  'Customer BI: bill BEFORETAX ranking by ACCTNO; blank ACCTNO excluded; party name master; unmatched list.';
+  'Customer BI: bill BEFORETAX ranking by ACCTNO; name = party → ARMAS → blank; expose name_source.';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_customer_overview(date, date, text, integer) TO service_role;
 GRANT EXECUTE ON FUNCTION public.fn_bi_customer_overview(date, date, text, integer) TO authenticated;

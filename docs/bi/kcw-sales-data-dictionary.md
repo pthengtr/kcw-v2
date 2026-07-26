@@ -454,10 +454,11 @@ July 2026 check (revenue filters): line `ACCTNO` equals bill `ACCTNO` whenever f
 1. **Grain:** bill header · revenue = `BEFORETAX` · same filters as sales overview (`CANCELED=N`, `JOURMODE<>0`, exclude `TF`/`TFV`/`TAR`; reporting branch `ONLINE` for TAD/CNTAD).
 2. **Exclude blank `ACCTNO`** — walk-in / random cash customers (often `ACCTNAME='เงินสด'`). Do not rank them.
 3. **Join:** `bill.ACCTNO = public.party.party_code` (left join).
-4. **Display name priority:** `party.party_name` → else bill `ACCTNAME` → else `ACCTNO`. Party is master.
-5. **Unmatched:** keep the `ACCTNO` (and bill name if any); do **not** invent party rows. UI may show the full unmatched list so operators can add/sync into party.
-6. **Related party tables:** `party`, `party_tax_info`, `party_bank_info`, `party_contact` (`kind`: `CUSTOMER` / `SUPPLIER` / `BOTH`).
-7. **KACC AR/AP masters:** `raw_hq_armas_receivable` / `raw_hq_apmas_payable` — see [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md). In those tables, **`MOBILE` is tax id**, not phone (`PHONE` is the phone field).
+4. **Display name priority:** `party.party_name` → else ARMAS `"ACCTNAME"` (`raw_kcw.raw_hq_armas_receivable`) → else **blank**. Do **not** invent a name from bill `ACCTNAME` or `ACCTNO` when both masters are missing.
+5. **Name source:** expose `name_source` = `party` | `armas` | `none` (and `in_armas`) so the UI can show where the name came from.
+6. **Unmatched:** keep the `ACCTNO` when there is no `party` row; name may still come from ARMAS. UI may show the full unmatched list so operators can add/sync into party.
+7. **Related party tables:** `party`, `party_tax_info`, `party_bank_info`, `party_contact` (`kind`: `CUSTOMER` / `SUPPLIER` / `BOTH`).
+8. **KACC AR/AP masters:** `raw_hq_armas_receivable` / `raw_hq_apmas_payable` — see [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md). In those tables, **`MOBILE` is tax id**, not phone (`PHONE` is the phone field).
 
 RPC: `public.fn_bi_customer_overview` · UI `/bi/customers`.
 
@@ -787,9 +788,10 @@ Exclude: blank / null / whitespace ACCTNO  (walk-in)
 revenue_net = sum(BEFORETAX)  -- same bill filters as §8 sales overview
 customer_count = count distinct ACCTNO
 bill_count = count bills with ACCTNO
-display_name = coalesce(party.party_name, bill.ACCTNAME, ACCTNO)
+display_name = coalesce(party.party_name, armas.ACCTNAME)  -- blank if both missing
+name_source  = party | armas | none
 
-Unmatched (no party row): still ranked by ACCTNO; expose list for party sync.
+Unmatched (no party row): still ranked by ACCTNO; name may come from ARMAS; expose list for party sync.
 Walk-in totals may be reported separately but are outside the ranking set.
 ```
 
@@ -814,7 +816,7 @@ Walk-in totals may be reported separately but are outside the ranking set.
 - [ ] `PAYSTAT` legend and AR aging rules
 - [x] Margin COGS = qty×MTP×LAST_PURCHASE_COST; ignore XPRICE; blank cost lines excluded from totals (list kept) — Confirmed §8.5
 - [x] Line `ACCTNO` = customer (AR, = bill); line `ACCT_NO` = supplier (AP-leaning) — Confirmed §6.9
-- [x] Customer ranking key = bill `ACCTNO` → `party.party_code`; blank excluded; party name master — Confirmed §6.9 / §8.7
+- [x] Customer ranking key = bill `ACCTNO` → `party.party_code`; blank excluded; name = party → ARMAS → blank; expose `name_source` — Confirmed §6.9 / §8.7
 - [ ] Whether `BILLTYPE = R` headers should appear in any dashboard
 - [ ] Default timezone / business day cutoff for `BILLDATE`
 - [ ] Richer customer dims from `party_tax_info` / `party_contact` (tax id, phone) on ranking UI
@@ -843,6 +845,7 @@ Walk-in totals may be reported separately but are outside the ranking set.
 | 2026-07-26 | Confirm ACCTNO (AR customer) vs ACCT_NO (AP/supplier); customer ranking rules + party master; ship `fn_bi_customer_overview` | Owner + Cursor |
 | 2026-07-26 | Lock gross margin §8.5 (LAST_PURCHASE_COST; blank=0; ignore XPRICE) + income report net = gross − opex | Owner + Cursor |
 | 2026-07-27 | Cross-link ARMAS/APMAS; `MOBILE` = tax id (see ar-ap dictionary) | Owner |
+| 2026-07-27 | Customer name fallback: party → ARMAS → blank; expose `name_source` | Owner + Cursor |
 
 ---
 

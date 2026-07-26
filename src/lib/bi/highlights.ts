@@ -174,12 +174,20 @@ export function buildCustomerHighlights(overview: BiCustomerOverview): string[] 
 
   const top = overview.top_customers[0];
   if (top) {
-    const name =
-      top.customer_name.length > 36
-        ? `${top.customer_name.slice(0, 36)}…`
-        : top.customer_name;
+    const rawName = top.customer_name.trim();
+    const name = !rawName
+      ? "—"
+      : rawName.length > 36
+        ? `${rawName.slice(0, 36)}…`
+        : rawName;
+    const sourceLabel =
+      top.name_source === "party"
+        ? "party"
+        : top.name_source === "armas"
+          ? "ARMAS"
+          : "ไม่มีชื่อ";
     lines.push(
-      `ลูกค้าอันดับ 1: ${top.acctno} (${name}) · ${formatBaht(top.revenue_net)} · ${shareOf(top.revenue_net, total).toFixed(1)}% ของยอดจัดอันดับ`
+      `ลูกค้าอันดับ 1: ${top.acctno} (${name} · ${sourceLabel}) · ${formatBaht(top.revenue_net)} · ${shareOf(top.revenue_net, total).toFixed(1)}% ของยอดจัดอันดับ`
     );
   }
 

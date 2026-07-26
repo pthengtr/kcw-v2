@@ -347,7 +347,7 @@ export default function CustomerOverviewPage() {
               totalRevenue={overview.summary.revenue_net}
               branchFilter={branch}
               onBranchFilterChange={setBranch}
-              description="กรอง HQ / SYP / ออนไลน์ เพื่อจัดอันดับใหม่ · ชื่อจาก public.party เป็นหลัก"
+              description="กรอง HQ / SYP / ออนไลน์ เพื่อจัดอันดับใหม่ · ชื่อ party → ARMAS · ไม่มีทั้งคู่แสดงว่าง"
             />
           </section>
 
@@ -358,7 +358,7 @@ export default function CustomerOverviewPage() {
                   รหัสที่ยังไม่มีใน party
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  เปิดรายการเต็มเพื่อให้ operator เพิ่ม/ sync เข้า party master
+                  เปิดรายการเต็มเพื่อ sync เข้า party · ชื่ออาจมาจาก ARMAS แล้ว
                 </p>
               </div>
               <Button
@@ -380,7 +380,7 @@ export default function CustomerOverviewPage() {
                 rows={overview.unmatched_customers}
                 totalRevenue={overview.summary.revenue_net}
                 title="ลูกค้าที่ยังไม่มีใน party"
-                description="เก็บ ACCTNO จากบิลไว้ · ชื่อจาก ACCTNAME ถ้ามี · ใช้สำหรับ sync เข้า party"
+                description="เก็บ ACCTNO จากบิล · ชื่อจาก ARMAS ถ้ามี · ไม่มีใน party/ARMAS แสดงว่าง · ใช้ sync เข้า party"
                 emptyLabel="ทุกรหัสในช่วงนี้มีใน party แล้ว"
               />
             ) : null}
