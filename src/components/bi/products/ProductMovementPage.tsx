@@ -57,7 +57,7 @@ export default function ProductMovementPage() {
   const [customMonth, setCustomMonth] = useState("");
   const [tab, setTab] = useState<TabId>("stock-more");
   const [deadAsOf, setDeadAsOf] = useState(() => bangkokTodayIso());
-  const [deadSort, setDeadSort] = useState<BiDeadSort>("recent");
+  const [deadSort, setDeadSort] = useState<BiDeadSort>("deep");
   const [deadOffset, setDeadOffset] = useState(0);
   const [overview, setOverview] = useState<BiProductMovement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -164,8 +164,8 @@ export default function ProductMovementPage() {
               การเคลื่อนไหวสินค้า
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              ขายบ่อย → สต็อกเพิ่ม · สต็อกค้างตามอายุซื้อล่าสุด (เหลือง 3 ด. /
-              ส้ม 6 ด. / แดง 1 ปี) · ซื้ออ้างอิง HQ เสมอ
+              ขายบ่อย → สต็อกเพิ่ม · สต็อกค้างนับจากวันซื้อล่าสุดที่ยังไม่ขาย
+              (เหลือง ≥6 ด. / ส้ม ≥1 ปี / แดง ≥2 ปี) · ซื้ออ้างอิง HQ เสมอ
             </p>
             <p className="mt-2 text-xs text-slate-600 sm:text-sm">
               {tab === "dead" ? (
@@ -419,7 +419,7 @@ export default function ProductMovementPage() {
             <SalesKpiCard
               title="สต็อกค้าง (มีคงเหลือ)"
               value={formatCount(overview.summary.dead_total_count)}
-              hint={`แดง ${formatCount(overview.summary.dead_red_count)} · ส้ม ${formatCount(overview.summary.dead_orange_count)} · เหลือง ${formatCount(overview.summary.dead_yellow_count)}`}
+              hint={`แดง ≥2 ปี ${formatCount(overview.summary.dead_red_count)} · ส้ม ≥1 ปี ${formatCount(overview.summary.dead_orange_count)} · เหลือง ≥6 ด. ${formatCount(overview.summary.dead_yellow_count)}`}
               icon={<AlertTriangle className="h-4 w-4" />}
             />
           </section>

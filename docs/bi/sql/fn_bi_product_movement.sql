@@ -12,7 +12,7 @@ CREATE OR REPLACE FUNCTION public.fn_bi_product_movement(
   p_stock_limit integer DEFAULT 50,
   p_dead_limit integer DEFAULT 100,
   p_dead_offset integer DEFAULT 0,
-  p_dead_sort text DEFAULT 'recent'
+  p_dead_sort text DEFAULT 'deep'
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -38,8 +38,8 @@ BEGIN
   v_dead_limit := GREATEST(1, LEAST(COALESCE(p_dead_limit, 100), 500));
   v_dead_offset := GREATEST(0, COALESCE(p_dead_offset, 0));
   v_dead_sort := CASE
-    WHEN lower(COALESCE(p_dead_sort, 'recent')) = 'deep' THEN 'deep'
-    ELSE 'recent'
+    WHEN lower(COALESCE(p_dead_sort, 'deep')) = 'recent' THEN 'recent'
+    ELSE 'deep'
   END;
 
   RETURN (
@@ -188,17 +188,11 @@ BEGIN
       SELECT
         d.*,
         CASE
-          WHEN d.no_move_since_purchase AND d.days_since_purchase >= 365 THEN 'red'
-          WHEN d.no_move_since_purchase AND d.days_since_purchase >= 180 THEN 'orange'
-          WHEN d.no_move_since_purchase AND d.days_since_purchase >= 90 THEN 'yellow'
+          WHEN d.no_move_since_purchase AND d.days_since_purchase >= 730 THEN 'red'
+          WHEN d.no_move_since_purchase AND d.days_since_purchase >= 365 THEN 'orange'
+          WHEN d.no_move_since_purchase AND d.days_since_purchase >= 180 THEN 'yellow'
           ELSE NULL
-        END AS purchase_dead_tier,
-        CASE
-          WHEN d.last_sale_date IS NULL OR d.days_since_sale >= 365 THEN 'red'
-          WHEN d.days_since_sale >= 180 THEN 'orange'
-          WHEN d.days_since_sale >= 90 THEN 'yellow'
-          ELSE NULL
-        END AS never_sold_tier
+        END AS dead_tier
       FROM dead_base d
     ),
     dead_final AS (
@@ -213,18 +207,13 @@ BEGIN
         days_since_purchase,
         days_since_sale,
         no_move_since_purchase,
-        CASE
-          WHEN purchase_dead_tier = 'red' OR never_sold_tier = 'red' THEN 'red'
-          WHEN purchase_dead_tier = 'orange' OR never_sold_tier = 'orange' THEN 'orange'
-          WHEN purchase_dead_tier = 'yellow' OR never_sold_tier = 'yellow' THEN 'yellow'
-          ELSE NULL
-        END AS dead_tier
+        dead_tier
       FROM dead_scored
+      WHERE dead_tier IS NOT NULL
     ),
     dead_filtered AS (
       SELECT *
       FROM dead_final
-      WHERE dead_tier IS NOT NULL
     ),
     stock_more AS (
       SELECT
