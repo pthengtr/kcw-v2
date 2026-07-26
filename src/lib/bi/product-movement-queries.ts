@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { categoryLabel, code1Label } from "./icmas-labels";
 import type {
+  BiDeadSort,
   BiDeadStockRow,
   BiDeadTier,
   BiProductMovement,
@@ -43,6 +44,10 @@ function asDeadTier(value: unknown): BiDeadTier {
   const s = asString(value);
   if (s === "red" || s === "orange" || s === "yellow") return s;
   return "yellow";
+}
+
+function asDeadSort(value: unknown): BiDeadSort {
+  return asString(value) === "deep" ? "deep" : "recent";
 }
 
 function parseStockMore(value: unknown): BiStockMoreRow[] {
@@ -100,12 +105,30 @@ export function normalizeProductMovement(raw: unknown): BiProductMovement {
   const data = (raw ?? {}) as Record<string, unknown>;
   const summary = (data.summary ?? {}) as Record<string, unknown>;
 
+  const dead_limit = asNumber(data.dead_limit);
+  const dead_offset = asNumber(data.dead_offset);
+  const dead_sort = asDeadSort(data.dead_sort);
+  const dead_stock = parseDeadStock(data.dead_stock);
+  const dead_returned_count =
+    data.dead_returned_count == null
+      ? dead_stock.length
+      : asNumber(data.dead_returned_count);
+  const dead_total_count = asNumber(summary.dead_total_count);
+  const dead_has_more =
+    data.dead_has_more == null
+      ? dead_offset + dead_returned_count < dead_total_count
+      : Boolean(data.dead_has_more);
+
   return {
     from: asString(data.from),
     to: asString(data.to),
     branch: data.branch == null ? null : asString(data.branch),
     stock_limit: asNumber(data.stock_limit),
-    dead_limit: asNumber(data.dead_limit),
+    dead_limit,
+    dead_offset,
+    dead_sort,
+    dead_returned_count,
+    dead_has_more,
     summary: {
       sold_sku_count: asNumber(summary.sold_sku_count),
       sell_qty: asNumber(summary.sell_qty),
@@ -114,10 +137,10 @@ export function normalizeProductMovement(raw: unknown): BiProductMovement {
       dead_yellow_count: asNumber(summary.dead_yellow_count),
       dead_orange_count: asNumber(summary.dead_orange_count),
       dead_red_count: asNumber(summary.dead_red_count),
-      dead_total_count: asNumber(summary.dead_total_count),
+      dead_total_count,
     },
     stock_more: parseStockMore(data.stock_more),
-    dead_stock: parseDeadStock(data.dead_stock),
+    dead_stock,
   };
 }
 
@@ -129,6 +152,8 @@ export async function fetchProductMovement(
     branch?: string | null;
     stockLimit?: number;
     deadLimit?: number;
+    deadOffset?: number;
+    deadSort?: BiDeadSort;
   }
 ): Promise<BiProductMovement> {
   const { data, error } = await supabase.rpc("fn_bi_product_movement", {
@@ -136,7 +161,9 @@ export async function fetchProductMovement(
     p_to: params.to,
     p_branch: params.branch ?? null,
     p_stock_limit: params.stockLimit ?? 50,
-    p_dead_limit: params.deadLimit ?? 200,
+    p_dead_limit: params.deadLimit ?? 100,
+    p_dead_offset: params.deadOffset ?? 0,
+    p_dead_sort: params.deadSort ?? "recent",
   });
 
   if (error) {

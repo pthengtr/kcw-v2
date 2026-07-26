@@ -15,7 +15,8 @@ Last reviewed: 2026-07-26
 | **Stock more** | Rank SKUs by **most move-out** in the period (`sell_qty` desc) |
 | **Dead / careful** | Age from **last HQ purchase** with **no subsequent sale**, plus never-sold in same windows |
 | Purchase side | Always **HQ** PIDET |
-| Sales side | Optional branch filter HQ / SYP / ONLINE |
+| Sales side (stock-more) | Optional branch filter HQ / SYP / ONLINE |
+| Dead side | As-of end date; **no** period/branch filter on membership |
 
 Aging colors:
 
@@ -70,9 +71,13 @@ Universe for dead list: has `last_purchase_date`, **`on_hand_qty > 0`**, and
 
 | Piece | Detail |
 |-------|--------|
-| RPC | `public.fn_bi_product_movement(from, to, branch, stock_limit, dead_limit)` |
-| UI | `/bi/product-movement` |
-| API | `GET /api/bi/products/movement?from=&to=&branch=&stock_limit=&dead_limit=` |
+| RPC | `public.fn_bi_product_movement(from, to, branch, stock_limit, dead_limit, dead_offset, dead_sort)` |
+| Stock-more filters | Period `from`–`to` + optional sales `branch` |
+| Dead stock filters | **As-of `to` only** — period window and branch do **not** define the dead universe; `last_sale` is always all-branch |
+| Dead sort | `recent` = yellow→orange→red, short age first · `deep` = red→orange→yellow, long age first |
+| Pagination | `dead_offset` + `dead_limit` (default 100); response includes `dead_has_more` |
+| UI | `/bi/product-movement` — stock-more uses period/branch; dead tab uses as-of date + recent/deep toggle |
+| API | `GET /api/bi/products/movement?from=&to=&branch=&stock_limit=&dead_limit=&dead_offset=&dead_sort=` |
 
 ---
 
@@ -80,4 +85,6 @@ Universe for dead list: has `last_purchase_date`, **`on_hand_qty > 0`**, and
 
 | Date | Change |
 |------|--------|
+| 2026-07-26 | Dead list: configurable `recent`/`deep` sort; period/branch apply only to stock-more |
+| 2026-07-26 | Dead list: yellow-first sort + offset pagination; remove tier filter chips |
 | 2026-07-26 | Lock stock-more rank + dead tiers 90/180/365; HQ purchases; ship report |

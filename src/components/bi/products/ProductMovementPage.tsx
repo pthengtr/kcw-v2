@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import type {
-  BiDeadTier,
+  BiDeadSort,
   BiProductMovement,
 } from "@/lib/bi/product-movement-types";
 import { formatCount } from "@/lib/bi/sales-format";
@@ -44,6 +44,7 @@ import DeadStockTable from "./DeadStockTable";
 import StockMoreTable from "./StockMoreTable";
 
 const PERIODS: BiPeriodPreset[] = ["month", "ytd", "custom"];
+const DEAD_PAGE_SIZE = 100;
 
 type TabId = "stock-more" | "dead";
 
@@ -55,7 +56,9 @@ export default function ProductMovementPage() {
   const [customTo, setCustomTo] = useState("");
   const [customMonth, setCustomMonth] = useState("");
   const [tab, setTab] = useState<TabId>("stock-more");
-  const [deadTier, setDeadTier] = useState<"ALL" | BiDeadTier>("ALL");
+  const [deadAsOf, setDeadAsOf] = useState(() => bangkokTodayIso());
+  const [deadSort, setDeadSort] = useState<BiDeadSort>("recent");
+  const [deadOffset, setDeadOffset] = useState(0);
   const [overview, setOverview] = useState<BiProductMovement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,12 +81,21 @@ export default function ProductMovementPage() {
     setError(null);
     try {
       const params = new URLSearchParams({
-        from: range.from,
-        to: range.to,
         stock_limit: "50",
-        dead_limit: "200",
+        dead_limit: String(DEAD_PAGE_SIZE),
+        dead_offset: String(deadOffset),
+        dead_sort: deadSort,
       });
-      if (branch !== "ALL") params.set("branch", branch);
+
+      if (tab === "dead") {
+        // Dead stock is as-of date only — period/branch filters do not apply.
+        params.set("from", deadAsOf);
+        params.set("to", deadAsOf);
+      } else {
+        params.set("from", range.from);
+        params.set("to", range.to);
+        if (branch !== "ALL") params.set("branch", branch);
+      }
 
       const res = await fetch(
         `/api/bi/products/movement?${params.toString()}`
@@ -105,11 +117,23 @@ export default function ProductMovementPage() {
     } finally {
       setLoading(false);
     }
-  }, [range.from, range.to, branch]);
+  }, [
+    tab,
+    range.from,
+    range.to,
+    branch,
+    deadAsOf,
+    deadSort,
+    deadOffset,
+  ]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setDeadOffset(0);
+  }, [tab, range.from, range.to, branch, deadAsOf, deadSort]);
 
   useEffect(() => {
     if (preset !== "custom") return;
@@ -118,6 +142,18 @@ export default function ProductMovementPage() {
     setCustomTo((prev) => prev || today);
     setCustomMonth((prev) => prev || bangkokCurrentMonthIso());
   }, [preset]);
+
+  const onDeadPrev = useCallback(() => {
+    setDeadOffset((prev) => Math.max(0, prev - DEAD_PAGE_SIZE));
+  }, []);
+
+  const onDeadNext = useCallback(() => {
+    setDeadOffset((prev) => prev + DEAD_PAGE_SIZE);
+  }, []);
+
+  const onDeadSortChange = useCallback((next: BiDeadSort) => {
+    setDeadSort(next);
+  }, []);
 
   return (
     <div className="space-y-4 pb-8 md:space-y-5">
@@ -132,16 +168,30 @@ export default function ProductMovementPage() {
               ส้ม 6 ด. / แดง 1 ปี) · ซื้ออ้างอิง HQ เสมอ
             </p>
             <p className="mt-2 text-xs text-slate-600 sm:text-sm">
-              ช่วง{" "}
-              <span className="font-medium">
-                {formatThaiDateRange(range.from, range.to)}
-              </span>
-              {branch !== "ALL" ? (
+              {tab === "dead" ? (
                 <>
+                  สต็อกค้างนับถึง{" "}
+                  <span className="font-medium">
+                    {formatThaiDateRange(deadAsOf, deadAsOf)}
+                  </span>
                   {" "}
-                  · ขายกรองสาขา <span className="font-medium">{branch}</span>
+                  · ไม่กรองช่วงขาย/สาขา
                 </>
-              ) : null}
+              ) : (
+                <>
+                  ช่วง{" "}
+                  <span className="font-medium">
+                    {formatThaiDateRange(range.from, range.to)}
+                  </span>
+                  {branch !== "ALL" ? (
+                    <>
+                      {" "}
+                      · ขายกรองสาขา{" "}
+                      <span className="font-medium">{branch}</span>
+                    </>
+                  ) : null}
+                </>
+              )}
             </p>
           </div>
           <Button
@@ -160,110 +210,160 @@ export default function ProductMovementPage() {
           </Button>
         </div>
 
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={tab === "stock-more" ? "default" : "outline"}
+            className={cn(
+              tab === "stock-more" && "bg-slate-800 hover:bg-slate-700"
+            )}
+            onClick={() => setTab("stock-more")}
+          >
+            ควรสต็อกเพิ่ม
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={tab === "dead" ? "default" : "outline"}
+            className={cn(tab === "dead" && "bg-slate-800 hover:bg-slate-700")}
+            onClick={() => setTab("dead")}
+          >
+            ระวังก่อนสั่ง / สต็อกค้าง
+          </Button>
+        </div>
+
         <div className="mt-4 flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="ช่วงเวลา">
-            {PERIODS.map((p) => (
-              <Button
-                key={p}
-                type="button"
-                size="sm"
-                variant={preset === p ? "default" : "outline"}
-                className={cn(
-                  preset === p && "bg-slate-800 hover:bg-slate-700"
-                )}
-                onClick={() => setPreset(p)}
+          {tab === "stock-more" ? (
+            <>
+              <div
+                className="flex flex-wrap gap-2"
+                role="group"
+                aria-label="ช่วงเวลา"
               >
-                {periodLabel(p)}
-              </Button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="bi-move-branch">สาขาขาย</Label>
-              <Select
-                value={branch}
-                onValueChange={(v) => setBranch(v as BiBranchFilter)}
-              >
-                <SelectTrigger id="bi-move-branch" className="w-full">
-                  <SelectValue placeholder="สาขา" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">ทุกสาขา (ขาย)</SelectItem>
-                  <SelectItem value="HQ">HQ</SelectItem>
-                  <SelectItem value="SYP">SYP</SelectItem>
-                  <SelectItem value="ONLINE">ออนไลน์</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {preset === "custom" ? (
-              <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="bi-move-custom-mode">รูปแบบวันที่</Label>
-                  <Select
-                    value={customMode}
-                    onValueChange={(v) =>
-                      setCustomMode(v as BiCustomDateMode)
-                    }
+                {PERIODS.map((p) => (
+                  <Button
+                    key={p}
+                    type="button"
+                    size="sm"
+                    variant={preset === p ? "default" : "outline"}
+                    className={cn(
+                      preset === p && "bg-slate-800 hover:bg-slate-700"
+                    )}
+                    onClick={() => setPreset(p)}
                   >
-                    <SelectTrigger id="bi-move-custom-mode" className="w-full">
-                      <SelectValue />
+                    {periodLabel(p)}
+                  </Button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="bi-move-branch">สาขาขาย</Label>
+                  <Select
+                    value={branch}
+                    onValueChange={(v) => setBranch(v as BiBranchFilter)}
+                  >
+                    <SelectTrigger id="bi-move-branch" className="w-full">
+                      <SelectValue placeholder="สาขา" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="single">วันเดียว</SelectItem>
-                      <SelectItem value="month">เดือน</SelectItem>
-                      <SelectItem value="range">ช่วงวันที่</SelectItem>
+                      <SelectItem value="ALL">ทุกสาขา (ขาย)</SelectItem>
+                      <SelectItem value="HQ">HQ</SelectItem>
+                      <SelectItem value="SYP">SYP</SelectItem>
+                      <SelectItem value="ONLINE">ออนไลน์</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {customMode === "month" ? (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="bi-move-month">เดือน</Label>
-                    <input
-                      id="bi-move-month"
-                      type="month"
-                      value={customMonth}
-                      onChange={(e) => setCustomMonth(e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    />
-                  </div>
-                ) : (
+                {preset === "custom" ? (
                   <>
                     <div className="space-y-1.5">
-                      <Label htmlFor="bi-move-from">
-                        {customMode === "single" ? "วันที่" : "จากวันที่"}
-                      </Label>
-                      <input
-                        id="bi-move-from"
-                        type="date"
-                        value={customFrom}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setCustomFrom(value);
-                          if (customMode === "single") setCustomTo(value);
-                        }}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      />
+                      <Label htmlFor="bi-move-custom-mode">รูปแบบวันที่</Label>
+                      <Select
+                        value={customMode}
+                        onValueChange={(v) =>
+                          setCustomMode(v as BiCustomDateMode)
+                        }
+                      >
+                        <SelectTrigger
+                          id="bi-move-custom-mode"
+                          className="w-full"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="single">วันเดียว</SelectItem>
+                          <SelectItem value="month">เดือน</SelectItem>
+                          <SelectItem value="range">ช่วงวันที่</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    {customMode === "range" ? (
+
+                    {customMode === "month" ? (
                       <div className="space-y-1.5">
-                        <Label htmlFor="bi-move-to">ถึงวันที่</Label>
+                        <Label htmlFor="bi-move-month">เดือน</Label>
                         <input
-                          id="bi-move-to"
-                          type="date"
-                          value={customTo}
-                          onChange={(e) => setCustomTo(e.target.value)}
+                          id="bi-move-month"
+                          type="month"
+                          value={customMonth}
+                          onChange={(e) => setCustomMonth(e.target.value)}
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         />
                       </div>
-                    ) : null}
+                    ) : (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="bi-move-from">
+                            {customMode === "single" ? "วันที่" : "จากวันที่"}
+                          </Label>
+                          <input
+                            id="bi-move-from"
+                            type="date"
+                            value={customFrom}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setCustomFrom(value);
+                              if (customMode === "single") setCustomTo(value);
+                            }}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          />
+                        </div>
+                        {customMode === "range" ? (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="bi-move-to">ถึงวันที่</Label>
+                            <input
+                              id="bi-move-to"
+                              type="date"
+                              value={customTo}
+                              onChange={(e) => setCustomTo(e.target.value)}
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            />
+                          </div>
+                        ) : null}
+                      </>
+                    )}
                   </>
-                )}
-              </>
-            ) : null}
-          </div>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <div className="grid max-w-sm grid-cols-1 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="bi-dead-asof">นับสต็อกค้างถึงวันที่</Label>
+                <input
+                  id="bi-dead-asof"
+                  type="date"
+                  value={deadAsOf}
+                  onChange={(e) => setDeadAsOf(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  ช่วงเดือน/YTD และสาขาขายใช้กับตาราง “ควรสต็อกเพิ่ม” เท่านั้น
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -286,85 +386,58 @@ export default function ProductMovementPage() {
 
       {overview ? (
         <>
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <SalesKpiCard
-              title="SKU ที่ขาย"
-              value={formatCount(overview.summary.sold_sku_count)}
-              hint={`ปริมาณ ${formatCount(overview.summary.sell_qty)}`}
-              icon={<Package className="h-4 w-4" />}
-            />
-            <SalesKpiCard
-              title="SKU ที่ซื้อ (HQ)"
-              value={formatCount(overview.summary.bought_sku_count)}
-              hint={`ปริมาณ ${formatCount(overview.summary.buy_qty)}`}
-              icon={<ShoppingCart className="h-4 w-4" />}
-            />
+          <section
+            className={cn(
+              "grid grid-cols-1 gap-3",
+              tab === "dead"
+                ? "sm:grid-cols-2 xl:grid-cols-3"
+                : "sm:grid-cols-2 xl:grid-cols-4"
+            )}
+          >
+            {tab === "stock-more" ? (
+              <>
+                <SalesKpiCard
+                  title="SKU ที่ขาย"
+                  value={formatCount(overview.summary.sold_sku_count)}
+                  hint={`ปริมาณ ${formatCount(overview.summary.sell_qty)}`}
+                  icon={<Package className="h-4 w-4" />}
+                />
+                <SalesKpiCard
+                  title="SKU ที่ซื้อ (HQ)"
+                  value={formatCount(overview.summary.bought_sku_count)}
+                  hint={`ปริมาณ ${formatCount(overview.summary.buy_qty)}`}
+                  icon={<ShoppingCart className="h-4 w-4" />}
+                />
+                <SalesKpiCard
+                  title="อันดับขายออก"
+                  value={formatCount(overview.stock_more.length)}
+                  hint="รายการในตาราง Stock more"
+                  icon={<ArrowUpRight className="h-4 w-4" />}
+                />
+              </>
+            ) : null}
             <SalesKpiCard
               title="สต็อกค้าง (มีคงเหลือ)"
               value={formatCount(overview.summary.dead_total_count)}
               hint={`แดง ${formatCount(overview.summary.dead_red_count)} · ส้ม ${formatCount(overview.summary.dead_orange_count)} · เหลือง ${formatCount(overview.summary.dead_yellow_count)}`}
               icon={<AlertTriangle className="h-4 w-4" />}
             />
-            <SalesKpiCard
-              title="อันดับขายออก"
-              value={formatCount(overview.stock_more.length)}
-              hint="รายการในตาราง Stock more"
-              icon={<ArrowUpRight className="h-4 w-4" />}
-            />
           </section>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={tab === "stock-more" ? "default" : "outline"}
-              className={cn(
-                tab === "stock-more" && "bg-slate-800 hover:bg-slate-700"
-              )}
-              onClick={() => setTab("stock-more")}
-            >
-              ควรสต็อกเพิ่ม
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={tab === "dead" ? "default" : "outline"}
-              className={cn(tab === "dead" && "bg-slate-800 hover:bg-slate-700")}
-              onClick={() => setTab("dead")}
-            >
-              ระวังก่อนสั่ง / สต็อกค้าง
-            </Button>
-          </div>
-
-          {tab === "dead" ? (
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  ["ALL", "ทั้งหมด"],
-                  ["red", "แดง ≥1 ปี"],
-                  ["orange", "ส้ม ≥6 ด."],
-                  ["yellow", "เหลือง ≥3 ด."],
-                ] as const
-              ).map(([key, label]) => (
-                <Button
-                  key={key}
-                  type="button"
-                  size="sm"
-                  variant={deadTier === key ? "default" : "outline"}
-                  onClick={() => setDeadTier(key)}
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
-          ) : null}
 
           {tab === "stock-more" ? (
             <StockMoreTable rows={overview.stock_more} />
           ) : (
             <DeadStockTable
               rows={overview.dead_stock}
-              tierFilter={deadTier}
+              totalCount={overview.summary.dead_total_count}
+              offset={overview.dead_offset}
+              pageSize={overview.dead_limit || DEAD_PAGE_SIZE}
+              hasMore={overview.dead_has_more}
+              sort={deadSort}
+              loading={loading}
+              onSortChange={onDeadSortChange}
+              onPrev={onDeadPrev}
+              onNext={onDeadNext}
             />
           )}
         </>
