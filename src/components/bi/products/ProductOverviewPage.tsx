@@ -11,7 +11,11 @@ import {
 
 import { buildProductHighlights } from "@/lib/bi/highlights";
 import type { BiProductOverview } from "@/lib/bi/product-types";
-import { formatBaht, formatCount, pctChange } from "@/lib/bi/sales-format";
+import {
+  formatBahtCompact,
+  formatCount,
+  pctChange,
+} from "@/lib/bi/sales-format";
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
@@ -304,7 +308,7 @@ export default function ProductOverviewPage() {
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <SalesKpiCard
               title="ยอดขายสุทธิ"
-              value={formatBaht(overview.summary.revenue_net)}
+              value={formatBahtCompact(overview.summary.revenue_net)}
               deltaPct={revenueDelta}
               hint="ระดับบรรทัด · ก่อน VAT"
               icon={<Wallet className="h-4 w-4" />}

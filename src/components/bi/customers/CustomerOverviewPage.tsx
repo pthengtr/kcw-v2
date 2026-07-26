@@ -12,7 +12,11 @@ import {
 
 import { buildCustomerHighlights } from "@/lib/bi/highlights";
 import type { BiCustomerOverview } from "@/lib/bi/customer-types";
-import { formatBaht, formatCount, pctChange } from "@/lib/bi/sales-format";
+import {
+  formatBahtCompact,
+  formatCount,
+  pctChange,
+} from "@/lib/bi/sales-format";
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
@@ -310,7 +314,7 @@ export default function CustomerOverviewPage() {
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <SalesKpiCard
               title="ยอดลูกค้าที่จัดอันดับ"
-              value={formatBaht(overview.summary.revenue_net)}
+              value={formatBahtCompact(overview.summary.revenue_net)}
               deltaPct={revenueDelta}
               hint="บิลที่มี ACCTNO · ก่อน VAT"
               icon={<Wallet className="h-4 w-4" />}
@@ -326,12 +330,12 @@ export default function CustomerOverviewPage() {
               title="จำนวนบิล"
               value={formatCount(overview.summary.bill_count)}
               deltaPct={billDelta}
-              hint={`เฉลี่ย ${formatBaht(overview.summary.avg_bill)}/บิล`}
+              hint={`เฉลี่ย ${formatBahtCompact(overview.summary.avg_bill)}/บิล`}
               icon={<Receipt className="h-4 w-4" />}
             />
             <SalesKpiCard
               title="Walk-in (ตัดออก)"
-              value={formatBaht(overview.walkin_summary.revenue_net)}
+              value={formatBahtCompact(overview.walkin_summary.revenue_net)}
               hint={`${formatCount(overview.walkin_summary.bill_count)} บิลไม่มี ACCTNO`}
               icon={<UserRound className="h-4 w-4" />}
             />
