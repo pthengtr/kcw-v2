@@ -332,7 +332,7 @@ describe("BI highlight builders", () => {
     expect(lines[0]).toContain("กำไรขั้นต้น");
     expect(lines[1]).toContain("กำไรสุทธิ");
     expect(lines.some((l) => l.includes("HQ"))).toBe(true);
-    expect(lines.some((l) => l.includes("ต้นทุนว่าง") || l.includes("ไม่มีต้นทุน"))).toBe(
+    expect(lines.some((l) => l.includes("ตัดออกจากคำนวณ") || l.includes("ไม่มีต้นทุน"))).toBe(
       true
     );
   });

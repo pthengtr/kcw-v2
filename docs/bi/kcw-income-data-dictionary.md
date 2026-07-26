@@ -28,8 +28,12 @@ revenue_net = line amount after:
   - bill DISCOUNT/DEDUCT gap allocation (§6.7)
   - /1.07 only when ISVAT='Y' AND TAXIC='Y'
 
-cogs = qty_base × coalesce(LAST_PURCHASE_COST, 0)
+cogs = qty_base × LAST_PURCHASE_COST
 qty_base = QTY × coalesce(nullif(MTP, 0), 1)   -- purchase/base units
+
+-- Lines with blank/missing LAST_PURCHASE_COST:
+--   excluded from revenue_net / cogs / gross / net totals
+--   still counted in blank_cost_line_count + drilldown list
 
 gross_profit = revenue_net − cogs
 gross_margin_pct = gross_profit / revenue_net   -- null if revenue_net = 0
@@ -38,7 +42,7 @@ gross_margin_pct = gross_profit / revenue_net   -- null if revenue_net = 0
 | Rule | Status |
 |------|--------|
 | Ignore `XPRICE` for COGS | Confirmed |
-| Blank / missing `LAST_PURCHASE_COST` → **0** | Confirmed (do **not** exclude by `COST_STATUS`) |
+| Blank / missing `LAST_PURCHASE_COST` | **Exclude from margin totals**; keep drilldown list (Confirmed) |
 | Allocate bill gap onto lines before margin | Confirmed |
 | Sales filters = revenue include set (no TF/TFV/TAR; `JOURMODE≠0`; etc.) | Confirmed |
 | Reporting branch HQ / SYP / ONLINE (TAD/CNTAD) | Confirmed |
@@ -87,7 +91,9 @@ Previous-period window = equal length immediately before `from` (same as other B
 
 ### 5.1 Blank cost drilldown
 
-Lines where `LAST_PURCHASE_COST` is blank/null (COGS counted as 0).  
+Lines where `LAST_PURCHASE_COST` is blank/null are **excluded from income totals** (revenue/COGS/gross/net) so missing cost does not inflate margin.  
+They remain available in the drilldown list for data cleanup.
+
 UI: click **ต้นทุนว่าง N บรรทัด** on the COGS KPI → dialog with:
 
 `bill_date`, `bill_no`, reporting/store branch, `BCODE`, `DETAIL`, `QTY` (+ `MTP`), line `AMOUNT`, `COST_STATUS`.
@@ -102,3 +108,4 @@ Default API limit 500 (max 2000); response includes `truncated` when capped.
 |------|--------|
 | 2026-07-26 | Lock gross/net formulas; HQ category ออนไลน์ → ONLINE; ship `fn_bi_income_overview` + `/bi/income` |
 | 2026-07-26 | Blank-cost line drilldown (`fn_bi_income_blank_costs` + dialog on COGS KPI) |
+| 2026-07-26 | Blank-cost lines excluded from income totals; list retained for drilldown |

@@ -79,7 +79,7 @@ export default function IncomeBlankCostDialog({
         <DialogHeader className="pr-8 text-left">
           <DialogTitle>บรรทัดที่ไม่มีต้นทุนซื้อล่าสุด</DialogTitle>
           <DialogDescription>
-            LAST_PURCHASE_COST ว่าง → นับต้นทุน = 0 · คาด{" "}
+            LAST_PURCHASE_COST ว่าง → ตัดออกจากคำนวณกำไร · คาด{" "}
             {formatCount(expectedCount)} บรรทัดในช่วงที่เลือก
           </DialogDescription>
         </DialogHeader>

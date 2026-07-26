@@ -345,7 +345,7 @@ export default function IncomeOverviewPage() {
                   >
                     ต้นทุนว่าง{" "}
                     {formatCount(overview.summary.blank_cost_line_count)}{" "}
-                    บรรทัด → 0 · ดูรายการ
+                    บรรทัด · ตัดออกจากคำนวณ · ดูรายการ
                   </button>
                 ) : (
                   "ไม่มีบรรทัดต้นทุนว่าง"

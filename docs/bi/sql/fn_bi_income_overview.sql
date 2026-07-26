@@ -97,7 +97,7 @@ BEGIN
     FROM lines_raw
     GROUP BY store_branch, bill_no
   ),
-  sales_lines AS (
+  sales_lines_all AS (
     SELECT
       r.bill_date,
       r.reporting_branch,
@@ -126,6 +126,16 @@ BEGIN
       ON s.store_branch = r.store_branch
      AND s.bill_no = r.bill_no
     WHERE p_branch IS NULL OR r.reporting_branch = p_branch
+  ),
+  -- Blank LAST_PURCHASE_COST lines are listed for drilldown but excluded from margin math
+  sales_lines AS (
+    SELECT *
+    FROM sales_lines_all
+    WHERE blank_cost_flag = 0
+  ),
+  blank_cost_summary AS (
+    SELECT COALESCE(sum(blank_cost_flag), 0)::int AS blank_cost_line_count
+    FROM sales_lines_all
   ),
   prev_bills AS (
     SELECT
@@ -168,7 +178,12 @@ BEGIN
       COALESCE(
         NULLIF(replace(nullif(btrim(l."LAST_PURCHASE_COST"), ''), ',', ''), '')::numeric,
         0
-      ) AS unit_cost
+      ) AS unit_cost,
+      CASE
+        WHEN nullif(btrim(COALESCE(l."LAST_PURCHASE_COST", '')), '') IS NULL
+          THEN 1
+        ELSE 0
+      END AS blank_cost_flag
     FROM curated_kcw.fact_sales_all l
     JOIN prev_bills b
       ON b.store_branch = l."BRANCH"
@@ -206,7 +221,8 @@ BEGIN
     JOIN prev_bill_line_sums s
       ON s.store_branch = r.store_branch
      AND s.bill_no = r.bill_no
-    WHERE p_branch IS NULL OR r.reporting_branch = p_branch
+    WHERE (p_branch IS NULL OR r.reporting_branch = p_branch)
+      AND r.blank_cost_flag = 0
   ),
   entry_base AS (
     SELECT
@@ -376,12 +392,14 @@ BEGIN
   ),
   sales_summary AS (
     SELECT
-      COALESCE(sum(revenue_net), 0) AS revenue_net,
-      COALESCE(sum(cogs), 0) AS cogs,
-      count(*)::int AS line_count,
-      count(DISTINCT (store_branch, bill_no))::int AS bill_count,
-      COALESCE(sum(blank_cost_flag), 0)::int AS blank_cost_line_count
-    FROM sales_lines
+      COALESCE((SELECT sum(revenue_net) FROM sales_lines), 0) AS revenue_net,
+      COALESCE((SELECT sum(cogs) FROM sales_lines), 0) AS cogs,
+      COALESCE((SELECT count(*)::int FROM sales_lines), 0) AS line_count,
+      COALESCE(
+        (SELECT count(DISTINCT (store_branch, bill_no))::int FROM sales_lines),
+        0
+      ) AS bill_count,
+      (SELECT blank_cost_line_count FROM blank_cost_summary) AS blank_cost_line_count
   ),
   opex_summary AS (
     SELECT COALESCE(sum(amount), 0)::numeric AS opex
@@ -599,7 +617,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fn_bi_income_overview(date, date, text, text) IS
-  'Income BI: line revenue_net (bill-gap alloc) − QTY×MTP×LAST_PURCHASE_COST − app opex; HQ ออนไลน์→ONLINE.';
+  'Income BI: margin on lines with LAST_PURCHASE_COST only; blank-cost lines excluded from totals but counted for drilldown; − app opex; HQ ออนไลน์→ONLINE.';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_income_overview(date, date, text, text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.fn_bi_income_overview(date, date, text, text) TO authenticated;
