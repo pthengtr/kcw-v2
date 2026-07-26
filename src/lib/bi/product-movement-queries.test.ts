@@ -27,6 +27,8 @@ describe("normalizeProductMovement", () => {
         dead_red_count: 2,
         dead_total_count: 2,
         dead_category_total: 17,
+        dead_stock_value: 5000,
+        dead_category_stock_value: 80000,
       },
       stock_more: [
         {
@@ -53,6 +55,8 @@ describe("normalizeProductMovement", () => {
           category_code: "25",
           code1: "O",
           on_hand_qty: 30,
+          unit_cost: 12.5,
+          stock_value: 375,
           last_purchase_date: "2025-01-01",
           last_sale_date: null,
           days_since_purchase: 571,
@@ -70,6 +74,8 @@ describe("normalizeProductMovement", () => {
     expect(overview.dead_stock[0]?.dead_tier).toBe("red");
     expect(overview.summary.dead_total_count).toBe(2);
     expect(overview.summary.dead_category_total).toBe(17);
+    expect(overview.summary.dead_stock_value).toBe(5000);
+    expect(overview.dead_stock[0]?.stock_value).toBe(375);
     expect(overview.dead_offset).toBe(0);
     expect(overview.dead_sort).toBe("recent");
     expect(overview.dead_tier).toBe("red");

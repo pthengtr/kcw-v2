@@ -53,10 +53,12 @@ BEGIN
   v_stock_limit := GREATEST(1, LEAST(COALESCE(p_stock_limit, 50), 200));
   v_dead_limit := GREATEST(1, LEAST(COALESCE(p_dead_limit, 100), 500));
   v_dead_offset := GREATEST(0, COALESCE(p_dead_offset, 0));
-  v_dead_sort := CASE
-    WHEN lower(COALESCE(p_dead_sort, 'deep')) = 'recent' THEN 'recent'
-    ELSE 'deep'
-  END;
+  v_dead_sort := lower(COALESCE(p_dead_sort, 'deep'));
+  IF v_dead_sort NOT IN (
+    'deep', 'recent', 'value_desc', 'value_asc', 'qty_desc', 'cost_desc'
+  ) THEN
+    v_dead_sort := 'deep';
+  END IF;
   v_mode := lower(COALESCE(p_mode, 'both'));
   IF v_mode NOT IN ('stock_more', 'dead', 'both') THEN
     RAISE EXCEPTION 'Invalid mode';
@@ -210,7 +212,10 @@ BEGIN
         max(COALESCE(i."CODE1", '')) AS code1,
         max(
           COALESCE(NULLIF(replace(nullif(btrim(i."QTYOH2"), ''), ',', ''), '')::numeric, 0)
-        ) AS on_hand_qty
+        ) AS on_hand_qty,
+        max(
+          NULLIF(replace(nullif(btrim(i."COSTLAST"), ''), ',', ''), '')::numeric
+        ) AS unit_cost
       FROM raw_kcw.raw_hq_icmas_products i
       WHERE nullif(btrim(i."BCODE"), '') IS NOT NULL
       GROUP BY 1
@@ -222,6 +227,8 @@ BEGIN
         lpad(left(lp.bcode, 2), 2, '0') AS category_code,
         nullif(btrim(COALESCE(i.code1, '')), '') AS code1,
         COALESCE(i.on_hand_qty, 0) AS on_hand_qty,
+        i.unit_cost,
+        COALESCE(i.on_hand_qty, 0) * COALESCE(i.unit_cost, 0) AS stock_value,
         lp.last_purchase_date,
         ls.last_sale_date,
         (p_to - lp.last_purchase_date) AS days_since_purchase,
@@ -289,6 +296,8 @@ BEGIN
         d.category_code,
         d.code1,
         d.on_hand_qty,
+        d.unit_cost,
+        d.stock_value,
         d.last_purchase_date,
         d.last_sale_date,
         d.days_since_purchase,
@@ -308,16 +317,21 @@ BEGIN
               WHEN 'yellow' THEN 3
               ELSE 4
             END
-          ELSE
+          WHEN v_dead_sort = 'recent' THEN
             CASE d.dead_tier
               WHEN 'yellow' THEN 1
               WHEN 'orange' THEN 2
               WHEN 'red' THEN 3
               ELSE 4
             END
+          ELSE 0
         END,
         CASE WHEN v_dead_sort = 'deep' THEN d.days_since_purchase END DESC NULLS LAST,
         CASE WHEN v_dead_sort = 'recent' THEN d.days_since_purchase END ASC NULLS LAST,
+        CASE WHEN v_dead_sort = 'value_desc' THEN d.stock_value END DESC NULLS LAST,
+        CASE WHEN v_dead_sort = 'value_asc' THEN d.stock_value END ASC NULLS LAST,
+        CASE WHEN v_dead_sort = 'qty_desc' THEN d.on_hand_qty END DESC NULLS LAST,
+        CASE WHEN v_dead_sort = 'cost_desc' THEN d.unit_cost END DESC NULLS LAST,
         d.bcode
       OFFSET v_dead_offset
       LIMIT CASE WHEN v_want_dead THEN v_dead_limit ELSE 0 END
@@ -332,7 +346,13 @@ BEGIN
         CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'orange') ELSE 0 END AS dead_orange_count,
         CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'red') ELSE 0 END AS dead_red_count,
         CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_list_source) ELSE 0 END AS dead_total_count,
-        CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered) ELSE 0 END AS dead_category_total
+        CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered) ELSE 0 END AS dead_category_total,
+        CASE WHEN v_want_dead THEN (
+          SELECT COALESCE(sum(stock_value), 0) FROM dead_list_source
+        ) ELSE 0 END AS dead_stock_value,
+        CASE WHEN v_want_dead THEN (
+          SELECT COALESCE(sum(stock_value), 0) FROM dead_filtered
+        ) ELSE 0 END AS dead_category_stock_value
     )
     SELECT jsonb_build_object(
       'from', p_from,
@@ -360,7 +380,9 @@ BEGIN
         'dead_orange_count', dead_orange_count,
         'dead_red_count', dead_red_count,
         'dead_total_count', dead_total_count,
-        'dead_category_total', dead_category_total
+        'dead_category_total', dead_category_total,
+        'dead_stock_value', dead_stock_value,
+        'dead_category_stock_value', dead_category_stock_value
       ) FROM summary),
       'stock_more', CASE WHEN NOT v_want_stock THEN '[]'::jsonb ELSE COALESCE((
         SELECT jsonb_agg(jsonb_build_object(
@@ -390,6 +412,8 @@ BEGIN
           'code1', dl.code1,
           'code1_name', dl.code1,
           'on_hand_qty', dl.on_hand_qty,
+          'unit_cost', dl.unit_cost,
+          'stock_value', dl.stock_value,
           'last_purchase_date', dl.last_purchase_date,
           'last_sale_date', dl.last_sale_date,
           'days_since_purchase', dl.days_since_purchase,
@@ -407,16 +431,21 @@ BEGIN
                 WHEN 'yellow' THEN 3
                 ELSE 4
               END
-            ELSE
+            WHEN v_dead_sort = 'recent' THEN
               CASE dl.dead_tier
                 WHEN 'yellow' THEN 1
                 WHEN 'orange' THEN 2
                 WHEN 'red' THEN 3
                 ELSE 4
               END
+            ELSE 0
           END,
           CASE WHEN v_dead_sort = 'deep' THEN dl.days_since_purchase END DESC NULLS LAST,
           CASE WHEN v_dead_sort = 'recent' THEN dl.days_since_purchase END ASC NULLS LAST,
+          CASE WHEN v_dead_sort = 'value_desc' THEN dl.stock_value END DESC NULLS LAST,
+          CASE WHEN v_dead_sort = 'value_asc' THEN dl.stock_value END ASC NULLS LAST,
+          CASE WHEN v_dead_sort = 'qty_desc' THEN dl.on_hand_qty END DESC NULLS LAST,
+          CASE WHEN v_dead_sort = 'cost_desc' THEN dl.unit_cost END DESC NULLS LAST,
           dl.bcode
         )
         FROM dead_list dl
@@ -427,7 +456,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text) IS
-  'Product movement BI; mode/tier/category filters; statement_timeout 60s; buys always HQ.';
+  'Product movement BI; dead cost/value + sort modes; statement_timeout 60s; buys always HQ.';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text) TO authenticated;

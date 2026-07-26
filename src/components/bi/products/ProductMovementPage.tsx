@@ -15,7 +15,7 @@ import type {
   BiDeadTier,
   BiProductMovement,
 } from "@/lib/bi/product-movement-types";
-import { formatCount } from "@/lib/bi/sales-format";
+import { formatBaht, formatCount } from "@/lib/bi/sales-format";
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
@@ -58,7 +58,7 @@ export default function ProductMovementPage() {
   const [customMonth, setCustomMonth] = useState("");
   const [tab, setTab] = useState<TabId>("stock-more");
   const [deadAsOf, setDeadAsOf] = useState(() => bangkokTodayIso());
-  const [deadSort, setDeadSort] = useState<BiDeadSort>("deep");
+  const [deadSort, setDeadSort] = useState<BiDeadSort>("value_desc");
   const [deadTier, setDeadTier] = useState<BiDeadTier | "ALL">("ALL");
   const [deadCategory, setDeadCategory] = useState<string | null>(null);
   const [deadOffset, setDeadOffset] = useState(0);
@@ -455,21 +455,21 @@ export default function ProductMovementPage() {
             ) : (
               <>
                 <SalesKpiCard
-                  title="สต็อกค้างทั้งหมด"
+                  title="รายการตามตัวกรอง"
                   value={formatCount(overview.summary.dead_total_count)}
-                  hint="มีคงเหลือ · ไม่ขายหลังซื้อ ≥6 เดือน"
+                  hint={`ในหมวด ${formatCount(overview.summary.dead_category_total)} รายการ`}
                   icon={<AlertTriangle className="h-4 w-4" />}
                 />
                 <SalesKpiCard
-                  title="แดง ≥2 ปี"
-                  value={formatCount(overview.summary.dead_red_count)}
-                  hint={`ส้ม ≥1 ปี ${formatCount(overview.summary.dead_orange_count)}`}
+                  title="มูลค่าตามตัวกรอง"
+                  value={formatBaht(overview.summary.dead_stock_value, true)}
+                  hint={`ทั้งหมวด ${formatBaht(overview.summary.dead_category_stock_value, true)}`}
                   icon={<AlertTriangle className="h-4 w-4" />}
                 />
                 <SalesKpiCard
-                  title="เหลือง ≥6 ด."
-                  value={formatCount(overview.summary.dead_yellow_count)}
-                  hint="เพิ่งเข้าเกณฑ์ระวัง"
+                  title="แดง / ส้ม / เหลือง"
+                  value={`${formatCount(overview.summary.dead_red_count)} / ${formatCount(overview.summary.dead_orange_count)} / ${formatCount(overview.summary.dead_yellow_count)}`}
+                  hint="นับในหมวดที่เลือก (ทุกระดับ)"
                   icon={<AlertTriangle className="h-4 w-4" />}
                 />
               </>
@@ -483,6 +483,8 @@ export default function ProductMovementPage() {
               rows={overview.dead_stock}
               totalCount={overview.summary.dead_total_count}
               categoryTotal={overview.summary.dead_category_total}
+              stockValue={overview.summary.dead_stock_value}
+              categoryStockValue={overview.summary.dead_category_stock_value}
               tierCounts={{
                 yellow: overview.summary.dead_yellow_count,
                 orange: overview.summary.dead_orange_count,

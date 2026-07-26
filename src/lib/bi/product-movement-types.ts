@@ -1,7 +1,13 @@
 export type BiDeadTier = "yellow" | "orange" | "red";
 
-/** recent = shorter age first; deep = longer age first */
-export type BiDeadSort = "recent" | "deep";
+/** Dead list sort modes */
+export type BiDeadSort =
+  | "deep"
+  | "recent"
+  | "value_desc"
+  | "value_asc"
+  | "qty_desc"
+  | "cost_desc";
 
 /** UI loads one side at a time to avoid statement timeouts */
 export type BiProductMovementMode = "stock_more" | "dead" | "both";
@@ -18,6 +24,10 @@ export type BiProductMovementSummary = {
   dead_total_count: number;
   /** All caution rows in current category (any tier) */
   dead_category_total: number;
+  /** Stock value (qty × COSTLAST) for current tier+category filter */
+  dead_stock_value: number;
+  /** Stock value for all tiers in current category */
+  dead_category_stock_value: number;
 };
 
 export type BiStockMoreRow = {
@@ -45,6 +55,8 @@ export type BiDeadStockRow = {
   code1: string | null;
   code1_name: string | null;
   on_hand_qty: number;
+  unit_cost: number | null;
+  stock_value: number;
   last_purchase_date: string | null;
   last_sale_date: string | null;
   days_since_purchase: number | null;

@@ -14,7 +14,9 @@ const QuerySchema = z.object({
   stock_limit: z.coerce.number().int().min(1).max(200).optional(),
   dead_limit: z.coerce.number().int().min(1).max(500).optional(),
   dead_offset: z.coerce.number().int().min(0).optional(),
-  dead_sort: z.enum(["recent", "deep"]).optional(),
+  dead_sort: z
+    .enum(["recent", "deep", "value_desc", "value_asc", "qty_desc", "cost_desc"])
+    .optional(),
   mode: z.enum(["stock_more", "dead", "both"]).optional(),
   dead_tier: z.enum(["yellow", "orange", "red"]).optional(),
   category: z
@@ -74,7 +76,7 @@ export async function GET(req: Request) {
       stockLimit: parsed.data.stock_limit ?? 50,
       deadLimit: parsed.data.dead_limit ?? 100,
       deadOffset: parsed.data.dead_offset ?? 0,
-      deadSort: parsed.data.dead_sort ?? "deep",
+      deadSort: parsed.data.dead_sort ?? "value_desc",
       mode: parsed.data.mode ?? "both",
       deadTier: parsed.data.dead_tier ?? null,
       category: parsed.data.category
