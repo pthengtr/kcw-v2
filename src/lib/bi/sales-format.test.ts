@@ -1,11 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { formatBaht, formatPct, pctChange, shareOf } from "./sales-format";
+import {
+  formatBaht,
+  formatBahtCompact,
+  formatPct,
+  pctChange,
+  shareOf,
+} from "./sales-format";
 
 describe("sales format helpers", () => {
   it("formats baht with sign", () => {
     expect(formatBaht(1234)).toContain("1,234");
     expect(formatBaht(-50)).toMatch(/^-฿/);
+  });
+
+  it("formats large baht in compact form", () => {
+    expect(formatBahtCompact(1234)).toBe(formatBaht(1234));
+    expect(formatBahtCompact(1_200_000)).toMatch(/^฿/);
+    expect(formatBahtCompact(1_200_000).length).toBeLessThan(
+      formatBaht(1_200_000).length
+    );
+    expect(formatBahtCompact(-50_000)).toMatch(/^-฿/);
   });
 
   it("computes percent change and share", () => {

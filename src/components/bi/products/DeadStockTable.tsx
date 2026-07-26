@@ -8,7 +8,11 @@ import type {
   BiDeadTier,
 } from "@/lib/bi/product-movement-types";
 import { CATEGORY_LABELS } from "@/lib/bi/icmas-labels";
-import { formatBaht, formatCount } from "@/lib/bi/sales-format";
+import {
+  formatBaht,
+  formatBahtCompact,
+  formatCount,
+} from "@/lib/bi/sales-format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -205,7 +209,7 @@ export default function DeadStockTable({
             <p className="mt-1 text-xs text-muted-foreground">
               ทุนจาก ICMAS COSTLAST · มูลค่า = คงเหลือ × ทุน · กรองหมวดเดียวช่วยให้โหลดเร็ว
               · ในหมวดนี้ {formatCount(categoryTotal)} รายการ (
-              {formatBaht(categoryStockValue, true)})
+              {formatBahtCompact(categoryStockValue)})
             </p>
           </div>
           {pager}
@@ -287,7 +291,7 @@ export default function DeadStockTable({
         <p className="mt-2 text-xs text-muted-foreground">
           มูลค่าตามตัวกรองปัจจุบัน{" "}
           <span className="font-medium text-slate-800">
-            {formatBaht(stockValue, true)}
+            {formatBahtCompact(stockValue)}
           </span>
         </p>
       </CardHeader>

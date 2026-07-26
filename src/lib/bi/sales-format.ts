@@ -14,10 +14,24 @@ const thMoneyPrecise = new Intl.NumberFormat("th-TH", {
   maximumFractionDigits: 2,
 });
 
+const thMoneyCompact = new Intl.NumberFormat("th-TH", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
 export function formatBaht(value: number, precise = false): string {
   if (!Number.isFinite(value)) return "฿0";
   const abs = Math.abs(value);
   const body = precise ? thMoneyPrecise.format(abs) : thMoney.format(abs);
+  return value < 0 ? `-฿${body}` : `฿${body}`;
+}
+
+/** Short form for KPI cards (e.g. ฿1.2 ล้าน). */
+export function formatBahtCompact(value: number): string {
+  if (!Number.isFinite(value)) return "฿0";
+  const abs = Math.abs(value);
+  if (abs < 10_000) return formatBaht(value);
+  const body = thMoneyCompact.format(abs);
   return value < 0 ? `-฿${body}` : `฿${body}`;
 }
 
