@@ -57,6 +57,12 @@ function asMode(value: unknown): BiProductMovementMode {
   return "both";
 }
 
+function asOptionalDeadTier(value: unknown): BiDeadTier | null {
+  const s = asString(value);
+  if (s === "red" || s === "orange" || s === "yellow") return s;
+  return null;
+}
+
 function parseStockMore(value: unknown): BiStockMoreRow[] {
   if (!Array.isArray(value)) return [];
   return value.map((row) => {
@@ -135,6 +141,8 @@ export function normalizeProductMovement(raw: unknown): BiProductMovement {
     dead_limit,
     dead_offset,
     dead_sort,
+    dead_tier: asOptionalDeadTier(data.dead_tier),
+    dead_category: asNullableString(data.dead_category),
     dead_returned_count,
     dead_has_more,
     summary: {
@@ -146,6 +154,10 @@ export function normalizeProductMovement(raw: unknown): BiProductMovement {
       dead_orange_count: asNumber(summary.dead_orange_count),
       dead_red_count: asNumber(summary.dead_red_count),
       dead_total_count,
+      dead_category_total:
+        summary.dead_category_total == null
+          ? dead_total_count
+          : asNumber(summary.dead_category_total),
     },
     stock_more: parseStockMore(data.stock_more),
     dead_stock,
@@ -163,6 +175,8 @@ export async function fetchProductMovement(
     deadOffset?: number;
     deadSort?: BiDeadSort;
     mode?: BiProductMovementMode;
+    deadTier?: BiDeadTier | null;
+    category?: string | null;
   }
 ): Promise<BiProductMovement> {
   const rpcArgs = {
@@ -174,6 +188,8 @@ export async function fetchProductMovement(
     p_dead_offset: params.deadOffset ?? 0,
     p_dead_sort: params.deadSort ?? "deep",
     p_mode: params.mode ?? "both",
+    p_dead_tier: params.deadTier ?? null,
+    p_category: params.category ?? null,
   };
 
   const run = () => supabase.rpc("fn_bi_product_movement", rpcArgs);

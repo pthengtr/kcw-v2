@@ -10,6 +10,7 @@ DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer,
 DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer, integer);
 DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer, integer, text);
 DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text);
+DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text);
 
 CREATE OR REPLACE FUNCTION public.fn_bi_product_movement(
   p_from date,
@@ -19,7 +20,9 @@ CREATE OR REPLACE FUNCTION public.fn_bi_product_movement(
   p_dead_limit integer DEFAULT 100,
   p_dead_offset integer DEFAULT 0,
   p_dead_sort text DEFAULT 'deep',
-  p_mode text DEFAULT 'both'
+  p_mode text DEFAULT 'both',
+  p_dead_tier text DEFAULT NULL,
+  p_category text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -36,6 +39,8 @@ DECLARE
   v_mode text;
   v_want_stock boolean;
   v_want_dead boolean;
+  v_dead_tier text;
+  v_category text;
 BEGIN
   IF p_from IS NULL OR p_to IS NULL OR p_from > p_to THEN
     RAISE EXCEPTION 'Invalid date range';
@@ -58,6 +63,17 @@ BEGIN
   END IF;
   v_want_stock := v_mode IN ('stock_more', 'both');
   v_want_dead := v_mode IN ('dead', 'both');
+
+  v_dead_tier := lower(nullif(btrim(COALESCE(p_dead_tier, '')), ''));
+  IF v_dead_tier IS NOT NULL AND v_dead_tier NOT IN ('yellow', 'orange', 'red') THEN
+    RAISE EXCEPTION 'Invalid dead_tier';
+  END IF;
+
+  IF p_category IS NULL OR btrim(p_category) = '' THEN
+    v_category := NULL;
+  ELSE
+    v_category := lpad(left(btrim(p_category), 2), 2, '0');
+  END IF;
 
   RETURN (
     WITH
@@ -125,6 +141,10 @@ BEGIN
         AND COALESCE(b."BILLTYPE_STD", '') NOT IN ('TF', 'TFV', 'TAR')
         AND l."BILLDATE" < (p_to + 1)::text
         AND nullif(btrim(l."BCODE"), '') IS NOT NULL
+        AND (
+          v_category IS NULL
+          OR lpad(left(nullif(btrim(l."BCODE"), ''), 2), 2, '0') = v_category
+        )
       GROUP BY 1
     ),
     purchase_product AS (
@@ -154,6 +174,11 @@ BEGIN
             left(p."BILLDATE", 10)::date >= p_from
             AND left(p."BILLDATE", 10)::date <= p_to
           )
+        )
+        AND (
+          NOT v_want_dead
+          OR v_category IS NULL
+          OR lpad(left(nullif(btrim(p."BCODE"), ''), 2), 2, '0') = v_category
         )
     ),
     purchase_period AS (
@@ -190,7 +215,7 @@ BEGIN
       WHERE nullif(btrim(i."BCODE"), '') IS NOT NULL
       GROUP BY 1
     ),
-    dead_filtered AS (
+    dead_scored AS (
       SELECT
         lp.bcode,
         COALESCE(NULLIF(i.descr, ''), NULLIF(lp.detail, ''), lp.bcode) AS detail,
@@ -218,6 +243,21 @@ BEGIN
         AND COALESCE(i.on_hand_qty, 0) > 0
         AND (ls.last_sale_date IS NULL OR ls.last_sale_date < lp.last_purchase_date)
         AND (p_to - lp.last_purchase_date) >= 180
+        AND (
+          v_category IS NULL
+          OR lpad(left(lp.bcode, 2), 2, '0') = v_category
+        )
+    ),
+    -- Tier counts within current category (before tier chip filter)
+    dead_filtered AS (
+      SELECT *
+      FROM dead_scored
+      WHERE dead_tier IS NOT NULL
+    ),
+    dead_list_source AS (
+      SELECT *
+      FROM dead_filtered
+      WHERE v_dead_tier IS NULL OR dead_tier = v_dead_tier
     ),
     stock_more AS (
       SELECT
@@ -257,7 +297,7 @@ BEGIN
         d.dead_tier,
         0::numeric AS sell_qty_period,
         0::numeric AS buy_qty_period
-      FROM dead_filtered d
+      FROM dead_list_source d
       WHERE v_want_dead
       ORDER BY
         CASE
@@ -291,7 +331,8 @@ BEGIN
         CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'yellow') ELSE 0 END AS dead_yellow_count,
         CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'orange') ELSE 0 END AS dead_orange_count,
         CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'red') ELSE 0 END AS dead_red_count,
-        CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered) ELSE 0 END AS dead_total_count
+        CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_list_source) ELSE 0 END AS dead_total_count,
+        CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered) ELSE 0 END AS dead_category_total
     )
     SELECT jsonb_build_object(
       'from', p_from,
@@ -302,6 +343,8 @@ BEGIN
       'dead_limit', v_dead_limit,
       'dead_offset', v_dead_offset,
       'dead_sort', v_dead_sort,
+      'dead_tier', v_dead_tier,
+      'dead_category', v_category,
       'dead_returned_count', (SELECT count(*)::int FROM dead_list),
       'dead_has_more', (
         v_want_dead
@@ -316,7 +359,8 @@ BEGIN
         'dead_yellow_count', dead_yellow_count,
         'dead_orange_count', dead_orange_count,
         'dead_red_count', dead_red_count,
-        'dead_total_count', dead_total_count
+        'dead_total_count', dead_total_count,
+        'dead_category_total', dead_category_total
       ) FROM summary),
       'stock_more', CASE WHEN NOT v_want_stock THEN '[]'::jsonb ELSE COALESCE((
         SELECT jsonb_agg(jsonb_build_object(
@@ -382,8 +426,8 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text) IS
-  'Product movement BI; mode=stock_more|dead|both; statement_timeout 60s; buys always HQ.';
+COMMENT ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text) IS
+  'Product movement BI; mode/tier/category filters; statement_timeout 60s; buys always HQ.';
 
-GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text) TO authenticated;

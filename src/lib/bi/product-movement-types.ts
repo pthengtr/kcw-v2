@@ -14,7 +14,10 @@ export type BiProductMovementSummary = {
   dead_yellow_count: number;
   dead_orange_count: number;
   dead_red_count: number;
+  /** Rows matching current tier (+ category) filter — used for pagination */
   dead_total_count: number;
+  /** All caution rows in current category (any tier) */
+  dead_category_total: number;
 };
 
 export type BiStockMoreRow = {
@@ -61,6 +64,8 @@ export type BiProductMovement = {
   dead_limit: number;
   dead_offset: number;
   dead_sort: BiDeadSort;
+  dead_tier: BiDeadTier | null;
+  dead_category: string | null;
   dead_returned_count: number;
   dead_has_more: boolean;
   summary: BiProductMovementSummary;

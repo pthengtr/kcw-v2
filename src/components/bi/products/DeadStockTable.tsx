@@ -1,26 +1,44 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+
 import type {
   BiDeadSort,
   BiDeadStockRow,
   BiDeadTier,
 } from "@/lib/bi/product-movement-types";
+import { CATEGORY_LABELS } from "@/lib/bi/icmas-labels";
 import { formatCount } from "@/lib/bi/sales-format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Props = {
   rows: BiDeadStockRow[];
   totalCount: number;
+  categoryTotal: number;
+  tierCounts: { yellow: number; orange: number; red: number };
   offset: number;
   pageSize: number;
   hasMore: boolean;
   sort: BiDeadSort;
+  tierFilter: BiDeadTier | "ALL";
+  category: string | null;
   loading?: boolean;
   onSortChange: (sort: BiDeadSort) => void;
+  onTierChange: (tier: BiDeadTier | "ALL") => void;
+  onCategoryChange: (category: string | null) => void;
   onPrev: () => void;
   onNext: () => void;
+  onJumpPage: (page: number) => void;
 };
 
 const TIER_LABEL: Record<BiDeadTier, string> = {
@@ -56,24 +74,61 @@ function ageLabel(days: number | null) {
 export default function DeadStockTable({
   rows,
   totalCount,
+  categoryTotal,
+  tierCounts,
   offset,
   pageSize,
   hasMore,
   sort,
+  tierFilter,
+  category,
   loading,
   onSortChange,
+  onTierChange,
+  onCategoryChange,
   onPrev,
   onNext,
+  onJumpPage,
 }: Props) {
   const fromRow = totalCount === 0 ? 0 : offset + 1;
   const toRow = offset + rows.length;
   const canPrev = offset > 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize) || 1);
+  const currentPage =
+    totalCount === 0 ? 1 : Math.floor(offset / pageSize) + 1;
+
+  const [pageInput, setPageInput] = useState(String(currentPage));
+
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
+
+  const categoryOptions = useMemo(
+    () =>
+      Object.entries(CATEGORY_LABELS)
+        .map(([code, name]) => ({ code, name }))
+        .sort((a, b) => a.code.localeCompare(b.code)),
+    []
+  );
+
+  const jumpToInput = () => {
+    const n = Number(pageInput);
+    if (!Number.isFinite(n)) {
+      setPageInput(String(currentPage));
+      return;
+    }
+    const page = Math.min(totalPages, Math.max(1, Math.trunc(n)));
+    setPageInput(String(page));
+    onJumpPage(page);
+  };
 
   const pager = (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-xs text-muted-foreground">
         แสดง {formatCount(fromRow)}–{formatCount(toRow)} จาก{" "}
         {formatCount(totalCount)}
+        {" · "}
+        หน้า {formatCount(currentPage)}/{formatCount(totalPages)}
       </span>
       <Button
         type="button"
@@ -93,6 +148,36 @@ export default function DeadStockTable({
       >
         ถัดไป
       </Button>
+      <div className="flex items-center gap-1">
+        <Label htmlFor="bi-dead-page" className="sr-only">
+          ไปหน้า
+        </Label>
+        <input
+          id="bi-dead-page"
+          type="number"
+          min={1}
+          max={totalPages}
+          value={pageInput}
+          onChange={(e) => setPageInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              jumpToInput();
+            }
+          }}
+          disabled={loading || totalCount === 0}
+          className="h-8 w-16 rounded-md border border-input bg-background px-2 text-sm tabular-nums"
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={jumpToInput}
+          disabled={loading || totalCount === 0}
+        >
+          ไปหน้า
+        </Button>
+      </div>
     </div>
   );
 
@@ -105,15 +190,69 @@ export default function DeadStockTable({
               สต็อกค้าง — อายุจากวันซื้อล่าสุดที่ยังไม่ขายต่อ
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              มีคงเหลือ · เริ่มเตือนตั้งแต่ 6 เดือน · เหลือง ≥6 ด. / ส้ม ≥1 ปี /
-              แดง ≥2 ปี · ไม่ใช้ช่วงขาย/สาขา
+              กรองระดับอายุ + หมวดเดียวต่อครั้งช่วยให้โหลดเร็วขึ้น · ในหมวดนี้{" "}
+              {formatCount(categoryTotal)} รายการ
             </p>
           </div>
           {pager}
         </div>
 
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="bi-dead-category">หมวดสินค้า (เลือกทีละหมวด)</Label>
+            <Select
+              value={category ?? "ALL"}
+              onValueChange={(v) =>
+                onCategoryChange(v === "ALL" ? null : v)
+              }
+              disabled={loading}
+            >
+              <SelectTrigger id="bi-dead-category" className="w-full">
+                <SelectValue placeholder="ทุกหมวด" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="ALL">ทุกหมวด</SelectItem>
+                {categoryOptions.map((opt) => (
+                  <SelectItem key={opt.code} value={opt.code}>
+                    {opt.code} — {opt.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <div
           className="mt-3 flex flex-wrap gap-2"
+          role="group"
+          aria-label="กรองระดับอายุ"
+        >
+          {(
+            [
+              ["ALL", "ทั้งหมด", categoryTotal],
+              ["yellow", TIER_LABEL.yellow, tierCounts.yellow],
+              ["orange", TIER_LABEL.orange, tierCounts.orange],
+              ["red", TIER_LABEL.red, tierCounts.red],
+            ] as const
+          ).map(([key, label, count]) => (
+            <Button
+              key={key}
+              type="button"
+              size="sm"
+              variant={tierFilter === key ? "default" : "outline"}
+              className={cn(
+                tierFilter === key && "bg-slate-800 hover:bg-slate-700"
+              )}
+              onClick={() => onTierChange(key)}
+              disabled={loading}
+            >
+              {label} ({formatCount(count)})
+            </Button>
+          ))}
+        </div>
+
+        <div
+          className="mt-2 flex flex-wrap gap-2"
           role="group"
           aria-label="ทิศทางเรียงสต็อกค้าง"
         >
@@ -144,7 +283,7 @@ export default function DeadStockTable({
       <CardContent className="overflow-x-auto">
         {rows.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            ไม่มีรายการสต็อกค้าง (≥6 เดือนหลังซื้อโดยยังไม่ขาย)
+            ไม่มีรายการตามตัวกรองนี้
           </p>
         ) : (
           <table className="w-full min-w-[52rem] text-left text-sm">

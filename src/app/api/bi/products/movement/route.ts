@@ -16,6 +16,11 @@ const QuerySchema = z.object({
   dead_offset: z.coerce.number().int().min(0).optional(),
   dead_sort: z.enum(["recent", "deep"]).optional(),
   mode: z.enum(["stock_more", "dead", "both"]).optional(),
+  dead_tier: z.enum(["yellow", "orange", "red"]).optional(),
+  category: z
+    .string()
+    .regex(/^\d{1,2}$/)
+    .optional(),
 });
 
 function publicErrorMessage(error: unknown): string {
@@ -45,6 +50,8 @@ export async function GET(req: Request) {
     dead_offset: url.searchParams.get("dead_offset") || undefined,
     dead_sort: url.searchParams.get("dead_sort") || undefined,
     mode: url.searchParams.get("mode") || undefined,
+    dead_tier: url.searchParams.get("dead_tier") || undefined,
+    category: url.searchParams.get("category") || undefined,
   });
 
   if (!parsed.success) {
@@ -69,6 +76,10 @@ export async function GET(req: Request) {
       deadOffset: parsed.data.dead_offset ?? 0,
       deadSort: parsed.data.dead_sort ?? "deep",
       mode: parsed.data.mode ?? "both",
+      deadTier: parsed.data.dead_tier ?? null,
+      category: parsed.data.category
+        ? parsed.data.category.padStart(2, "0")
+        : null,
     });
     return NextResponse.json({ overview });
   } catch (error) {

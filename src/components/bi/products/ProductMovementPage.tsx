@@ -12,6 +12,7 @@ import {
 
 import type {
   BiDeadSort,
+  BiDeadTier,
   BiProductMovement,
 } from "@/lib/bi/product-movement-types";
 import { formatCount } from "@/lib/bi/sales-format";
@@ -58,6 +59,8 @@ export default function ProductMovementPage() {
   const [tab, setTab] = useState<TabId>("stock-more");
   const [deadAsOf, setDeadAsOf] = useState(() => bangkokTodayIso());
   const [deadSort, setDeadSort] = useState<BiDeadSort>("deep");
+  const [deadTier, setDeadTier] = useState<BiDeadTier | "ALL">("ALL");
+  const [deadCategory, setDeadCategory] = useState<string | null>(null);
   const [deadOffset, setDeadOffset] = useState(0);
   const [overview, setOverview] = useState<BiProductMovement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +95,8 @@ export default function ProductMovementPage() {
         // Dead stock is as-of date only — period/branch filters do not apply.
         params.set("from", deadAsOf);
         params.set("to", deadAsOf);
+        if (deadTier !== "ALL") params.set("dead_tier", deadTier);
+        if (deadCategory) params.set("category", deadCategory);
       } else {
         params.set("from", range.from);
         params.set("to", range.to);
@@ -130,6 +135,8 @@ export default function ProductMovementPage() {
     branch,
     deadAsOf,
     deadSort,
+    deadTier,
+    deadCategory,
     deadOffset,
   ]);
 
@@ -143,6 +150,16 @@ export default function ProductMovementPage() {
   const setDeadSortAndReset = useCallback((next: BiDeadSort) => {
     setDeadOffset(0);
     setDeadSort(next);
+  }, []);
+
+  const setDeadTierAndReset = useCallback((next: BiDeadTier | "ALL") => {
+    setDeadOffset(0);
+    setDeadTier(next);
+  }, []);
+
+  const setDeadCategoryAndReset = useCallback((next: string | null) => {
+    setDeadOffset(0);
+    setDeadCategory(next);
   }, []);
 
   const setDeadAsOfAndReset = useCallback((next: string) => {
@@ -169,6 +186,10 @@ export default function ProductMovementPage() {
 
   const onDeadNext = useCallback(() => {
     setDeadOffset((prev) => prev + DEAD_PAGE_SIZE);
+  }, []);
+
+  const onDeadJumpPage = useCallback((page: number) => {
+    setDeadOffset(Math.max(0, (page - 1) * DEAD_PAGE_SIZE));
   }, []);
 
   return (
@@ -461,14 +482,25 @@ export default function ProductMovementPage() {
             <DeadStockTable
               rows={overview.dead_stock}
               totalCount={overview.summary.dead_total_count}
+              categoryTotal={overview.summary.dead_category_total}
+              tierCounts={{
+                yellow: overview.summary.dead_yellow_count,
+                orange: overview.summary.dead_orange_count,
+                red: overview.summary.dead_red_count,
+              }}
               offset={overview.dead_offset}
               pageSize={overview.dead_limit || DEAD_PAGE_SIZE}
               hasMore={overview.dead_has_more}
               sort={deadSort}
+              tierFilter={deadTier}
+              category={deadCategory}
               loading={loading}
               onSortChange={setDeadSortAndReset}
+              onTierChange={setDeadTierAndReset}
+              onCategoryChange={setDeadCategoryAndReset}
               onPrev={onDeadPrev}
               onNext={onDeadNext}
+              onJumpPage={onDeadJumpPage}
             />
           )}
         </>

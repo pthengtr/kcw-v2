@@ -13,6 +13,8 @@ describe("normalizeProductMovement", () => {
       dead_offset: 0,
       dead_sort: "recent",
       mode: "both",
+      dead_tier: "red",
+      dead_category: "25",
       dead_returned_count: 1,
       dead_has_more: true,
       summary: {
@@ -23,7 +25,8 @@ describe("normalizeProductMovement", () => {
         dead_yellow_count: 10,
         dead_orange_count: 5,
         dead_red_count: 2,
-        dead_total_count: 17,
+        dead_total_count: 2,
+        dead_category_total: 17,
       },
       stock_more: [
         {
@@ -65,9 +68,12 @@ describe("normalizeProductMovement", () => {
     expect(overview.stock_more[0]?.category_name).toContain("ลูกปืน");
     expect(overview.stock_more[0]?.code1_name).toContain("ลูกปืน");
     expect(overview.dead_stock[0]?.dead_tier).toBe("red");
-    expect(overview.summary.dead_total_count).toBe(17);
+    expect(overview.summary.dead_total_count).toBe(2);
+    expect(overview.summary.dead_category_total).toBe(17);
     expect(overview.dead_offset).toBe(0);
     expect(overview.dead_sort).toBe("recent");
+    expect(overview.dead_tier).toBe("red");
+    expect(overview.dead_category).toBe("25");
     expect(overview.mode).toBe("both");
     expect(overview.dead_returned_count).toBe(1);
     expect(overview.dead_has_more).toBe(true);
