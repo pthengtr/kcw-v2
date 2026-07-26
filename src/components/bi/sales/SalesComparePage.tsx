@@ -14,7 +14,7 @@ import type {
   BiSalesCompareResult,
   BiSalesCompareViz,
 } from "@/lib/bi/sales-compare-types";
-import { formatBaht, formatCount } from "@/lib/bi/sales-format";
+import { formatBahtCompact, formatCount } from "@/lib/bi/sales-format";
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
@@ -138,14 +138,14 @@ export default function SalesComparePage() {
       return compare.series.map((s) => ({
         key: String(s.year),
         title: `ปี ${s.year + 543}`,
-        value: formatBaht(s.total_revenue_net),
+        value: formatBahtCompact(s.total_revenue_net),
         hint: `${formatCount(s.total_bill_count)} บิล · ${s.from} → ${s.to}`,
       }));
     }
     return compare.period_points.map((p) => ({
       key: p.period,
       title: p.label,
-      value: formatBaht(p.revenue_net),
+      value: formatBahtCompact(p.revenue_net),
       hint: `${formatCount(p.bill_count)} บิล`,
     }));
   }, [compare]);

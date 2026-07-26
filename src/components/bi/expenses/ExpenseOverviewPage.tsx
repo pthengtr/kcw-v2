@@ -16,7 +16,12 @@ import type {
   BiExpenseOverview,
   BiExpenseSourceFilter,
 } from "@/lib/bi/expense-types";
-import { formatBaht, formatCount, pctChange } from "@/lib/bi/sales-format";
+import {
+  formatBaht,
+  formatBahtCompact,
+  formatCount,
+  pctChange,
+} from "@/lib/bi/sales-format";
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
@@ -385,20 +390,20 @@ export default function ExpenseOverviewPage() {
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <SalesKpiCard
               title="ยอดค่าใช้จ่าย"
-              value={formatBaht(overview.summary.amount)}
+              value={formatBahtCompact(overview.summary.amount)}
               deltaPct={amountDelta}
               hint={`${SOURCE_LABEL[source]} · เทียบช่วงก่อน`}
               icon={<Wallet className="h-4 w-4" />}
             />
             <SalesKpiCard
               title="บริษัท"
-              value={formatBaht(overview.summary.entries_amount)}
+              value={formatBahtCompact(overview.summary.entries_amount)}
               hint={`${formatCount(overview.summary.receipt_count)} บิล`}
               icon={<Building2 className="h-4 w-4" />}
             />
             <SalesKpiCard
               title="ทั่วไป"
-              value={formatBaht(overview.summary.general_amount)}
+              value={formatBahtCompact(overview.summary.general_amount)}
               hint={`${formatCount(overview.summary.general_count)} รายการ`}
               icon={<Users className="h-4 w-4" />}
             />

@@ -14,6 +14,7 @@ import {
 import {
   BRANCH_LABELS,
   formatBaht,
+  formatBahtCompact,
   formatCount,
   pctChange,
   SALES_TYPE_LABELS,
@@ -345,7 +346,7 @@ export default function SalesOverviewPage() {
           >
             <SalesKpiCard
               title="ยอดขายสุทธิ"
-              value={formatBaht(overview.summary.revenue_net)}
+              value={formatBahtCompact(overview.summary.revenue_net)}
               deltaPct={revenueDelta}
               hint="ก่อน VAT"
               icon={<Wallet className="h-4 w-4" />}
@@ -358,7 +359,7 @@ export default function SalesOverviewPage() {
             />
             <SalesKpiCard
               title="เฉลี่ยต่อบิล"
-              value={formatBaht(overview.summary.avg_bill)}
+              value={formatBahtCompact(overview.summary.avg_bill)}
               hint="ยอดสุทธิ / บิล"
               icon={<Store className="h-4 w-4" />}
             />

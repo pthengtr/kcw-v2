@@ -12,7 +12,11 @@ import {
 
 import { buildIncomeHighlights } from "@/lib/bi/highlights";
 import type { BiIncomeOverview } from "@/lib/bi/income-types";
-import { formatBaht, formatCount, pctChange } from "@/lib/bi/sales-format";
+import {
+  formatBahtCompact,
+  formatCount,
+  pctChange,
+} from "@/lib/bi/sales-format";
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
@@ -328,14 +332,14 @@ export default function IncomeOverviewPage() {
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <SalesKpiCard
               title="ยอดขายสุทธิ"
-              value={formatBaht(overview.summary.revenue_net)}
+              value={formatBahtCompact(overview.summary.revenue_net)}
               deltaPct={revenueDelta}
               hint="ก่อน VAT · หลังจัดสรรส่วนลดบิล"
               icon={<Wallet className="h-4 w-4" />}
             />
             <SalesKpiCard
               title="ต้นทุนขาย (COGS)"
-              value={formatBaht(overview.summary.cogs)}
+              value={formatBahtCompact(overview.summary.cogs)}
               hint={
                 overview.summary.blank_cost_line_count > 0 ? (
                   <button
@@ -355,21 +359,21 @@ export default function IncomeOverviewPage() {
             />
             <SalesKpiCard
               title="กำไรขั้นต้น"
-              value={formatBaht(overview.summary.gross_profit)}
+              value={formatBahtCompact(overview.summary.gross_profit)}
               deltaPct={grossDelta}
               hint={`อัตรากำไร ${formatMarginPct(overview.summary.gross_margin_pct)}`}
               icon={<Percent className="h-4 w-4" />}
             />
             <SalesKpiCard
               title="ค่าใช้จ่าย (OpEx)"
-              value={formatBaht(overview.summary.opex)}
+              value={formatBahtCompact(overview.summary.opex)}
               deltaPct={opexDelta}
               hint="บริษัท + ทั่วไป"
               icon={<Landmark className="h-4 w-4" />}
             />
             <SalesKpiCard
               title="กำไรสุทธิ (ประมาณ)"
-              value={formatBaht(overview.summary.net_income)}
+              value={formatBahtCompact(overview.summary.net_income)}
               deltaPct={netDelta}
               hint={`ขั้นต้น − ค่าใช้จ่าย · ${formatMarginPct(overview.summary.net_margin_pct)} ของยอดขาย`}
               icon={<Wallet className="h-4 w-4" />}
