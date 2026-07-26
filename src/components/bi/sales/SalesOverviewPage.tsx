@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Building2,
   CalendarDays,
+  CalendarRange,
   Loader2,
   ReceiptText,
   RefreshCcw,
@@ -13,7 +13,6 @@ import {
 
 import {
   BRANCH_LABELS,
-  CHANNEL_LABELS,
   formatBaht,
   formatCount,
   pctChange,
@@ -24,6 +23,7 @@ import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
   formatThaiDateRange,
+  inclusiveDayCount,
   periodLabel,
   preferDailyBreakdown,
   resolvePeriodRange,
@@ -121,6 +121,8 @@ export default function SalesOverviewPage() {
   }, [preset]);
 
   const useDaily = preferDailyBreakdown(range.from, range.to);
+  const dayCount = inclusiveDayCount(range.from, range.to);
+  const showAvgBillsPerDay = dayCount > 1;
   const trendRows = overview
     ? useDaily
       ? overview.trend_daily
@@ -140,8 +142,17 @@ export default function SalesOverviewPage() {
         overview.previous_summary.bill_count
       )
     : null;
-  const vatDelta = overview
-    ? pctChange(overview.summary.vat_baht, overview.previous_summary.vat_baht)
+  const avgBillsPerDay = overview
+    ? overview.summary.bill_count / dayCount
+    : 0;
+  const prevDayCount = overview
+    ? inclusiveDayCount(overview.previous_from, overview.previous_to)
+    : 1;
+  const avgBillsPerDayDelta = overview
+    ? pctChange(
+        overview.summary.bill_count / dayCount,
+        overview.previous_summary.bill_count / Math.max(prevDayCount, 1)
+      )
     : null;
 
   return (
@@ -306,8 +317,13 @@ export default function SalesOverviewPage() {
       ) : null}
 
       {loading && !overview ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-3 sm:grid-cols-2",
+            showAvgBillsPerDay ? "xl:grid-cols-4" : "xl:grid-cols-3"
+          )}
+        >
+          {Array.from({ length: showAvgBillsPerDay ? 4 : 3 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
@@ -315,7 +331,12 @@ export default function SalesOverviewPage() {
 
       {overview ? (
         <>
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <section
+            className={cn(
+              "grid grid-cols-1 gap-3 sm:grid-cols-2",
+              showAvgBillsPerDay ? "xl:grid-cols-4" : "xl:grid-cols-3"
+            )}
+          >
             <SalesKpiCard
               title="ยอดขายสุทธิ"
               value={formatBaht(overview.summary.revenue_net)}
@@ -335,30 +356,29 @@ export default function SalesOverviewPage() {
               hint="ยอดสุทธิ / บิล"
               icon={<Store className="h-4 w-4" />}
             />
-            <SalesKpiCard
-              title="VAT ที่เก็บได้"
-              value={formatBaht(overview.summary.vat_baht)}
-              deltaPct={vatDelta}
-              hint="แยกจากยอดขาย"
-              icon={<Building2 className="h-4 w-4" />}
-            />
+            {showAvgBillsPerDay ? (
+              <SalesKpiCard
+                title="เฉลี่ยบิลต่อวัน"
+                value={avgBillsPerDay.toLocaleString("th-TH", {
+                  maximumFractionDigits: 1,
+                })}
+                deltaPct={avgBillsPerDayDelta}
+                hint={`${formatCount(dayCount)} วัน`}
+                icon={<CalendarRange className="h-4 w-4" />}
+              />
+            ) : null}
           </section>
 
-          <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-            <SalesSplitChart
-              title="VAT vs Non-VAT"
-              rows={overview.by_sales_type}
-              labels={SALES_TYPE_LABELS}
-            />
+          <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <SalesSplitChart
               title="HQ / SYP / ออนไลน์"
               rows={overview.by_branch}
               labels={BRANCH_LABELS}
             />
             <SalesSplitChart
-              title="ออนไลน์ vs หน้าร้าน"
-              rows={overview.by_channel}
-              labels={CHANNEL_LABELS}
+              title="VAT vs Non-VAT"
+              rows={overview.by_sales_type}
+              labels={SALES_TYPE_LABELS}
             />
           </section>
 
@@ -413,17 +433,6 @@ export default function SalesOverviewPage() {
                 ออนไลน์{" "}
                 <span className="font-medium text-slate-800">
                   {formatBaht(splitAmount(overview.by_branch, "ONLINE"))}
-                </span>
-              </li>
-              <li>
-                ช่องทาง ออนไลน์{" "}
-                <span className="font-medium text-slate-800">
-                  {formatBaht(splitAmount(overview.by_channel, "ONLINE"))}
-                </span>
-                {" · "}
-                หน้าร้าน{" "}
-                <span className="font-medium text-slate-800">
-                  {formatBaht(splitAmount(overview.by_channel, "COUNTER"))}
                 </span>
               </li>
             </ul>

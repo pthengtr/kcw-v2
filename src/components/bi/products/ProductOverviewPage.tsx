@@ -6,17 +6,11 @@ import {
   Loader2,
   Package,
   RefreshCcw,
-  ShoppingBasket,
   Wallet,
 } from "lucide-react";
 
 import type { BiProductOverview } from "@/lib/bi/product-types";
-import {
-  BRANCH_LABELS,
-  formatBaht,
-  formatCount,
-  pctChange,
-} from "@/lib/bi/sales-format";
+import { formatBaht, formatCount, pctChange } from "@/lib/bi/sales-format";
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
@@ -31,7 +25,6 @@ import type {
 } from "@/lib/bi/sales-types";
 import { cn } from "@/lib/utils";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
-import SalesSplitChart from "@/components/bi/sales/SalesSplitChart";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -293,8 +286,8 @@ export default function ProductOverviewPage() {
       ) : null}
 
       {loading && !overview ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
@@ -302,7 +295,7 @@ export default function ProductOverviewPage() {
 
       {overview ? (
         <>
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <SalesKpiCard
               title="ยอดขายสุทธิ"
               value={formatBaht(overview.summary.revenue_net)}
@@ -324,15 +317,9 @@ export default function ProductOverviewPage() {
               hint="QTY × MTP"
               icon={<Boxes className="h-4 w-4" />}
             />
-            <SalesKpiCard
-              title="บรรทัดบิล"
-              value={formatCount(overview.summary.line_count)}
-              hint={`${formatCount(overview.summary.bill_count)} บิลที่มีสินค้า`}
-              icon={<ShoppingBasket className="h-4 w-4" />}
-            />
           </section>
 
-          <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <ProductGroupChart
               title="หมวดสินค้า (KACC9)"
               rows={overview.by_category}
@@ -341,18 +328,6 @@ export default function ProductOverviewPage() {
               title="ชนิดชิ้นส่วน (CODE1)"
               rows={overview.by_code1}
             />
-            <SalesSplitChart
-              title="HQ / SYP / ออนไลน์"
-              rows={overview.by_branch}
-              labels={BRANCH_LABELS}
-            />
-          </section>
-
-          <section>
-            <ProductRankTable
-              rows={overview.top_products}
-              totalRevenue={overview.summary.revenue_net}
-            />
           </section>
 
           <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
@@ -360,6 +335,13 @@ export default function ProductOverviewPage() {
             <ProductCategoryTable
               rows={overview.by_code1}
               title="แยกตามชนิดชิ้นส่วน (CODE1)"
+            />
+          </section>
+
+          <section>
+            <ProductRankTable
+              rows={overview.top_products}
+              totalRevenue={overview.summary.revenue_net}
             />
           </section>
         </>

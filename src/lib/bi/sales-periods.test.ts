@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   bangkokTodayIso,
+  inclusiveDayCount,
   monthRange,
   preferDailyBreakdown,
   preferDailyTrend,
@@ -72,5 +73,10 @@ describe("sales period helpers", () => {
     // 2026-07-24 20:00 UTC = 2026-07-25 03:00 Bangkok
     const lateUtc = new Date("2026-07-24T20:00:00.000Z");
     expect(bangkokTodayIso(lateUtc)).toBe("2026-07-25");
+  });
+
+  it("counts inclusive days in a range", () => {
+    expect(inclusiveDayCount("2026-07-01", "2026-07-01")).toBe(1);
+    expect(inclusiveDayCount("2026-07-01", "2026-07-25")).toBe(25);
   });
 });
