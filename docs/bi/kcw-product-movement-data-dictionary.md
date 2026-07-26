@@ -75,7 +75,8 @@ Universe for dead list: has `last_purchase_date`, **`on_hand_qty > 0`**, **`no_m
 | Dead stock filters | **As-of `to` only** — period/branch do not define membership; `last_sale` is always all-branch |
 | Mode | `stock_more` \| `dead` \| `both` — UI loads one side to avoid statement timeouts |
 | Dead filters | `dead_tier` = yellow\|orange\|red · `category` = 2-digit ICMAS prefix (one at a time) |
-| Dead sort | `deep` (default in UI) = red→orange→yellow · `recent` = yellow→orange→red |
+| Dead sort | `value_desc` (default) · `deep` · `recent` · `qty_desc` · `cost_desc` · `value_asc` |
+| Dead cost | ICMAS `COSTLAST` → `unit_cost`; `stock_value` = on_hand × cost (blank cost excluded from value) |
 | Timeout | Function `statement_timeout = 60s`; API retries once on timeout |
 | Pagination | `dead_offset` + `dead_limit` (default 100); UI page jump; `dead_has_more` |
 | UI | `/bi/product-movement` — stock-more uses period/branch; dead tab uses as-of + tier/category/sort |
@@ -87,6 +88,7 @@ Universe for dead list: has `last_purchase_date`, **`on_hand_qty > 0`**, **`no_m
 
 | Date | Change |
 |------|--------|
+| 2026-07-26 | Dead cost (COSTLAST) + stock value; sort by value/qty/cost/age |
 | 2026-07-26 | Dead filters: tier chips + single category + page jump; category narrows RPC scan |
 | 2026-07-26 | Fix intermittent load errors: mode split, 60s timeout, light last-sale, client abort/retry |
 | 2026-07-26 | Dead tiers → 6m/1y/2y; purchase-age only; UI age in months + default deep sort |

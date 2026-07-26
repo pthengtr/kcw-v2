@@ -48,7 +48,18 @@ function asDeadTier(value: unknown): BiDeadTier {
 }
 
 function asDeadSort(value: unknown): BiDeadSort {
-  return asString(value) === "recent" ? "recent" : "deep";
+  const s = asString(value);
+  if (
+    s === "recent" ||
+    s === "value_desc" ||
+    s === "value_asc" ||
+    s === "qty_desc" ||
+    s === "cost_desc" ||
+    s === "deep"
+  ) {
+    return s;
+  }
+  return "deep";
 }
 
 function asMode(value: unknown): BiProductMovementMode {
@@ -102,6 +113,8 @@ function parseDeadStock(value: unknown): BiDeadStockRow[] {
       code1,
       code1_name: code1Label(code1),
       on_hand_qty: asNumber(r.on_hand_qty),
+      unit_cost: asNullableNumber(r.unit_cost),
+      stock_value: asNumber(r.stock_value),
       last_purchase_date: asNullableString(r.last_purchase_date),
       last_sale_date: asNullableString(r.last_sale_date),
       days_since_purchase: asNullableNumber(r.days_since_purchase),
@@ -158,6 +171,8 @@ export function normalizeProductMovement(raw: unknown): BiProductMovement {
         summary.dead_category_total == null
           ? dead_total_count
           : asNumber(summary.dead_category_total),
+      dead_stock_value: asNumber(summary.dead_stock_value),
+      dead_category_stock_value: asNumber(summary.dead_category_stock_value),
     },
     stock_more: parseStockMore(data.stock_more),
     dead_stock,
@@ -186,7 +201,7 @@ export async function fetchProductMovement(
     p_stock_limit: params.stockLimit ?? 50,
     p_dead_limit: params.deadLimit ?? 100,
     p_dead_offset: params.deadOffset ?? 0,
-    p_dead_sort: params.deadSort ?? "deep",
+    p_dead_sort: params.deadSort ?? "value_desc",
     p_mode: params.mode ?? "both",
     p_dead_tier: params.deadTier ?? null,
     p_category: params.category ?? null,

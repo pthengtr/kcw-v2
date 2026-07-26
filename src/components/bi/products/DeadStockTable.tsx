@@ -8,7 +8,7 @@ import type {
   BiDeadTier,
 } from "@/lib/bi/product-movement-types";
 import { CATEGORY_LABELS } from "@/lib/bi/icmas-labels";
-import { formatCount } from "@/lib/bi/sales-format";
+import { formatBaht, formatCount } from "@/lib/bi/sales-format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,8 @@ type Props = {
   rows: BiDeadStockRow[];
   totalCount: number;
   categoryTotal: number;
+  stockValue: number;
+  categoryStockValue: number;
   tierCounts: { yellow: number; orange: number; red: number };
   offset: number;
   pageSize: number;
@@ -40,6 +42,15 @@ type Props = {
   onNext: () => void;
   onJumpPage: (page: number) => void;
 };
+
+const SORT_OPTIONS: { value: BiDeadSort; label: string }[] = [
+  { value: "value_desc", label: "มูลค่าสต๊อกสูงก่อน" },
+  { value: "deep", label: "ค้างนานก่อน (อายุ)" },
+  { value: "recent", label: "เพิ่งเข้าเกณฑ์ (อายุ)" },
+  { value: "qty_desc", label: "คงเหลือมากก่อน" },
+  { value: "cost_desc", label: "ทุนต่อหน่วยสูงก่อน" },
+  { value: "value_asc", label: "มูลค่าสต๊อกต่ำก่อน" },
+];
 
 const TIER_LABEL: Record<BiDeadTier, string> = {
   yellow: "≥6 เดือน",
@@ -75,6 +86,8 @@ export default function DeadStockTable({
   rows,
   totalCount,
   categoryTotal,
+  stockValue,
+  categoryStockValue,
   tierCounts,
   offset,
   pageSize,
@@ -190,8 +203,9 @@ export default function DeadStockTable({
               สต็อกค้าง — อายุจากวันซื้อล่าสุดที่ยังไม่ขายต่อ
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              กรองระดับอายุ + หมวดเดียวต่อครั้งช่วยให้โหลดเร็วขึ้น · ในหมวดนี้{" "}
-              {formatCount(categoryTotal)} รายการ
+              ทุนจาก ICMAS COSTLAST · มูลค่า = คงเหลือ × ทุน · กรองหมวดเดียวช่วยให้โหลดเร็ว
+              · ในหมวดนี้ {formatCount(categoryTotal)} รายการ (
+              {formatBaht(categoryStockValue, true)})
             </p>
           </div>
           {pager}
@@ -215,6 +229,25 @@ export default function DeadStockTable({
                 {categoryOptions.map((opt) => (
                   <SelectItem key={opt.code} value={opt.code}>
                     {opt.code} — {opt.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bi-dead-sort">เรียงตาม</Label>
+            <Select
+              value={sort}
+              onValueChange={(v) => onSortChange(v as BiDeadSort)}
+              disabled={loading}
+            >
+              <SelectTrigger id="bi-dead-sort" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -251,34 +284,12 @@ export default function DeadStockTable({
           ))}
         </div>
 
-        <div
-          className="mt-2 flex flex-wrap gap-2"
-          role="group"
-          aria-label="ทิศทางเรียงสต็อกค้าง"
-        >
-          <Button
-            type="button"
-            size="sm"
-            variant={sort === "deep" ? "default" : "outline"}
-            className={cn(sort === "deep" && "bg-slate-800 hover:bg-slate-700")}
-            onClick={() => onSortChange("deep")}
-            disabled={loading}
-          >
-            ค้างนานก่อน (2 ปี+ →)
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={sort === "recent" ? "default" : "outline"}
-            className={cn(
-              sort === "recent" && "bg-slate-800 hover:bg-slate-700"
-            )}
-            onClick={() => onSortChange("recent")}
-            disabled={loading}
-          >
-            เพิ่งเข้าเกณฑ์ (6 ด. →)
-          </Button>
-        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          มูลค่าตามตัวกรองปัจจุบัน{" "}
+          <span className="font-medium text-slate-800">
+            {formatBaht(stockValue, true)}
+          </span>
+        </p>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {rows.length === 0 ? (
@@ -286,16 +297,17 @@ export default function DeadStockTable({
             ไม่มีรายการตามตัวกรองนี้
           </p>
         ) : (
-          <table className="w-full min-w-[52rem] text-left text-sm">
+          <table className="w-full min-w-[60rem] text-left text-sm">
             <thead>
               <tr className="border-b text-xs text-muted-foreground">
                 <th className="py-2 pr-3 font-medium">ระดับ</th>
                 <th className="py-2 pr-3 font-medium">สินค้า</th>
                 <th className="py-2 pr-3 font-medium">หมวด</th>
                 <th className="py-2 pr-3 font-medium">ซื้อล่าสุด</th>
-                <th className="py-2 pr-3 font-medium">ขายล่าสุด</th>
-                <th className="py-2 pr-3 font-medium text-right">อายุหลังซื้อ</th>
-                <th className="py-2 font-medium text-right">คงเหลือ</th>
+                <th className="py-2 pr-3 font-medium text-right">อายุ</th>
+                <th className="py-2 pr-3 font-medium text-right">คงเหลือ</th>
+                <th className="py-2 pr-3 font-medium text-right">ทุน/หน่วย</th>
+                <th className="py-2 font-medium text-right">มูลค่าสต๊อก</th>
               </tr>
             </thead>
             <tbody>
@@ -331,21 +343,23 @@ export default function DeadStockTable({
                   <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums text-xs">
                     {row.last_purchase_date ?? "—"}
                   </td>
-                  <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums text-xs">
-                    {row.last_sale_date ?? "ไม่เคยขาย"}
-                  </td>
                   <td className="py-2.5 pr-3 text-right">
                     <div className="font-medium tabular-nums text-slate-900">
                       {ageLabel(row.days_since_purchase)}
                     </div>
-                    {row.days_since_purchase != null ? (
-                      <div className="text-[11px] tabular-nums text-muted-foreground">
-                        {formatCount(row.days_since_purchase)} วัน
-                      </div>
-                    ) : null}
+                  </td>
+                  <td className="py-2.5 pr-3 text-right font-semibold tabular-nums text-slate-900">
+                    {formatCount(row.on_hand_qty)}
+                  </td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums text-slate-900">
+                    {row.unit_cost == null
+                      ? "—"
+                      : formatBaht(row.unit_cost, true)}
                   </td>
                   <td className="py-2.5 text-right font-semibold tabular-nums text-slate-900">
-                    {formatCount(row.on_hand_qty)}
+                    {row.unit_cost == null
+                      ? "—"
+                      : formatBaht(row.stock_value, true)}
                   </td>
                 </tr>
               ))}
@@ -354,10 +368,8 @@ export default function DeadStockTable({
         )}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
           <p className="text-[11px] text-muted-foreground">
-            {sort === "deep"
-              ? "เรียงแดง → ส้ม → เหลือง (อายุมากก่อน)"
-              : "เรียงเหลือง → ส้ม → แดง (เพิ่งเข้าเกณฑ์ก่อน)"}{" "}
-            · หน้าละ {formatCount(pageSize)}
+            {SORT_OPTIONS.find((o) => o.value === sort)?.label ?? sort} · หน้าละ{" "}
+            {formatCount(pageSize)} · ไม่มีทุน = ไม่คิดมูลค่า
           </p>
           {pager}
         </div>
