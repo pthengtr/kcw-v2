@@ -77,11 +77,22 @@ Note: category name in DB may have a trailing space (`ออนไลน์ `) �
 | Piece | Detail |
 |-------|--------|
 | RPC | `public.fn_bi_income_overview(from, to, branch, timezone)` |
+| Blank-cost RPC | `public.fn_bi_income_blank_costs(from, to, branch, limit)` |
 | UI | `/bi/income` |
 | API | `GET /api/bi/income/overview?from=&to=&branch=` |
+| Blank-cost API | `GET /api/bi/income/blank-costs?from=&to=&branch=&limit=` |
 | Branch filter | `HQ` \| `SYP` \| `ONLINE` \| omit = ALL |
 
 Previous-period window = equal length immediately before `from` (same as other BI reports).
+
+### 5.1 Blank cost drilldown
+
+Lines where `LAST_PURCHASE_COST` is blank/null (COGS counted as 0).  
+UI: click **ต้นทุนว่าง N บรรทัด** on the COGS KPI → dialog with:
+
+`bill_date`, `bill_no`, reporting/store branch, `BCODE`, `DETAIL`, `QTY` (+ `MTP`), line `AMOUNT`, `COST_STATUS`.
+
+Default API limit 500 (max 2000); response includes `truncated` when capped.
 
 ---
 
@@ -90,3 +101,4 @@ Previous-period window = equal length immediately before `from` (same as other B
 | Date | Change |
 |------|--------|
 | 2026-07-26 | Lock gross/net formulas; HQ category ออนไลน์ → ONLINE; ship `fn_bi_income_overview` + `/bi/income` |
+| 2026-07-26 | Blank-cost line drilldown (`fn_bi_income_blank_costs` + dialog on COGS KPI) |

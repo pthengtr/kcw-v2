@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import IncomeBlankCostDialog from "./IncomeBlankCostDialog";
 import IncomeBranchTable from "./IncomeBranchTable";
 import IncomeOpexTable from "./IncomeOpexTable";
 import IncomeTrendChart from "./IncomeTrendChart";
@@ -61,6 +62,7 @@ export default function IncomeOverviewPage() {
   const [overview, setOverview] = useState<BiIncomeOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [blankCostOpen, setBlankCostOpen] = useState(false);
 
   const range = useMemo(
     () =>
@@ -334,7 +336,21 @@ export default function IncomeOverviewPage() {
             <SalesKpiCard
               title="ต้นทุนขาย (COGS)"
               value={formatBaht(overview.summary.cogs)}
-              hint={`ต้นทุนว่าง ${formatCount(overview.summary.blank_cost_line_count)} บรรทัด → 0`}
+              hint={
+                overview.summary.blank_cost_line_count > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setBlankCostOpen(true)}
+                    className="text-left text-sky-700 underline decoration-sky-300 underline-offset-2 hover:text-sky-900"
+                  >
+                    ต้นทุนว่าง{" "}
+                    {formatCount(overview.summary.blank_cost_line_count)}{" "}
+                    บรรทัด → 0 · ดูรายการ
+                  </button>
+                ) : (
+                  "ไม่มีบรรทัดต้นทุนว่าง"
+                )
+              }
               icon={<Package className="h-4 w-4" />}
             />
             <SalesKpiCard
@@ -397,6 +413,15 @@ export default function IncomeOverviewPage() {
           <section>
             <BiHighlightsCard lines={highlightLines} />
           </section>
+
+          <IncomeBlankCostDialog
+            open={blankCostOpen}
+            onOpenChange={setBlankCostOpen}
+            from={range.from}
+            to={range.to}
+            branch={branch === "ALL" ? null : branch}
+            expectedCount={overview.summary.blank_cost_line_count}
+          />
         </>
       ) : null}
     </div>

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeIncomeOverview } from "./income-queries";
+import {
+  normalizeIncomeBlankCosts,
+  normalizeIncomeOverview,
+} from "./income-queries";
 
 describe("normalizeIncomeOverview", () => {
   it("parses summary, branch, opex categories, and trends", () => {
@@ -102,5 +105,38 @@ describe("normalizeIncomeOverview", () => {
     });
     expect(overview.summary.gross_margin_pct).toBeNull();
     expect(overview.summary.net_margin_pct).toBeNull();
+  });
+});
+
+describe("normalizeIncomeBlankCosts", () => {
+  it("parses blank cost line drilldown", () => {
+    const blank = normalizeIncomeBlankCosts({
+      from: "2026-07-01",
+      to: "2026-07-25",
+      branch: "HQ",
+      limit: 500,
+      total_count: 2,
+      returned_count: 2,
+      truncated: false,
+      lines: [
+        {
+          bill_date: "2026-07-10",
+          store_branch: "HQ",
+          reporting_branch: "HQ",
+          bill_no: "K6907-001",
+          bcode: "0100123",
+          detail: "FILTER",
+          qty: 2,
+          mtp: 1,
+          amount_gross: 500,
+          cost_status: "UNKNOWN",
+        },
+      ],
+    });
+
+    expect(blank.total_count).toBe(2);
+    expect(blank.lines[0]?.bill_no).toBe("K6907-001");
+    expect(blank.lines[0]?.bcode).toBe("0100123");
+    expect(blank.truncated).toBe(false);
   });
 });

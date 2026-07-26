@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 type SalesKpiCardProps = {
   title: string;
   value: string;
-  hint?: string;
+  hint?: ReactNode;
   deltaPct?: number | null;
   icon?: ReactNode;
   className?: string;
