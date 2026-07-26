@@ -375,7 +375,7 @@ export default function DeadStockTable({
                   <td className="py-2 text-right align-top font-semibold tabular-nums text-xs text-slate-900 sm:text-sm">
                     {row.unit_cost == null
                       ? "—"
-                      : formatBahtCompact(row.stock_value)}
+                      : formatBaht(row.stock_value, true)}
                   </td>
                 </tr>
               ))}
