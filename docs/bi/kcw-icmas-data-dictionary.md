@@ -274,7 +274,7 @@ Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 /
 | `XCODE` / `ACODE` | TBD | TBD |
 | `MAIN` / `SUB` / `PART` | Aligns with BCODE structure; names TBD | Inferred |
 | `CATEGORY_CODE` / `left(BCODE,2)` | หมวดสินค้า KACC9 | Confirmed — full legend in §2.1 |
-| `QTYOH2` | Remaining stock / คงเหลือ | Confirmed — §6 |
+| `QTYOH2` | Remaining stock in small units (`UI1`); large sale −`MTP2` | Confirmed — §6 |
 | `DESCR`, `BRAND`, `MODEL` | Description / brand / model | Confirmed (name) |
 
 ---
