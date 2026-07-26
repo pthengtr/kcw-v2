@@ -48,7 +48,12 @@ export type BiSalesOverview = {
   trend_monthly: BiTrendRow[];
 };
 
-export type BiReportId = "sales" | "customers" | "products" | "expenses";
+export type BiReportId =
+  | "sales"
+  | "sales-compare"
+  | "customers"
+  | "products"
+  | "expenses";
 
 export type BiReportNavItem = {
   id: BiReportId;
