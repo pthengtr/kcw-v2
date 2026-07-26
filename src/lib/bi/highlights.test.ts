@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCustomerHighlights,
+  buildExpenseHighlights,
   buildProductHighlights,
   buildSalesHighlights,
 } from "./highlights";
 import type { BiCustomerOverview } from "./customer-types";
+import type { BiExpenseOverview } from "./expense-types";
 import type { BiProductOverview } from "./product-types";
 import type { BiSalesOverview } from "./sales-types";
 
@@ -212,5 +214,69 @@ describe("BI highlight builders", () => {
     expect(lines.some((l) => l.includes("7ICE"))).toBe(true);
     expect(lines.some((l) => l.includes("รอ sync"))).toBe(true);
     expect(lines.some((l) => l.includes("walk-in"))).toBe(true);
+  });
+
+  it("builds expense highlight lines with company/general split", () => {
+    const expenseBase: BiExpenseOverview = {
+      from: "2026-07-01",
+      to: "2026-07-25",
+      branch: null,
+      source: null,
+      limit: 30,
+      previous_from: "2026-06-06",
+      previous_to: "2026-06-30",
+      summary: {
+        amount: 500_000,
+        line_count: 120,
+        item_count: 18,
+        receipt_count: 40,
+        general_count: 80,
+        entries_amount: 300_000,
+        general_amount: 200_000,
+      },
+      previous_summary: {
+        amount: 450_000,
+        line_count: 110,
+        item_count: 16,
+      },
+      by_source: [],
+      by_branch: [
+        {
+          key: "hq",
+          label: "สำนักงานใหญ่",
+          amount: 400_000,
+          line_count: 100,
+        },
+      ],
+      by_category: [
+        {
+          key: "c1",
+          label: "สาธารณูปโภค",
+          amount: 120_000,
+          item_count: 4,
+          line_count: 20,
+        },
+      ],
+      top_items: [
+        {
+          key: "i1",
+          label: "ค่าไฟ",
+          category_name: "สาธารณูปโภค",
+          amount: 80_000,
+          line_count: 5,
+          entries_amount: 70_000,
+          general_amount: 10_000,
+        },
+      ],
+      trend_monthly: [],
+      branches: [],
+    };
+
+    const lines = buildExpenseHighlights(expenseBase);
+    expect(lines[0]).toContain("ยอดค่าใช้จ่าย");
+    expect(lines[0]).toContain("บริษัท");
+    expect(lines.some((l) => l.includes("ค่าไฟ"))).toBe(true);
+    expect(lines.some((l) => l.includes("สาธารณูปโภค"))).toBe(true);
+    expect(lines.some((l) => l.includes("สำนักงานใหญ่"))).toBe(true);
   });
 });

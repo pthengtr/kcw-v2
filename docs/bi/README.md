@@ -1,6 +1,6 @@
 # KCW BI documentation
 
-Living docs for BI dashboards built on Supabase schemas `raw_kcw` and `curated_kcw`.
+Living docs for BI dashboards. Sales/product/customer reports use `raw_kcw` / `curated_kcw`; the expense report uses **`public`** app tables.
 
 ## Files
 
@@ -8,16 +8,19 @@ Living docs for BI dashboards built on Supabase schemas `raw_kcw` and `curated_k
 |------|---------|
 | [kcw-sales-data-dictionary.md](./kcw-sales-data-dictionary.md) | Sales naming, grain, joins, codes, billing rules; customer `ACCTNO` / party |
 | [kcw-icmas-data-dictionary.md](./kcw-icmas-data-dictionary.md) | Product master (ICMAS): `BCODE`, `CODE1`, categories |
-| [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` overview dashboard |
-| [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products` ranking dashboard |
-| [sql/fn_bi_customer_overview.sql](./sql/fn_bi_customer_overview.sql) | RPC used by `/bi/customers` ranking dashboard |
+| [kcw-expense-data-dictionary.md](./kcw-expense-data-dictionary.md) | App expense tables + amount rules (company + general) |
+| [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
+| [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products` |
+| [sql/fn_bi_customer_overview.sql](./sql/fn_bi_customer_overview.sql) | RPC used by `/bi/customers` |
+| [sql/fn_bi_expense_overview.sql](./sql/fn_bi_expense_overview.sql) | RPC used by `/bi/expenses` |
 
 ## App entry
 
-- UI: `/bi/sales`, `/bi/products`, `/bi/customers` (shell + side panel)
+- UI: `/bi/sales`, `/bi/products`, `/bi/customers`, `/bi/expenses`
 - API: `GET /api/bi/sales/overview?from=&to=&branch=`
 - API: `GET /api/bi/products/overview?from=&to=&branch=&limit=`
 - API: `GET /api/bi/customers/overview?from=&to=&branch=&limit=`
+- API: `GET /api/bi/expenses/overview?from=&to=&branch=&source=&limit=`
 - Auth: admin-only (`requireAdmin` + service role RPC)
 
 ## How we maintain this

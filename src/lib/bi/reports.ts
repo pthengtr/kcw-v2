@@ -22,4 +22,11 @@ export const BI_REPORTS: BiReportNavItem[] = [
     description: "จัดอันดับยอดขายตามสินค้า",
     available: true,
   },
+  {
+    id: "expenses",
+    href: "/bi/expenses",
+    label: "ภาพรวมค่าใช้จ่าย",
+    description: "บริษัท + ทั่วไป · รายเดือน–YTD",
+    available: true,
+  },
 ];
