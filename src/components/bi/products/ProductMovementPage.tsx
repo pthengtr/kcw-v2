@@ -15,7 +15,7 @@ import type {
   BiDeadTier,
   BiProductMovement,
 } from "@/lib/bi/product-movement-types";
-import { formatBaht, formatCount } from "@/lib/bi/sales-format";
+import { formatBahtCompact, formatCount } from "@/lib/bi/sales-format";
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
@@ -56,7 +56,7 @@ export default function ProductMovementPage() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [customMonth, setCustomMonth] = useState("");
-  const [tab, setTab] = useState<TabId>("stock-more");
+  const [tab, setTab] = useState<TabId>("dead");
   const [deadAsOf, setDeadAsOf] = useState(() => bangkokTodayIso());
   const [deadSort, setDeadSort] = useState<BiDeadSort>("value_desc");
   const [deadTier, setDeadTier] = useState<BiDeadTier | "ALL">("ALL");
@@ -251,6 +251,15 @@ export default function ProductMovementPage() {
           <Button
             type="button"
             size="sm"
+            variant={tab === "dead" ? "default" : "outline"}
+            className={cn(tab === "dead" && "bg-slate-800 hover:bg-slate-700")}
+            onClick={() => setTabAndReset("dead")}
+          >
+            ระวังก่อนสั่ง / สต็อกค้าง
+          </Button>
+          <Button
+            type="button"
+            size="sm"
             variant={tab === "stock-more" ? "default" : "outline"}
             className={cn(
               tab === "stock-more" && "bg-slate-800 hover:bg-slate-700"
@@ -258,15 +267,6 @@ export default function ProductMovementPage() {
             onClick={() => setTabAndReset("stock-more")}
           >
             ควรสต็อกเพิ่ม
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={tab === "dead" ? "default" : "outline"}
-            className={cn(tab === "dead" && "bg-slate-800 hover:bg-slate-700")}
-            onClick={() => setTabAndReset("dead")}
-          >
-            ระวังก่อนสั่ง / สต็อกค้าง
           </Button>
         </div>
 
@@ -462,8 +462,8 @@ export default function ProductMovementPage() {
                 />
                 <SalesKpiCard
                   title="มูลค่าตามตัวกรอง"
-                  value={formatBaht(overview.summary.dead_stock_value, true)}
-                  hint={`ทั้งหมวด ${formatBaht(overview.summary.dead_category_stock_value, true)}`}
+                  value={formatBahtCompact(overview.summary.dead_stock_value)}
+                  hint={`ทั้งหมวด ${formatBahtCompact(overview.summary.dead_category_stock_value)}`}
                   icon={<AlertTriangle className="h-4 w-4" />}
                 />
                 <SalesKpiCard
