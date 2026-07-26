@@ -76,7 +76,7 @@ export default function ProductMovementPage() {
     [preset, customFrom, customTo, customMode, customMonth]
   );
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
@@ -85,6 +85,7 @@ export default function ProductMovementPage() {
         dead_limit: String(DEAD_PAGE_SIZE),
         dead_offset: String(deadOffset),
         dead_sort: deadSort,
+        mode: tab === "dead" ? "dead" : "stock_more",
       });
 
       if (tab === "dead") {
@@ -98,12 +99,14 @@ export default function ProductMovementPage() {
       }
 
       const res = await fetch(
-        `/api/bi/products/movement?${params.toString()}`
+        `/api/bi/products/movement?${params.toString()}`,
+        { signal }
       );
       const json = (await res.json()) as {
         overview?: BiProductMovement;
         error?: string;
       };
+      if (signal?.aborted) return;
       if (!res.ok) {
         throw new Error(json.error || "โหลดข้อมูลไม่สำเร็จ");
       }
@@ -112,10 +115,13 @@ export default function ProductMovementPage() {
       }
       setOverview(json.overview);
     } catch (err) {
+      if (signal?.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+        return;
+      }
       setOverview(null);
       setError(err instanceof Error ? err.message : "โหลดข้อมูลไม่สำเร็จ");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [
     tab,
@@ -128,12 +134,26 @@ export default function ProductMovementPage() {
   ]);
 
   useEffect(() => {
-    void load();
+    const ac = new AbortController();
+    void load(ac.signal);
+    return () => ac.abort();
   }, [load]);
 
-  useEffect(() => {
+  // Reset paging without a second concurrent request when filters change.
+  const setDeadSortAndReset = useCallback((next: BiDeadSort) => {
     setDeadOffset(0);
-  }, [tab, range.from, range.to, branch, deadAsOf, deadSort]);
+    setDeadSort(next);
+  }, []);
+
+  const setDeadAsOfAndReset = useCallback((next: string) => {
+    setDeadOffset(0);
+    setDeadAsOf(next);
+  }, []);
+
+  const setTabAndReset = useCallback((next: TabId) => {
+    setDeadOffset(0);
+    setTab(next);
+  }, []);
 
   useEffect(() => {
     if (preset !== "custom") return;
@@ -149,10 +169,6 @@ export default function ProductMovementPage() {
 
   const onDeadNext = useCallback(() => {
     setDeadOffset((prev) => prev + DEAD_PAGE_SIZE);
-  }, []);
-
-  const onDeadSortChange = useCallback((next: BiDeadSort) => {
-    setDeadSort(next);
   }, []);
 
   return (
@@ -218,7 +234,7 @@ export default function ProductMovementPage() {
             className={cn(
               tab === "stock-more" && "bg-slate-800 hover:bg-slate-700"
             )}
-            onClick={() => setTab("stock-more")}
+            onClick={() => setTabAndReset("stock-more")}
           >
             ควรสต็อกเพิ่ม
           </Button>
@@ -227,7 +243,7 @@ export default function ProductMovementPage() {
             size="sm"
             variant={tab === "dead" ? "default" : "outline"}
             className={cn(tab === "dead" && "bg-slate-800 hover:bg-slate-700")}
-            onClick={() => setTab("dead")}
+            onClick={() => setTabAndReset("dead")}
           >
             ระวังก่อนสั่ง / สต็อกค้าง
           </Button>
@@ -355,7 +371,7 @@ export default function ProductMovementPage() {
                   id="bi-dead-asof"
                   type="date"
                   value={deadAsOf}
-                  onChange={(e) => setDeadAsOf(e.target.value)}
+                  onChange={(e) => setDeadAsOfAndReset(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
                 <p className="text-[11px] text-muted-foreground">
@@ -391,7 +407,7 @@ export default function ProductMovementPage() {
               "grid grid-cols-1 gap-3",
               tab === "dead"
                 ? "sm:grid-cols-2 xl:grid-cols-3"
-                : "sm:grid-cols-2 xl:grid-cols-4"
+                : "sm:grid-cols-2 xl:grid-cols-3"
             )}
           >
             {tab === "stock-more" ? (
@@ -415,13 +431,28 @@ export default function ProductMovementPage() {
                   icon={<ArrowUpRight className="h-4 w-4" />}
                 />
               </>
-            ) : null}
-            <SalesKpiCard
-              title="สต็อกค้าง (มีคงเหลือ)"
-              value={formatCount(overview.summary.dead_total_count)}
-              hint={`แดง ≥2 ปี ${formatCount(overview.summary.dead_red_count)} · ส้ม ≥1 ปี ${formatCount(overview.summary.dead_orange_count)} · เหลือง ≥6 ด. ${formatCount(overview.summary.dead_yellow_count)}`}
-              icon={<AlertTriangle className="h-4 w-4" />}
-            />
+            ) : (
+              <>
+                <SalesKpiCard
+                  title="สต็อกค้างทั้งหมด"
+                  value={formatCount(overview.summary.dead_total_count)}
+                  hint="มีคงเหลือ · ไม่ขายหลังซื้อ ≥6 เดือน"
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                />
+                <SalesKpiCard
+                  title="แดง ≥2 ปี"
+                  value={formatCount(overview.summary.dead_red_count)}
+                  hint={`ส้ม ≥1 ปี ${formatCount(overview.summary.dead_orange_count)}`}
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                />
+                <SalesKpiCard
+                  title="เหลือง ≥6 ด."
+                  value={formatCount(overview.summary.dead_yellow_count)}
+                  hint="เพิ่งเข้าเกณฑ์ระวัง"
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                />
+              </>
+            )}
           </section>
 
           {tab === "stock-more" ? (
@@ -435,7 +466,7 @@ export default function ProductMovementPage() {
               hasMore={overview.dead_has_more}
               sort={deadSort}
               loading={loading}
-              onSortChange={onDeadSortChange}
+              onSortChange={setDeadSortAndReset}
               onPrev={onDeadPrev}
               onNext={onDeadNext}
             />

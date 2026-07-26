@@ -1,9 +1,15 @@
 -- Product movement BI: stock-more (sell qty rank) + dead-stock aging from last HQ buy.
 -- See docs/bi/kcw-product-movement-data-dictionary.md and kcw-purchase-data-dictionary.md.
+--
+-- p_mode:
+--   stock_more — period sell rank only (no dead scan)
+--   dead       — as-of dead list only (no period sell rank)
+--   both       — full payload (heavier; avoid in UI)
 
 DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer);
 DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer, integer);
 DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer, integer, text);
+DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text);
 
 CREATE OR REPLACE FUNCTION public.fn_bi_product_movement(
   p_from date,
@@ -12,19 +18,24 @@ CREATE OR REPLACE FUNCTION public.fn_bi_product_movement(
   p_stock_limit integer DEFAULT 50,
   p_dead_limit integer DEFAULT 100,
   p_dead_offset integer DEFAULT 0,
-  p_dead_sort text DEFAULT 'deep'
+  p_dead_sort text DEFAULT 'deep',
+  p_mode text DEFAULT 'both'
 )
 RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public, curated_kcw, raw_kcw
+SET statement_timeout = '60s'
 AS $$
 DECLARE
   v_stock_limit int;
   v_dead_limit int;
   v_dead_offset int;
   v_dead_sort text;
+  v_mode text;
+  v_want_stock boolean;
+  v_want_dead boolean;
 BEGIN
   IF p_from IS NULL OR p_to IS NULL OR p_from > p_to THEN
     RAISE EXCEPTION 'Invalid date range';
@@ -41,9 +52,17 @@ BEGIN
     WHEN lower(COALESCE(p_dead_sort, 'deep')) = 'recent' THEN 'recent'
     ELSE 'deep'
   END;
+  v_mode := lower(COALESCE(p_mode, 'both'));
+  IF v_mode NOT IN ('stock_more', 'dead', 'both') THEN
+    RAISE EXCEPTION 'Invalid mode';
+  END IF;
+  v_want_stock := v_mode IN ('stock_more', 'both');
+  v_want_dead := v_mode IN ('dead', 'both');
 
   RETURN (
-    WITH sales_bills AS (
+    WITH
+    -- Period bills only (stock-more / period KPIs)
+    sales_bills_period AS (
       SELECT
         b."BRANCH" AS store_branch,
         b."BILLNO" AS bill_no,
@@ -55,56 +74,58 @@ BEGIN
           ELSE b."BRANCH"
         END AS reporting_branch
       FROM curated_kcw.fact_sales_bills_all b
-      WHERE b."CANCELED" = 'N'
+      WHERE v_want_stock
+        AND b."CANCELED" = 'N'
         AND b."JOURMODE" <> '0'
         AND COALESCE(b."BILLTYPE_STD", '') NOT IN ('TF', 'TFV', 'TAR')
+        AND b."BILLDATE" >= p_from::text
         AND b."BILLDATE" < (p_to + 1)::text
     ),
-    sales_lines_hist AS (
+    sales_period AS (
       SELECT
         nullif(btrim(l."BCODE"), '') AS bcode,
-        COALESCE(l."DETAIL", '') AS detail,
-        b.bill_date,
-        b.bill_no,
-        b.store_branch,
-        b.reporting_branch,
-        COALESCE(NULLIF(replace(l."QTY", ',', ''), '')::numeric, 0)
+        max(COALESCE(l."DETAIL", '')) AS detail,
+        sum(
+          COALESCE(NULLIF(replace(l."QTY", ',', ''), '')::numeric, 0)
           * COALESCE(
               NULLIF(
                 COALESCE(NULLIF(replace(nullif(trim(l."MTP"), ''), ',', ''), '')::numeric, 0),
                 0
               ),
               1
-            ) AS base_qty
+            )
+        ) AS sell_qty,
+        count(DISTINCT (b.store_branch, b.bill_no))::int AS sell_bills,
+        count(DISTINCT b.bill_date)::int AS sell_days
       FROM curated_kcw.fact_sales_all l
-      JOIN sales_bills b
+      JOIN sales_bills_period b
         ON b.store_branch = l."BRANCH"
        AND b.bill_no = l."BILLNO"
-      WHERE l."IS_VALID" = 'True'
+      WHERE v_want_stock
+        AND l."IS_VALID" = 'True'
         AND l."CANCELED" = 'N'
-        AND l."BILLDATE" < (p_to + 1)::text
         AND nullif(btrim(l."BCODE"), '') IS NOT NULL
-        -- Branch filter applies only to period stock-more, not dead last_sale.
+        AND (p_branch IS NULL OR b.reporting_branch = p_branch)
+      GROUP BY 1
     ),
-    sales_period AS (
-      SELECT
-        bcode,
-        max(detail) AS detail,
-        sum(base_qty) AS sell_qty,
-        count(DISTINCT (store_branch, bill_no))::int AS sell_bills,
-        count(DISTINCT bill_date)::int AS sell_days
-      FROM sales_lines_hist
-      WHERE bill_date >= p_from
-        AND bill_date <= p_to
-        AND (p_branch IS NULL OR reporting_branch = p_branch)
-      GROUP BY bcode
-    ),
+    -- Light last-sale dates (no QTY×MTP) — only for dead aging
     last_sale AS (
       SELECT
-        bcode,
-        max(bill_date) AS last_sale_date
-      FROM sales_lines_hist
-      GROUP BY bcode
+        nullif(btrim(l."BCODE"), '') AS bcode,
+        max(left(l."BILLDATE", 10)::date) AS last_sale_date
+      FROM curated_kcw.fact_sales_all l
+      JOIN curated_kcw.fact_sales_bills_all b
+        ON b."BRANCH" = l."BRANCH"
+       AND b."BILLNO" = l."BILLNO"
+      WHERE v_want_dead
+        AND l."IS_VALID" = 'True'
+        AND l."CANCELED" = 'N'
+        AND b."CANCELED" = 'N'
+        AND b."JOURMODE" <> '0'
+        AND COALESCE(b."BILLTYPE_STD", '') NOT IN ('TF', 'TFV', 'TAR')
+        AND l."BILLDATE" < (p_to + 1)::text
+        AND nullif(btrim(l."BCODE"), '') IS NOT NULL
+      GROUP BY 1
     ),
     purchase_product AS (
       SELECT
@@ -122,20 +143,28 @@ BEGIN
               1
             ) AS base_qty
       FROM raw_kcw.raw_hq_pidet_purchase_lines p
-      WHERE COALESCE(p."JOURMODE", '') IN ('1', '2')
+      WHERE (v_want_dead OR v_want_stock)
+        AND COALESCE(p."JOURMODE", '') IN ('1', '2')
         AND COALESCE(p."BILLTYPE", '') IN ('1', '2', '3')
         AND nullif(btrim(p."BCODE"), '') IS NOT NULL
         AND p."BILLDATE" < (p_to + 1)::text
+        AND (
+          v_want_dead
+          OR (
+            left(p."BILLDATE", 10)::date >= p_from
+            AND left(p."BILLDATE", 10)::date <= p_to
+          )
+        )
     ),
     purchase_period AS (
       SELECT
         bcode,
         max(detail) AS detail,
         sum(base_qty) AS buy_qty,
-        count(DISTINCT bill_no)::int AS buy_bills,
-        count(DISTINCT bill_date)::int AS buy_days
+        count(DISTINCT bill_no)::int AS buy_bills
       FROM purchase_product
-      WHERE bill_date >= p_from
+      WHERE v_want_stock
+        AND bill_date >= p_from
         AND bill_date <= p_to
       GROUP BY bcode
     ),
@@ -145,7 +174,8 @@ BEGIN
         max(detail) AS detail,
         max(bill_date) AS last_purchase_date
       FROM purchase_product
-      WHERE billtype = '1'
+      WHERE v_want_dead
+        AND billtype = '1'
       GROUP BY bcode
     ),
     icmas AS (
@@ -160,7 +190,7 @@ BEGIN
       WHERE nullif(btrim(i."BCODE"), '') IS NOT NULL
       GROUP BY 1
     ),
-    dead_base AS (
+    dead_filtered AS (
       SELECT
         lp.bcode,
         COALESCE(NULLIF(i.descr, ''), NULLIF(lp.detail, ''), lp.bcode) AS detail,
@@ -174,46 +204,20 @@ BEGIN
           WHEN ls.last_sale_date IS NULL THEN NULL
           ELSE (p_to - ls.last_sale_date)
         END AS days_since_sale,
+        true AS no_move_since_purchase,
         CASE
-          WHEN ls.last_sale_date IS NULL THEN true
-          WHEN ls.last_sale_date < lp.last_purchase_date THEN true
-          ELSE false
-        END AS no_move_since_purchase
+          WHEN (p_to - lp.last_purchase_date) >= 730 THEN 'red'
+          WHEN (p_to - lp.last_purchase_date) >= 365 THEN 'orange'
+          WHEN (p_to - lp.last_purchase_date) >= 180 THEN 'yellow'
+          ELSE NULL
+        END AS dead_tier
       FROM last_purchase lp
       LEFT JOIN last_sale ls ON ls.bcode = lp.bcode
       LEFT JOIN icmas i ON i.bcode = lp.bcode
-      WHERE COALESCE(i.on_hand_qty, 0) > 0
-    ),
-    dead_scored AS (
-      SELECT
-        d.*,
-        CASE
-          WHEN d.no_move_since_purchase AND d.days_since_purchase >= 730 THEN 'red'
-          WHEN d.no_move_since_purchase AND d.days_since_purchase >= 365 THEN 'orange'
-          WHEN d.no_move_since_purchase AND d.days_since_purchase >= 180 THEN 'yellow'
-          ELSE NULL
-        END AS dead_tier
-      FROM dead_base d
-    ),
-    dead_final AS (
-      SELECT
-        bcode,
-        detail,
-        category_code,
-        code1,
-        on_hand_qty,
-        last_purchase_date,
-        last_sale_date,
-        days_since_purchase,
-        days_since_sale,
-        no_move_since_purchase,
-        dead_tier
-      FROM dead_scored
-      WHERE dead_tier IS NOT NULL
-    ),
-    dead_filtered AS (
-      SELECT *
-      FROM dead_final
+      WHERE v_want_dead
+        AND COALESCE(i.on_hand_qty, 0) > 0
+        AND (ls.last_sale_date IS NULL OR ls.last_sale_date < lp.last_purchase_date)
+        AND (p_to - lp.last_purchase_date) >= 180
     ),
     stock_more AS (
       SELECT
@@ -234,6 +238,7 @@ BEGIN
       LEFT JOIN icmas i ON i.bcode = s.bcode
       LEFT JOIN last_sale ls ON ls.bcode = s.bcode
       LEFT JOIN last_purchase lp ON lp.bcode = s.bcode
+      WHERE v_want_stock
       ORDER BY s.sell_qty DESC, s.sell_bills DESC, s.bcode
       LIMIT v_stock_limit
     ),
@@ -250,13 +255,10 @@ BEGIN
         d.days_since_sale,
         d.no_move_since_purchase,
         d.dead_tier,
-        COALESCE(sp.sell_qty, 0) AS sell_qty_period,
-        COALESCE(pp.buy_qty, 0) AS buy_qty_period
+        0::numeric AS sell_qty_period,
+        0::numeric AS buy_qty_period
       FROM dead_filtered d
-      LEFT JOIN sales_period sp ON sp.bcode = d.bcode
-      LEFT JOIN purchase_period pp ON pp.bcode = d.bcode
-      -- recent: yellow→orange→red, short age first
-      -- deep:   red→orange→yellow, long age first
+      WHERE v_want_dead
       ORDER BY
         CASE
           WHEN v_dead_sort = 'deep' THEN
@@ -278,31 +280,33 @@ BEGIN
         CASE WHEN v_dead_sort = 'recent' THEN d.days_since_purchase END ASC NULLS LAST,
         d.bcode
       OFFSET v_dead_offset
-      LIMIT v_dead_limit
+      LIMIT CASE WHEN v_want_dead THEN v_dead_limit ELSE 0 END
     ),
     summary AS (
       SELECT
-        (SELECT count(*)::int FROM sales_period) AS sold_sku_count,
-        (SELECT COALESCE(sum(sell_qty), 0) FROM sales_period) AS sell_qty,
-        (SELECT count(*)::int FROM purchase_period) AS bought_sku_count,
-        (SELECT COALESCE(sum(buy_qty), 0) FROM purchase_period) AS buy_qty,
-        (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'yellow') AS dead_yellow_count,
-        (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'orange') AS dead_orange_count,
-        (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'red') AS dead_red_count,
-        (SELECT count(*)::int FROM dead_filtered) AS dead_total_count
+        CASE WHEN v_want_stock THEN (SELECT count(*)::int FROM sales_period) ELSE 0 END AS sold_sku_count,
+        CASE WHEN v_want_stock THEN (SELECT COALESCE(sum(sell_qty), 0) FROM sales_period) ELSE 0 END AS sell_qty,
+        CASE WHEN v_want_stock THEN (SELECT count(*)::int FROM purchase_period) ELSE 0 END AS bought_sku_count,
+        CASE WHEN v_want_stock THEN (SELECT COALESCE(sum(buy_qty), 0) FROM purchase_period) ELSE 0 END AS buy_qty,
+        CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'yellow') ELSE 0 END AS dead_yellow_count,
+        CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'orange') ELSE 0 END AS dead_orange_count,
+        CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered WHERE dead_tier = 'red') ELSE 0 END AS dead_red_count,
+        CASE WHEN v_want_dead THEN (SELECT count(*)::int FROM dead_filtered) ELSE 0 END AS dead_total_count
     )
     SELECT jsonb_build_object(
       'from', p_from,
       'to', p_to,
       'branch', p_branch,
+      'mode', v_mode,
       'stock_limit', v_stock_limit,
       'dead_limit', v_dead_limit,
       'dead_offset', v_dead_offset,
       'dead_sort', v_dead_sort,
       'dead_returned_count', (SELECT count(*)::int FROM dead_list),
       'dead_has_more', (
-        (v_dead_offset + (SELECT count(*)::int FROM dead_list))
-        < (SELECT dead_total_count FROM summary)
+        v_want_dead
+        AND (v_dead_offset + (SELECT count(*)::int FROM dead_list))
+          < (SELECT dead_total_count FROM summary)
       ),
       'summary', (SELECT jsonb_build_object(
         'sold_sku_count', sold_sku_count,
@@ -314,7 +318,7 @@ BEGIN
         'dead_red_count', dead_red_count,
         'dead_total_count', dead_total_count
       ) FROM summary),
-      'stock_more', COALESCE((
+      'stock_more', CASE WHEN NOT v_want_stock THEN '[]'::jsonb ELSE COALESCE((
         SELECT jsonb_agg(jsonb_build_object(
           'bcode', sm.bcode,
           'detail', sm.detail,
@@ -332,8 +336,8 @@ BEGIN
           'last_purchase_date', sm.last_purchase_date
         ) ORDER BY sm.sell_qty DESC, sm.sell_bills DESC, sm.bcode)
         FROM stock_more sm
-      ), '[]'::jsonb),
-      'dead_stock', COALESCE((
+      ), '[]'::jsonb) END,
+      'dead_stock', CASE WHEN NOT v_want_dead THEN '[]'::jsonb ELSE COALESCE((
         SELECT jsonb_agg(jsonb_build_object(
           'bcode', dl.bcode,
           'detail', dl.detail,
@@ -372,14 +376,14 @@ BEGIN
           dl.bcode
         )
         FROM dead_list dl
-      ), '[]'::jsonb)
+      ), '[]'::jsonb) END
     )
   );
 END;
 $$;
 
-COMMENT ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text) IS
-  'Product movement: stock-more by sell_qty (+ optional branch); dead as-of to with recent|deep sort + offset; buys always HQ.';
+COMMENT ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text) IS
+  'Product movement BI; mode=stock_more|dead|both; statement_timeout 60s; buys always HQ.';
 
-GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text) TO authenticated;

@@ -6,6 +6,7 @@ import type {
   BiDeadStockRow,
   BiDeadTier,
   BiProductMovement,
+  BiProductMovementMode,
   BiStockMoreRow,
 } from "./product-movement-types";
 
@@ -47,7 +48,13 @@ function asDeadTier(value: unknown): BiDeadTier {
 }
 
 function asDeadSort(value: unknown): BiDeadSort {
-  return asString(value) === "deep" ? "deep" : "recent";
+  return asString(value) === "recent" ? "recent" : "deep";
+}
+
+function asMode(value: unknown): BiProductMovementMode {
+  const s = asString(value);
+  if (s === "stock_more" || s === "dead" || s === "both") return s;
+  return "both";
 }
 
 function parseStockMore(value: unknown): BiStockMoreRow[] {
@@ -123,6 +130,7 @@ export function normalizeProductMovement(raw: unknown): BiProductMovement {
     from: asString(data.from),
     to: asString(data.to),
     branch: data.branch == null ? null : asString(data.branch),
+    mode: asMode(data.mode),
     stock_limit: asNumber(data.stock_limit),
     dead_limit,
     dead_offset,
@@ -154,9 +162,10 @@ export async function fetchProductMovement(
     deadLimit?: number;
     deadOffset?: number;
     deadSort?: BiDeadSort;
+    mode?: BiProductMovementMode;
   }
 ): Promise<BiProductMovement> {
-  const { data, error } = await supabase.rpc("fn_bi_product_movement", {
+  const rpcArgs = {
     p_from: params.from,
     p_to: params.to,
     p_branch: params.branch ?? null,
@@ -164,7 +173,20 @@ export async function fetchProductMovement(
     p_dead_limit: params.deadLimit ?? 100,
     p_dead_offset: params.deadOffset ?? 0,
     p_dead_sort: params.deadSort ?? "deep",
-  });
+    p_mode: params.mode ?? "both",
+  };
+
+  const run = () => supabase.rpc("fn_bi_product_movement", rpcArgs);
+
+  let { data, error } = await run();
+
+  // One retry on transient statement timeout / gateway blips
+  if (
+    error &&
+    /timeout|canceling statement|57014|503|502/i.test(error.message || "")
+  ) {
+    ({ data, error } = await run());
+  }
 
   if (error) {
     throw new Error(error.message || "Unable to load product movement");

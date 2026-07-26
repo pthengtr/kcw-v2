@@ -1,7 +1,10 @@
 export type BiDeadTier = "yellow" | "orange" | "red";
 
-/** recent = 3m first (short age); deep = 1y+ first (long age) */
+/** recent = shorter age first; deep = longer age first */
 export type BiDeadSort = "recent" | "deep";
+
+/** UI loads one side at a time to avoid statement timeouts */
+export type BiProductMovementMode = "stock_more" | "dead" | "both";
 
 export type BiProductMovementSummary = {
   sold_sku_count: number;
@@ -53,6 +56,7 @@ export type BiProductMovement = {
   from: string;
   to: string;
   branch: string | null;
+  mode: BiProductMovementMode;
   stock_limit: number;
   dead_limit: number;
   dead_offset: number;

@@ -5,6 +5,8 @@ import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { fetchProductMovement } from "@/lib/bi/product-movement-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const maxDuration = 60;
+
 const QuerySchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -13,7 +15,16 @@ const QuerySchema = z.object({
   dead_limit: z.coerce.number().int().min(1).max(500).optional(),
   dead_offset: z.coerce.number().int().min(0).optional(),
   dead_sort: z.enum(["recent", "deep"]).optional(),
+  mode: z.enum(["stock_more", "dead", "both"]).optional(),
 });
+
+function publicErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  if (/timeout|canceling statement|57014/i.test(message)) {
+    return "โหลดช้าเกินกำหนด ลองรีเฟรชอีกครั้ง";
+  }
+  return "Unable to load product movement";
+}
 
 export async function GET(req: Request) {
   const adminCheck = await requireAdmin();
@@ -33,6 +44,7 @@ export async function GET(req: Request) {
     dead_limit: url.searchParams.get("dead_limit") || undefined,
     dead_offset: url.searchParams.get("dead_offset") || undefined,
     dead_sort: url.searchParams.get("dead_sort") || undefined,
+    mode: url.searchParams.get("mode") || undefined,
   });
 
   if (!parsed.success) {
@@ -56,13 +68,15 @@ export async function GET(req: Request) {
       deadLimit: parsed.data.dead_limit ?? 100,
       deadOffset: parsed.data.dead_offset ?? 0,
       deadSort: parsed.data.dead_sort ?? "deep",
+      mode: parsed.data.mode ?? "both",
     });
     return NextResponse.json({ overview });
   } catch (error) {
     console.error("bi product movement", error);
-    return NextResponse.json(
-      { error: "Unable to load product movement" },
-      { status: 500 }
-    );
+    const message = publicErrorMessage(error);
+    const status = /ช้า|timeout|canceling statement|57014/i.test(message)
+      ? 504
+      : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

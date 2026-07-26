@@ -12,6 +12,7 @@ describe("normalizeProductMovement", () => {
       dead_limit: 100,
       dead_offset: 0,
       dead_sort: "recent",
+      mode: "both",
       dead_returned_count: 1,
       dead_has_more: true,
       summary: {
@@ -67,6 +68,7 @@ describe("normalizeProductMovement", () => {
     expect(overview.summary.dead_total_count).toBe(17);
     expect(overview.dead_offset).toBe(0);
     expect(overview.dead_sort).toBe("recent");
+    expect(overview.mode).toBe("both");
     expect(overview.dead_returned_count).toBe(1);
     expect(overview.dead_has_more).toBe(true);
   });
