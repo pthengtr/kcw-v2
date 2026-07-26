@@ -208,19 +208,32 @@ ICMAS `UI1`/`UI2`/`MTP2` are the **master** pack definition. They often align bu
 
 | Field | Meaning | Status | Notes |
 |-------|---------|--------|-------|
-| **`QTYOH2`** | **Remaining stock / คงเหลือ** (use this) | Confirmed | Sole field for on-hand inventory KPIs |
+| **`QTYOH2`** | **Remaining stock / คงเหลือ** in **smallest units** (`UI1`) | Confirmed | Sole field for on-hand inventory KPIs; covers both small- and large-unit movements |
 | `QTYOH1` | Not used for remaining stock | Confirmed (do not use) | Populated on many HQ rows, but **not** the business remaining-stock quantity |
 | `QTYOHA` / `QTYOHB` / `QTYOHC` | Unused for remaining stock | Confirmed (do not use) | Effectively empty / zero in HQ ICMAS |
 
 ```sql
-on_hand = nullif(trim("QTYOH2"), '')::numeric   -- remaining stock only
+on_hand_small_units = nullif(trim("QTYOH2"), '')::numeric   -- remaining stock only
 -- do NOT sum/prefer QTYOH1, QTYOHA, QTYOHB, QTYOHC for คงเหลือ
 ```
+
+**Unit rule (Confirmed):** `QTYOH2` is a single balance in **small units** (`UI1`). It already reflects sales/issues in either pack size:
+
+| Sale / movement | Effect on `QTYOH2` |
+|-----------------|--------------------|
+| 1 × small unit (`UI1`) | −1 |
+| 1 × large unit (`UI2`) | **−`MTP2`** (small units in one large pack) |
+
+```text
+1 × UI2 sold  →  QTYOH2 decreases by MTP2
+1 × UI1 sold  →  QTYOH2 decreases by 1
+```
+
+Do **not** treat `QTYOH2` as a large-unit count, and do **not** divide by `MTP2` to get “pieces” — it is already in small-unit terms. Optional display: `QTYOH2 / MTP2` ≈ whole large packs on hand (when `MTP2 > 0`).
 
 Notes:
 
 - Stock is per ICMAS branch master: HQ rows → HQ on-hand; SYP rows → SYP on-hand. Do not mix without labeling branch.
-- Unit of `QTYOH2` relative to `UI1`/`UI2` — still **TBD** (treat as the system’s working balance; do not convert via `MTP2` unless confirmed later).
 - Related unused/TBD qty family: `QTYBEG*`, `QTYMIN`, `QTYMAX`, `QTYGET`, `QTYPUT`.
 
 ---
@@ -274,7 +287,7 @@ Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 /
 - [x] `SIZE1–3` meanings by `CODE1` (A/C/D/E/F/G/I/K/L/O/P) — Confirmed
 - [x] หมวดสินค้า `CATEGORY_CODE` / first 2 digits of `BCODE` (KACC9) — Confirmed §2.1
 - [x] Remaining stock = `QTYOH2` only — Confirmed §6
-- [ ] Unit of `QTYOH2` vs `UI1` / `UI2` / `MTP2`
+- [x] `QTYOH2` in small units (`UI1`); large-unit sale reduces by `MTP2` — Confirmed §6
 - [ ] `SIZE*` meanings for `CODE1` = `Q`, `R`
 - [ ] Name for rare code `88` (in Drive dim, not in KACC9 list)
 - [ ] Meanings of `CODE2`–`CODE4`, `XCODE`, `ACODE`
@@ -293,3 +306,4 @@ Example (`CODE1=C` ซีล): `SIZE1=31`, `SIZE2=46`, `SIZE3=7` → ใน 31 /
 | 2026-07-26 | Lock UI/MTP/PRICE pack rules + SIZE1–3 meanings by CODE1 | Owner |
 | 2026-07-26 | Lock KACC9 หมวดสินค้า names for BCODE first 2 digits | Owner |
 | 2026-07-26 | Lock remaining stock = `QTYOH2` only | Owner |
+| 2026-07-26 | Lock `QTYOH2` = small-unit balance; large sale −`MTP2` | Owner |
