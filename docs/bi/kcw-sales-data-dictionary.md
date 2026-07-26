@@ -756,12 +756,17 @@ GET /api/bi/sales/summary?from=&to=&branch=&sales_type=VAT|NON_VAT|ALL
 count distinct (BRANCH, BILLNO) on the same filtered base as revenue
 ```
 
-### 8.5 Gross margin — TBD
+### 8.5 Gross margin — Confirmed
 
 ```text
-TBD: e.g. AMOUNT_NUM - (QTY * LAST_PURCHASE_COST) or XPRICE
-Only where COST_STATUS = 'OK'? TBD
--- add as another measure on the same canonical line base
+revenue_net = line net after bill-gap alloc (§6.7) + VAT strip (ISVAT=Y & TAXIC=Y → /1.07)
+cogs        = (QTY × coalesce(nullif(MTP,0), 1)) × coalesce(LAST_PURCHASE_COST, 0)
+gross       = revenue_net − cogs
+
+Ignore XPRICE.
+Blank / missing LAST_PURCHASE_COST → 0 (do not filter on COST_STATUS).
+Net income (approx) = gross − app opex only — see kcw-income-data-dictionary.md
+RPC: public.fn_bi_income_overview → /bi/income
 ```
 
 ### 8.6 Paid vs credit — TBD
@@ -805,7 +810,7 @@ Walk-in totals may be reported separately but are outside the ranking set.
 - [x] Allocation = proportional by line `AMOUNT`; `DEDUCT` on `TAXIC=Y` is **gross**; CN uses same method via **gap** (not blind `DEDUCT`)
 - [ ] Credit note / debit note sign handling (`CN`, `DN`)
 - [ ] `PAYSTAT` legend and AR aging rules
-- [ ] Difference between `PRICE` / `XPRICE` / `LAST_PURCHASE_COST`
+- [x] Margin COGS = qty×MTP×LAST_PURCHASE_COST; ignore XPRICE; blank cost = 0 — Confirmed §8.5
 - [x] Line `ACCTNO` = customer (AR, = bill); line `ACCT_NO` = supplier (AP-leaning) — Confirmed §6.9
 - [x] Customer ranking key = bill `ACCTNO` → `party.party_code`; blank excluded; party name master — Confirmed §6.9 / §8.7
 - [ ] Whether `BILLTYPE = R` headers should appear in any dashboard
@@ -834,6 +839,7 @@ Walk-in totals may be reported separately but are outside the ranking set.
 | 2026-07-25 | TAD/CNTAD reporting_branch=ONLINE; remove from HQ totals | Owner |
 | 2026-07-25 | Ship sales overview dashboard + `fn_bi_sales_overview` (bill BEFORETAX; VAT/branch/channel splits) | Cursor |
 | 2026-07-26 | Confirm ACCTNO (AR customer) vs ACCT_NO (AP/supplier); customer ranking rules + party master; ship `fn_bi_customer_overview` | Owner + Cursor |
+| 2026-07-26 | Lock gross margin §8.5 (LAST_PURCHASE_COST; blank=0; ignore XPRICE) + income report net = gross − opex | Owner + Cursor |
 
 ---
 

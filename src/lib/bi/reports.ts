@@ -36,4 +36,11 @@ export const BI_REPORTS: BiReportNavItem[] = [
     description: "บริษัท + ทั่วไป · รายเดือน–YTD",
     available: true,
   },
+  {
+    id: "income",
+    href: "/bi/income",
+    label: "กำไรขั้นต้น / สุทธิ",
+    description: "ยอดขาย − ต้นทุน − ค่าใช้จ่าย (ประมาณการ)",
+    available: true,
+  },
 ];

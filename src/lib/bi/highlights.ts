@@ -1,5 +1,6 @@
 import type { BiCustomerOverview } from "./customer-types";
 import type { BiExpenseOverview } from "./expense-types";
+import type { BiIncomeOverview } from "./income-types";
 import type { BiProductOverview } from "./product-types";
 import {
   BRANCH_LABELS,
@@ -233,6 +234,51 @@ export function buildExpenseHighlights(overview: BiExpenseOverview): string[] {
   if (topBranch) {
     lines.push(
       `สาขานำ: ${topBranch.label || topBranch.key} · ${formatBaht(topBranch.amount)} · ${shareOf(topBranch.amount, total).toFixed(0)}%`
+    );
+  }
+
+  return lines;
+}
+
+export function buildIncomeHighlights(overview: BiIncomeOverview): string[] {
+  const lines: string[] = [];
+  const grossDelta = pctChange(
+    overview.summary.gross_profit,
+    overview.previous_summary.gross_profit
+  );
+  const netDelta = pctChange(
+    overview.summary.net_income,
+    overview.previous_summary.net_income
+  );
+
+  const grossPct =
+    overview.summary.gross_margin_pct != null
+      ? `${overview.summary.gross_margin_pct.toFixed(1)}%`
+      : "—";
+  const netPct =
+    overview.summary.net_margin_pct != null
+      ? `${overview.summary.net_margin_pct.toFixed(1)}%`
+      : "—";
+
+  lines.push(
+    `กำไรขั้นต้น ${formatBaht(overview.summary.gross_profit)} (${grossPct} ของยอด · ${changePhrase(grossDelta)}) · ต้นทุน ${formatBaht(overview.summary.cogs)}`
+  );
+  lines.push(
+    `กำไรสุทธิ (ประมาณ) ${formatBaht(overview.summary.net_income)} (${netPct} · ${changePhrase(netDelta)}) หลังหักค่าใช้จ่าย ${formatBaht(overview.summary.opex)}`
+  );
+
+  const topBranch = [...overview.by_branch].sort(
+    (a, b) => b.net_income - a.net_income
+  )[0];
+  if (topBranch) {
+    lines.push(
+      `สาขานำด้านสุทธิ: ${labelFor(BRANCH_LABELS, topBranch.key)} · ${formatBaht(topBranch.net_income)} · ขั้นต้น ${formatBaht(topBranch.gross_profit)}`
+    );
+  }
+
+  if (overview.summary.blank_cost_line_count > 0) {
+    lines.push(
+      `บรรทัดที่ไม่มีต้นทุนซื้อล่าสุด: ${formatCount(overview.summary.blank_cost_line_count)} แถว (นับต้นทุน = 0)`
     );
   }
 
