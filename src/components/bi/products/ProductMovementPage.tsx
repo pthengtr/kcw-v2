@@ -12,6 +12,7 @@ import {
 
 import type {
   BiDeadSort,
+  BiDeadTier,
   BiProductMovement,
 } from "@/lib/bi/product-movement-types";
 import { formatCount } from "@/lib/bi/sales-format";
@@ -58,6 +59,8 @@ export default function ProductMovementPage() {
   const [tab, setTab] = useState<TabId>("stock-more");
   const [deadAsOf, setDeadAsOf] = useState(() => bangkokTodayIso());
   const [deadSort, setDeadSort] = useState<BiDeadSort>("deep");
+  const [deadTier, setDeadTier] = useState<BiDeadTier | "ALL">("ALL");
+  const [deadCategory, setDeadCategory] = useState<string | null>(null);
   const [deadOffset, setDeadOffset] = useState(0);
   const [overview, setOverview] = useState<BiProductMovement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,7 +79,7 @@ export default function ProductMovementPage() {
     [preset, customFrom, customTo, customMode, customMonth]
   );
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
@@ -85,12 +88,15 @@ export default function ProductMovementPage() {
         dead_limit: String(DEAD_PAGE_SIZE),
         dead_offset: String(deadOffset),
         dead_sort: deadSort,
+        mode: tab === "dead" ? "dead" : "stock_more",
       });
 
       if (tab === "dead") {
         // Dead stock is as-of date only — period/branch filters do not apply.
         params.set("from", deadAsOf);
         params.set("to", deadAsOf);
+        if (deadTier !== "ALL") params.set("dead_tier", deadTier);
+        if (deadCategory) params.set("category", deadCategory);
       } else {
         params.set("from", range.from);
         params.set("to", range.to);
@@ -98,12 +104,14 @@ export default function ProductMovementPage() {
       }
 
       const res = await fetch(
-        `/api/bi/products/movement?${params.toString()}`
+        `/api/bi/products/movement?${params.toString()}`,
+        { signal }
       );
       const json = (await res.json()) as {
         overview?: BiProductMovement;
         error?: string;
       };
+      if (signal?.aborted) return;
       if (!res.ok) {
         throw new Error(json.error || "โหลดข้อมูลไม่สำเร็จ");
       }
@@ -112,10 +120,13 @@ export default function ProductMovementPage() {
       }
       setOverview(json.overview);
     } catch (err) {
+      if (signal?.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+        return;
+      }
       setOverview(null);
       setError(err instanceof Error ? err.message : "โหลดข้อมูลไม่สำเร็จ");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [
     tab,
@@ -124,16 +135,42 @@ export default function ProductMovementPage() {
     branch,
     deadAsOf,
     deadSort,
+    deadTier,
+    deadCategory,
     deadOffset,
   ]);
 
   useEffect(() => {
-    void load();
+    const ac = new AbortController();
+    void load(ac.signal);
+    return () => ac.abort();
   }, [load]);
 
-  useEffect(() => {
+  // Reset paging without a second concurrent request when filters change.
+  const setDeadSortAndReset = useCallback((next: BiDeadSort) => {
     setDeadOffset(0);
-  }, [tab, range.from, range.to, branch, deadAsOf, deadSort]);
+    setDeadSort(next);
+  }, []);
+
+  const setDeadTierAndReset = useCallback((next: BiDeadTier | "ALL") => {
+    setDeadOffset(0);
+    setDeadTier(next);
+  }, []);
+
+  const setDeadCategoryAndReset = useCallback((next: string | null) => {
+    setDeadOffset(0);
+    setDeadCategory(next);
+  }, []);
+
+  const setDeadAsOfAndReset = useCallback((next: string) => {
+    setDeadOffset(0);
+    setDeadAsOf(next);
+  }, []);
+
+  const setTabAndReset = useCallback((next: TabId) => {
+    setDeadOffset(0);
+    setTab(next);
+  }, []);
 
   useEffect(() => {
     if (preset !== "custom") return;
@@ -151,8 +188,8 @@ export default function ProductMovementPage() {
     setDeadOffset((prev) => prev + DEAD_PAGE_SIZE);
   }, []);
 
-  const onDeadSortChange = useCallback((next: BiDeadSort) => {
-    setDeadSort(next);
+  const onDeadJumpPage = useCallback((page: number) => {
+    setDeadOffset(Math.max(0, (page - 1) * DEAD_PAGE_SIZE));
   }, []);
 
   return (
@@ -218,7 +255,7 @@ export default function ProductMovementPage() {
             className={cn(
               tab === "stock-more" && "bg-slate-800 hover:bg-slate-700"
             )}
-            onClick={() => setTab("stock-more")}
+            onClick={() => setTabAndReset("stock-more")}
           >
             ควรสต็อกเพิ่ม
           </Button>
@@ -227,7 +264,7 @@ export default function ProductMovementPage() {
             size="sm"
             variant={tab === "dead" ? "default" : "outline"}
             className={cn(tab === "dead" && "bg-slate-800 hover:bg-slate-700")}
-            onClick={() => setTab("dead")}
+            onClick={() => setTabAndReset("dead")}
           >
             ระวังก่อนสั่ง / สต็อกค้าง
           </Button>
@@ -355,7 +392,7 @@ export default function ProductMovementPage() {
                   id="bi-dead-asof"
                   type="date"
                   value={deadAsOf}
-                  onChange={(e) => setDeadAsOf(e.target.value)}
+                  onChange={(e) => setDeadAsOfAndReset(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
                 <p className="text-[11px] text-muted-foreground">
@@ -391,7 +428,7 @@ export default function ProductMovementPage() {
               "grid grid-cols-1 gap-3",
               tab === "dead"
                 ? "sm:grid-cols-2 xl:grid-cols-3"
-                : "sm:grid-cols-2 xl:grid-cols-4"
+                : "sm:grid-cols-2 xl:grid-cols-3"
             )}
           >
             {tab === "stock-more" ? (
@@ -415,13 +452,28 @@ export default function ProductMovementPage() {
                   icon={<ArrowUpRight className="h-4 w-4" />}
                 />
               </>
-            ) : null}
-            <SalesKpiCard
-              title="สต็อกค้าง (มีคงเหลือ)"
-              value={formatCount(overview.summary.dead_total_count)}
-              hint={`แดง ≥2 ปี ${formatCount(overview.summary.dead_red_count)} · ส้ม ≥1 ปี ${formatCount(overview.summary.dead_orange_count)} · เหลือง ≥6 ด. ${formatCount(overview.summary.dead_yellow_count)}`}
-              icon={<AlertTriangle className="h-4 w-4" />}
-            />
+            ) : (
+              <>
+                <SalesKpiCard
+                  title="สต็อกค้างทั้งหมด"
+                  value={formatCount(overview.summary.dead_total_count)}
+                  hint="มีคงเหลือ · ไม่ขายหลังซื้อ ≥6 เดือน"
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                />
+                <SalesKpiCard
+                  title="แดง ≥2 ปี"
+                  value={formatCount(overview.summary.dead_red_count)}
+                  hint={`ส้ม ≥1 ปี ${formatCount(overview.summary.dead_orange_count)}`}
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                />
+                <SalesKpiCard
+                  title="เหลือง ≥6 ด."
+                  value={formatCount(overview.summary.dead_yellow_count)}
+                  hint="เพิ่งเข้าเกณฑ์ระวัง"
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                />
+              </>
+            )}
           </section>
 
           {tab === "stock-more" ? (
@@ -430,14 +482,25 @@ export default function ProductMovementPage() {
             <DeadStockTable
               rows={overview.dead_stock}
               totalCount={overview.summary.dead_total_count}
+              categoryTotal={overview.summary.dead_category_total}
+              tierCounts={{
+                yellow: overview.summary.dead_yellow_count,
+                orange: overview.summary.dead_orange_count,
+                red: overview.summary.dead_red_count,
+              }}
               offset={overview.dead_offset}
               pageSize={overview.dead_limit || DEAD_PAGE_SIZE}
               hasMore={overview.dead_has_more}
               sort={deadSort}
+              tierFilter={deadTier}
+              category={deadCategory}
               loading={loading}
-              onSortChange={onDeadSortChange}
+              onSortChange={setDeadSortAndReset}
+              onTierChange={setDeadTierAndReset}
+              onCategoryChange={setDeadCategoryAndReset}
               onPrev={onDeadPrev}
               onNext={onDeadNext}
+              onJumpPage={onDeadJumpPage}
             />
           )}
         </>

@@ -1,7 +1,10 @@
 export type BiDeadTier = "yellow" | "orange" | "red";
 
-/** recent = 3m first (short age); deep = 1y+ first (long age) */
+/** recent = shorter age first; deep = longer age first */
 export type BiDeadSort = "recent" | "deep";
+
+/** UI loads one side at a time to avoid statement timeouts */
+export type BiProductMovementMode = "stock_more" | "dead" | "both";
 
 export type BiProductMovementSummary = {
   sold_sku_count: number;
@@ -11,7 +14,10 @@ export type BiProductMovementSummary = {
   dead_yellow_count: number;
   dead_orange_count: number;
   dead_red_count: number;
+  /** Rows matching current tier (+ category) filter — used for pagination */
   dead_total_count: number;
+  /** All caution rows in current category (any tier) */
+  dead_category_total: number;
 };
 
 export type BiStockMoreRow = {
@@ -53,10 +59,13 @@ export type BiProductMovement = {
   from: string;
   to: string;
   branch: string | null;
+  mode: BiProductMovementMode;
   stock_limit: number;
   dead_limit: number;
   dead_offset: number;
   dead_sort: BiDeadSort;
+  dead_tier: BiDeadTier | null;
+  dead_category: string | null;
   dead_returned_count: number;
   dead_has_more: boolean;
   summary: BiProductMovementSummary;

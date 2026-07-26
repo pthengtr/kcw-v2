@@ -70,13 +70,16 @@ Universe for dead list: has `last_purchase_date`, **`on_hand_qty > 0`**, **`no_m
 
 | Piece | Detail |
 |-------|--------|
-| RPC | `public.fn_bi_product_movement(from, to, branch, stock_limit, dead_limit, dead_offset, dead_sort)` |
+| RPC | `public.fn_bi_product_movement(from, to, branch, stock_limit, dead_limit, dead_offset, dead_sort, mode, dead_tier, category)` |
 | Stock-more filters | Period `from`–`to` + optional sales `branch` |
 | Dead stock filters | **As-of `to` only** — period/branch do not define membership; `last_sale` is always all-branch |
+| Mode | `stock_more` \| `dead` \| `both` — UI loads one side to avoid statement timeouts |
+| Dead filters | `dead_tier` = yellow\|orange\|red · `category` = 2-digit ICMAS prefix (one at a time) |
 | Dead sort | `deep` (default in UI) = red→orange→yellow · `recent` = yellow→orange→red |
-| Pagination | `dead_offset` + `dead_limit` (default 100); response includes `dead_has_more` |
-| UI | `/bi/product-movement` — stock-more uses period/branch; dead tab uses as-of + recent/deep |
-| API | `GET /api/bi/products/movement?from=&to=&branch=&stock_limit=&dead_limit=&dead_offset=&dead_sort=` |
+| Timeout | Function `statement_timeout = 60s`; API retries once on timeout |
+| Pagination | `dead_offset` + `dead_limit` (default 100); UI page jump; `dead_has_more` |
+| UI | `/bi/product-movement` — stock-more uses period/branch; dead tab uses as-of + tier/category/sort |
+| API | `GET /api/bi/products/movement?...&mode=&dead_tier=&category=&dead_sort=&dead_offset=` |
 
 ---
 
@@ -84,6 +87,8 @@ Universe for dead list: has `last_purchase_date`, **`on_hand_qty > 0`**, **`no_m
 
 | Date | Change |
 |------|--------|
+| 2026-07-26 | Dead filters: tier chips + single category + page jump; category narrows RPC scan |
+| 2026-07-26 | Fix intermittent load errors: mode split, 60s timeout, light last-sale, client abort/retry |
 | 2026-07-26 | Dead tiers → 6m/1y/2y; purchase-age only; UI age in months + default deep sort |
 | 2026-07-26 | Dead list: configurable `recent`/`deep` sort; period/branch apply only to stock-more |
 | 2026-07-26 | Dead list: yellow-first sort + offset pagination; remove tier filter chips |
