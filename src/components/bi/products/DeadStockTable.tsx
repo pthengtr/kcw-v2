@@ -62,6 +62,12 @@ const TIER_LABEL: Record<BiDeadTier, string> = {
   red: "≥2 ปี",
 };
 
+const TIER_BADGE_LABEL: Record<BiDeadTier, string> = {
+  yellow: "≥6ด.",
+  orange: "≥1ปี",
+  red: "≥2ปี",
+};
+
 const ROW_TONE: Record<BiDeadTier, string> = {
   yellow: "border-l-[3px] border-l-amber-400 bg-amber-50/80",
   orange: "border-l-[3px] border-l-orange-500 bg-orange-50/80",
@@ -200,7 +206,7 @@ export default function DeadStockTable({
 
   return (
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader className="pb-2">
+      <CardHeader className="space-y-1.5 px-3 pb-2 pt-4 sm:p-6 sm:pb-2">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle className="text-base font-semibold">
@@ -295,23 +301,29 @@ export default function DeadStockTable({
           </span>
         </p>
       </CardHeader>
-      <CardContent className="overflow-x-auto">
+      <CardContent className="overflow-x-auto px-3 pt-0 sm:px-6">
         {rows.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             ไม่มีรายการตามตัวกรองนี้
           </p>
         ) : (
-          <table className="w-full min-w-[60rem] text-left text-sm">
+          <table className="w-full table-fixed text-left text-sm">
+            <colgroup>
+              <col className="w-[4.25rem]" />
+              <col />
+              <col className="w-[4.75rem] sm:w-[5.75rem]" />
+              <col className="w-[3.75rem] sm:w-[4.75rem]" />
+              <col className="w-[4.75rem] sm:w-[6rem]" />
+              <col className="w-[4.75rem] sm:w-[6.5rem]" />
+            </colgroup>
             <thead>
               <tr className="border-b text-xs text-muted-foreground">
-                <th className="py-2 pr-3 font-medium">ระดับ</th>
-                <th className="py-2 pr-3 font-medium">สินค้า</th>
-                <th className="py-2 pr-3 font-medium">หมวด</th>
-                <th className="py-2 pr-3 font-medium">ซื้อล่าสุด</th>
-                <th className="py-2 pr-3 font-medium text-right">อายุ</th>
-                <th className="py-2 pr-3 font-medium text-right">คงเหลือ</th>
-                <th className="py-2 pr-3 font-medium text-right">ทุน/หน่วย</th>
-                <th className="py-2 font-medium text-right">มูลค่าสต๊อก</th>
+                <th className="py-2 pr-2 font-medium">ระดับ</th>
+                <th className="py-2 pr-2 font-medium">สินค้า</th>
+                <th className="py-2 pr-2 font-medium text-right">อายุ</th>
+                <th className="py-2 pr-2 font-medium text-right">คงเหลือ</th>
+                <th className="py-2 pr-2 font-medium text-right">ทุน/หน่วย</th>
+                <th className="py-2 font-medium text-right">มูลค่า</th>
               </tr>
             </thead>
             <tbody>
@@ -323,47 +335,47 @@ export default function DeadStockTable({
                     ROW_TONE[row.dead_tier]
                   )}
                 >
-                  <td className="py-2.5 pr-3">
+                  <td className="py-2 pr-2 align-top">
                     <span
                       className={cn(
-                        "inline-flex rounded px-1.5 py-0.5 text-[11px] font-semibold",
+                        "inline-flex rounded px-1.5 py-0.5 text-[11px] font-semibold leading-tight",
                         TIER_BADGE[row.dead_tier]
                       )}
                     >
-                      {TIER_LABEL[row.dead_tier]}
+                      {TIER_BADGE_LABEL[row.dead_tier]}
                     </span>
                   </td>
-                  <td className="py-2.5 pr-3">
-                    <div className="font-mono text-xs font-medium text-slate-900">
+                  <td className="min-w-0 py-2 pr-2 align-top">
+                    <div className="truncate font-mono text-xs font-medium text-slate-900">
                       {row.bcode}
                     </div>
-                    <div className="max-w-[16rem] truncate text-xs text-muted-foreground">
+                    <div className="truncate text-xs text-muted-foreground">
                       {row.detail}
                     </div>
-                  </td>
-                  <td className="max-w-[9rem] truncate py-2.5 pr-3 text-xs text-muted-foreground">
-                    {row.category_name || row.category_code || "—"}
-                  </td>
-                  <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums text-xs">
-                    {row.last_purchase_date ?? "—"}
-                  </td>
-                  <td className="py-2.5 pr-3 text-right">
-                    <div className="font-medium tabular-nums text-slate-900">
-                      {ageLabel(row.days_since_purchase)}
+                    <div className="truncate text-[11px] text-muted-foreground">
+                      {row.category_name || row.category_code || "—"}
                     </div>
                   </td>
-                  <td className="py-2.5 pr-3 text-right font-semibold tabular-nums text-slate-900">
+                  <td className="py-2 pr-2 text-right align-top">
+                    <div className="font-medium tabular-nums leading-tight text-slate-900">
+                      {ageLabel(row.days_since_purchase)}
+                    </div>
+                    <div className="tabular-nums text-[11px] text-muted-foreground">
+                      {row.last_purchase_date ?? "—"}
+                    </div>
+                  </td>
+                  <td className="py-2 pr-2 text-right align-top font-semibold tabular-nums text-slate-900">
                     {formatCount(row.on_hand_qty)}
                   </td>
-                  <td className="py-2.5 pr-3 text-right tabular-nums text-slate-900">
+                  <td className="py-2 pr-2 text-right align-top tabular-nums text-xs text-slate-900 sm:text-sm">
                     {row.unit_cost == null
                       ? "—"
                       : formatBaht(row.unit_cost, true)}
                   </td>
-                  <td className="py-2.5 text-right font-semibold tabular-nums text-slate-900">
+                  <td className="py-2 text-right align-top font-semibold tabular-nums text-xs text-slate-900 sm:text-sm">
                     {row.unit_cost == null
                       ? "—"
-                      : formatBaht(row.stock_value, true)}
+                      : formatBahtCompact(row.stock_value)}
                   </td>
                 </tr>
               ))}
