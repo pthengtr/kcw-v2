@@ -33,7 +33,6 @@ const navLinks = [
 
 const expenseLinks = (branches: BranchType[]) => [
   { href: "/expense", label: "เมนูหลัก" },
-  { href: "/expense/dashboard", label: "ภาพรวม" },
   ...branches.map((branch) => ({
     href: `/expense/company/${branch.branch_uuid}`,
     label: `ค่าใช้จ่ายบริษัท · ${branch.branch_name}`,

@@ -44,14 +44,7 @@ describe("Webapp mobile layout", () => {
     expect(form).toContain("sm:grid-cols-2");
   });
 
-  it("makes expense dashboards and search toolbars responsive", () => {
-    const dashboard = read(
-      "src/components/expense/dashboard/ExpenseDashboardPageV2.tsx"
-    );
-    expect(dashboard).toContain("grid-cols-1");
-    expect(dashboard).toContain("xl:grid-cols-2");
-    expect(dashboard).not.toContain("w-[1000px]");
-
+  it("makes expense search toolbars responsive", () => {
     const search = read(
       "src/components/expense/manage/ExpenseReceiptSearchForm.tsx"
     );
