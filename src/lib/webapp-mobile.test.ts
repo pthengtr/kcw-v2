@@ -98,6 +98,9 @@ describe("Webapp mobile layout", () => {
     expect(sales).toContain("xl:grid-cols-4");
     expect(sales).not.toContain("w-[1000px]");
     expect(sales).not.toContain('"today"');
+    expect(sales).not.toContain("VAT ที่เก็บได้");
+    expect(sales).not.toContain("ออนไลน์ vs หน้าร้าน");
+    expect(sales).toContain("เฉลี่ยบิลต่อวัน");
     expect(sales).toContain("SalesPeriodTable");
     expect(sales).toContain('value="month"');
     expect(sales).toContain('type="month"');
@@ -108,9 +111,11 @@ describe("Webapp mobile layout", () => {
 
     const products = read("src/components/bi/products/ProductOverviewPage.tsx");
     expect(products).toContain("grid-cols-1");
-    expect(products).toContain("sm:grid-cols-2");
-    expect(products).toContain("xl:grid-cols-4");
+    expect(products).toContain("sm:grid-cols-3");
     expect(products).toContain("ProductRankTable");
+    expect(products).toContain("ProductCategoryTable");
+    expect(products).not.toContain("บรรทัดบิล");
+    expect(products).not.toContain("HQ / SYP / ออนไลน์");
     expect(products).not.toContain("w-[1000px]");
   });
 });

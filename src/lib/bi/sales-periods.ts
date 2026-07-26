@@ -124,3 +124,13 @@ export function preferDailyBreakdown(from: string, to: string): boolean {
 export function preferDailyTrend(from: string, to: string): boolean {
   return preferDailyBreakdown(from, to);
 }
+
+/** Inclusive calendar-day count for YYYY-MM-DD ranges. */
+export function inclusiveDayCount(from: string, to: string): number {
+  const start = Date.parse(`${from}T00:00:00Z`);
+  const end = Date.parse(`${to}T00:00:00Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+    return 1;
+  }
+  return Math.round((end - start) / (24 * 60 * 60 * 1000)) + 1;
+}
