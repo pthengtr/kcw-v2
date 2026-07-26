@@ -33,7 +33,7 @@ export default function Home() {
             icon="ArrowRightLeft"
           />
           <CardIcon href="/tiger-pay" label="Tiger Pay" icon="Wallet" />
-          <CardIcon href="/bi/sales" label="BI ยอดขาย" icon="BarChart3" />
+          <CardIcon href="/bi/income" label="BI" icon="BarChart3" />
         </CardIconMenu>
       </div>
     </main>
