@@ -13,7 +13,7 @@ export const BI_REPORTS: BiReportNavItem[] = [
     href: "/bi/customers",
     label: "อันดับลูกค้า",
     description: "จัดอันดับยอดซื้อตามลูกค้า",
-    available: false,
+    available: true,
   },
   {
     id: "products",
