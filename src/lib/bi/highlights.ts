@@ -278,7 +278,7 @@ export function buildIncomeHighlights(overview: BiIncomeOverview): string[] {
 
   if (overview.summary.blank_cost_line_count > 0) {
     lines.push(
-      `บรรทัดที่ไม่มีต้นทุนซื้อล่าสุด: ${formatCount(overview.summary.blank_cost_line_count)} แถว (นับต้นทุน = 0)`
+      `บรรทัดที่ไม่มีต้นทุนซื้อล่าสุด: ${formatCount(overview.summary.blank_cost_line_count)} แถว (ตัดออกจากคำนวณ · ดูรายการได้)`
     );
   }
 

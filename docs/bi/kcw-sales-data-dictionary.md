@@ -760,11 +760,12 @@ count distinct (BRANCH, BILLNO) on the same filtered base as revenue
 
 ```text
 revenue_net = line net after bill-gap alloc (§6.7) + VAT strip (ISVAT=Y & TAXIC=Y → /1.07)
-cogs        = (QTY × coalesce(nullif(MTP,0), 1)) × coalesce(LAST_PURCHASE_COST, 0)
+cogs        = (QTY × coalesce(nullif(MTP,0), 1)) × LAST_PURCHASE_COST
 gross       = revenue_net − cogs
 
 Ignore XPRICE.
-Blank / missing LAST_PURCHASE_COST → 0 (do not filter on COST_STATUS).
+Blank / missing LAST_PURCHASE_COST → exclude line from income totals
+  (still listed in blank-cost drilldown for cleanup).
 Net income (approx) = gross − app opex only — see kcw-income-data-dictionary.md
 RPC: public.fn_bi_income_overview → /bi/income
 ```
@@ -810,7 +811,7 @@ Walk-in totals may be reported separately but are outside the ranking set.
 - [x] Allocation = proportional by line `AMOUNT`; `DEDUCT` on `TAXIC=Y` is **gross**; CN uses same method via **gap** (not blind `DEDUCT`)
 - [ ] Credit note / debit note sign handling (`CN`, `DN`)
 - [ ] `PAYSTAT` legend and AR aging rules
-- [x] Margin COGS = qty×MTP×LAST_PURCHASE_COST; ignore XPRICE; blank cost = 0 — Confirmed §8.5
+- [x] Margin COGS = qty×MTP×LAST_PURCHASE_COST; ignore XPRICE; blank cost lines excluded from totals (list kept) — Confirmed §8.5
 - [x] Line `ACCTNO` = customer (AR, = bill); line `ACCT_NO` = supplier (AP-leaning) — Confirmed §6.9
 - [x] Customer ranking key = bill `ACCTNO` → `party.party_code`; blank excluded; party name master — Confirmed §6.9 / §8.7
 - [ ] Whether `BILLTYPE = R` headers should appear in any dashboard
