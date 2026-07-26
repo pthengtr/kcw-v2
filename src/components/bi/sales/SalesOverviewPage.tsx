@@ -19,6 +19,7 @@ import {
   SALES_TYPE_LABELS,
   splitAmount,
 } from "@/lib/bi/sales-format";
+import { buildSalesHighlights } from "@/lib/bi/highlights";
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
@@ -35,6 +36,7 @@ import type {
   BiSalesOverview,
 } from "@/lib/bi/sales-types";
 import { cn } from "@/lib/utils";
+import BiHighlightsCard from "@/components/bi/BiHighlightsCard";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -154,6 +156,10 @@ export default function SalesOverviewPage() {
         overview.previous_summary.bill_count / Math.max(prevDayCount, 1)
       )
     : null;
+  const highlightLines = useMemo(
+    () => (overview ? buildSalesHighlights(overview) : []),
+    [overview]
+  );
 
   return (
     <div className="space-y-4 pb-8 md:space-y-5">
@@ -436,6 +442,10 @@ export default function SalesOverviewPage() {
                 </span>
               </li>
             </ul>
+          </section>
+
+          <section>
+            <BiHighlightsCard lines={highlightLines} />
           </section>
         </>
       ) : null}

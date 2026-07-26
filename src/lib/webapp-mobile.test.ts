@@ -114,9 +114,14 @@ describe("Webapp mobile layout", () => {
     expect(products).toContain("sm:grid-cols-3");
     expect(products).toContain("ProductRankTable");
     expect(products).toContain("ProductCategoryTable");
+    expect(products).toContain("BiHighlightsCard");
     expect(products).not.toContain("บรรทัดบิล");
     expect(products).not.toContain("HQ / SYP / ออนไลน์");
     expect(products).not.toContain("w-[1000px]");
+
+    const salesHighlights = read("src/components/bi/sales/SalesOverviewPage.tsx");
+    expect(salesHighlights).toContain("BiHighlightsCard");
+    expect(salesHighlights).toContain("buildSalesHighlights");
   });
 });
 
