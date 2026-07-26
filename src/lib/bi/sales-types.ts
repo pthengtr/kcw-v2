@@ -53,7 +53,8 @@ export type BiReportId =
   | "sales-compare"
   | "customers"
   | "products"
-  | "expenses";
+  | "expenses"
+  | "income";
 
 export type BiReportNavItem = {
   id: BiReportId;
