@@ -88,11 +88,11 @@ One row per product (or charge line) on a sales bill. Use for product mix, quant
 | `BILLTYPE` | Raw bill type code | TBD | Seen: `0`, `1`, `2` (and rare others on bills) |
 | `BILLTYPE_STD` | Standardized bill type | TBD | Seen: `TAR`, `TF`, `TFV`, `TAD`, `TD`, `TR`, `DN`, `CN`, `UNKNOWN` — meanings TBD |
 | `JOURMODE` | Journal / posting mode | TBD | Seen: `0`, `1`, `2` |
-| `BCODE` | Product / item code | Confirmed (name) | Item SKU-like code |
+| `BCODE` | Product / item code | Confirmed (name) | Item SKU-like code. First 2 digits = category; see [ICMAS dictionary](./kcw-icmas-data-dictionary.md) for `CODE1` part-type letters |
 | `DETAIL` | Product description | Confirmed | Thai/English text |
 | `QTY` | Quantity sold | Confirmed | Text numeric |
-| `UI` | Unit of measure | Confirmed | e.g. `หน่วย`, `ชุด` |
-| `MTP` | Pack multiplier → count of **smallest units** per sold UI | Confirmed | e.g. box of 10 ⇒ `MTP=10`, UI=`กล่อง`/`ลัง`/`คู่`. Most lines `MTP=1`. See note below |
+| `UI` | Unit of measure (as sold on the bill) | Confirmed | e.g. `หน่วย`, `ชุด`. Master pack names live on ICMAS `UI1`/`UI2` — see [ICMAS §5](./kcw-icmas-data-dictionary.md) |
+| `MTP` | Pack multiplier → count of **smallest units** per sold UI | Confirmed | e.g. box of 10 ⇒ `MTP=10`. Related to ICMAS `MTP2` (master). See note below |
 | `PRICE` | Unit selling price | Confirmed (name) | Text; also `PRICE_NUM` |
 | `XPRICE` | Appears related to cost/ref price | Inferred | Often close to `LAST_PURCHASE_COST` |
 | `DISCNT1`…`DISCNT4` | Line discounts | Confirmed (DISCNT1) | `DISCNT1` is **percent off**. Already baked into `AMOUNT` (`AMOUNT ≈ QTY*PRICE*(1-DISCNT1/100)`). `DISCNT2–4` almost unused |
