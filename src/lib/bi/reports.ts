@@ -20,6 +20,6 @@ export const BI_REPORTS: BiReportNavItem[] = [
     href: "/bi/products",
     label: "อันดับสินค้า",
     description: "จัดอันดับยอดขายตามสินค้า",
-    available: false,
+    available: true,
   },
 ];

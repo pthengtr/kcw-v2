@@ -105,5 +105,13 @@ describe("Webapp mobile layout", () => {
     const split = read("src/components/bi/sales/SalesSplitChart.tsx");
     expect(split).not.toContain("<Legend");
     expect(split).toContain("whitespace-nowrap");
+
+    const products = read("src/components/bi/products/ProductOverviewPage.tsx");
+    expect(products).toContain("grid-cols-1");
+    expect(products).toContain("sm:grid-cols-2");
+    expect(products).toContain("xl:grid-cols-4");
+    expect(products).toContain("ProductRankTable");
+    expect(products).not.toContain("w-[1000px]");
   });
 });
+
