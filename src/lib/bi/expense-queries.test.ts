@@ -67,6 +67,16 @@ describe("normalizeExpenseOverview", () => {
           general_amount: 200_000,
         },
       ],
+      month_columns: ["2026-01", "2026-07"],
+      by_item_month: [
+        {
+          key: "item-1",
+          label: "ค่าไฟ",
+          category_name: "สาธารณูปโภค",
+          total: 90_000,
+          months: { "2026-01": 10_000, "2026-07": 80_000 },
+        },
+      ],
       branches: [
         {
           key: "c93efb5f-07c9-4229-b6b3-568ce1c0a9ab",
@@ -79,6 +89,8 @@ describe("normalizeExpenseOverview", () => {
     expect(overview.by_category[0]?.label).toBe("สาธารณูปโภค");
     expect(overview.top_items[0]?.label).toBe("ค่าไฟ");
     expect(overview.trend_monthly[0]?.period).toBe("2026-07");
+    expect(overview.month_columns).toEqual(["2026-01", "2026-07"]);
+    expect(overview.by_item_month[0]?.months["2026-07"]).toBe(80_000);
     expect(overview.branches).toHaveLength(1);
   });
 });

@@ -94,6 +94,8 @@ Previous-period comparison uses an equal-length window immediately before `from`
 | General count | Row count in GENERAL |
 | Item / category ranking | Sum amount by item or category |
 | Monthly trend | Sum by `YYYY-MM` |
+| Item × month matrix | `by_item_month` + `month_columns` (for YTD compare table) |
+| YTD year | UI year selector → `from=YYYY-01-01` … today or year-end |
 
 ---
 
@@ -115,3 +117,4 @@ BI uses `fn_bi_expense_overview` (date range + admin API). The old `/expense/das
 |------|--------|
 | 2026-07-26 | Initial dictionary; ship `fn_bi_expense_overview` + `/bi/expenses` |
 | 2026-07-26 | Remove `/expense/dashboard` UI; expense analytics live under `/bi/expenses` |
+| 2026-07-26 | YTD year selector + item×month compare table (`month_columns` / `by_item_month`) |

@@ -49,6 +49,15 @@ export type BiExpenseTrendRow = {
   general_amount: number;
 };
 
+export type BiExpenseItemMonthRow = {
+  key: string;
+  label: string;
+  category_name: string;
+  total: number;
+  /** Map of YYYY-MM → amount */
+  months: Record<string, number>;
+};
+
 export type BiExpenseBranchOption = {
   key: string;
   label: string;
@@ -69,5 +78,7 @@ export type BiExpenseOverview = {
   by_category: BiExpenseCategoryRow[];
   top_items: BiExpenseItemRow[];
   trend_monthly: BiExpenseTrendRow[];
+  month_columns: string[];
+  by_item_month: BiExpenseItemMonthRow[];
   branches: BiExpenseBranchOption[];
 };

@@ -7,6 +7,7 @@ import {
   preferDailyBreakdown,
   preferDailyTrend,
   resolvePeriodRange,
+  ytdRangeForYear,
 } from "./sales-periods";
 
 describe("sales period helpers", () => {
@@ -18,6 +19,16 @@ describe("sales period helpers", () => {
       to: "2026-07-25",
     });
     expect(resolvePeriodRange("ytd", undefined, undefined, now)).toEqual({
+      from: "2026-01-01",
+      to: "2026-07-25",
+    });
+    expect(
+      resolvePeriodRange("ytd", undefined, undefined, now, "range", undefined, 2025)
+    ).toEqual({
+      from: "2025-01-01",
+      to: "2025-12-31",
+    });
+    expect(ytdRangeForYear(2026, now)).toEqual({
       from: "2026-01-01",
       to: "2026-07-25",
     });

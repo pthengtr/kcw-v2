@@ -269,6 +269,8 @@ describe("BI highlight builders", () => {
         },
       ],
       trend_monthly: [],
+      month_columns: [],
+      by_item_month: [],
       branches: [],
     };
 

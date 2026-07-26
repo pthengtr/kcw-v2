@@ -265,6 +265,34 @@ BEGIN
     FROM combined
     GROUP BY 1
   ),
+  month_columns AS (
+    SELECT to_char(d::date, 'YYYY-MM') AS period
+    FROM generate_series(
+      date_trunc('month', p_from::timestamp)::date,
+      date_trunc('month', p_to::timestamp)::date,
+      interval '1 month'
+    ) AS d
+  ),
+  item_month AS (
+    SELECT
+      item_uuid,
+      MAX(item_name) AS item_name,
+      MAX(category_name) AS category_name,
+      to_char(expense_date, 'YYYY-MM') AS period,
+      SUM(amount) AS amount
+    FROM combined
+    GROUP BY item_uuid, to_char(expense_date, 'YYYY-MM')
+  ),
+  by_item_month AS (
+    SELECT
+      item_uuid::text AS key,
+      MAX(item_name) AS label,
+      MAX(category_name) AS category_name,
+      COALESCE(SUM(amount), 0) AS total,
+      COALESCE(jsonb_object_agg(period, amount), '{}'::jsonb) AS months
+    FROM item_month
+    GROUP BY item_uuid
+  ),
   branches AS (
     SELECT
       branch_uuid::text AS key,
@@ -346,6 +374,20 @@ BEGIN
         'general_amount', general_amount
       ) ORDER BY period)
       FROM trend_monthly
+    ), '[]'::jsonb),
+    'month_columns', COALESCE((
+      SELECT jsonb_agg(period ORDER BY period)
+      FROM month_columns
+    ), '[]'::jsonb),
+    'by_item_month', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'key', key,
+        'label', label,
+        'category_name', category_name,
+        'total', total,
+        'months', months
+      ) ORDER BY total DESC, label)
+      FROM by_item_month
     ), '[]'::jsonb),
     'branches', COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
