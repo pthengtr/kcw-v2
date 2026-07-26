@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
+  BiIncomeBlankCostLine,
+  BiIncomeBlankCosts,
   BiIncomeBranchRow,
   BiIncomeOpexCategoryRow,
   BiIncomeOverview,
@@ -129,4 +131,60 @@ export async function fetchIncomeOverview(
   }
 
   return normalizeIncomeOverview(data);
+}
+
+function parseBlankCostLines(value: unknown): BiIncomeBlankCostLine[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    return {
+      bill_date: asString(r.bill_date),
+      store_branch: asString(r.store_branch),
+      reporting_branch: asString(r.reporting_branch),
+      bill_no: asString(r.bill_no),
+      bcode: asString(r.bcode),
+      detail: asString(r.detail),
+      qty: asNumber(r.qty),
+      mtp: asNumber(r.mtp),
+      amount_gross: asNumber(r.amount_gross),
+      cost_status: asString(r.cost_status),
+    };
+  });
+}
+
+export function normalizeIncomeBlankCosts(raw: unknown): BiIncomeBlankCosts {
+  const data = (raw ?? {}) as Record<string, unknown>;
+  return {
+    from: asString(data.from),
+    to: asString(data.to),
+    branch: data.branch == null ? null : asString(data.branch),
+    limit: asNumber(data.limit),
+    total_count: asNumber(data.total_count),
+    returned_count: asNumber(data.returned_count),
+    truncated: Boolean(data.truncated),
+    lines: parseBlankCostLines(data.lines),
+  };
+}
+
+export async function fetchIncomeBlankCosts(
+  supabase: SupabaseClient,
+  params: {
+    from: string;
+    to: string;
+    branch?: string | null;
+    limit?: number;
+  }
+): Promise<BiIncomeBlankCosts> {
+  const { data, error } = await supabase.rpc("fn_bi_income_blank_costs", {
+    p_from: params.from,
+    p_to: params.to,
+    p_branch: params.branch ?? null,
+    p_limit: params.limit ?? 500,
+  });
+
+  if (error) {
+    throw new Error(error.message || "Unable to load blank cost lines");
+  }
+
+  return normalizeIncomeBlankCosts(data);
 }

@@ -15,6 +15,7 @@ Living docs for BI dashboards. Sales/product/customer reports use `raw_kcw` / `c
 | [sql/fn_bi_customer_overview.sql](./sql/fn_bi_customer_overview.sql) | RPC used by `/bi/customers` |
 | [sql/fn_bi_expense_overview.sql](./sql/fn_bi_expense_overview.sql) | RPC used by `/bi/expenses` |
 | [sql/fn_bi_income_overview.sql](./sql/fn_bi_income_overview.sql) | RPC used by `/bi/income` |
+| [sql/fn_bi_income_blank_costs.sql](./sql/fn_bi_income_blank_costs.sql) | Blank-cost line drilldown for `/bi/income` |
 
 ## App entry
 
@@ -25,6 +26,7 @@ Living docs for BI dashboards. Sales/product/customer reports use `raw_kcw` / `c
 - API: `GET /api/bi/customers/overview?from=&to=&branch=&limit=`
 - API: `GET /api/bi/expenses/overview?from=&to=&branch=&source=&limit=`
 - API: `GET /api/bi/income/overview?from=&to=&branch=`
+- API: `GET /api/bi/income/blank-costs?from=&to=&branch=&limit=`
 - Auth: admin-only (`requireAdmin` + service role RPC)
 
 ### Sales comparison note

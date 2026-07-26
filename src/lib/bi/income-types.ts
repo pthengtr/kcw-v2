@@ -59,3 +59,27 @@ export type BiIncomeOverview = {
   trend_daily: BiIncomeTrendRow[];
   trend_monthly: BiIncomeTrendRow[];
 };
+
+export type BiIncomeBlankCostLine = {
+  bill_date: string;
+  store_branch: string;
+  reporting_branch: string;
+  bill_no: string;
+  bcode: string;
+  detail: string;
+  qty: number;
+  mtp: number;
+  amount_gross: number;
+  cost_status: string;
+};
+
+export type BiIncomeBlankCosts = {
+  from: string;
+  to: string;
+  branch: string | null;
+  limit: number;
+  total_count: number;
+  returned_count: number;
+  truncated: boolean;
+  lines: BiIncomeBlankCostLine[];
+};
