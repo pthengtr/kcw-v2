@@ -2,6 +2,13 @@ import type { BiReportNavItem } from "./sales-types";
 
 export const BI_REPORTS: BiReportNavItem[] = [
   {
+    id: "income",
+    href: "/bi/income",
+    label: "กำไรขั้นต้น / สุทธิ",
+    description: "ยอดขาย − ต้นทุน − ค่าใช้จ่าย (ประมาณการ)",
+    available: true,
+  },
+  {
     id: "sales",
     href: "/bi/sales",
     label: "ภาพรวมยอดขาย",
@@ -41,13 +48,6 @@ export const BI_REPORTS: BiReportNavItem[] = [
     href: "/bi/expenses",
     label: "ภาพรวมค่าใช้จ่าย",
     description: "บริษัท + ทั่วไป · รายเดือน–YTD",
-    available: true,
-  },
-  {
-    id: "income",
-    href: "/bi/income",
-    label: "กำไรขั้นต้น / สุทธิ",
-    description: "ยอดขาย − ต้นทุน − ค่าใช้จ่าย (ประมาณการ)",
     available: true,
   },
 ];
