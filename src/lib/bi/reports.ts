@@ -30,6 +30,13 @@ export const BI_REPORTS: BiReportNavItem[] = [
     available: true,
   },
   {
+    id: "product-movement",
+    href: "/bi/product-movement",
+    label: "การเคลื่อนไหวสินค้า",
+    description: "ขายออกบ่อย / สต็อกค้างตามอายุซื้อ",
+    available: true,
+  },
+  {
     id: "expenses",
     href: "/bi/expenses",
     label: "ภาพรวมค่าใช้จ่าย",

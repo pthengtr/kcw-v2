@@ -1,0 +1,147 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { categoryLabel, code1Label } from "./icmas-labels";
+import type {
+  BiDeadStockRow,
+  BiDeadTier,
+  BiProductMovement,
+  BiStockMoreRow,
+} from "./product-movement-types";
+
+function asNumber(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return 0;
+}
+
+function asNullableNumber(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function asString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  return String(value);
+}
+
+function asNullableString(value: unknown): string | null {
+  if (value == null) return null;
+  const s = asString(value).trim();
+  return s === "" ? null : s;
+}
+
+function asDeadTier(value: unknown): BiDeadTier {
+  const s = asString(value);
+  if (s === "red" || s === "orange" || s === "yellow") return s;
+  return "yellow";
+}
+
+function parseStockMore(value: unknown): BiStockMoreRow[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    const category_code = asString(r.category_code);
+    const code1 = asNullableString(r.code1);
+    return {
+      bcode: asString(r.bcode),
+      detail: asString(r.detail),
+      category_code,
+      category_name: categoryLabel(category_code),
+      code1,
+      code1_name: code1Label(code1),
+      sell_qty: asNumber(r.sell_qty),
+      sell_bills: asNumber(r.sell_bills),
+      sell_days: asNumber(r.sell_days),
+      buy_qty: asNumber(r.buy_qty),
+      buy_bills: asNumber(r.buy_bills),
+      on_hand_qty: asNumber(r.on_hand_qty),
+      last_sale_date: asNullableString(r.last_sale_date),
+      last_purchase_date: asNullableString(r.last_purchase_date),
+    };
+  });
+}
+
+function parseDeadStock(value: unknown): BiDeadStockRow[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    const category_code = asString(r.category_code);
+    const code1 = asNullableString(r.code1);
+    return {
+      bcode: asString(r.bcode),
+      detail: asString(r.detail),
+      category_code,
+      category_name: categoryLabel(category_code),
+      code1,
+      code1_name: code1Label(code1),
+      on_hand_qty: asNumber(r.on_hand_qty),
+      last_purchase_date: asNullableString(r.last_purchase_date),
+      last_sale_date: asNullableString(r.last_sale_date),
+      days_since_purchase: asNullableNumber(r.days_since_purchase),
+      days_since_sale: asNullableNumber(r.days_since_sale),
+      no_move_since_purchase: Boolean(r.no_move_since_purchase),
+      dead_tier: asDeadTier(r.dead_tier),
+      sell_qty_period: asNumber(r.sell_qty_period),
+      buy_qty_period: asNumber(r.buy_qty_period),
+    };
+  });
+}
+
+export function normalizeProductMovement(raw: unknown): BiProductMovement {
+  const data = (raw ?? {}) as Record<string, unknown>;
+  const summary = (data.summary ?? {}) as Record<string, unknown>;
+
+  return {
+    from: asString(data.from),
+    to: asString(data.to),
+    branch: data.branch == null ? null : asString(data.branch),
+    stock_limit: asNumber(data.stock_limit),
+    dead_limit: asNumber(data.dead_limit),
+    summary: {
+      sold_sku_count: asNumber(summary.sold_sku_count),
+      sell_qty: asNumber(summary.sell_qty),
+      bought_sku_count: asNumber(summary.bought_sku_count),
+      buy_qty: asNumber(summary.buy_qty),
+      dead_yellow_count: asNumber(summary.dead_yellow_count),
+      dead_orange_count: asNumber(summary.dead_orange_count),
+      dead_red_count: asNumber(summary.dead_red_count),
+      dead_total_count: asNumber(summary.dead_total_count),
+    },
+    stock_more: parseStockMore(data.stock_more),
+    dead_stock: parseDeadStock(data.dead_stock),
+  };
+}
+
+export async function fetchProductMovement(
+  supabase: SupabaseClient,
+  params: {
+    from: string;
+    to: string;
+    branch?: string | null;
+    stockLimit?: number;
+    deadLimit?: number;
+  }
+): Promise<BiProductMovement> {
+  const { data, error } = await supabase.rpc("fn_bi_product_movement", {
+    p_from: params.from,
+    p_to: params.to,
+    p_branch: params.branch ?? null,
+    p_stock_limit: params.stockLimit ?? 50,
+    p_dead_limit: params.deadLimit ?? 200,
+  });
+
+  if (error) {
+    throw new Error(error.message || "Unable to load product movement");
+  }
+
+  return normalizeProductMovement(data);
+}
