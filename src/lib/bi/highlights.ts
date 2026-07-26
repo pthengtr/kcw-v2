@@ -1,4 +1,5 @@
 import type { BiCustomerOverview } from "./customer-types";
+import type { BiExpenseOverview } from "./expense-types";
 import type { BiProductOverview } from "./product-types";
 import {
   BRANCH_LABELS,
@@ -192,6 +193,46 @@ export function buildCustomerHighlights(overview: BiCustomerOverview): string[] 
   if (overview.walkin_summary.bill_count > 0) {
     lines.push(
       `ตัด walk-in (ไม่มี ACCTNO): ${formatCount(overview.walkin_summary.bill_count)} บิล · ${formatBaht(overview.walkin_summary.revenue_net)}`
+    );
+  }
+
+  return lines;
+}
+
+export function buildExpenseHighlights(overview: BiExpenseOverview): string[] {
+  const lines: string[] = [];
+  const total = overview.summary.amount;
+  const amountDelta = pctChange(
+    overview.summary.amount,
+    overview.previous_summary.amount
+  );
+
+  lines.push(
+    `ยอดค่าใช้จ่าย ${formatBaht(total)} (${changePhrase(amountDelta)}) · บริษัท ${formatBaht(overview.summary.entries_amount)} · ทั่วไป ${formatBaht(overview.summary.general_amount)}`
+  );
+
+  const topItem = overview.top_items[0];
+  if (topItem) {
+    lines.push(
+      `ประเภทนำ: ${topItem.label} · ${formatBaht(topItem.amount)} · ${shareOf(topItem.amount, total).toFixed(1)}%`
+    );
+  }
+
+  const topCategory = [...overview.by_category].sort(
+    (a, b) => b.amount - a.amount
+  )[0];
+  if (topCategory) {
+    lines.push(
+      `หมวดนำ: ${topCategory.label} · ${formatBaht(topCategory.amount)} · ${shareOf(topCategory.amount, total).toFixed(0)}% · ${formatCount(topCategory.item_count)} ประเภท`
+    );
+  }
+
+  const topBranch = [...overview.by_branch].sort(
+    (a, b) => b.amount - a.amount
+  )[0];
+  if (topBranch) {
+    lines.push(
+      `สาขานำ: ${topBranch.label || topBranch.key} · ${formatBaht(topBranch.amount)} · ${shareOf(topBranch.amount, total).toFixed(0)}%`
     );
   }
 
