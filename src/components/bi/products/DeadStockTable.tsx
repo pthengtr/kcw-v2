@@ -1,6 +1,10 @@
 "use client";
 
-import type { BiDeadStockRow, BiDeadTier } from "@/lib/bi/product-movement-types";
+import type {
+  BiDeadSort,
+  BiDeadStockRow,
+  BiDeadTier,
+} from "@/lib/bi/product-movement-types";
 import { formatCount } from "@/lib/bi/sales-format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,7 +16,9 @@ type Props = {
   offset: number;
   pageSize: number;
   hasMore: boolean;
+  sort: BiDeadSort;
   loading?: boolean;
+  onSortChange: (sort: BiDeadSort) => void;
   onPrev: () => void;
   onNext: () => void;
 };
@@ -41,7 +47,9 @@ export default function DeadStockTable({
   offset,
   pageSize,
   hasMore,
+  sort,
   loading,
+  onSortChange,
   onPrev,
   onNext,
 }: Props) {
@@ -85,11 +93,38 @@ export default function DeadStockTable({
               สต็อกค้าง / ระวังก่อนสั่ง — ตามอายุซื้อล่าสุด
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              มีคงเหลือ · เรียง 3 เดือน → 6 เดือน → 1 ปี+ (อายุน้อยก่อนในแต่ละช่วง)
-              · ไฮไลท์แถวตามระดับ · ซื้ออ้างอิง HQ
+              มีคงเหลือ · นับถึงวันอ้างอิง · ไม่ใช้ช่วงเวลา/สาขาของตารางขายออก ·
+              ไฮไลท์แถวตามระดับ · ซื้ออ้างอิง HQ
             </p>
           </div>
           {pager}
+        </div>
+
+        <div
+          className="mt-3 flex flex-wrap gap-2"
+          role="group"
+          aria-label="ทิศทางเรียงสต็อกค้าง"
+        >
+          <Button
+            type="button"
+            size="sm"
+            variant={sort === "recent" ? "default" : "outline"}
+            className={cn(sort === "recent" && "bg-slate-800 hover:bg-slate-700")}
+            onClick={() => onSortChange("recent")}
+            disabled={loading}
+          >
+            ค้างไม่นานก่อน (3 ด. →)
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={sort === "deep" ? "default" : "outline"}
+            className={cn(sort === "deep" && "bg-slate-800 hover:bg-slate-700")}
+            onClick={() => onSortChange("deep")}
+            disabled={loading}
+          >
+            ค้างนานก่อน (1 ปี+ →)
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
@@ -157,7 +192,10 @@ export default function DeadStockTable({
         )}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
           <p className="text-[11px] text-muted-foreground">
-            เหลือง ≥3 ด. · ส้ม ≥6 ด. · แดง ≥1 ปี · หน้าละ {formatCount(pageSize)}
+            {sort === "deep"
+              ? "เรียงแดง → ส้ม → เหลือง (อายุมากก่อน)"
+              : "เรียงเหลือง → ส้ม → แดง (อายุน้อยก่อน)"}{" "}
+            · หน้าละ {formatCount(pageSize)}
           </p>
           {pager}
         </div>

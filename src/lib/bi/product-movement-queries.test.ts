@@ -11,6 +11,7 @@ describe("normalizeProductMovement", () => {
       stock_limit: 50,
       dead_limit: 100,
       dead_offset: 0,
+      dead_sort: "recent",
       dead_returned_count: 1,
       dead_has_more: true,
       summary: {
@@ -65,6 +66,7 @@ describe("normalizeProductMovement", () => {
     expect(overview.dead_stock[0]?.dead_tier).toBe("red");
     expect(overview.summary.dead_total_count).toBe(17);
     expect(overview.dead_offset).toBe(0);
+    expect(overview.dead_sort).toBe("recent");
     expect(overview.dead_returned_count).toBe(1);
     expect(overview.dead_has_more).toBe(true);
   });

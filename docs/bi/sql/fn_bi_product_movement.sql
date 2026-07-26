@@ -3,6 +3,7 @@
 
 DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer);
 DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer, integer);
+DROP FUNCTION IF EXISTS public.fn_bi_product_movement(date, date, text, integer, integer, integer, text);
 
 CREATE OR REPLACE FUNCTION public.fn_bi_product_movement(
   p_from date,
@@ -10,7 +11,8 @@ CREATE OR REPLACE FUNCTION public.fn_bi_product_movement(
   p_branch text DEFAULT NULL,
   p_stock_limit integer DEFAULT 50,
   p_dead_limit integer DEFAULT 100,
-  p_dead_offset integer DEFAULT 0
+  p_dead_offset integer DEFAULT 0,
+  p_dead_sort text DEFAULT 'recent'
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -22,6 +24,7 @@ DECLARE
   v_stock_limit int;
   v_dead_limit int;
   v_dead_offset int;
+  v_dead_sort text;
 BEGIN
   IF p_from IS NULL OR p_to IS NULL OR p_from > p_to THEN
     RAISE EXCEPTION 'Invalid date range';
@@ -34,6 +37,10 @@ BEGIN
   v_stock_limit := GREATEST(1, LEAST(COALESCE(p_stock_limit, 50), 200));
   v_dead_limit := GREATEST(1, LEAST(COALESCE(p_dead_limit, 100), 500));
   v_dead_offset := GREATEST(0, COALESCE(p_dead_offset, 0));
+  v_dead_sort := CASE
+    WHEN lower(COALESCE(p_dead_sort, 'recent')) = 'deep' THEN 'deep'
+    ELSE 'recent'
+  END;
 
   RETURN (
     WITH sales_bills AS (
@@ -77,7 +84,7 @@ BEGIN
         AND l."CANCELED" = 'N'
         AND l."BILLDATE" < (p_to + 1)::text
         AND nullif(btrim(l."BCODE"), '') IS NOT NULL
-        AND (p_branch IS NULL OR b.reporting_branch = p_branch)
+        -- Branch filter applies only to period stock-more, not dead last_sale.
     ),
     sales_period AS (
       SELECT
@@ -89,6 +96,7 @@ BEGIN
       FROM sales_lines_hist
       WHERE bill_date >= p_from
         AND bill_date <= p_to
+        AND (p_branch IS NULL OR reporting_branch = p_branch)
       GROUP BY bcode
     ),
     last_sale AS (
@@ -258,15 +266,27 @@ BEGIN
       FROM dead_filtered d
       LEFT JOIN sales_period sp ON sp.bcode = d.bcode
       LEFT JOIN purchase_period pp ON pp.bcode = d.bcode
-      -- 3m (yellow) first, then 6m, then 1y+; within tier shorter age first → pagination goes deeper
+      -- recent: yellow→orange→red, short age first
+      -- deep:   red→orange→yellow, long age first
       ORDER BY
-        CASE d.dead_tier
-          WHEN 'yellow' THEN 1
-          WHEN 'orange' THEN 2
-          WHEN 'red' THEN 3
-          ELSE 4
+        CASE
+          WHEN v_dead_sort = 'deep' THEN
+            CASE d.dead_tier
+              WHEN 'red' THEN 1
+              WHEN 'orange' THEN 2
+              WHEN 'yellow' THEN 3
+              ELSE 4
+            END
+          ELSE
+            CASE d.dead_tier
+              WHEN 'yellow' THEN 1
+              WHEN 'orange' THEN 2
+              WHEN 'red' THEN 3
+              ELSE 4
+            END
         END,
-        d.days_since_purchase ASC NULLS LAST,
+        CASE WHEN v_dead_sort = 'deep' THEN d.days_since_purchase END DESC NULLS LAST,
+        CASE WHEN v_dead_sort = 'recent' THEN d.days_since_purchase END ASC NULLS LAST,
         d.bcode
       OFFSET v_dead_offset
       LIMIT v_dead_limit
@@ -289,6 +309,7 @@ BEGIN
       'stock_limit', v_stock_limit,
       'dead_limit', v_dead_limit,
       'dead_offset', v_dead_offset,
+      'dead_sort', v_dead_sort,
       'dead_returned_count', (SELECT count(*)::int FROM dead_list),
       'dead_has_more', (
         (v_dead_offset + (SELECT count(*)::int FROM dead_list))
@@ -341,13 +362,24 @@ BEGIN
           'sell_qty_period', dl.sell_qty_period,
           'buy_qty_period', dl.buy_qty_period
         ) ORDER BY
-          CASE dl.dead_tier
-            WHEN 'yellow' THEN 1
-            WHEN 'orange' THEN 2
-            WHEN 'red' THEN 3
-            ELSE 4
+          CASE
+            WHEN v_dead_sort = 'deep' THEN
+              CASE dl.dead_tier
+                WHEN 'red' THEN 1
+                WHEN 'orange' THEN 2
+                WHEN 'yellow' THEN 3
+                ELSE 4
+              END
+            ELSE
+              CASE dl.dead_tier
+                WHEN 'yellow' THEN 1
+                WHEN 'orange' THEN 2
+                WHEN 'red' THEN 3
+                ELSE 4
+              END
           END,
-          dl.days_since_purchase ASC NULLS LAST,
+          CASE WHEN v_dead_sort = 'deep' THEN dl.days_since_purchase END DESC NULLS LAST,
+          CASE WHEN v_dead_sort = 'recent' THEN dl.days_since_purchase END ASC NULLS LAST,
           dl.bcode
         )
         FROM dead_list dl
@@ -357,8 +389,8 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer) IS
-  'Product movement: stock-more by sell_qty; dead list yellow→orange→red with offset pagination; buys always HQ.';
+COMMENT ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text) IS
+  'Product movement: stock-more by sell_qty (+ optional branch); dead as-of to with recent|deep sort + offset; buys always HQ.';
 
-GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text) TO authenticated;

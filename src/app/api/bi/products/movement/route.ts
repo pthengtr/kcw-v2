@@ -12,6 +12,7 @@ const QuerySchema = z.object({
   stock_limit: z.coerce.number().int().min(1).max(200).optional(),
   dead_limit: z.coerce.number().int().min(1).max(500).optional(),
   dead_offset: z.coerce.number().int().min(0).optional(),
+  dead_sort: z.enum(["recent", "deep"]).optional(),
 });
 
 export async function GET(req: Request) {
@@ -31,6 +32,7 @@ export async function GET(req: Request) {
     stock_limit: url.searchParams.get("stock_limit") || undefined,
     dead_limit: url.searchParams.get("dead_limit") || undefined,
     dead_offset: url.searchParams.get("dead_offset") || undefined,
+    dead_sort: url.searchParams.get("dead_sort") || undefined,
   });
 
   if (!parsed.success) {
@@ -53,6 +55,7 @@ export async function GET(req: Request) {
       stockLimit: parsed.data.stock_limit ?? 50,
       deadLimit: parsed.data.dead_limit ?? 100,
       deadOffset: parsed.data.dead_offset ?? 0,
+      deadSort: parsed.data.dead_sort ?? "recent",
     });
     return NextResponse.json({ overview });
   } catch (error) {

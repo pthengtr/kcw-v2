@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { categoryLabel, code1Label } from "./icmas-labels";
 import type {
+  BiDeadSort,
   BiDeadStockRow,
   BiDeadTier,
   BiProductMovement,
@@ -43,6 +44,10 @@ function asDeadTier(value: unknown): BiDeadTier {
   const s = asString(value);
   if (s === "red" || s === "orange" || s === "yellow") return s;
   return "yellow";
+}
+
+function asDeadSort(value: unknown): BiDeadSort {
+  return asString(value) === "deep" ? "deep" : "recent";
 }
 
 function parseStockMore(value: unknown): BiStockMoreRow[] {
@@ -102,6 +107,7 @@ export function normalizeProductMovement(raw: unknown): BiProductMovement {
 
   const dead_limit = asNumber(data.dead_limit);
   const dead_offset = asNumber(data.dead_offset);
+  const dead_sort = asDeadSort(data.dead_sort);
   const dead_stock = parseDeadStock(data.dead_stock);
   const dead_returned_count =
     data.dead_returned_count == null
@@ -120,6 +126,7 @@ export function normalizeProductMovement(raw: unknown): BiProductMovement {
     stock_limit: asNumber(data.stock_limit),
     dead_limit,
     dead_offset,
+    dead_sort,
     dead_returned_count,
     dead_has_more,
     summary: {
@@ -146,6 +153,7 @@ export async function fetchProductMovement(
     stockLimit?: number;
     deadLimit?: number;
     deadOffset?: number;
+    deadSort?: BiDeadSort;
   }
 ): Promise<BiProductMovement> {
   const { data, error } = await supabase.rpc("fn_bi_product_movement", {
@@ -155,6 +163,7 @@ export async function fetchProductMovement(
     p_stock_limit: params.stockLimit ?? 50,
     p_dead_limit: params.deadLimit ?? 100,
     p_dead_offset: params.deadOffset ?? 0,
+    p_dead_sort: params.deadSort ?? "recent",
   });
 
   if (error) {
