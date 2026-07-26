@@ -9,6 +9,13 @@ export const BI_REPORTS: BiReportNavItem[] = [
     available: true,
   },
   {
+    id: "sales-compare",
+    href: "/bi/sales-compare",
+    label: "เปรียบเทียบยอดขาย",
+    description: "เทียบปี / เดือน · ตาราง แท่ง เส้น",
+    available: true,
+  },
+  {
     id: "customers",
     href: "/bi/customers",
     label: "อันดับลูกค้า",

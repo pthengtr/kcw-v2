@@ -16,12 +16,17 @@ Living docs for BI dashboards. Sales/product/customer reports use `raw_kcw` / `c
 
 ## App entry
 
-- UI: `/bi/sales`, `/bi/products`, `/bi/customers`, `/bi/expenses`
+- UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/customers`, `/bi/expenses`
 - API: `GET /api/bi/sales/overview?from=&to=&branch=`
+- API: `GET /api/bi/sales/compare?mode=years|months&years=&periods=&branch=`
 - API: `GET /api/bi/products/overview?from=&to=&branch=&limit=`
 - API: `GET /api/bi/customers/overview?from=&to=&branch=&limit=`
 - API: `GET /api/bi/expenses/overview?from=&to=&branch=&source=&limit=`
 - Auth: admin-only (`requireAdmin` + service role RPC)
+
+### Sales comparison note
+
+`/bi/sales-compare` is a **separate report** (not jammed into overview): pick years for seasonal month overlay, or pick specific month–years, then toggle table / bar / line. It reuses `fn_bi_sales_overview` per selected range.
 
 ## How we maintain this
 
