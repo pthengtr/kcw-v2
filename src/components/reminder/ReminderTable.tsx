@@ -243,7 +243,10 @@ export default function ReminderTable({
     setMobilePageIndex(0);
   }, [reminders, status]);
 
-  const reminderRows = (reminders ?? []) as ReminderRow[];
+  const reminderRows = useMemo(
+    () => (reminders ?? []) as ReminderRow[],
+    [reminders],
+  );
   const mobilePageCount = Math.max(
     1,
     Math.ceil(reminderRows.length / mobilePageSize),

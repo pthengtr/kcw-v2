@@ -16,7 +16,6 @@ import {
   expenseCategoryFormDefaultValues,
 } from "./ExpenseCategoryForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import BackButton from "@/components/common/BackButton";
 
 export default function ExpenseItemPage() {
