@@ -14,23 +14,33 @@ import {
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { BranchType } from "@/lib/types/models";
-import { Building2, SquareMenu, Users } from "lucide-react";
+import { Banknote, Building2, ChevronDown, SquareMenu, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type NavbarExpenseDropdownMenuProps = { branches: BranchType[] };
+type NavbarExpenseDropdownMenuProps = {
+  branches: BranchType[];
+  active?: boolean;
+};
 
 export default function NavbarExpenseDropdownMenu({
   branches,
+  active = false,
 }: NavbarExpenseDropdownMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost">ค่าใช้จ่าย</Button>
+        <Button
+          variant={active ? "secondary" : "ghost"}
+          className={cn(active && "bg-slate-200/80 text-slate-900")}
+        >
+          <Banknote className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+          ค่าใช้จ่าย
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" aria-hidden />
+        </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
+      <DropdownMenuContent align="end" className="min-w-52">
         <DropdownMenuItem asChild>
-          <Link href="/expense" passHref>
-            เมนูหลัก
-          </Link>
+          <Link href="/expense">เมนูหลัก</Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuSub>
@@ -41,11 +51,8 @@ export default function NavbarExpenseDropdownMenu({
           <DropdownMenuPortal>
             <DropdownMenuSubContent>
               {branches?.map((branch) => (
-                <DropdownMenuItem asChild key={branch.branch_name}>
-                  <Link
-                    href={`/expense/company/${branch.branch_uuid}`}
-                    passHref
-                  >
+                <DropdownMenuItem asChild key={branch.branch_uuid}>
+                  <Link href={`/expense/company/${branch.branch_uuid}`}>
                     {branch.branch_name}
                   </Link>
                 </DropdownMenuItem>
@@ -54,14 +61,13 @@ export default function NavbarExpenseDropdownMenu({
           </DropdownMenuPortal>
         </DropdownMenuSub>
         <DropdownMenuItem asChild>
-          <Link href="/expense/general" passHref>
+          <Link href="/expense/general">
             <Users />
             ค่าใช้จ่ายทั่วไป
           </Link>
         </DropdownMenuItem>
-
         <DropdownMenuItem asChild>
-          <Link href="/expense/item" passHref>
+          <Link href="/expense/item">
             <SquareMenu />
             ประเภทค่าใช้จ่าย
           </Link>
