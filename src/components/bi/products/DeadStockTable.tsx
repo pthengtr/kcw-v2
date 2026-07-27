@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import TableLoadingState from "@/components/common/TableLoadingState";
 import {
   Select,
   SelectContent,
@@ -303,9 +304,13 @@ export default function DeadStockTable({
       </CardHeader>
       <CardContent className="overflow-x-auto px-3 pt-0 sm:px-6">
         {rows.length === 0 ? (
+          loading ? (
+            <TableLoadingState />
+          ) : (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            {loading ? "กำลังโหลด…" : "ไม่มีรายการตามตัวกรองนี้"}
+            ไม่มีรายการตามตัวกรองนี้
           </p>
+          )
         ) : (
           <table className="w-full table-fixed text-left text-sm">
             <colgroup>

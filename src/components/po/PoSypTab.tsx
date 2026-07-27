@@ -3,17 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { BadgeProps } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -22,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
+import PoSypDetailDialog from "@/components/po/PoSypDetailDialog";
 import {
   billedLabel,
   formatPoAmount,
@@ -47,6 +40,7 @@ export default function PoSypTab({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingDocno, setSavingDocno] = useState<string | null>(null);
+  const [savingLine, setSavingLine] = useState<string | null>(null);
 
   const [status, setStatus] = useState<"open" | "billed" | "all">("open");
   const [prepare, setPrepare] = useState<
@@ -132,6 +126,7 @@ export default function PoSypTab({
           prepared_at: string | null;
           prepared_by: string | null;
           note: string | null;
+          lines?: PoLineRow[];
         };
       };
       setRows((prev) =>
@@ -159,12 +154,54 @@ export default function PoSypTab({
               }
             : s
         );
+        if (data.row.lines) setLines(data.row.lines);
       }
       onChanged?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSavingDocno(null);
+    }
+  }
+
+  async function setLinePrepared(line: PoLineRow, prepared: boolean) {
+    if (!selected?.docno || !line.line) return;
+    const key = `${selected.docno}:${line.line}`;
+    setSavingLine(key);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/po/syp/${encodeURIComponent(selected.docno)}/lines/${encodeURIComponent(line.line)}/prepare`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prepared }),
+        }
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `Request failed (${res.status})`);
+      }
+      const data = (await res.json()) as {
+        headerPrepared: boolean;
+        lines: PoLineRow[];
+      };
+      setLines(data.lines ?? []);
+      setRows((prev) =>
+        prev.map((r) =>
+          r.docno === selected.docno
+            ? { ...r, prepared: data.headerPrepared }
+            : r
+        )
+      );
+      setSelected((s) =>
+        s ? { ...s, prepared: data.headerPrepared } : s
+      );
+      onChanged?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingLine(null);
     }
   }
 
@@ -299,102 +336,28 @@ export default function PoSypTab({
         loading={loading}
       />
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>SYP PO {selected?.docno}</DialogTitle>
-          </DialogHeader>
-          {selected ? (
-            <div className="space-y-3 text-sm">
-              <div>
-                วันที่: {formatPoDate(selected.docdate)} · PARTS9:{" "}
-                {billedLabel(selected.billed)} · ยอด:{" "}
-                {formatPoAmount(selected.aftertax)}
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={Boolean(selected.prepared)}
-                    disabled={savingDocno === selected.docno}
-                    onCheckedChange={(checked) =>
-                      void setPrepared(selected, checked, noteDraft)
-                    }
-                  />
-                  <span>เตรียมแล้ว</span>
-                </div>
-                {selected.prepared_at ? (
-                  <span className="text-muted-foreground">
-                    {formatPoTs(selected.prepared_at)}
-                  </span>
-                ) : null}
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  placeholder="หมายเหตุ (ถ้ามี)"
-                  value={noteDraft}
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={savingDocno === selected.docno}
-                  onClick={() =>
-                    void setPrepared(
-                      selected,
-                      Boolean(selected.prepared),
-                      noteDraft
-                    )
-                  }
-                >
-                  บันทึกหมายเหตุ
-                </Button>
-              </div>
-            </div>
-          ) : null}
-          <ScrollArea className="max-h-[50vh] rounded-md border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40 text-left">
-                  <th className="p-2">Line</th>
-                  <th className="p-2">BCODE</th>
-                  <th className="p-2">รายละเอียด</th>
-                  <th className="p-2">Qty</th>
-                  <th className="p-2">ราคา</th>
-                  <th className="p-2">จำนวนเงิน</th>
-                </tr>
-              </thead>
-              <tbody>
-                {linesLoading ? (
-                  <tr>
-                    <td className="p-2" colSpan={6}>
-                      กำลังโหลดรายการ…
-                    </td>
-                  </tr>
-                ) : lines.length === 0 ? (
-                  <tr>
-                    <td className="p-2" colSpan={6}>
-                      ไม่มีรายการ
-                    </td>
-                  </tr>
-                ) : (
-                  lines.map((line, i) => (
-                    <tr key={`${line.line}-${i}`} className="border-b">
-                      <td className="p-2">{line.line ?? "—"}</td>
-                      <td className="p-2">{line.bcode ?? "—"}</td>
-                      <td className="p-2">{line.detail ?? "—"}</td>
-                      <td className="p-2">
-                        {line.qty ?? "—"} {line.ui ?? ""}
-                      </td>
-                      <td className="p-2">{formatPoAmount(line.price)}</td>
-                      <td className="p-2">{formatPoAmount(line.amount)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      <PoSypDetailDialog
+        open={open}
+        onOpenChange={setOpen}
+        selected={selected}
+        lines={lines}
+        linesLoading={linesLoading}
+        savingDocno={savingDocno}
+        savingLine={savingLine}
+        noteDraft={noteDraft}
+        onNoteDraftChange={setNoteDraft}
+        onToggleHeaderPrepared={(prepared) => {
+          if (!selected) return;
+          void setPrepared(selected, prepared, noteDraft);
+        }}
+        onSaveNote={() => {
+          if (!selected) return;
+          void setPrepared(selected, Boolean(selected.prepared), noteDraft);
+        }}
+        onToggleLinePrepared={(line, prepared) => {
+          void setLinePrepared(line, prepared);
+        }}
+      />
     </div>
   );
 }

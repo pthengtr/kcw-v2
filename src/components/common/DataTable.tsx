@@ -59,6 +59,7 @@ import { FileSpreadsheet, GripVertical } from "lucide-react";
 import { setMyCookie } from "@/app/(root)/action";
 import { Button } from "../ui/button";
 import { exportTableToCSV } from "@/lib/utils";
+import TableLoadingState from "@/components/common/TableLoadingState";
 
 interface DataTableProps<TData, TValue> {
   children?: React.ReactNode;
@@ -279,13 +280,19 @@ export function DataTable<TData, TValue>({
                   ))}
                 </TableRow>
               ))
+            ) : loading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="p-0">
+                  <TableLoadingState />
+                </TableCell>
+              </TableRow>
             ) : (
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  {loading ? "กำลังโหลด…" : "ไม่พบข้อมูล"}
+                  ไม่พบข้อมูล
                 </TableCell>
               </TableRow>
             )}

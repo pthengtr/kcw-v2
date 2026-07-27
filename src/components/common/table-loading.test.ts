@@ -9,16 +9,17 @@ function read(rel: string) {
 }
 
 describe("Table loading empty states", () => {
-  it("ServerPagedTable shows loading instead of empty when loading", () => {
+  it("ServerPagedTable shows spinner loading instead of empty when loading", () => {
     const src = read("src/components/bank/ServerPagedTable.tsx");
     expect(src).toContain("loading = false");
-    expect(src).toContain('loading ? "กำลังโหลด…" : "ไม่พบข้อมูล"');
+    expect(src).toContain("TableLoadingState");
+    expect(src).toContain("loading && !rows.length");
   });
 
-  it("DataTable shows loading instead of empty when loading", () => {
+  it("DataTable shows spinner loading instead of empty when loading", () => {
     const src = read("src/components/common/DataTable.tsx");
     expect(src).toContain("loading?: boolean");
-    expect(src).toContain('loading ? "กำลังโหลด…" : "ไม่พบข้อมูล"');
+    expect(src).toContain("TableLoadingState");
   });
 
   it("PO and bank tables pass loading into ServerPagedTable", () => {

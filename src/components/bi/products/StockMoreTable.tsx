@@ -3,6 +3,7 @@
 import type { BiStockMoreRow } from "@/lib/bi/product-movement-types";
 import { formatCount } from "@/lib/bi/sales-format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import TableLoadingState from "@/components/common/TableLoadingState";
 
 type Props = {
   rows: BiStockMoreRow[];
@@ -22,9 +23,13 @@ export default function StockMoreTable({ rows, loading = false }: Props) {
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {rows.length === 0 ? (
+          loading ? (
+            <TableLoadingState />
+          ) : (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            {loading ? "กำลังโหลด…" : "ไม่มีสินค้าขายในช่วงนี้"}
+            ไม่มีสินค้าขายในช่วงนี้
           </p>
+          )
         ) : (
           <table className="w-full min-w-[44rem] text-left text-sm">
             <thead>

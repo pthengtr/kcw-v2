@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import TableLoadingState from "@/components/common/TableLoadingState";
 
 export type Column<T> = {
   key: string;
@@ -115,7 +116,13 @@ export function ServerPagedTable<T>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length ? (
+            {loading && !rows.length ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="p-0">
+                  <TableLoadingState />
+                </TableCell>
+              </TableRow>
+            ) : rows.length ? (
               rows.map((row, idx) => (
                 <TableRow
                   key={idx}
@@ -135,7 +142,7 @@ export function ServerPagedTable<T>({
                   colSpan={columns.length}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  {loading ? "กำลังโหลด…" : "ไม่พบข้อมูล"}
+                  ไม่พบข้อมูล
                 </TableCell>
               </TableRow>
             )}
