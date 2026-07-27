@@ -145,9 +145,6 @@ export default function PoSypDetailDialog({
               <thead>
                 <tr className="border-b bg-muted/40 text-left">
                   <th className="w-14 p-2 text-center">เตรียม</th>
-                  <th className="p-2" title="หมายเลขบรรทัดใน PARTS9 (PODET.LINE)">
-                    บรรทัด
-                  </th>
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
                   <th className="p-2">HQ Loc1</th>
@@ -160,7 +157,7 @@ export default function PoSypDetailDialog({
               <tbody>
                 {lines.length === 0 ? (
                   <tr>
-                    <td className="p-2 text-muted-foreground" colSpan={9}>
+                    <td className="p-2 text-muted-foreground" colSpan={8}>
                       ไม่มีรายการ
                     </td>
                   </tr>
@@ -189,7 +186,6 @@ export default function PoSypDetailDialog({
                             className="mx-auto hidden h-4 w-4 border border-black print:inline-block"
                           />
                         </td>
-                        <td className="p-2">{line.line ?? "—"}</td>
                         <td className="p-2">{line.bcode ?? "—"}</td>
                         <td className="p-2">{line.detail ?? "—"}</td>
                         <td className="p-2 font-medium">
