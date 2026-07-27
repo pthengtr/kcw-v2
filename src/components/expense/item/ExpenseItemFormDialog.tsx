@@ -35,16 +35,16 @@ export default function ExpenseItemFormDialog({
       <DialogTrigger asChild>
         <Button>{dialogTrigger}</Button>
       </DialogTrigger>
-      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg sm:max-w-fit">
-        <DialogHeader className="grid place-content-center py-4">
+      <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-lg flex-col overflow-hidden sm:max-w-fit">
+        <DialogHeader className="grid shrink-0 place-content-center py-4">
           <DialogTitle>{dialogHeader}</DialogTitle>
         </DialogHeader>
         {submitError && (
-          <div className="grid place-content-center w-full text-red-600">
+          <div className="grid w-full shrink-0 place-content-center text-red-600">
             {submitError}
           </div>
         )}
-        <div className="h-full overflow-y-auto px-2 sm:px-12">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-4 sm:px-12">
           <ExpenseItemForm defaultValues={defaultValues} update={update} />
         </div>
       </DialogContent>

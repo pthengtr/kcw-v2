@@ -59,11 +59,13 @@ export default function ExpenseAddEntryFormDialog({
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader className="flex flex-col gap-2">
+      <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-lg flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{update ? "แก้ไขรายการ" : `เพิ่มรายการ`}</DialogTitle>
-          <ExpenseAddEntryForm defaultValues={defaultValues} update={update} />
         </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4">
+          <ExpenseAddEntryForm defaultValues={defaultValues} update={update} />
+        </div>
       </DialogContent>
     </Dialog>
   );
