@@ -22,6 +22,16 @@ import {
 } from "@/lib/po/format";
 import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
 
+function formatHqLocation(
+  location1: string | null | undefined,
+  location2: string | null | undefined
+): string {
+  const loc1 = location1?.trim() || null;
+  const loc2 = location2?.trim() || null;
+  if (loc1 && loc2) return `${loc1}/${loc2}`;
+  return loc1 ?? loc2 ?? "—";
+}
+
 export default function PoSypDetailDialog({
   open,
   onOpenChange,
