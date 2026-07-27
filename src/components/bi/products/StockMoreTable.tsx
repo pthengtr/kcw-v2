@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Props = {
   rows: BiStockMoreRow[];
+  loading?: boolean;
 };
 
-export default function StockMoreTable({ rows }: Props) {
+export default function StockMoreTable({ rows, loading = false }: Props) {
   return (
     <Card className="border-slate-200/80 shadow-sm">
       <CardHeader className="pb-2">
@@ -22,7 +23,7 @@ export default function StockMoreTable({ rows }: Props) {
       <CardContent className="overflow-x-auto">
         {rows.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            ไม่มีสินค้าขายในช่วงนี้
+            {loading ? "กำลังโหลด…" : "ไม่มีสินค้าขายในช่วงนี้"}
           </p>
         ) : (
           <table className="w-full min-w-[44rem] text-left text-sm">

@@ -102,7 +102,7 @@ export default function StatementLinesTab({
 
   const [rows, setRows] = useState<StatementLineRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [limit, setLimit] = useState(50);
@@ -433,9 +433,6 @@ export default function StatementLinesTab({
         </div>
       )}
       {error && <div className="text-sm text-red-600">{error}</div>}
-      {loading && (
-        <div className="text-sm text-muted-foreground">กำลังโหลด...</div>
-      )}
 
       {canFetch && (
         <ServerPagedTable
@@ -447,6 +444,7 @@ export default function StatementLinesTab({
           onLimitChange={setLimit}
           onOffsetChange={setOffset}
           onRowClick={openRaw}
+          loading={loading}
         />
       )}
 

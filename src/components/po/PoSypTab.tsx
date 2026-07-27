@@ -44,7 +44,7 @@ export default function PoSypTab({
 }) {
   const [rows, setRows] = useState<PoHeaderRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingDocno, setSavingDocno] = useState<string | null>(null);
 
@@ -286,9 +286,6 @@ export default function PoSypTab({
       </div>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {loading ? (
-        <p className="text-sm text-muted-foreground">กำลังโหลด…</p>
-      ) : null}
 
       <ServerPagedTable
         columns={columns}
@@ -299,6 +296,7 @@ export default function PoSypTab({
         onOffsetChange={setOffset}
         onLimitChange={setLimit}
         onRowClick={openDetail}
+        loading={loading}
       />
 
       <Dialog open={open} onOpenChange={setOpen}>

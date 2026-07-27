@@ -209,6 +209,7 @@ export default function ReminderTable({
     openUpdateDialog,
     setSubmitError,
     reminders,
+    loading,
     total,
     handleSelectedRow,
     status,
@@ -350,7 +351,11 @@ export default function ReminderTable({
       </div>
 
       <div className="md:flex-1 md:min-h-0 md:overflow-hidden">
-        {!!reminders && (
+        {loading && !reminders ? (
+          <div className="rounded-md border p-8 text-center text-sm text-muted-foreground">
+            กำลังโหลด…
+          </div>
+        ) : !!reminders ? (
           <>
             {/* Mobile card list */}
             <div className="md:hidden flex flex-col gap-3 pb-4">
@@ -370,7 +375,10 @@ export default function ReminderTable({
                 pageSize={mobilePageSize}
                 pageCount={mobilePageCount}
                 onPageIndexChange={setMobilePageIndex}
-                onPageSizeChange={setMobilePageSize}
+                onPageSizeChange={(next) => {
+                  setMobilePageSize(next);
+                  setMobilePageIndex(0);
+                }}
               />
 
               <div className="flex flex-col gap-2">
@@ -383,7 +391,7 @@ export default function ReminderTable({
                 ))}
                 {mobilePageRows.length === 0 && (
                   <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-                    ไม่พบรายการ
+                    {loading ? "กำลังโหลด…" : "ไม่พบรายการ"}
                   </div>
                 )}
               </div>
@@ -397,6 +405,7 @@ export default function ReminderTable({
                 data={reminders}
                 total={total}
                 setSelectedRow={handleSelectedRow}
+                loading={loading}
                 initialState={{
                   columnVisibility: columnVisibility,
                   pagination: {
@@ -416,7 +425,7 @@ export default function ReminderTable({
               </DataTable>
             </div>
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );

@@ -73,6 +73,7 @@ interface DataTableProps<TData, TValue> {
   setCustomColumnFilters?: Dispatch<SetStateAction<ColumnFiltersState>>;
   exportButton?: boolean;
   filterInHeader?: boolean;
+  loading?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -88,6 +89,7 @@ export function DataTable<TData, TValue>({
   setCustomColumnFilters,
   exportButton = false,
   filterInHeader = true,
+  loading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [_columnFilters, _setColumnFilters] = useState<ColumnFiltersState>(
@@ -281,9 +283,9 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-24 text-center text-muted-foreground"
                 >
-                  ไม่พบข้อมูล
+                  {loading ? "กำลังโหลด…" : "ไม่พบข้อมูล"}
                 </TableCell>
               </TableRow>
             )}

@@ -477,7 +477,7 @@ export default function ProductMovementPage() {
           </section>
 
           {tab === "stock-more" ? (
-            <StockMoreTable rows={overview.stock_more} />
+            <StockMoreTable rows={overview.stock_more} loading={loading} />
           ) : (
             <DeadStockTable
               rows={overview.dead_stock}

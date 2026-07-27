@@ -94,6 +94,16 @@ export default function PartyTable({
               </TableCell>
             </TableRow>
           )}
+          {loading && items.length === 0 && (
+            <TableRow>
+              <TableCell
+                colSpan={5}
+                className="text-center text-sm text-muted-foreground"
+              >
+                กำลังโหลด…
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
 

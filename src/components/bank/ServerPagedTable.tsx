@@ -28,6 +28,7 @@ export function ServerPagedTable<T>({
   onOffsetChange,
   onLimitChange,
   onRowClick,
+  loading = false,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -37,20 +38,25 @@ export function ServerPagedTable<T>({
   onOffsetChange: (nextOffset: number) => void;
   onLimitChange: (nextLimit: number) => void;
   onRowClick?: (row: T) => void;
+  loading?: boolean;
 }) {
   const total = count ?? null;
   const pageIndex = Math.floor(offset / limit);
   const pageCount = total !== null ? Math.max(1, Math.ceil(total / limit)) : null;
-  const canPrev = offset > 0;
-  const canNext = total !== null ? offset + limit < total : rows.length === limit;
+  const canPrev = !loading && offset > 0;
+  const canNext =
+    !loading &&
+    (total !== null ? offset + limit < total : rows.length === limit);
 
   return (
     <div className="rounded-md border p-3 sm:p-4 flex flex-col gap-3 h-full">
       <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 min-w-0">
-          {total !== null
-            ? `แสดง ${rows.length} จากทั้งหมด ${total} รายการ`
-            : `แสดง ${rows.length} รายการ`}
+          {loading
+            ? "กำลังโหลด…"
+            : total !== null
+              ? `แสดง ${rows.length} จากทั้งหมด ${total} รายการ`
+              : `แสดง ${rows.length} รายการ`}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="whitespace-nowrap">รายการ/หน้า</span>
@@ -61,6 +67,7 @@ export function ServerPagedTable<T>({
               onLimitChange(next);
               onOffsetChange(0);
             }}
+            disabled={loading}
           >
             <SelectTrigger className="h-8 w-[90px]">
               <SelectValue />
@@ -124,8 +131,11 @@ export function ServerPagedTable<T>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  ไม่พบข้อมูล
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  {loading ? "กำลังโหลด…" : "ไม่พบข้อมูล"}
                 </TableCell>
               </TableRow>
             )}
@@ -135,4 +145,3 @@ export function ServerPagedTable<T>({
     </div>
   );
 }
-

@@ -304,7 +304,7 @@ export default function DeadStockTable({
       <CardContent className="overflow-x-auto px-3 pt-0 sm:px-6">
         {rows.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            ไม่มีรายการตามตัวกรองนี้
+            {loading ? "กำลังโหลด…" : "ไม่มีรายการตามตัวกรองนี้"}
           </p>
         ) : (
           <table className="w-full table-fixed text-left text-sm">

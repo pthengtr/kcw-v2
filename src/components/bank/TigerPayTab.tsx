@@ -173,7 +173,7 @@ export default function TigerPayTab({
 
   const [rows, setRows] = useState<ListRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [limit, setLimit] = useState(50);
@@ -348,13 +348,19 @@ export default function TigerPayTab({
           onOffsetChange={setOffset}
         />
         <div className="flex flex-col gap-2">
-          {rows.map((row) => (
-            <MobileTransactionCard
-              key={row.tiger_payment_id}
-              row={row}
-              onClick={() => openRow(row)}
-            />
-          ))}
+          {rows.length === 0 ? (
+            <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
+              {loading ? "กำลังโหลด…" : "ไม่พบข้อมูล"}
+            </div>
+          ) : (
+            rows.map((row) => (
+              <MobileTransactionCard
+                key={row.tiger_payment_id}
+                row={row}
+                onClick={() => openRow(row)}
+              />
+            ))
+          )}
         </div>
       </div>
 
@@ -369,6 +375,7 @@ export default function TigerPayTab({
           onLimitChange={setLimit}
           onOffsetChange={setOffset}
           onRowClick={openRow}
+          loading={loading}
         />
       </div>
     </>
@@ -496,9 +503,6 @@ export default function TigerPayTab({
       </div>
 
       {error && <div className="text-sm text-red-600">{error}</div>}
-      {loading && (
-        <div className="text-sm text-muted-foreground">กำลังโหลด...</div>
-      )}
 
       {!loading && rows.length === 0 && !error ? (
         <div className="rounded-md border p-6 sm:p-8 text-center text-sm text-muted-foreground">
