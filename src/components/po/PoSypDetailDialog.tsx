@@ -158,7 +158,7 @@ export default function PoSypDetailDialog({
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
                   <th className="p-2">ที่เก็บ HQ</th>
-                  <th className="p-2">Qty</th>
+                  <th className="p-2">จำนวน</th>
                 </tr>
               </thead>
               <tbody>
