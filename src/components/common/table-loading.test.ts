@@ -33,4 +33,12 @@ describe("Table loading empty states", () => {
       expect(read(rel)).toContain("loading={loading}");
     }
   });
+
+  it("RbacAdminPage shows spinner instead of empty members while loading", () => {
+    const src = read("src/components/rbac/RbacAdminPage.tsx");
+    expect(src).toContain("loadingDetail");
+    expect(src).toContain("TableLoadingState");
+    expect(src).toContain("loadingDetail ? (");
+    expect(src).toContain("ไม่มีสมาชิกใน role นี้");
+  });
 });
