@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import TableLoadingState from "@/components/common/TableLoadingState";
 import {
   billedLabel,
@@ -22,6 +21,16 @@ import {
   formatPoTs,
 } from "@/lib/po/format";
 import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
+
+function formatHqLocation(
+  location1: string | null | undefined,
+  location2: string | null | undefined
+): string {
+  const loc1 = location1?.trim() || null;
+  const loc2 = location2?.trim() || null;
+  if (loc1 && loc2) return `${loc1}/${loc2}`;
+  return loc1 ?? loc2 ?? "—";
+}
 
 export default function PoSypDetailDialog({
   open,
@@ -137,7 +146,8 @@ export default function PoSypDetailDialog({
           </div>
         ) : null}
 
-        <ScrollArea className="max-h-[55vh] rounded-md border print:max-h-none print:overflow-visible">
+        {/* Plain overflow div (not ScrollArea): Radix viewport h-full causes blank print pages */}
+        <div className="max-h-[55vh] overflow-auto rounded-md border print:max-h-none print:overflow-visible print:border-0">
           {linesLoading ? (
             <TableLoadingState label="กำลังโหลดรายการ…" />
           ) : (
@@ -147,8 +157,8 @@ export default function PoSypDetailDialog({
                   <th className="w-14 p-2 text-center">เตรียม</th>
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
-                  <th className="p-2">HQ Loc1</th>
-                  <th className="p-2">Qty</th>
+                  <th className="p-2">ที่เก็บ HQ</th>
+                  <th className="p-2">จำนวน</th>
                 </tr>
               </thead>
               <tbody>
@@ -186,7 +196,7 @@ export default function PoSypDetailDialog({
                         <td className="p-2">{line.bcode ?? "—"}</td>
                         <td className="p-2">{line.detail ?? "—"}</td>
                         <td className="p-2 font-medium">
-                          {line.hq_location1 ?? "—"}
+                          {formatHqLocation(line.hq_location1, line.hq_location2)}
                         </td>
                         <td className="p-2">
                           {line.qty ?? "—"} {line.ui ?? ""}
@@ -198,21 +208,42 @@ export default function PoSypDetailDialog({
               </tbody>
             </table>
           )}
-        </ScrollArea>
+        </div>
 
         <style>{`
           @media print {
-            body * { visibility: hidden !important; }
-            [data-po-print-root], [data-po-print-root] * { visibility: visible !important; }
+            @page { margin: 12mm; size: auto; }
+            html, body {
+              height: auto !important;
+              overflow: visible !important;
+              background: white !important;
+            }
+            /* visibility:hidden still leaves page chrome in the layout → blank trailing pages.
+               Drop non-print UI from the box tree entirely. */
+            body > *:not([data-radix-portal]) {
+              display: none !important;
+            }
+            [data-radix-dialog-overlay] {
+              display: none !important;
+            }
             [data-po-print-root] {
-              position: absolute !important;
-              inset: 0 !important;
+              position: static !important;
+              inset: auto !important;
               width: 100% !important;
               max-width: none !important;
+              max-height: none !important;
+              height: auto !important;
+              margin: 0 !important;
+              padding: 0 !important;
               transform: none !important;
               border: none !important;
               box-shadow: none !important;
+              border-radius: 0 !important;
               background: white !important;
+              overflow: visible !important;
+            }
+            [data-po-print-root] > button {
+              display: none !important;
             }
           }
         `}</style>
