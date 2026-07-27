@@ -9,6 +9,7 @@ import {
   ROLE_NORMAL,
 } from "@/lib/auth/rbac-pages";
 import BackButton from "@/components/common/BackButton";
+import TableLoadingState from "@/components/common/TableLoadingState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -60,6 +61,7 @@ export default function RbacAdminPage() {
   const [roleKey, setRoleKey] = useState<string | null>(null);
   const [detail, setDetail] = useState<RoleDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(true);
   const [memberEmailToAdd, setMemberEmailToAdd] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -70,10 +72,13 @@ export default function RbacAdminPage() {
       const json = await res.json();
       if (!res.ok) {
         setError(json?.error ?? "Unable to load roles");
+        setLoadingDetail(false);
         return;
       }
-      setRoles(json.roles ?? []);
-      setRoleKey((prev) => prev ?? json.roles?.[0]?.role_key ?? null);
+      const nextRoles = json.roles ?? [];
+      setRoles(nextRoles);
+      setRoleKey((prev) => prev ?? nextRoles[0]?.role_key ?? null);
+      if (!nextRoles.length) setLoadingDetail(false);
     }
     void loadRoles();
   }, []);
@@ -81,16 +86,21 @@ export default function RbacAdminPage() {
   useEffect(() => {
     async function loadDetail() {
       if (!roleKey) return;
+      setLoadingDetail(true);
       setError(null);
-      const res = await fetch(`/api/admin/rbac/roles/${roleKey}`, {
-        method: "GET",
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json?.error ?? "Unable to load role");
-        return;
+      try {
+        const res = await fetch(`/api/admin/rbac/roles/${roleKey}`, {
+          method: "GET",
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          setError(json?.error ?? "Unable to load role");
+          return;
+        }
+        setDetail(json);
+      } finally {
+        setLoadingDetail(false);
       }
-      setDetail(json);
     }
     void loadDetail();
   }, [roleKey]);
@@ -210,29 +220,33 @@ export default function RbacAdminPage() {
             <CardTitle className="text-base">สิทธิ์เข้าใช้งานหน้า</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {protectedPageKeyChoices.map((k) => {
-              const checked = selectedPageKeys.includes(k);
-              return (
-                <div key={k} className="flex items-center gap-3">
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={(v) => togglePageKey(k, v === true)}
-                    id={`page-${k}`}
-                  />
-                  <label
-                    htmlFor={`page-${k}`}
-                    className="text-sm text-slate-800 leading-tight"
-                  >
-                    {labelForPageKey(k)}
-                  </label>
-                </div>
-              );
-            })}
+            {loadingDetail ? (
+              <TableLoadingState />
+            ) : (
+              protectedPageKeyChoices.map((k) => {
+                const checked = selectedPageKeys.includes(k);
+                return (
+                  <div key={k} className="flex items-center gap-3">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(v) => togglePageKey(k, v === true)}
+                      id={`page-${k}`}
+                    />
+                    <label
+                      htmlFor={`page-${k}`}
+                      className="text-sm text-slate-800 leading-tight"
+                    >
+                      {labelForPageKey(k)}
+                    </label>
+                  </div>
+                );
+              })
+            )}
           </CardContent>
           <CardContent className="pt-0">
             <Button
               type="button"
-              disabled={loading}
+              disabled={loading || loadingDetail}
               onClick={() => void save()}
             >
               {loading ? "กำลังบันทึก..." : "บันทึกสิทธิ์"}
@@ -251,34 +265,43 @@ export default function RbacAdminPage() {
                 placeholder="เพิ่มด้วยอีเมล (auth user)"
                 onChange={(e) => setMemberEmailToAdd(e.target.value)}
                 className="flex-1"
+                disabled={loadingDetail}
               />
-              <Button type="button" variant="outline" onClick={addMemberEmail}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addMemberEmail}
+                disabled={loadingDetail}
+              >
                 เพิ่ม
               </Button>
             </div>
 
             <div className="max-h-64 space-y-2 overflow-auto pr-2">
-              {selectedMemberEmails.length === 0 ? (
+              {loadingDetail ? (
+                <TableLoadingState />
+              ) : selectedMemberEmails.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   ไม่มีสมาชิกใน role นี้
                 </p>
-              ) : null}
-              {selectedMemberEmails.map((email) => (
-                <div
-                  key={email}
-                  className="flex items-center justify-between gap-2 rounded-md border border-slate-200/80 px-2 py-1.5"
-                >
-                  <div className="min-w-0 truncate text-sm">{email}</div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => removeMemberEmail(email)}
+              ) : (
+                selectedMemberEmails.map((email) => (
+                  <div
+                    key={email}
+                    className="flex items-center justify-between gap-2 rounded-md border border-slate-200/80 px-2 py-1.5"
                   >
-                    ลบ
-                  </Button>
-                </div>
-              ))}
+                    <div className="min-w-0 truncate text-sm">{email}</div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => removeMemberEmail(email)}
+                    >
+                      ลบ
+                    </Button>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
