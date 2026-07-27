@@ -2,6 +2,8 @@
 
 Living docs for BI dashboards. Sales/product/customer reports use `raw_kcw` / `curated_kcw`; the expense report uses **`public`** app tables.
 
+Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/worker-jobs.md](../worker-jobs.md)
+
 ## Files
 
 | File | Purpose |
