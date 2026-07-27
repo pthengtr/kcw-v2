@@ -67,6 +67,39 @@ from auth.users au
 where au.email in ('pthengtr@gmail.com', 'narumon.wit@gmail.com')
 on conflict (user_id, role_key) do nothing;
 
+-- Default: every existing auth user without a role becomes normal.
+insert into public.kcw_user_roles (user_id, role_key)
+select au.id, 'normal'
+from auth.users au
+where not exists (
+  select 1 from public.kcw_user_roles ur where ur.user_id = au.id
+)
+on conflict (user_id, role_key) do nothing;
+
+-- Auto-assign normal on new signup (layer-1 membership).
+create or replace function public.fn_kcw_assign_default_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.kcw_user_roles (user_id, role_key)
+  values (new.id, 'normal')
+  on conflict (user_id, role_key) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_kcw_assign_default_role on auth.users;
+create trigger trg_kcw_assign_default_role
+after insert on auth.users
+for each row
+execute function public.fn_kcw_assign_default_role();
+
+revoke all on function public.fn_kcw_assign_default_role() from public;
+grant execute on function public.fn_kcw_assign_default_role() to service_role;
+
 -- Harden BI RPCs: only service_role may execute (app routes use admin client after permission check).
 revoke execute on function public.fn_bi_sales_overview(date, date, text) from authenticated, anon, public;
 revoke execute on function public.fn_bi_customer_overview(date, date, text, integer) from authenticated, anon, public;

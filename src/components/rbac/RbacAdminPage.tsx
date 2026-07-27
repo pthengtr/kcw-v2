@@ -174,7 +174,8 @@ export default function RbacAdminPage() {
         <div>
           <h1 className="text-xl font-bold">จัดการสิทธิ์การเข้าถึง</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            จัดการผู้ใช้ในแต่ละ role และอนุญาตให้เข้าถึงหน้า (ตาม page_key)
+            2 ชั้น: (1) ต้องมี role ถึงเข้าแอปได้ · (2) ใน role กำหนดหน้าได้ ·
+            ผู้ใช้ใหม่ได้ normal อัตโนมัติ · admin เข้าได้ทุกหน้า
           </p>
         </div>
         <div className="w-full sm:w-72">

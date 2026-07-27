@@ -37,10 +37,12 @@ export async function requirePermission(
     return { ok: true, userEmail };
   }
 
+  // Layer 1 already required a role in middleware; empty here is still deny.
   if (roleKeys.length === 0) {
     return { ok: false, status: 403, message: "Forbidden" };
   }
 
+  // Layer 2: page_key must be granted to one of the user's roles.
   const { data: allowed, error: allowedError } = await supabase
     .from("kcw_role_page_permissions")
     .select("page_key")

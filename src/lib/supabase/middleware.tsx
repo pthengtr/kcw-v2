@@ -1,6 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const PUBLIC_PATH_PREFIXES = ["/login", "/auth", "/error", "/no-access"];
+const PUBLIC_EXACT_PATHS = new Set(["/manifest.webmanifest", "/sw.js"]);
+
+function isPublicPath(pathname: string) {
+  if (PUBLIC_EXACT_PATHS.has(pathname)) return true;
+  return PUBLIC_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -39,20 +49,39 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/api") &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/error") &&
-    // Chrome installability fetches these without a session; do not redirect.
-    request.nextUrl.pathname !== "/manifest.webmanifest" &&
-    request.nextUrl.pathname !== "/sw.js"
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  const pathname = request.nextUrl.pathname;
+  const isApi = pathname.startsWith("/api");
+
+  // Layer 0: must be signed in for app pages (APIs handle their own 401).
+  if (!user && !isApi && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
+  }
+
+  // Layer 1: signed-in users must have at least one role.
+  // Layer 2 (page permissions) is enforced in requirePermission / UI.
+  if (user && !isPublicPath(pathname)) {
+    const { data: roles, error } = await supabase
+      .from("kcw_user_roles")
+      .select("role_key")
+      .eq("user_id", user.id)
+      .limit(1);
+
+    const hasRole = !error && (roles?.length ?? 0) > 0;
+
+    if (!hasRole) {
+      if (isApi) {
+        return NextResponse.json(
+          { error: "No role assigned" },
+          { status: 403 }
+        );
+      }
+
+      const url = request.nextUrl.clone();
+      url.pathname = "/no-access";
+      return NextResponse.redirect(url);
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
