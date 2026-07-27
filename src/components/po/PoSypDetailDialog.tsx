@@ -147,7 +147,7 @@ export default function PoSypDetailDialog({
                   <th className="w-14 p-2 text-center">เตรียม</th>
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
-                  <th className="p-2">HQ Loc1</th>
+                  <th className="p-2">ที่เก็บ HQ</th>
                   <th className="p-2">Qty</th>
                 </tr>
               </thead>
@@ -186,7 +186,7 @@ export default function PoSypDetailDialog({
                         <td className="p-2">{line.bcode ?? "—"}</td>
                         <td className="p-2">{line.detail ?? "—"}</td>
                         <td className="p-2 font-medium">
-                          {line.hq_location1 ?? "—"}
+                          {formatHqLocation(line.hq_location1, line.hq_location2)}
                         </td>
                         <td className="p-2">
                           {line.qty ?? "—"} {line.ui ?? ""}
