@@ -4,7 +4,7 @@ import { useState, type ComponentType } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Banknote, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -34,21 +34,12 @@ type NavbarClientProps = {
   branches: BranchType[];
 };
 
-function BrandMark({
-  onNavigate,
-  compact = false,
-}: {
-  onNavigate?: () => void;
-  compact?: boolean;
-}) {
+function BrandMark({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <Link
       href="/home"
       onClick={onNavigate}
-      className={cn(
-        "flex min-w-0 items-center gap-2 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-1 focus-visible:ring-ring",
-        compact ? "gap-2" : "gap-2.5"
-      )}
+      className="inline-flex shrink-0 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-1 focus-visible:ring-ring"
       aria-label="KCW หน้าแรก"
     >
       <Image
@@ -56,19 +47,9 @@ function BrandMark({
         alt=""
         width={32}
         height={32}
-        className="h-8 w-8 shrink-0 object-contain"
+        className="h-8 w-8 object-contain"
         priority
       />
-      <span className="flex min-w-0 flex-col leading-tight">
-        <span className="truncate text-sm font-semibold tracking-wide text-slate-900">
-          KCW
-        </span>
-        {!compact ? (
-          <span className="truncate text-[11px] text-muted-foreground">
-            ระบบงานภายใน
-          </span>
-        ) : null}
-      </span>
     </Link>
   );
 }
@@ -122,12 +103,12 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
   );
 
   return (
-    <nav className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75">
+    <nav className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:px-6">
-        <div className="md:hidden">
+        <div className="flex items-center gap-2 md:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="เปิดเมนู">
+              <Button variant="ghost" size="icon" aria-label="เปิดเมนู">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -135,15 +116,11 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
               side="left"
               className="flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-0 p-0"
             >
-              <SheetHeader className="border-b border-slate-200/80 px-4 py-4 text-left">
-                <SheetTitle className="sr-only">เมนู</SheetTitle>
-                <BrandMark onNavigate={closeSheet} />
+              <SheetHeader className="border-b border-slate-200 px-4 py-3 text-left">
+                <SheetTitle className="text-base font-semibold">เมนู</SheetTitle>
               </SheetHeader>
 
-              <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-                <p className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  เมนูหลัก
-                </p>
+              <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
                 {linksBeforeExpense.map((link) => (
                   <NavLinkButton
                     key={link.href}
@@ -155,8 +132,8 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                   />
                 ))}
 
-                <p className="mt-3 flex items-center gap-2 px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <Banknote className="h-3.5 w-3.5" aria-hidden />
+                <div className="my-2 border-t border-slate-200" />
+                <p className="px-3 pb-1 text-xs text-muted-foreground">
                   ค่าใช้จ่าย
                 </p>
                 {expenseMobileLinks(branches).map((link) => {
@@ -180,29 +157,29 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                   );
                 })}
 
-                <div className="mt-3 flex flex-col gap-1">
-                  {linksAfterExpense.map((link) => (
-                    <NavLinkButton
-                      key={link.href}
-                      href={link.href}
-                      label={link.label}
-                      icon={link.icon}
-                      active={isNavActive(pathname, link)}
-                      onNavigate={closeSheet}
-                    />
-                  ))}
-                </div>
+                <div className="my-2 border-t border-slate-200" />
+                {linksAfterExpense.map((link) => (
+                  <NavLinkButton
+                    key={link.href}
+                    href={link.href}
+                    label={link.label}
+                    icon={link.icon}
+                    active={isNavActive(pathname, link)}
+                    onNavigate={closeSheet}
+                  />
+                ))}
               </div>
 
-              <div className="border-t border-slate-200/80 px-3 py-3">
+              <div className="border-t border-slate-200 px-2 py-3">
                 <LogoutButton />
               </div>
             </SheetContent>
           </Sheet>
+          <BrandMark />
         </div>
 
-        <div className="min-w-0 flex-1 md:flex-none">
-          <BrandMark compact />
+        <div className="hidden md:block">
+          <BrandMark />
         </div>
 
         <div className="hidden md:flex md:flex-1 md:items-center md:justify-end md:gap-1">
@@ -241,7 +218,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
           </div>
         </div>
 
-        <div className="md:hidden">
+        <div className="ml-auto md:hidden">
           <LogoutButton />
         </div>
       </div>
