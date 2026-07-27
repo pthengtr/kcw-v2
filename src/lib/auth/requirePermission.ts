@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ROLE_ADMIN } from "./rbac-pages";
 
 export type RequirePermissionResult =
-  | { ok: true; userEmail: string }
+  | { ok: true; userId: string; userEmail: string }
   | { ok: false; status: 401 | 403; message: string };
 
 export async function requirePermission(
@@ -34,7 +34,7 @@ export async function requirePermission(
   const roleKeys = (userRoles ?? []).map((r) => r.role_key as string);
 
   if (roleKeys.includes(ROLE_ADMIN)) {
-    return { ok: true, userEmail };
+    return { ok: true, userId, userEmail };
   }
 
   // Layer 1 already required a role in middleware; empty here is still deny.
@@ -58,6 +58,6 @@ export async function requirePermission(
     return { ok: false, status: 403, message: "Forbidden" };
   }
 
-  return { ok: true, userEmail };
+  return { ok: true, userId, userEmail };
 }
 

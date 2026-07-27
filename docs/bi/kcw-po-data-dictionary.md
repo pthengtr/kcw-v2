@@ -17,7 +17,11 @@ Last reviewed: 2026-07-28
 | PO line table: `dbo.PODET` | Confirmed |
 | Related receive/invoice: `dbo.PIMAS` / `dbo.PIDET` (not PO) | Confirmed |
 | `dbo.SAPOS` = cash-register POS — **unrelated**, empty | Confirmed |
-| Not yet ingested into Supabase `raw_kcw` (only PIDET lines today) | Confirmed (2026-07-28) |
+| Ingested into Supabase `raw_kcw` via worker job `sync_pomas_podet` (HQ-PC + SYP-PC) | Confirmed (2026-07-27) |
+| HQ tables: `raw_hq_pomas_purchase_orders`, `raw_hq_podet_purchase_order_lines` (+ `_stg`) | Confirmed |
+| SYP tables: `raw_syp_pomas_purchase_orders`, `raw_syp_podet_purchase_order_lines` (+ `_stg`) | Confirmed |
+| Last sync signal: `max(_ingested_at)` on each header table | Confirmed |
+| SYP open POs are HQ→SYP transfers (vendor = HQ / เกียรติชัย) | Confirmed |
 
 Row counts (local PARTS9 as of 2026-07-28):
 
@@ -155,7 +159,10 @@ WHERE ISNULL(h.CANCELED, '') <> 'Y';
 | Stock / last purchase | Product-movement BI uses **PIDET** receive lines, not open POs | Confirmed (see [purchase dictionary](./kcw-purchase-data-dictionary.md)) |
 | Open commitments | Use `POMAS`/`PODET` where `BILLED='N'` | Confirmed pattern |
 | Vendor | `POMAS.ACCTNO` → APMAS / `party` supplier | Inferred |
-| Supabase | Ingest POMAS/PODET into `raw_kcw` when needed for open-PO dashboards | TBD |
+| Supabase raw | `raw_kcw.raw_{hq\|syp}_pomas_purchase_orders` + `raw_{hq\|syp}_podet_purchase_order_lines` | Confirmed |
+| Sync job | `sync_pomas_podet` — see [worker-jobs.md](../worker-jobs.md); enqueue via `ops.job_queue` | Confirmed |
+| App prepare overlay (SYP only) | `public.po_syp_prepare` — webapp marks prepared for HQ→SYP transfer; not PARTS9 | Confirmed |
+| HQ vs SYP product meaning | **HQ** = open POs to external vendors; **SYP** = orders on HQ (transfer prep) | Confirmed |
 
 Do **not** confuse sales-bill column `"PO"` (CN original bill / TAD txn id — sales dictionary §6.8) with PARTS9 purchase-order `DOCNO`.
 
@@ -166,10 +173,11 @@ Do **not** confuse sales-bill column `"PO"` (CN original bill / TAD txn id — s
 - [x] PO number = `DOCNO` (not `POMAS.PO`) — Confirmed
 - [x] Header↔line join = `DOCNO`; PI link = `PIMAS.PO = POMAS.DOCNO` — Confirmed
 - [x] `BILLED` Y/N = invoiced vs open — Confirmed
+- [x] Ingest path into `raw_kcw` via `sync_pomas_podet` — Confirmed
 - [ ] How to de-dupe rare duplicate `DOCNO` headers
 - [ ] PO-level VAT/`TAXIC`/`BEFORETAX` rules (mirror PIDET/sales or different?)
 - [ ] Whether open-PO qty should use `QTY*MTP` like sales/PIDET
-- [ ] Ingest path into `raw_kcw` + curated open-PO fact
+- [ ] Curated open-PO fact (optional; v1 reads raw)
 
 ---
 
@@ -178,3 +186,4 @@ Do **not** confuse sales-bill column `"PO"` (CN original bill / TAD txn id — s
 | Date | Change | By |
 |------|--------|----|
 | 2026-07-28 | Start PO dictionary from PARTS9 `POMAS`/`PODET` inspection | Owner |
+| 2026-07-28 | Mark `raw_kcw` ingest Confirmed (`sync_pomas_podet`); SYP = HQ→SYP transfer; note `po_syp_prepare` | Owner |

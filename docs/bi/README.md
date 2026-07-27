@@ -14,7 +14,9 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [kcw-expense-data-dictionary.md](./kcw-expense-data-dictionary.md) | App expense tables + amount rules (company + general) |
 | [kcw-income-data-dictionary.md](./kcw-income-data-dictionary.md) | Gross / net income (sales margin − app opex) |
 | [kcw-purchase-data-dictionary.md](./kcw-purchase-data-dictionary.md) | HQ PIDET purchase **invoice** lines (JOURMODE / BILLTYPE) |
-| [kcw-po-data-dictionary.md](./kcw-po-data-dictionary.md) | PARTS9 purchase **orders** (`POMAS`/`PODET`); PO id = `DOCNO` |
+| [kcw-po-data-dictionary.md](./kcw-po-data-dictionary.md) | Purchase **orders** in `raw_kcw` (HQ+SYP); PO id = `DOCNO`; SYP prepare = `po_syp_prepare` |
+| [sql/po_syp_prepare.sql](./sql/po_syp_prepare.sql) | App overlay for SYP “prepared for transfer” |
+| [sql/fn_po_sync_ops.sql](./sql/fn_po_sync_ops.sql) | Service-role RPCs for PO sync via `ops.job_queue` |
 | [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictionary.md) | Stock-more + dead-stock aging rules |
 | [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
 | [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products` |
@@ -26,6 +28,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 
 ## App entry
 
+- UI: `/po` — HQ/SYP purchase-order status (sync via `sync_pomas_podet`; SYP prepare overlay)
 - UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/income`
 - API: `GET /api/bi/sales/overview?from=&to=&branch=`
 - API: `GET /api/bi/sales/compare?mode=years|months&years=&periods=&branch=`

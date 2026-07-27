@@ -75,7 +75,7 @@ Same MTP convention as sales. CN (`BILLTYPE=2`) keeps natural signed qty.
 |-------|------|
 | Sales branch filter | HQ / SYP / ONLINE — applies to **sales** metrics only |
 | Purchase **invoice** metrics | Always HQ PIDET |
-| Purchase **orders** (open/commitment) | PARTS9 `POMAS`/`PODET` — [PO dictionary](./kcw-po-data-dictionary.md); not in `raw_kcw` yet |
+| Purchase **orders** (open/commitment) | `raw_kcw.raw_{hq\|syp}_pomas_*` / `podet_*` via `sync_pomas_podet` — [PO dictionary](./kcw-po-data-dictionary.md) |
 | On-hand | ICMAS `QTYOH2` (HQ master) |
 | Supplier master | PIDET `"ACCTNO"` → `raw_hq_apmas_payable."ACCTNO"` — see [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md) (`MOBILE` = tax id) |
 
@@ -90,3 +90,4 @@ See [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictio
 | 2026-07-26 | Lock JOURMODE 1/2 + BILLTYPE 1/2/3/5/Q; purchases HQ-only for movement BI |
 | 2026-07-27 | Link AP master; note APMAS `MOBILE` = tax id |
 | 2026-07-28 | Clarify PIDET = invoices vs POMAS/PODET orders; link PO dictionary |
+| 2026-07-28 | PO orders now in `raw_kcw` (HQ + SYP); link worker sync |

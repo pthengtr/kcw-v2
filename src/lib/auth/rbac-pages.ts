@@ -19,6 +19,10 @@ export const BANK_PAGE_KEYS = {
   statementSync: "bank_statement_sync",
 } as const;
 
+export const PO_PAGE_KEYS = {
+  status: "po_status",
+} as const;
+
 export const RBAC_PROTECTED_PAGE_KEYS: RbacPageKey[] = [
   ADMIN_RBAC_PAGE,
   BI_PAGE_KEYS.income,
@@ -30,5 +34,6 @@ export const RBAC_PROTECTED_PAGE_KEYS: RbacPageKey[] = [
   BI_PAGE_KEYS.expenses,
   BANK_PAGE_KEYS.tigerPay,
   BANK_PAGE_KEYS.statementSync,
+  PO_PAGE_KEYS.status,
 ];
 
