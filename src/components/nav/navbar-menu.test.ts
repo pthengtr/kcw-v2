@@ -33,7 +33,7 @@ describe("Navbar menu order and design", () => {
     expect(isExpenseActive("/reminder")).toBe(false);
   });
 
-  it("uses a sticky branded navbar with logo home link and mobile sheet", () => {
+  it("uses a sticky logo-only navbar and a simple mobile sheet", () => {
     const navbar = read("src/components/nav/NavbarClient.tsx");
     expect(navbar).toContain("sticky top-0");
     expect(navbar).toContain('href="/home"');
@@ -41,6 +41,12 @@ describe("Navbar menu order and design", () => {
     expect(navbar).toContain("md:hidden");
     expect(navbar).toContain("SheetContent");
     expect(navbar).toContain('aria-label="เปิดเมนู"');
+    expect(navbar).toContain("<SheetTitle");
+    expect(navbar).toContain("เมนู");
     expect(navbar).not.toContain('label: "หน้าแรก"');
+    // Logo already carries the brand; avoid redundant KCW text next to it.
+    expect(navbar).not.toContain(">KCW</");
+    expect(navbar).not.toContain("ระบบงานภายใน");
+    expect(navbar).not.toContain("backdrop-blur");
   });
 });
