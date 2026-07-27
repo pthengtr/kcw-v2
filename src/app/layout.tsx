@@ -13,12 +13,26 @@ const prompt = Prompt({
 
 export const metadata: Metadata = {
   title: "KCW V2",
-  description: "",
+  description: "ระบบงานภายใน KCW",
+  applicationName: "KCW V2",
+  appleWebApp: {
+    capable: true,
+    title: "KCW",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#2563eb",
 };
 
 export default function Layout({
