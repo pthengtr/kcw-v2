@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/common/BackButton";
 import { Button } from "@/components/ui/button";
 import {
   ClipboardList,
@@ -60,7 +61,8 @@ export default function ExpensePageHeader({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3 px-2 sm:flex-row sm:items-center">
-      <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <BackButton href={`/expense/company/${branch}`} />
         <TooltipProvider delayDuration={200}>
           {links.map(({ href, label, icon }) => (
             <Tooltip key={href}>

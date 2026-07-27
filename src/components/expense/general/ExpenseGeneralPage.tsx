@@ -7,6 +7,7 @@ import { expenseGeneralFormDefaultValues } from "./ExpenseGeneralCreateForm";
 import { Button } from "@/components/ui/button";
 import ExpenseGeneralDeleteDialog from "./ExpenseGeneralDeleteDialog";
 import ExpenseGeneralSearchForm from "./ExpenseGeneralSearchForm";
+import BackButton from "@/components/common/BackButton";
 
 export default function ExpenseGeneralPage() {
   const {
@@ -22,6 +23,7 @@ export default function ExpenseGeneralPage() {
       <div className="h-auto w-full min-w-0 p-2 sm:h-[90vh] sm:p-8">
         <ExpenseGeneralTable>
           <div className="flex w-full min-w-0 flex-col items-stretch justify-start gap-2 sm:flex-row sm:items-center">
+            <BackButton href="/expense" />
             <h2 className="px-2 text-lg font-semibold sm:px-4 sm:text-xl">
               ค่าใช้จ่ายทั่วไป
             </h2>

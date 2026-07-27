@@ -4,6 +4,7 @@ import { ProductImageSlotCard } from "./product-image-slot-card";
 import { ProductImageStatusAlert } from "./product-image-status-alert";
 import { UploadAutoCard } from "./upload-auto-card";
 import { ProductImageSearchForm } from "./product-image-search-form";
+import BackButton from "@/components/common/BackButton";
 
 type ProductImageAdminScreenProps = {
   bcode: string;
@@ -26,12 +27,15 @@ export function ProductImageAdminScreen({
 }: ProductImageAdminScreenProps) {
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">จัดการรูปสินค้า</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          ใช้รูปจาก Supabase Storage: pictures/product/[BCODE]/[BCODE].jpg ถึง
-          [BCODE]_4.jpg
-        </p>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <BackButton href="/home" />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">จัดการรูปสินค้า</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            ใช้รูปจาก Supabase Storage: pictures/product/[BCODE]/[BCODE].jpg ถึง
+            [BCODE]_4.jpg
+          </p>
+        </div>
       </div>
 
       <ProductImageStatusAlert status={status} />

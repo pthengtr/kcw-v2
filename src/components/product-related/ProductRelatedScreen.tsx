@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BackButton from "@/components/common/BackButton";
 import {
   Dialog,
   DialogContent,
@@ -112,14 +113,17 @@ export default function ProductRelatedScreen() {
 
   return (
     <main className="mx-auto w-full max-w-7xl space-y-6 p-3 sm:p-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          จัดการสินค้าที่ซื้อด้วยกัน
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          หน้าเดียวสำหรับเลือกสินค้าแม่ข่าย ดู related แบบ first-level
-          จากทุกกลุ่มที่สินค้าอยู่ และค่อยเลือกว่าจะเพิ่มเข้า group ไหนตอนบันทึก
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <BackButton href="/home" />
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight">
+            จัดการสินค้าที่ซื้อด้วยกัน
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            หน้าเดียวสำหรับเลือกสินค้าแม่ข่าย ดู related แบบ first-level
+            จากทุกกลุ่มที่สินค้าอยู่ และค่อยเลือกว่าจะเพิ่มเข้า group ไหนตอนบันทึก
+          </p>
+        </div>
       </div>
 
       {state.banner && (
