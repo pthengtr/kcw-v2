@@ -1,11 +1,13 @@
 # KCW purchase data dictionary (PIDET)
 
-Source of truth for **HQ purchase lines** used by product-movement BI.  
+Source of truth for **HQ purchase invoice lines** (received bills) used by product-movement BI.  
 Table: `raw_kcw.raw_hq_pidet_purchase_lines` (staging twin `_stg` — do not report from).
+
+**Related:** purchase **orders** (`POMAS`/`PODET`) are documented separately in [kcw-po-data-dictionary.md](./kcw-po-data-dictionary.md). PIDET = invoices; POMAS = orders.
 
 Status legend: **Confirmed** · **TBD** · **Inferred**
 
-Last reviewed: 2026-07-26
+Last reviewed: 2026-07-28
 
 ---
 
@@ -14,7 +16,9 @@ Last reviewed: 2026-07-26
 | Fact | Status |
 |------|--------|
 | Purchases always booked at **HQ** (no SYP PIDET) | Confirmed |
-| Grain: 1 row ≈ 1 purchase line | Confirmed |
+| Grain: 1 row ≈ 1 purchase **invoice** line | Confirmed |
+| Source system: PARTS9 `PIDET` (with header `PIMAS`) | Confirmed |
+| Link from PO: `PIMAS.PO = POMAS.DOCNO` (1 PO → many invoices) | Confirmed — see [PO dictionary](./kcw-po-data-dictionary.md) |
 | No curated `fact_purchase_*` yet — BI reads raw HQ PIDET | Confirmed (v1) |
 | App `public.expense_*` is **not** product purchase | Confirmed |
 
@@ -70,7 +74,8 @@ Same MTP convention as sales. CN (`BILLTYPE=2`) keeps natural signed qty.
 | Topic | Rule |
 |-------|------|
 | Sales branch filter | HQ / SYP / ONLINE — applies to **sales** metrics only |
-| Purchase metrics | Always HQ PIDET |
+| Purchase **invoice** metrics | Always HQ PIDET |
+| Purchase **orders** (open/commitment) | PARTS9 `POMAS`/`PODET` — [PO dictionary](./kcw-po-data-dictionary.md); not in `raw_kcw` yet |
 | On-hand | ICMAS `QTYOH2` (HQ master) |
 | Supplier master | PIDET `"ACCTNO"` → `raw_hq_apmas_payable."ACCTNO"` — see [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md) (`MOBILE` = tax id) |
 
@@ -84,3 +89,4 @@ See [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictio
 |------|--------|
 | 2026-07-26 | Lock JOURMODE 1/2 + BILLTYPE 1/2/3/5/Q; purchases HQ-only for movement BI |
 | 2026-07-27 | Link AP master; note APMAS `MOBILE` = tax id |
+| 2026-07-28 | Clarify PIDET = invoices vs POMAS/PODET orders; link PO dictionary |
