@@ -8,6 +8,7 @@ Living docs for BI dashboards. Sales/product/customer reports use `raw_kcw` / `c
 |------|---------|
 | [kcw-sales-data-dictionary.md](./kcw-sales-data-dictionary.md) | Sales naming, grain, joins, codes, billing rules; customer `ACCTNO` / party |
 | [kcw-icmas-data-dictionary.md](./kcw-icmas-data-dictionary.md) | Product master (ICMAS): `BCODE`, `CODE1`, categories |
+| [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md) | AR/AP masters (ARMAS/APMAS); **`MOBILE` = tax id** |
 | [kcw-expense-data-dictionary.md](./kcw-expense-data-dictionary.md) | App expense tables + amount rules (company + general) |
 | [kcw-income-data-dictionary.md](./kcw-income-data-dictionary.md) | Gross / net income (sales margin − app opex) |
 | [kcw-purchase-data-dictionary.md](./kcw-purchase-data-dictionary.md) | HQ PIDET purchase lines (JOURMODE / BILLTYPE) |

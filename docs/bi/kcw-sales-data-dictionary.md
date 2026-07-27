@@ -457,6 +457,7 @@ July 2026 check (revenue filters): line `ACCTNO` equals bill `ACCTNO` whenever f
 4. **Display name priority:** `party.party_name` → else bill `ACCTNAME` → else `ACCTNO`. Party is master.
 5. **Unmatched:** keep the `ACCTNO` (and bill name if any); do **not** invent party rows. UI may show the full unmatched list so operators can add/sync into party.
 6. **Related party tables:** `party`, `party_tax_info`, `party_bank_info`, `party_contact` (`kind`: `CUSTOMER` / `SUPPLIER` / `BOTH`).
+7. **KACC AR/AP masters:** `raw_hq_armas_receivable` / `raw_hq_apmas_payable` — see [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md). In those tables, **`MOBILE` is tax id**, not phone (`PHONE` is the phone field).
 
 RPC: `public.fn_bi_customer_overview` · UI `/bi/customers`.
 
@@ -841,6 +842,7 @@ Walk-in totals may be reported separately but are outside the ranking set.
 | 2026-07-25 | Ship sales overview dashboard + `fn_bi_sales_overview` (bill BEFORETAX; VAT/branch/channel splits) | Cursor |
 | 2026-07-26 | Confirm ACCTNO (AR customer) vs ACCT_NO (AP/supplier); customer ranking rules + party master; ship `fn_bi_customer_overview` | Owner + Cursor |
 | 2026-07-26 | Lock gross margin §8.5 (LAST_PURCHASE_COST; blank=0; ignore XPRICE) + income report net = gross − opex | Owner + Cursor |
+| 2026-07-27 | Cross-link ARMAS/APMAS; `MOBILE` = tax id (see ar-ap dictionary) | Owner |
 
 ---
 
