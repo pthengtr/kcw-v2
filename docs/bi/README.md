@@ -11,7 +11,8 @@ Living docs for BI dashboards. Sales/product/customer reports use `raw_kcw` / `c
 | [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md) | AR/AP masters (ARMAS/APMAS); **`MOBILE` = tax id** |
 | [kcw-expense-data-dictionary.md](./kcw-expense-data-dictionary.md) | App expense tables + amount rules (company + general) |
 | [kcw-income-data-dictionary.md](./kcw-income-data-dictionary.md) | Gross / net income (sales margin − app opex) |
-| [kcw-purchase-data-dictionary.md](./kcw-purchase-data-dictionary.md) | HQ PIDET purchase lines (JOURMODE / BILLTYPE) |
+| [kcw-purchase-data-dictionary.md](./kcw-purchase-data-dictionary.md) | HQ PIDET purchase **invoice** lines (JOURMODE / BILLTYPE) |
+| [kcw-po-data-dictionary.md](./kcw-po-data-dictionary.md) | PARTS9 purchase **orders** (`POMAS`/`PODET`); PO id = `DOCNO` |
 | [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictionary.md) | Stock-more + dead-stock aging rules |
 | [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
 | [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products` |
