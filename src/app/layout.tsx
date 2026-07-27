@@ -3,6 +3,7 @@ import { Prompt } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import GlobalLoadingUI from "@/components/common/GlobalLoading";
+import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 
 const prompt = Prompt({
   weight: ["400", "700"],
@@ -27,6 +28,7 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
@@ -46,6 +48,7 @@ export default function Layout({
         <GlobalLoadingUI />
         {children}
         <Toaster richColors expand={true} />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

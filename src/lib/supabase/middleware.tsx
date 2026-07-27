@@ -44,7 +44,10 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/api") &&
     !request.nextUrl.pathname.startsWith("/login") &&
     !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/error")
+    !request.nextUrl.pathname.startsWith("/error") &&
+    // Chrome installability fetches these without a session; do not redirect.
+    request.nextUrl.pathname !== "/manifest.webmanifest" &&
+    request.nextUrl.pathname !== "/sw.js"
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();

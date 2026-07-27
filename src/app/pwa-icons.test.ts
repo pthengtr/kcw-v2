@@ -5,6 +5,10 @@ import manifest from "@/app/manifest";
 
 const ROOT = process.cwd();
 
+function read(rel: string) {
+  return fs.readFileSync(path.join(ROOT, rel), "utf8");
+}
+
 describe("PWA install icons", () => {
   it("ships KCW logo icons for Chrome Add to Home Screen", () => {
     for (const rel of [
@@ -42,12 +46,25 @@ describe("PWA install icons", () => {
   });
 
   it("declares apple web app metadata for mobile install", () => {
-    const layout = fs.readFileSync(
-      path.join(ROOT, "src/app/layout.tsx"),
-      "utf8"
-    );
+    const layout = read("src/app/layout.tsx");
     expect(layout).toContain("appleWebApp");
     expect(layout).toContain("/icons/apple-touch-icon.png");
     expect(layout).toContain('themeColor: "#2563eb"');
+    expect(layout).toContain("ServiceWorkerRegister");
+    expect(layout).toContain('manifest: "/manifest.webmanifest"');
+  });
+
+  it("keeps manifest and service worker reachable without auth redirect", () => {
+    const middleware = read("src/middleware.ts");
+    const session = read("src/lib/supabase/middleware.tsx");
+    const sw = read("public/sw.js");
+    const register = read("src/components/pwa/ServiceWorkerRegister.tsx");
+
+    expect(middleware.includes("webmanifest")).toBe(true);
+    expect(middleware.includes("sw")).toBe(true);
+    expect(session).toContain('pathname !== "/manifest.webmanifest"');
+    expect(session).toContain('pathname !== "/sw.js"');
+    expect(sw).toContain('addEventListener("fetch"');
+    expect(register).toContain('register("/sw.js"');
   });
 });
