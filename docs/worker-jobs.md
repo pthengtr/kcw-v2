@@ -108,6 +108,14 @@ When adding a type here, update kcw-api LINE triggers the same way so chat and w
 
 New features almost never need new queue tables — only new `job_type` values and matching BAT/env on workers.
 
+### PO sync from `/po` (kcw-v2)
+
+- Job: `sync_pomas_podet` with `{ "task":"sync_pomas_podet", "site":"HQ"|"SYP" }`
+- Before insert: if a row for that `site` is already `pending`/`running`, return **already running** (do not enqueue another).
+- Gate on the matching PC heartbeat (`HQ-PC` / `SYP-PC`).
+- UI shows `max(_ingested_at)` as last updated; SYP prepare marks live in `public.po_syp_prepare` (not PARTS9).
+- **Note:** PostgREST does not expose schema `ops`. Webapp uses service-role RPCs `fn_po_worker_heartbeat`, `fn_po_find_inflight_sync`, `fn_po_enqueue_sync`, `fn_po_get_job` (see [bi/sql/fn_po_sync_ops.sql](./bi/sql/fn_po_sync_ops.sql)).
+
 ### Do / don’t
 
 | Do | Don’t |

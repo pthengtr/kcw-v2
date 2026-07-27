@@ -63,6 +63,7 @@ describe("Shared back navigation", () => {
       "src/components/expense/item/ExpenseItemPage.tsx",
       "src/components/bank/BankStatementSyncPage.tsx",
       "src/components/bank/TigerPayPage.tsx",
+      "src/components/po/PoStatusPage.tsx",
       "src/components/rbac/RbacAdminPage.tsx",
       "src/components/party/PartyScreen.tsx",
       "src/components/reminder/ReminderTable.tsx",
