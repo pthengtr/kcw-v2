@@ -72,6 +72,7 @@ Same MTP convention as sales. CN (`BILLTYPE=2`) keeps natural signed qty.
 | Sales branch filter | HQ / SYP / ONLINE — applies to **sales** metrics only |
 | Purchase metrics | Always HQ PIDET |
 | On-hand | ICMAS `QTYOH2` (HQ master) |
+| Supplier master | PIDET `"ACCTNO"` → `raw_hq_apmas_payable."ACCTNO"` — see [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md) (`MOBILE` = tax id) |
 
 See [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictionary.md).
 
@@ -82,3 +83,4 @@ See [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictio
 | Date | Change |
 |------|--------|
 | 2026-07-26 | Lock JOURMODE 1/2 + BILLTYPE 1/2/3/5/Q; purchases HQ-only for movement BI |
+| 2026-07-27 | Link AP master; note APMAS `MOBILE` = tax id |
