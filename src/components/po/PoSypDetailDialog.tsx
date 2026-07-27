@@ -148,16 +148,13 @@ export default function PoSypDetailDialog({
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
                   <th className="p-2">HQ Loc1</th>
-                  <th className="p-2">HQ Loc2</th>
                   <th className="p-2">Qty</th>
-                  <th className="p-2">ราคา</th>
-                  <th className="p-2">จำนวนเงิน</th>
                 </tr>
               </thead>
               <tbody>
                 {lines.length === 0 ? (
                   <tr>
-                    <td className="p-2 text-muted-foreground" colSpan={8}>
+                    <td className="p-2 text-muted-foreground" colSpan={5}>
                       ไม่มีรายการ
                     </td>
                   </tr>
@@ -191,14 +188,9 @@ export default function PoSypDetailDialog({
                         <td className="p-2 font-medium">
                           {line.hq_location1 ?? "—"}
                         </td>
-                        <td className="p-2 font-medium">
-                          {line.hq_location2 ?? "—"}
-                        </td>
                         <td className="p-2">
                           {line.qty ?? "—"} {line.ui ?? ""}
                         </td>
-                        <td className="p-2">{formatPoAmount(line.price)}</td>
-                        <td className="p-2">{formatPoAmount(line.amount)}</td>
                       </tr>
                     );
                   })
