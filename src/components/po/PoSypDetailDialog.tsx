@@ -144,8 +144,10 @@ export default function PoSypDetailDialog({
             <table className="w-full min-w-[52rem] border-collapse text-sm print:min-w-0">
               <thead>
                 <tr className="border-b bg-muted/40 text-left">
-                  <th className="p-2 print:hidden">เตรียม</th>
-                  <th className="p-2">Line</th>
+                  <th className="w-14 p-2 text-center">เตรียม</th>
+                  <th className="p-2" title="หมายเลขบรรทัดใน PARTS9 (PODET.LINE)">
+                    บรรทัด
+                  </th>
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
                   <th className="p-2">HQ Loc1</th>
@@ -169,14 +171,22 @@ export default function PoSypDetailDialog({
                       savingLine === `${selected?.docno}:${lineKey}`;
                     return (
                       <tr key={`${lineKey}-${i}`} className="border-b">
-                        <td className="p-2 print:hidden">
-                          <Checkbox
-                            checked={Boolean(line.prepared)}
-                            disabled={busy || !line.line}
-                            onCheckedChange={(value) =>
-                              onToggleLinePrepared(line, value === true)
-                            }
-                            aria-label={`เตรียมบรรทัด ${line.line ?? ""}`}
+                        <td className="p-2 text-center align-middle">
+                          {/* Screen: interactive checkbox */}
+                          <span className="inline-flex print:hidden">
+                            <Checkbox
+                              checked={Boolean(line.prepared)}
+                              disabled={busy || !line.line}
+                              onCheckedChange={(value) =>
+                                onToggleLinePrepared(line, value === true)
+                              }
+                              aria-label={`เตรียมบรรทัด ${line.line ?? ""}`}
+                            />
+                          </span>
+                          {/* Print: empty box for handwritten check */}
+                          <span
+                            aria-hidden
+                            className="mx-auto hidden h-4 w-4 border border-black print:inline-block"
                           />
                         </td>
                         <td className="p-2">{line.line ?? "—"}</td>
