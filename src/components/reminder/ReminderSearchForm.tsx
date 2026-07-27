@@ -60,11 +60,12 @@ function cleanSearchText(value: string) {
 export default function ReminderSearchForm({
   defaultValues,
 }: ReminderSearchFormProps) {
-  const { setReminders, setTotal } = useContext(
+  const { setReminders, setTotal, setLoading } = useContext(
     ReminderContext,
   ) as ReminderContextType;
 
   async function searchReminder(values: ReminderSearchFormValues) {
+    setLoading(true);
     const searchData = {
       party_search: values.search_supplier_name.trim(),
       note_id: values.note_id.trim(),
@@ -93,6 +94,7 @@ export default function ReminderSearchForm({
 
       if (partyError) {
         console.log(partyError);
+        setLoading(false);
         return;
       }
 
@@ -101,6 +103,7 @@ export default function ReminderSearchForm({
       if (partyUuids.length === 0) {
         setReminders([]);
         setTotal(0);
+        setLoading(false);
         return;
       }
 
@@ -139,6 +142,7 @@ export default function ReminderSearchForm({
 
     if (error) {
       console.log(error);
+      setLoading(false);
       return;
     }
 
@@ -149,6 +153,7 @@ export default function ReminderSearchForm({
     if (count !== null && count !== undefined) {
       setTotal(count);
     }
+    setLoading(false);
   }
 
   async function onSubmit(values: ReminderSearchFormValues) {

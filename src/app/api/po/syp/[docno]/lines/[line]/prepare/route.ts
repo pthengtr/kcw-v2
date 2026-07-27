@@ -3,14 +3,13 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
-import { upsertSypPrepare } from "@/lib/po/po-queries";
+import { upsertSypPrepareLine } from "@/lib/po/po-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-type Params = { params: Promise<{ docno: string }> };
+type Params = { params: Promise<{ docno: string; line: string }> };
 
 const BodySchema = z.object({
   prepared: z.boolean(),
-  note: z.string().max(500).nullable().optional(),
 });
 
 export async function PATCH(req: Request, { params }: Params) {
@@ -22,10 +21,14 @@ export async function PATCH(req: Request, { params }: Params) {
     );
   }
 
-  const { docno: rawDocno } = await params;
+  const { docno: rawDocno, line: rawLine } = await params;
   const docno = decodeURIComponent(rawDocno ?? "").trim();
-  if (!docno) {
-    return NextResponse.json({ error: "Missing DOCNO" }, { status: 400 });
+  const line = decodeURIComponent(rawLine ?? "").trim();
+  if (!docno || !line) {
+    return NextResponse.json(
+      { error: "Missing DOCNO or LINE" },
+      { status: 400 }
+    );
   }
 
   let body: unknown;
@@ -42,19 +45,18 @@ export async function PATCH(req: Request, { params }: Params) {
 
   try {
     const supabase = createAdminClient();
-    const row = await upsertSypPrepare({
+    const result = await upsertSypPrepareLine({
       supabase,
       docno,
+      line,
       prepared: parsed.data.prepared,
-      note: parsed.data.note ?? null,
       userId: permCheck.userId,
-      syncLines: true,
     });
-    return NextResponse.json({ row });
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("po syp prepare", error);
+    console.error("po syp line prepare", error);
     return NextResponse.json(
-      { error: "Unable to update prepare status" },
+      { error: "Unable to update line prepare status" },
       { status: 500 }
     );
   }

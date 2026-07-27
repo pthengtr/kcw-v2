@@ -59,6 +59,7 @@ import { FileSpreadsheet, GripVertical } from "lucide-react";
 import { setMyCookie } from "@/app/(root)/action";
 import { Button } from "../ui/button";
 import { exportTableToCSV } from "@/lib/utils";
+import TableLoadingState from "@/components/common/TableLoadingState";
 
 interface DataTableProps<TData, TValue> {
   children?: React.ReactNode;
@@ -73,6 +74,7 @@ interface DataTableProps<TData, TValue> {
   setCustomColumnFilters?: Dispatch<SetStateAction<ColumnFiltersState>>;
   exportButton?: boolean;
   filterInHeader?: boolean;
+  loading?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -88,6 +90,7 @@ export function DataTable<TData, TValue>({
   setCustomColumnFilters,
   exportButton = false,
   filterInHeader = true,
+  loading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [_columnFilters, _setColumnFilters] = useState<ColumnFiltersState>(
@@ -277,11 +280,17 @@ export function DataTable<TData, TValue>({
                   ))}
                 </TableRow>
               ))
+            ) : loading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="p-0">
+                  <TableLoadingState />
+                </TableCell>
+              </TableRow>
             ) : (
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-24 text-center text-muted-foreground"
                 >
                   ไม่พบข้อมูล
                 </TableCell>

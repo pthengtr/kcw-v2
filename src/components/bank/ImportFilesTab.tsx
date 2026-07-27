@@ -48,7 +48,7 @@ function statusBadgeVariant(status: string): BadgeProps["variant"] {
 export default function ImportFilesTab({ refreshToken }: { refreshToken: number }) {
   const [rows, setRows] = useState<StatementImportFileRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [status, setStatus] = useState<string>("all");
@@ -230,7 +230,6 @@ export default function ImportFilesTab({ refreshToken }: { refreshToken: number 
       </div>
 
       {error && <div className="text-sm text-red-600">{error}</div>}
-      {loading && <div className="text-sm text-muted-foreground">กำลังโหลด...</div>}
 
       <ServerPagedTable
         columns={columns}
@@ -241,6 +240,7 @@ export default function ImportFilesTab({ refreshToken }: { refreshToken: number 
         onLimitChange={setLimit}
         onOffsetChange={setOffset}
         onRowClick={openDetail}
+        loading={loading}
       />
 
       <Dialog open={open} onOpenChange={setOpen}>

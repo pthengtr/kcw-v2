@@ -43,16 +43,15 @@ export type PoLineRow = {
   mtp: string | null;
   price: string | null;
   amount: string | null;
+  hq_location1?: string | null;
+  hq_location2?: string | null;
+  prepared?: boolean;
+  prepared_at?: string | null;
+  prepared_by?: string | null;
 };
 
 function raw(supabase: SupabaseClient) {
   return supabase.schema("raw_kcw");
-}
-
-function headerTable(site: PoSyncSite) {
-  return site === "HQ"
-    ? "raw_hq_pomas_purchase_orders"
-    : "raw_syp_pomas_purchase_orders";
 }
 
 function lineTable(site: PoSyncSite) {
@@ -61,66 +60,59 @@ function lineTable(site: PoSyncSite) {
     : "raw_syp_podet_purchase_order_lines";
 }
 
-function mapHeader(row: Record<string, unknown>): PoHeaderRow {
-  return {
-    docno: String(row.DOCNO ?? ""),
-    docdate: (row.DOCDATE as string | null) ?? null,
-    acctno: (row.ACCTNO as string | null) ?? null,
-    acctname: (row.ACCTNAME as string | null) ?? null,
-    billed: (row.BILLED as string | null) ?? null,
-    canceled: (row.CANCELED as string | null) ?? null,
-    beforetax: (row.BEFORETAX as string | null) ?? null,
-    tax: (row.TAX as string | null) ?? null,
-    aftertax: (row.AFTERTAX as string | null) ?? null,
-    billno: (row.BILLNO as string | null) ?? null,
-    billdate: (row.BILLDATE as string | null) ?? null,
-    remarks: (row.REMARKS as string | null) ?? null,
-    ingested_at: (row._ingested_at as string | null) ?? null,
-  };
-}
-
 function mapLine(row: Record<string, unknown>): PoLineRow {
   return {
-    docno: String(row.DOCNO ?? ""),
-    line: (row.LINE as string | null) ?? null,
-    itemno: (row.ITEMNO as string | null) ?? null,
-    bcode: (row.BCODE as string | null) ?? null,
-    detail: (row.DETAIL as string | null) ?? null,
-    qty: (row.QTY as string | null) ?? null,
-    ui: (row.UI as string | null) ?? null,
-    mtp: (row.MTP as string | null) ?? null,
-    price: (row.PRICE as string | null) ?? null,
-    amount: (row.AMOUNT as string | null) ?? null,
+    docno: String(row.DOCNO ?? row.docno ?? ""),
+    line: ((row.LINE ?? row.line) as string | null) ?? null,
+    itemno: ((row.ITEMNO ?? row.itemno) as string | null) ?? null,
+    bcode: ((row.BCODE ?? row.bcode) as string | null) ?? null,
+    detail: ((row.DETAIL ?? row.detail) as string | null) ?? null,
+    qty: ((row.QTY ?? row.qty) as string | null) ?? null,
+    ui: ((row.UI ?? row.ui) as string | null) ?? null,
+    mtp: ((row.MTP ?? row.mtp) as string | null) ?? null,
+    price: ((row.PRICE ?? row.price) as string | null) ?? null,
+    amount: ((row.AMOUNT ?? row.amount) as string | null) ?? null,
+    hq_location1: (row.hq_location1 as string | null | undefined) ?? null,
+    hq_location2: (row.hq_location2 as string | null | undefined) ?? null,
+    prepared:
+      row.prepared === undefined ? undefined : Boolean(row.prepared),
+    prepared_at: (row.prepared_at as string | null | undefined) ?? null,
+    prepared_by: (row.prepared_by as string | null | undefined) ?? null,
   };
 }
 
-function applyStatusFilter(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  query: any,
-  status: PoStatusFilter
-) {
-  if (status === "open") {
-    return query.eq("BILLED", "N").neq("CANCELED", "Y");
-  }
-  if (status === "billed") {
-    return query.eq("BILLED", "Y");
-  }
-  return query;
+function mapRpcHeader(row: Record<string, unknown>): PoHeaderRow {
+  return {
+    docno: String(row.docno ?? ""),
+    docdate: (row.docdate as string | null) ?? null,
+    acctno: (row.acctno as string | null) ?? null,
+    acctname: (row.acctname as string | null) ?? null,
+    billed: (row.billed as string | null) ?? null,
+    canceled: (row.canceled as string | null) ?? null,
+    beforetax: (row.beforetax as string | null) ?? null,
+    tax: (row.tax as string | null) ?? null,
+    aftertax: (row.aftertax as string | null) ?? null,
+    billno: (row.billno as string | null) ?? null,
+    billdate: (row.billdate as string | null) ?? null,
+    remarks: (row.remarks as string | null) ?? null,
+    ingested_at: (row.ingested_at as string | null) ?? null,
+    prepared:
+      row.prepared === undefined ? undefined : Boolean(row.prepared),
+    prepared_at: (row.prepared_at as string | null | undefined) ?? null,
+    prepared_by: (row.prepared_by as string | null | undefined) ?? null,
+    note: (row.note as string | null | undefined) ?? null,
+  };
 }
 
 export async function fetchLastIngestedAt(
   supabase: SupabaseClient,
   site: PoSyncSite
 ): Promise<string | null> {
-  const { data, error } = await raw(supabase)
-    .from(headerTable(site))
-    .select("_ingested_at")
-    .order("_ingested_at", { ascending: false })
-    .limit(1);
-
+  const { data, error } = await supabase.rpc("fn_po_last_ingested_at", {
+    p_site: site,
+  });
   if (error) throw error;
-  const row = (data ?? [])[0] as { _ingested_at?: string } | undefined;
-  return row?._ingested_at ?? null;
+  return (data as string | null) ?? null;
 }
 
 export async function fetchPoMeta(supabase: SupabaseClient) {
@@ -154,22 +146,24 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     },
   };
 
-  for (const site of sites) {
-    const workerName = workerNameForSite(site);
-    const [lastIngestedAt, heartbeat, inFlightJob] = await Promise.all([
-      fetchLastIngestedAt(supabase, site),
-      getWorkerHeartbeat(supabase, workerName),
-      findInFlightPoSync(supabase, site),
-    ]);
-    result[site] = {
-      lastIngestedAt,
-      workerName,
-      workerOnline: isWorkerOnline(heartbeat?.last_seen ?? null),
-      workerLastSeen: heartbeat?.last_seen ?? null,
-      workerStatus: heartbeat?.status ?? null,
-      inFlightJob,
-    };
-  }
+  await Promise.all(
+    sites.map(async (site) => {
+      const workerName = workerNameForSite(site);
+      const [lastIngestedAt, heartbeat, inFlightJob] = await Promise.all([
+        fetchLastIngestedAt(supabase, site),
+        getWorkerHeartbeat(supabase, workerName),
+        findInFlightPoSync(supabase, site),
+      ]);
+      result[site] = {
+        lastIngestedAt,
+        workerName,
+        workerOnline: isWorkerOnline(heartbeat?.last_seen ?? null),
+        workerLastSeen: heartbeat?.last_seen ?? null,
+        workerStatus: heartbeat?.status ?? null,
+        inFlightJob,
+      };
+    })
+  );
 
   return result;
 }
@@ -193,97 +187,28 @@ export async function listPoHeaders(params: {
     prepareFilter = "all",
   } = params;
 
-  let preparedDocnos: string[] | null = null;
-  if (site === "SYP" && prepareFilter !== "all") {
-    const { data, error } = await supabase
-      .from("po_syp_prepare")
-      .select("docno")
-      .eq("prepared", true);
-    if (error) throw error;
-    preparedDocnos = (data ?? []).map((r) => r.docno as string);
-  }
-
-  let query = raw(supabase)
-    .from(headerTable(site))
-    .select(
-      "DOCNO, DOCDATE, ACCTNO, ACCTNAME, BILLED, CANCELED, BEFORETAX, TAX, AFTERTAX, BILLNO, BILLDATE, REMARKS, _ingested_at",
-      { count: "exact" }
-    );
-
-  query = applyStatusFilter(query, status);
-
-  if (q?.trim()) {
-    const term = q.trim().replace(/[%(),]/g, "");
-    if (term) {
-      query = query.or(
-        `DOCNO.ilike.%${term}%,ACCTNAME.ilike.%${term}%,ACCTNO.ilike.%${term}%`
-      );
-    }
-  }
-
-  if (site === "SYP" && preparedDocnos) {
-    if (prepareFilter === "prepared") {
-      if (preparedDocnos.length === 0) {
-        return { rows: [], count: 0 };
-      }
-      query = query.in("DOCNO", preparedDocnos);
-    } else if (prepareFilter === "not_prepared") {
-      if (preparedDocnos.length > 0) {
-        // PostgREST: not.in.(a,b)
-        query = query.not(
-          "DOCNO",
-          "in",
-          `(${preparedDocnos.map((d) => `"${d.replace(/"/g, "")}"`).join(",")})`
-        );
-      }
-    }
-  }
-
-  const { data, error, count } = await query
-    .order("DOCDATE", { ascending: false })
-    .order("DOCNO", { ascending: false })
-    .range(offset, offset + limit - 1);
+  const { data, error } = await supabase.rpc("fn_po_list", {
+    p_site: site,
+    p_status: status,
+    p_prepare: site === "SYP" ? prepareFilter : "all",
+    p_q: q?.trim() || null,
+    p_limit: limit,
+    p_offset: offset,
+  });
 
   if (error) throw error;
 
-  const headers = ((data ?? []) as Record<string, unknown>[]).map(mapHeader);
+  const payload = data as
+    | { rows?: Record<string, unknown>[]; count?: number | null }
+    | null;
 
-  if (site !== "SYP" || headers.length === 0) {
-    return { rows: headers, count: count ?? null };
-  }
+  const rows = (payload?.rows ?? []).map(mapRpcHeader);
+  const count =
+    payload?.count === null || payload?.count === undefined
+      ? null
+      : Number(payload.count);
 
-  const docnos = headers.map((h) => h.docno).filter(Boolean);
-  const { data: prepareRows, error: prepareError } = await supabase
-    .from("po_syp_prepare")
-    .select("docno, prepared, prepared_at, prepared_by, note")
-    .in("docno", docnos);
-
-  if (prepareError) throw prepareError;
-
-  const prepareMap = new Map(
-    (prepareRows ?? []).map((r) => [
-      r.docno as string,
-      {
-        prepared: Boolean(r.prepared),
-        prepared_at: (r.prepared_at as string | null) ?? null,
-        prepared_by: (r.prepared_by as string | null) ?? null,
-        note: (r.note as string | null) ?? null,
-      },
-    ])
-  );
-
-  const rows = headers.map((h) => {
-    const p = prepareMap.get(h.docno);
-    return {
-      ...h,
-      prepared: p?.prepared ?? false,
-      prepared_at: p?.prepared_at ?? null,
-      prepared_by: p?.prepared_by ?? null,
-      note: p?.note ?? null,
-    };
-  });
-
-  return { rows, count: count ?? null };
+  return { rows, count: Number.isFinite(count) ? count : null };
 }
 
 export async function fetchPoLines(params: {
@@ -292,6 +217,16 @@ export async function fetchPoLines(params: {
   docno: string;
 }): Promise<PoLineRow[]> {
   const { supabase, site, docno } = params;
+
+  if (site === "SYP") {
+    const { data, error } = await supabase.rpc("fn_po_syp_lines", {
+      p_docno: docno,
+    });
+    if (error) throw error;
+    const payload = data as { lines?: Record<string, unknown>[] } | null;
+    return (payload?.lines ?? []).map(mapLine);
+  }
+
   const { data, error } = await raw(supabase)
     .from(lineTable(site))
     .select("DOCNO, LINE, ITEMNO, BCODE, DETAIL, QTY, UI, MTP, PRICE, AMOUNT")
@@ -302,12 +237,91 @@ export async function fetchPoLines(params: {
   return ((data ?? []) as Record<string, unknown>[]).map(mapLine);
 }
 
+async function syncHeaderPreparedFromLines(params: {
+  supabase: SupabaseClient;
+  docno: string;
+  userId: string;
+  note?: string | null;
+}) {
+  const { supabase, docno, userId, note } = params;
+  const lines = await fetchPoLines({ supabase, site: "SYP", docno });
+  const allPrepared =
+    lines.length > 0 && lines.every((line) => Boolean(line.prepared));
+  await upsertSypPrepare({
+    supabase,
+    docno,
+    prepared: allPrepared,
+    note: note ?? null,
+    userId,
+  });
+  return { allPrepared, lines };
+}
+
+export async function upsertSypPrepareLine(params: {
+  supabase: SupabaseClient;
+  docno: string;
+  line: string;
+  prepared: boolean;
+  userId: string;
+}): Promise<{
+  line: {
+    docno: string;
+    line: string;
+    prepared: boolean;
+    prepared_at: string | null;
+    prepared_by: string | null;
+    updated_at: string;
+  };
+  headerPrepared: boolean;
+  lines: PoLineRow[];
+}> {
+  const { supabase, docno, line, prepared, userId } = params;
+  const now = new Date().toISOString();
+  const payload = {
+    docno,
+    line,
+    prepared,
+    prepared_at: prepared ? now : null,
+    prepared_by: prepared ? userId : null,
+    updated_at: now,
+  };
+
+  const { data, error } = await supabase
+    .from("po_syp_prepare_line")
+    .upsert(payload, { onConflict: "docno,line" })
+    .select("docno, line, prepared, prepared_at, prepared_by, updated_at")
+    .single();
+
+  if (error) throw error;
+
+  const synced = await syncHeaderPreparedFromLines({
+    supabase,
+    docno,
+    userId,
+  });
+
+  return {
+    line: data as {
+      docno: string;
+      line: string;
+      prepared: boolean;
+      prepared_at: string | null;
+      prepared_by: string | null;
+      updated_at: string;
+    },
+    headerPrepared: synced.allPrepared,
+    lines: synced.lines,
+  };
+}
+
 export async function upsertSypPrepare(params: {
   supabase: SupabaseClient;
   docno: string;
   prepared: boolean;
   note?: string | null;
   userId: string;
+  /** When true, also set every PODET line prepare flag to match. */
+  syncLines?: boolean;
 }): Promise<{
   docno: string;
   prepared: boolean;
@@ -315,8 +329,9 @@ export async function upsertSypPrepare(params: {
   prepared_by: string | null;
   note: string | null;
   updated_at: string;
+  lines?: PoLineRow[];
 }> {
-  const { supabase, docno, prepared, note, userId } = params;
+  const { supabase, docno, prepared, note, userId, syncLines = false } = params;
   const now = new Date().toISOString();
   const payload = {
     docno,
@@ -334,12 +349,41 @@ export async function upsertSypPrepare(params: {
     .single();
 
   if (error) throw error;
-  return data as {
-    docno: string;
-    prepared: boolean;
-    prepared_at: string | null;
-    prepared_by: string | null;
-    note: string | null;
-    updated_at: string;
+
+  let lines: PoLineRow[] | undefined;
+  if (syncLines) {
+    const currentLines = await fetchPoLines({ supabase, site: "SYP", docno });
+    if (currentLines.length > 0) {
+      const linePayload = currentLines
+        .map((l) => l.line)
+        .filter((line): line is string => Boolean(line))
+        .map((line) => ({
+          docno,
+          line,
+          prepared,
+          prepared_at: prepared ? now : null,
+          prepared_by: prepared ? userId : null,
+          updated_at: now,
+        }));
+      if (linePayload.length > 0) {
+        const { error: lineError } = await supabase
+          .from("po_syp_prepare_line")
+          .upsert(linePayload, { onConflict: "docno,line" });
+        if (lineError) throw lineError;
+      }
+    }
+    lines = await fetchPoLines({ supabase, site: "SYP", docno });
+  }
+
+  return {
+    ...(data as {
+      docno: string;
+      prepared: boolean;
+      prepared_at: string | null;
+      prepared_by: string | null;
+      note: string | null;
+      updated_at: string;
+    }),
+    lines,
   };
 }

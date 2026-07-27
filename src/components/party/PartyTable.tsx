@@ -12,6 +12,7 @@ import {
 import { Pencil } from "lucide-react";
 import { Party } from "./PartyProvider";
 import { cn } from "@/lib/utils";
+import TableLoadingState from "@/components/common/TableLoadingState";
 
 export default function PartyTable({
   items,
@@ -91,6 +92,13 @@ export default function PartyTable({
                 className="text-center text-sm text-muted-foreground"
               >
                 ไม่มีข้อมูล
+              </TableCell>
+            </TableRow>
+          )}
+          {loading && items.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={5} className="p-0">
+                <TableLoadingState />
               </TableCell>
             </TableRow>
           )}

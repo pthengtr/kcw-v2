@@ -36,7 +36,7 @@ function billedVariant(billed: string | null | undefined): BadgeProps["variant"]
 export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
   const [rows, setRows] = useState<PoHeaderRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [status, setStatus] = useState<"open" | "billed" | "all">("open");
@@ -175,9 +175,6 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
       </div>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {loading ? (
-        <p className="text-sm text-muted-foreground">กำลังโหลด…</p>
-      ) : null}
 
       <ServerPagedTable
         columns={columns}
@@ -188,6 +185,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
         onOffsetChange={setOffset}
         onLimitChange={setLimit}
         onRowClick={openDetail}
+        loading={loading}
       />
 
       <Dialog open={open} onOpenChange={setOpen}>

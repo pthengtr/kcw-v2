@@ -25,6 +25,8 @@ export type ReminderContextType = {
   setSubmitError: (error: string | undefined) => void;
   reminders: PaymentReminderRow[] | undefined;
   setReminders: (reminders: PaymentReminderRow[]) => void;
+  loading: boolean;
+  setLoading: (loading: boolean) => void;
   total: number | undefined;
   setTotal: (total: number) => void;
   bankName: string;
@@ -65,6 +67,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
   const [reminders, setReminders] = useState<PaymentReminderRow[]>();
+  const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState<number>();
   const [bankName, setBankName] = useState<string>("");
   const [bankAccountName, setBankAccountName] = useState<string>("");
@@ -87,6 +90,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   );
   const getReminder = useCallback(
     async function () {
+      setLoading(true);
       const supabase = createClient();
       let query = supabase
         .from("payment_reminder")
@@ -101,6 +105,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
 
       if (error) {
         console.log(error);
+        setLoading(false);
         return;
       }
 
@@ -109,6 +114,7 @@ export default function ReminderProvider({ children }: ReminderProvider) {
         setReminders(data);
       }
       if (count !== null && count !== undefined) setTotal(count);
+      setLoading(false);
     },
     [status]
   );
@@ -166,6 +172,8 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setSubmitError,
     reminders,
     setReminders,
+    loading,
+    setLoading,
     total,
     setTotal,
     bankName,
