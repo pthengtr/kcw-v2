@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, ShieldCheck } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -22,6 +22,12 @@ import LogoutButton from "../auth/LogoutButton";
 import NavbarExpenseDropdownMenu from "./NavbarExpenseDropdownMenu";
 import { BranchType } from "@/lib/types/models";
 import { cn } from "@/lib/utils";
+import {
+  canAccessAdminRbac,
+  canAccessAnyBi,
+  canAccessStatementSync,
+  canAccessTigerPay,
+} from "@/lib/auth/client-permissions";
 import {
   EXPENSE_DROPDOWN_AFTER_INDEX,
   expenseMobileLinks,
@@ -91,16 +97,46 @@ function NavLinkButton({
 export default function NavbarClient({ branches }: NavbarClientProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [pageKeys, setPageKeys] = useState<string[] | null>(null);
   const expenseActive = isExpenseActive(pathname);
   const closeSheet = () => setOpen(false);
 
-  const linksBeforeExpense = primaryNavLinks.slice(
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPermissions() {
+      const res = await fetch("/api/auth/me/permissions", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!cancelled) {
+        setPageKeys(json.pageKeys ?? []);
+      }
+    }
+    void loadPermissions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredPrimaryLinks = useMemo(() => {
+    if (pageKeys == null) return [];
+    return primaryNavLinks.filter((link) => {
+      if (link.href.startsWith("/bi")) return canAccessAnyBi(pageKeys);
+      return true;
+    });
+  }, [pageKeys]);
+
+  const linksBeforeExpense = filteredPrimaryLinks.slice(
     0,
     EXPENSE_DROPDOWN_AFTER_INDEX + 1
   );
-  const linksAfterExpense = primaryNavLinks.slice(
+  const linksAfterExpense = filteredPrimaryLinks.slice(
     EXPENSE_DROPDOWN_AFTER_INDEX + 1
   );
+  const showTigerPay = pageKeys ? canAccessTigerPay(pageKeys) : false;
+  const showStatementSync = pageKeys ? canAccessStatementSync(pageKeys) : false;
+  const showAdminRbac = pageKeys ? canAccessAdminRbac(pageKeys) : false;
 
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white">
@@ -168,6 +204,33 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     onNavigate={closeSheet}
                   />
                 ))}
+                {showTigerPay ? (
+                  <NavLinkButton
+                    href="/tiger-pay"
+                    label="TigerPay"
+                    icon={Menu}
+                    active={pathname === "/tiger-pay"}
+                    onNavigate={closeSheet}
+                  />
+                ) : null}
+                {showStatementSync ? (
+                  <NavLinkButton
+                    href="/bank-statement-sync"
+                    label="Bank Sync"
+                    icon={Menu}
+                    active={pathname === "/bank-statement-sync"}
+                    onNavigate={closeSheet}
+                  />
+                ) : null}
+                {showAdminRbac ? (
+                  <NavLinkButton
+                    href="/admin/rbac"
+                    label="RBAC"
+                    icon={ShieldCheck}
+                    active={pathname === "/admin/rbac"}
+                    onNavigate={closeSheet}
+                  />
+                ) : null}
               </div>
 
               <div className="border-t border-slate-200 px-2 py-3">
@@ -211,6 +274,36 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                   />
                 </NavigationMenuItem>
               ))}
+              {showTigerPay ? (
+                <NavigationMenuItem>
+                  <NavLinkButton
+                    href="/tiger-pay"
+                    label="TigerPay"
+                    icon={Menu}
+                    active={pathname === "/tiger-pay"}
+                  />
+                </NavigationMenuItem>
+              ) : null}
+              {showStatementSync ? (
+                <NavigationMenuItem>
+                  <NavLinkButton
+                    href="/bank-statement-sync"
+                    label="Bank Sync"
+                    icon={Menu}
+                    active={pathname === "/bank-statement-sync"}
+                  />
+                </NavigationMenuItem>
+              ) : null}
+              {showAdminRbac ? (
+                <NavigationMenuItem>
+                  <NavLinkButton
+                    href="/admin/rbac"
+                    label="RBAC"
+                    icon={ShieldCheck}
+                    active={pathname === "/admin/rbac"}
+                  />
+                </NavigationMenuItem>
+              ) : null}
             </NavigationMenuList>
           </NavigationMenu>
           <div className="ml-1 border-l border-slate-200 pl-1">

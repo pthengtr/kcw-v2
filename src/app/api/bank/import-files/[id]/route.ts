@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { requirePermission } from "@/lib/auth/requirePermission";
+import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminCheck = await requireAdmin();
-  if (!adminCheck.ok) {
+  const permCheck = await requirePermission(BANK_PAGE_KEYS.statementSync);
+  if (!permCheck.ok) {
     return NextResponse.json(
-      { error: adminCheck.message },
-      { status: adminCheck.status }
+      { error: permCheck.message },
+      { status: permCheck.status }
     );
   }
 

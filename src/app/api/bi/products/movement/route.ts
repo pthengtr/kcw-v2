@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { requirePermission } from "@/lib/auth/requirePermission";
+import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { fetchProductMovement } from "@/lib/bi/product-movement-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -34,11 +35,11 @@ function publicErrorMessage(error: unknown): string {
 }
 
 export async function GET(req: Request) {
-  const adminCheck = await requireAdmin();
-  if (!adminCheck.ok) {
+  const permCheck = await requirePermission(BI_PAGE_KEYS.productMovement);
+  if (!permCheck.ok) {
     return NextResponse.json(
-      { error: adminCheck.message },
-      { status: adminCheck.status }
+      { error: permCheck.message },
+      { status: permCheck.status }
     );
   }
 

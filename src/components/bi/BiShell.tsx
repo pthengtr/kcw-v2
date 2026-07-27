@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, Menu, PanelLeft } from "lucide-react";
 
 import { BI_REPORTS } from "@/lib/bi/reports";
+import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { canAccessPage } from "@/lib/auth/client-permissions";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,18 +19,30 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+const REPORT_PAGE_KEYS: Record<string, string> = {
+  income: BI_PAGE_KEYS.income,
+  sales: BI_PAGE_KEYS.sales,
+  "sales-compare": BI_PAGE_KEYS.salesCompare,
+  customers: BI_PAGE_KEYS.customers,
+  products: BI_PAGE_KEYS.products,
+  "product-movement": BI_PAGE_KEYS.productMovement,
+  expenses: BI_PAGE_KEYS.expenses,
+};
+
 function ReportNav({
   pathname,
+  reports,
   onNavigate,
   className,
 }: {
   pathname: string;
+  reports: typeof BI_REPORTS;
   onNavigate?: () => void;
   className?: string;
 }) {
   return (
     <nav className={cn("flex flex-col gap-1", className)} aria-label="รายงาน BI">
-      {BI_REPORTS.map((report) => {
+      {reports.map((report) => {
         const active =
           pathname === report.href || pathname.startsWith(`${report.href}/`);
         const content = (
@@ -81,10 +95,37 @@ function ReportNav({
 export default function BiShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [pageKeys, setPageKeys] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPermissions() {
+      const res = await fetch("/api/auth/me/permissions", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!cancelled) setPageKeys(json.pageKeys ?? []);
+    }
+    void loadPermissions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const visibleReports = useMemo(() => {
+    if (pageKeys == null) return [];
+    return BI_REPORTS.filter((report) => {
+      const pageKey = REPORT_PAGE_KEYS[report.id];
+      if (!pageKey) return false;
+      return canAccessPage(pageKeys, pageKey);
+    });
+  }, [pageKeys]);
+
   const activeReport =
-    BI_REPORTS.find(
+    visibleReports.find(
       (r) => pathname === r.href || pathname.startsWith(`${r.href}/`)
-    ) ?? BI_REPORTS[0];
+    ) ?? visibleReports[0];
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-gradient-to-b from-slate-100 via-slate-50 to-white">
@@ -100,7 +141,13 @@ export default function BiShell({ children }: { children: ReactNode }) {
                 <p className="text-xs text-muted-foreground">รายงานธุรกิจ</p>
               </div>
             </div>
-            <ReportNav pathname={pathname} />
+            {visibleReports.length === 0 ? (
+              <p className="px-1 text-xs text-muted-foreground">
+                ไม่มีรายงานที่คุณมีสิทธิ์เข้าถึง
+              </p>
+            ) : (
+              <ReportNav pathname={pathname} reports={visibleReports} />
+            )}
           </div>
         </aside>
 
@@ -128,6 +175,7 @@ export default function BiShell({ children }: { children: ReactNode }) {
                 </SheetHeader>
                 <ReportNav
                   pathname={pathname}
+                  reports={visibleReports}
                   className="mt-6"
                   onNavigate={() => setOpen(false)}
                 />
@@ -135,7 +183,7 @@ export default function BiShell({ children }: { children: ReactNode }) {
             </Sheet>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-900">
-                {activeReport?.label}
+                {activeReport?.label ?? "BI"}
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 แตะเมนูเพื่อเปลี่ยนรายงาน

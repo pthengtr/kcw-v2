@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { requirePermission } from "@/lib/auth/requirePermission";
+import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { fetchCustomerOverview } from "@/lib/bi/customer-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -13,11 +14,11 @@ const QuerySchema = z.object({
 });
 
 export async function GET(req: Request) {
-  const adminCheck = await requireAdmin();
-  if (!adminCheck.ok) {
+  const permCheck = await requirePermission(BI_PAGE_KEYS.customers);
+  if (!permCheck.ok) {
     return NextResponse.json(
-      { error: adminCheck.message },
-      { status: adminCheck.status }
+      { error: permCheck.message },
+      { status: permCheck.status }
     );
   }
 

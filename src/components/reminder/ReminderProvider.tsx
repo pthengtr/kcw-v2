@@ -42,8 +42,6 @@ export type ReminderContextType = {
   setSupplierName: (supplierName: string) => void;
   selectedSupplier: PartyOption | undefined;
   setSelectedSupplier: (selectedSupplier: PartyOption | undefined) => void;
-  isAdmin: boolean;
-  setIsAdmin: (open: boolean) => void;
   reminderUploadFile: ({
     picture,
     imageId,
@@ -75,7 +73,6 @@ export default function ReminderProvider({ children }: ReminderProvider) {
   const [selectedBankInfo, setSelectBankInfo] = useState<PartyBankInfo>();
   const [supplierName, setSupplierName] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState<PartyOption>();
-  const [isAdmin, setIsAdmin] = useState(false);
   const [status, setStatus] = useState("all");
 
   function handleSelectedRow(row: PaymentReminderRow) {
@@ -186,8 +183,6 @@ export default function ReminderProvider({ children }: ReminderProvider) {
     setSupplierName,
     selectedSupplier,
     setSelectedSupplier,
-    isAdmin,
-    setIsAdmin,
     reminderUploadFile,
     getReminder,
     setStatus,

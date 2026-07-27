@@ -12,6 +12,7 @@ export type NavLink = {
   icon: LucideIcon;
   /** Match nested routes under this prefix (e.g. /bi → /bi/income). */
   matchPrefix?: string;
+  pageKey?: string;
 };
 
 /**
