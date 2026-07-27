@@ -113,7 +113,7 @@ const PartyCtx = createContext<{ state: State; actions: Actions } | null>(null);
 export function PartyProvider({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
   const [state, setState] = useState<State>({
-    loading: false,
+    loading: true,
     items: [],
     total: 0,
     page: 1,
