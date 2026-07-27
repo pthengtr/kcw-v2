@@ -197,8 +197,10 @@ describe("BI highlight builders", () => {
         {
           acctno: "7ICE",
           customer_name: "ICE TIKTOK SHOP",
+          name_source: "party",
           bill_acctname: "ICE",
           in_party: true,
+          in_armas: true,
           party_kind: "CUSTOMER",
           revenue_net: 120_000,
           bill_count: 40,
@@ -214,6 +216,7 @@ describe("BI highlight builders", () => {
     const lines = buildCustomerHighlights(customerBase);
     expect(lines[0]).toContain("ยอดลูกค้าที่จัดอันดับ");
     expect(lines.some((l) => l.includes("7ICE"))).toBe(true);
+    expect(lines.some((l) => l.includes("party"))).toBe(true);
     expect(lines.some((l) => l.includes("รอ sync"))).toBe(true);
     expect(lines.some((l) => l.includes("walk-in"))).toBe(true);
   });

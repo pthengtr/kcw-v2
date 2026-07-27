@@ -20,11 +20,17 @@ export type BiCustomerPreviousSummary = {
   bill_count: number;
 };
 
+/** Where customer display name was resolved from. */
+export type BiCustomerNameSource = "party" | "armas" | "none";
+
 export type BiCustomerRankRow = {
   acctno: string;
+  /** Blank when neither party nor ARMAS has a name. */
   customer_name: string;
+  name_source: BiCustomerNameSource;
   bill_acctname: string | null;
   in_party: boolean;
+  in_armas: boolean;
   party_kind: string | null;
   revenue_net: number;
   bill_count: number;

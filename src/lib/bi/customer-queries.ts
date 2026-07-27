@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
+  BiCustomerNameSource,
   BiCustomerOverview,
   BiCustomerRankRow,
 } from "./customer-types";
@@ -45,15 +46,30 @@ function parseSplitRows(value: unknown): BiSplitRow[] {
   });
 }
 
+function asNameSource(value: unknown): BiCustomerNameSource {
+  if (value === "party" || value === "armas" || value === "none") return value;
+  return "none";
+}
+
 function parseCustomerRows(value: unknown): BiCustomerRankRow[] {
   if (!Array.isArray(value)) return [];
   return value.map((row) => {
     const r = (row ?? {}) as Record<string, unknown>;
+    const customer_name = asString(r.customer_name).trim();
+    const name_source = asNameSource(r.name_source);
     return {
       acctno: asString(r.acctno),
-      customer_name: asString(r.customer_name) || asString(r.acctno),
+      customer_name,
+      name_source:
+        customer_name && name_source === "none"
+          ? // Legacy payloads without name_source still carry a display name.
+            asBoolean(r.in_party)
+            ? "party"
+            : "none"
+          : name_source,
       bill_acctname: asNullableString(r.bill_acctname),
       in_party: asBoolean(r.in_party),
+      in_armas: asBoolean(r.in_armas),
       party_kind: asNullableString(r.party_kind),
       revenue_net: asNumber(r.revenue_net),
       bill_count: asNumber(r.bill_count),
