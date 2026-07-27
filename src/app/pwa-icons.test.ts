@@ -62,8 +62,9 @@ describe("PWA install icons", () => {
 
     expect(middleware.includes("webmanifest")).toBe(true);
     expect(middleware.includes("sw")).toBe(true);
-    expect(session).toContain('pathname !== "/manifest.webmanifest"');
-    expect(session).toContain('pathname !== "/sw.js"');
+    expect(session).toContain("/manifest.webmanifest");
+    expect(session).toContain("/sw.js");
+    expect(session).toContain("isPublicPath");
     expect(sw).toContain('addEventListener("fetch"');
     expect(register).toContain('register("/sw.js"');
   });
