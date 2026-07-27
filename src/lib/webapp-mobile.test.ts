@@ -44,6 +44,25 @@ describe("Webapp mobile layout", () => {
     expect(form).toContain("sm:grid-cols-2");
   });
 
+  it("keeps expense input dialogs scrollable on mobile so submit stays reachable", () => {
+    const dialogs = [
+      "src/components/expense/general/ExpenseGeneralCreateFormDialog.tsx",
+      "src/components/expense/item/ExpenseItemFormDialog.tsx",
+      "src/components/expense/item/ExpenseCategoryFormDialog.tsx",
+      "src/components/expense/create/ExpenseAddEntryForm/ExpenseAddEntryFormDialog.tsx",
+    ];
+
+    for (const rel of dialogs) {
+      const source = read(rel);
+      expect(source).toContain("max-h-[90dvh]");
+      expect(source).toContain("overflow-hidden");
+      expect(source).toContain("overflow-y-auto");
+      expect(source).toContain("min-h-0");
+      expect(source).toContain("w-[calc(100vw-1.5rem)]");
+      expect(source).not.toContain("h-full overflow-y-auto");
+    }
+  });
+
   it("makes expense search toolbars responsive", () => {
     const search = read(
       "src/components/expense/manage/ExpenseReceiptSearchForm.tsx"
