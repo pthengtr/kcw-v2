@@ -1,5 +1,16 @@
 import ProductOverviewPage from "@/components/bi/products/ProductOverviewPage";
+import { requirePermission } from "@/lib/auth/requirePermission";
+import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 
-export default function BiProductsPage() {
+export default async function BiProductsPage() {
+  const permCheck = await requirePermission(BI_PAGE_KEYS.products);
+  if (!permCheck.ok) {
+    return (
+      <div className="px-4 py-8 text-muted-foreground">
+        คุณไม่มีสิทธิ์เข้าถึงหน้านี้
+      </div>
+    );
+  }
+
   return <ProductOverviewPage />;
 }

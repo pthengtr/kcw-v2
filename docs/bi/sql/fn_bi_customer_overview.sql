@@ -277,4 +277,3 @@ COMMENT ON FUNCTION public.fn_bi_customer_overview(date, date, text, integer) IS
   'Customer BI: bill BEFORETAX ranking by ACCTNO; name = party → ARMAS → blank; expose name_source.';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_customer_overview(date, date, text, integer) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_customer_overview(date, date, text, integer) TO authenticated;

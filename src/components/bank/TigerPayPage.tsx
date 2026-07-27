@@ -1,66 +1,50 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { RefreshCcw } from "lucide-react";
 
+import PermissionGate from "@/components/auth/PermissionGate";
+import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TigerPayTab from "@/components/bank/TigerPayTab";
 
-async function isAdminUser(): Promise<boolean> {
-  try {
-    const res = await fetch("/api/bank/tiger-pay/transactions?limit=1&offset=0", {
-      method: "GET",
-      headers: { "content-type": "application/json" },
-      cache: "no-store",
-    });
-    return res.status !== 401 && res.status !== 403;
-  } catch {
-    return false;
-  }
-}
-
 export default function TigerPayPage() {
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
 
   const refresh = useCallback(() => setRefreshToken((x) => x + 1), []);
   const title = useMemo(() => "Tiger Pay", []);
 
-  useEffect(() => {
-    let cancelled = false;
-    isAdminUser().then((ok) => {
-      if (!cancelled) setIsAdmin(ok);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (isAdmin === false) {
-    return (
-      <div className="px-4 py-4 sm:px-8 sm:py-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{title}</CardTitle>
-          </CardHeader>
-          <CardContent>คุณไม่มีสิทธิ์เข้าถึงหน้านี้ (admin only)</CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="px-4 py-4 sm:px-8 sm:py-6">
-      <div className="flex items-center gap-3 mb-4">
-        <h2 className="text-xl sm:text-2xl font-bold flex-1">{title}</h2>
-        <Button variant="outline" size="sm" onClick={refresh} className="shrink-0 gap-1">
-          <RefreshCcw strokeWidth={1} className="h-4 w-4" />
-          <span>รีเฟรช</span>
-        </Button>
-      </div>
+    <PermissionGate
+      pageKey={BANK_PAGE_KEYS.tigerPay}
+      fallback={
+        <div className="px-4 py-4 sm:px-8 sm:py-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{title}</CardTitle>
+            </CardHeader>
+            <CardContent>คุณไม่มีสิทธิ์เข้าถึงหน้านี้</CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <div className="px-4 py-4 sm:px-8 sm:py-6">
+        <div className="mb-4 flex items-center gap-3">
+          <h2 className="flex-1 text-xl font-bold sm:text-2xl">{title}</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refresh}
+            className="shrink-0 gap-1"
+          >
+            <RefreshCcw strokeWidth={1} className="h-4 w-4" />
+            <span>รีเฟรช</span>
+          </Button>
+        </div>
 
-      <TigerPayTab refreshToken={refreshToken} />
-    </div>
+        <TigerPayTab refreshToken={refreshToken} />
+      </div>
+    </PermissionGate>
   );
 }

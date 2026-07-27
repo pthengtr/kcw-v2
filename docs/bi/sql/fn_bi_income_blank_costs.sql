@@ -119,4 +119,3 @@ COMMENT ON FUNCTION public.fn_bi_income_blank_costs(date, date, text, integer) I
   'Income BI drilldown: sales lines with blank LAST_PURCHASE_COST (COGS treated as 0).';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_income_blank_costs(date, date, text, integer) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_income_blank_costs(date, date, text, integer) TO authenticated;

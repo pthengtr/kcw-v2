@@ -10,7 +10,6 @@ import {
   ReminderContextType,
 } from "@/components/reminder/ReminderProvider";
 import { getMyCookie } from "../../action";
-import { createClient } from "@/lib/supabase/client";
 import {
   Sheet,
   SheetContent,
@@ -20,7 +19,7 @@ import {
 } from "@/components/ui/sheet";
 
 export default function Reminder() {
-  const { selectedRow, setIsAdmin, setSelectedRow, getReminder } = useContext(
+  const { selectedRow, setSelectedRow, getReminder } = useContext(
     ReminderContext
   ) as ReminderContextType;
 
@@ -55,40 +54,8 @@ export default function Reminder() {
       );
     }
 
-    async function checkUserAdmin() {
-      const supabase = createClient();
-
-      const {
-        data: { user },
-        error: errorUser,
-      } = await supabase.auth.getUser();
-
-      if (!user || errorUser) {
-        console.log("No user logged in or error:", errorUser);
-        return;
-      }
-
-      const query = supabase
-        .from("kcw_admin")
-        .select("*")
-        .eq("user_id", user.email)
-        .limit(500);
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.log("Cannot access kcw_admin table");
-        return;
-      }
-
-      if (data && data.length > 0) {
-        setIsAdmin(true);
-      }
-    }
-
     getCookies();
-    checkUserAdmin();
-  }, [setIsAdmin]);
+  }, []);
 
   return (
     <section className="min-h-0 md:h-[90vh] md:overflow-hidden">
