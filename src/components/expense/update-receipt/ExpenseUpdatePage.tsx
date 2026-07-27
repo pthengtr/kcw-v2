@@ -10,14 +10,15 @@ import {
 } from "@/components/expense/ExpenseProvider";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowBigLeftDash, Trash } from "lucide-react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Trash } from "lucide-react";
+import { useParams, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import ExpenseCreateReceiptFormCard from "../create/ExpenseCreateReceiptForm/ExpenseCreateReceiptFormCard";
 import ExpenseCreateReceiptSummary from "../create/ExpenseCreateReceiptSummary";
 import { ExpenseReceiptType } from "@/lib/types/models";
 import ExpenseCreateBillHeader from "../ExpenseCreateBillHeader";
 import { LocalImageDropzone } from "@/components/common/LocalImageDropzone";
+import BackButton from "@/components/common/BackButton";
 
 export default function ExpenseUpdatePage() {
   const {
@@ -105,17 +106,13 @@ export default function ExpenseUpdatePage() {
     setWithholdingInput,
   ]);
 
-  const router = useRouter();
   return (
     <>
       {selectedReceipt && (
         <section className="flex flex-col items-center p-2">
           <div className="flex w-full min-w-0 flex-col gap-2 p-2 sm:flex-row sm:items-center">
             <div className="flex flex-1 gap-2">
-              <Button variant="outline" onClick={() => router.back()}>
-                <ArrowBigLeftDash strokeWidth={1} />
-                กลับ
-              </Button>
+              <BackButton href={`/expense/company/${branch}/manage`} />
             </div>
             <h1 className="min-w-0 break-words text-center text-lg font-bold tracking-wider sm:text-2xl">
               {selectedRefReceipt

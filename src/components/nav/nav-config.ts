@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   Handshake,
+  Home,
   MessageCircleWarning,
 } from "lucide-react";
 import { BranchType } from "@/lib/types/models";
@@ -18,15 +19,20 @@ export type NavLink = {
 /**
  * Primary links shown beside the expense dropdown.
  *
- * Recommended order (daily ops → finance → master data → analytics):
- * 1. เตือนโอน
- * 2. ค่าใช้จ่าย (dropdown — rendered separately)
- * 3. รายชื่อคู่ค้า
- * 4. BI
- *
- * Home is reached via the brand mark, not a duplicate text link.
+ * Order: home → daily ops → finance → master data → analytics
+ * 1. หน้าแรก
+ * 2. เตือนโอน
+ * 3. ค่าใช้จ่าย (dropdown — rendered separately)
+ * 4. รายชื่อคู่ค้า
+ * 5. BI
  */
 export const primaryNavLinks: NavLink[] = [
+  {
+    href: "/home",
+    label: "หน้าแรก",
+    icon: Home,
+    matchPrefix: "/home",
+  },
   {
     href: "/reminder",
     label: "เตือนโอน",
@@ -47,8 +53,8 @@ export const primaryNavLinks: NavLink[] = [
   },
 ];
 
-/** Insert expense dropdown after the first primary link (เตือนโอน). */
-export const EXPENSE_DROPDOWN_AFTER_INDEX = 0;
+/** Insert expense dropdown after เตือนโอน (index 1). */
+export const EXPENSE_DROPDOWN_AFTER_INDEX = 1;
 
 export function isNavActive(pathname: string, link: NavLink) {
   const prefix = link.matchPrefix ?? link.href;

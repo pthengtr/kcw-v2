@@ -15,13 +15,14 @@ function read(rel: string) {
 }
 
 describe("Navbar menu order and design", () => {
-  it("orders primary links as reminder → party → BI with expense inserted after reminder", () => {
+  it("orders primary links as home → reminder → party → BI with expense after reminder", () => {
     expect(primaryNavLinks.map((link) => link.href)).toEqual([
+      "/home",
       "/reminder",
       "/party",
       "/bi/income",
     ]);
-    expect(EXPENSE_DROPDOWN_AFTER_INDEX).toBe(0);
+    expect(EXPENSE_DROPDOWN_AFTER_INDEX).toBe(1);
   });
 
   it("marks nested BI and expense routes as active", () => {
@@ -43,10 +44,40 @@ describe("Navbar menu order and design", () => {
     expect(navbar).toContain('aria-label="เปิดเมนู"');
     expect(navbar).toContain("<SheetTitle");
     expect(navbar).toContain("เมนู");
-    expect(navbar).not.toContain('label: "หน้าแรก"');
     // Logo already carries the brand; avoid redundant KCW text next to it.
     expect(navbar).not.toContain(">KCW</");
     expect(navbar).not.toContain("ระบบงานภายใน");
     expect(navbar).not.toContain("backdrop-blur");
+  });
+});
+
+describe("Shared back navigation", () => {
+  it("provides a shared BackButton used across app pages", () => {
+    const back = read("src/components/common/BackButton.tsx");
+    expect(back).toContain('label = "กลับ"');
+    expect(back).toContain("ArrowBigLeftDash");
+
+    const pages = [
+      "src/components/expense/ExpensePageHeader.tsx",
+      "src/components/expense/general/ExpenseGeneralPage.tsx",
+      "src/components/expense/item/ExpenseItemPage.tsx",
+      "src/components/bank/BankStatementSyncPage.tsx",
+      "src/components/bank/TigerPayPage.tsx",
+      "src/components/rbac/RbacAdminPage.tsx",
+      "src/components/party/PartyScreen.tsx",
+      "src/components/reminder/ReminderTable.tsx",
+      "src/components/bi/BiShell.tsx",
+      "src/components/product-related/ProductRelatedScreen.tsx",
+      "src/app/(root)/kb/_components/kb-admin-screen.tsx",
+      "src/app/(root)/product-images/_components/product-image-admin-screen.tsx",
+      "src/app/(root)/(user)/user/page.tsx",
+      "src/app/(root)/(expense)/expense/page.tsx",
+      "src/app/(root)/(expense)/expense/company/page.tsx",
+      "src/app/(root)/(expense)/expense/company/[branch]/page.tsx",
+    ];
+
+    for (const rel of pages) {
+      expect(read(rel)).toContain("BackButton");
+    }
   });
 });

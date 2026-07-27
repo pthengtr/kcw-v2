@@ -17,6 +17,7 @@ import PartyFormDialog from "./PartyFormDialog";
 import TaxInfoList from "./TaxInfoList";
 import BankInfoList from "./BankInfoList";
 import PartyTable from "./PartyTable";
+import BackButton from "@/components/common/BackButton";
 
 export default function PartyScreen() {
   const { state, actions } = useParty();
@@ -24,8 +25,12 @@ export default function PartyScreen() {
   const [editing, setEditing] = useState<null | "create" | string>(null);
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-end gap-2 flex-wrap">
+    <div className="space-y-4 p-4">
+      <div className="flex items-center gap-3">
+        <BackButton href="/home" />
+        <h2 className="text-xl font-bold sm:text-2xl">รายชื่อคู่ค้า</h2>
+      </div>
+      <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-0 flex-1 basis-full sm:min-w-[220px] sm:basis-auto">
           <label className="text-xs text-muted-foreground">ค้นหา</label>
           <Input

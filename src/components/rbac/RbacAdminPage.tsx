@@ -8,6 +8,7 @@ import {
   ROLE_ADMIN,
   ROLE_NORMAL,
 } from "@/lib/auth/rbac-pages";
+import BackButton from "@/components/common/BackButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -169,14 +170,17 @@ export default function RbacAdminPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 px-4 py-4 sm:px-8 sm:py-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold">จัดการสิทธิ์การเข้าถึง</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            2 ชั้น: (1) ต้องมี role ถึงเข้าแอปได้ · (2) ใน role กำหนดหน้าได้ ·
-            ผู้ใช้ใหม่ได้ normal อัตโนมัติ · admin เข้าได้ทุกหน้า
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+          <BackButton href="/home" />
+          <div>
+            <h1 className="text-xl font-bold">จัดการสิทธิ์การเข้าถึง</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              2 ชั้น: (1) ต้องมี role ถึงเข้าแอปได้ · (2) ใน role กำหนดหน้าได้ ·
+              ผู้ใช้ใหม่ได้ normal อัตโนมัติ · admin เข้าได้ทุกหน้า
+            </p>
+          </div>
         </div>
         <div className="w-full sm:w-72">
           <Select value={roleKey ?? undefined} onValueChange={setRoleKey}>

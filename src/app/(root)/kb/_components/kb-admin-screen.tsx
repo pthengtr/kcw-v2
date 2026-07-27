@@ -4,6 +4,7 @@ import { KbRecentList } from "./kb-recent-list";
 import { KbSemanticSearchCard } from "./kb-semantic-search-card";
 import { KbStatusBanner } from "./kb-status-banner";
 import type { KbAdminScreenProps } from "../types";
+import BackButton from "@/components/common/BackButton";
 
 export function KbAdminScreen({
   recentItems,
@@ -19,14 +20,17 @@ export function KbAdminScreen({
 }: KbAdminScreenProps) {
   return (
     <div className="space-y-6 p-3 sm:p-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-          จัดการ FAQ
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          จัดการข้อมูล <code>kb.kb_parts</code>{" "}
-          พร้อมทดสอบการค้นหาแบบคำตรงและแบบความหมาย
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <BackButton href="/home" />
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+            จัดการ FAQ
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            จัดการข้อมูล <code>kb.kb_parts</code>{" "}
+            พร้อมทดสอบการค้นหาแบบคำตรงและแบบความหมาย
+          </p>
+        </div>
       </div>
 
       <KbStatusBanner {...status} />

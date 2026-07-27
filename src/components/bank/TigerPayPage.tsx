@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { RefreshCcw } from "lucide-react";
 
 import PermissionGate from "@/components/auth/PermissionGate";
+import BackButton from "@/components/common/BackButton";
 import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +31,8 @@ export default function TigerPayPage() {
       }
     >
       <div className="px-4 py-4 sm:px-8 sm:py-6">
-        <div className="mb-4 flex items-center gap-3">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <BackButton href="/home" />
           <h2 className="flex-1 text-xl font-bold sm:text-2xl">{title}</h2>
           <Button
             variant="outline"

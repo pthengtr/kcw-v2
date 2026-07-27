@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PaymentReminderRow } from "@/lib/types/models";
+import BackButton from "@/components/common/BackButton";
 
 export const defaultColumnVisibility = {
   รายการเลขที่: false,
@@ -350,8 +351,11 @@ export default function ReminderTable({
           <>
             {/* Mobile card list */}
             <div className="md:hidden flex flex-col gap-3 pb-4">
-              <div className="rounded-md border bg-slate-50 p-3 flex flex-col gap-3">
-                <h2 className="text-xl font-bold">รายการเตือนชำระเงิน</h2>
+              <div className="flex flex-col gap-3 rounded-md border bg-slate-50 p-3">
+                <div className="flex items-center gap-3">
+                  <BackButton href="/home" />
+                  <h2 className="text-xl font-bold">รายการเตือนชำระเงิน</h2>
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {renderMobileStatusToolbar()}
                 </div>
@@ -399,8 +403,9 @@ export default function ReminderTable({
                 }}
                 totalAmountKey={["จำนวนเงิน (หักส่วนลดแล้ว)", "ส่วนลด"]}
               >
-                <div className="flex gap-4 mr-auto px-8 items-center">
-                  <h2 className="text-2xl font-bold flex-1">
+                <div className="mr-auto flex items-center gap-4 px-8">
+                  <BackButton href="/home" />
+                  <h2 className="flex-1 text-2xl font-bold">
                     รายการเตือนชำระเงิน
                   </h2>
                   {renderDesktopStatusToolbar()}
