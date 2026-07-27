@@ -144,17 +144,33 @@ export default function PoSypDetailDialog({
             <table className="w-full min-w-[52rem] border-collapse text-sm print:min-w-0">
               <thead>
                 <tr className="border-b bg-muted/40 text-left">
+<<<<<<< HEAD
                   <th className="w-14 p-2 text-center">เตรียม</th>
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
                   <th className="p-2">HQ Loc1</th>
                   <th className="p-2">Qty</th>
+=======
+                  <th className="p-2 print:hidden">เตรียม</th>
+                  <th className="p-2">Line</th>
+                  <th className="p-2">BCODE</th>
+                  <th className="p-2">รายละเอียด</th>
+                  <th className="p-2">HQ Loc1</th>
+                  <th className="p-2">HQ Loc2</th>
+                  <th className="p-2">Qty</th>
+                  <th className="p-2">ราคา</th>
+                  <th className="p-2">จำนวนเงิน</th>
+>>>>>>> origin/master
                 </tr>
               </thead>
               <tbody>
                 {lines.length === 0 ? (
                   <tr>
+<<<<<<< HEAD
                     <td className="p-2 text-muted-foreground" colSpan={5}>
+=======
+                    <td className="p-2 text-muted-foreground" colSpan={9}>
+>>>>>>> origin/master
                       ไม่มีรายการ
                     </td>
                   </tr>
@@ -165,6 +181,7 @@ export default function PoSypDetailDialog({
                       savingLine === `${selected?.docno}:${lineKey}`;
                     return (
                       <tr key={`${lineKey}-${i}`} className="border-b">
+<<<<<<< HEAD
                         <td className="p-2 text-center align-middle">
                           {/* Screen: interactive checkbox */}
                           <span className="inline-flex print:hidden">
@@ -183,14 +200,38 @@ export default function PoSypDetailDialog({
                             className="mx-auto hidden h-4 w-4 border border-black print:inline-block"
                           />
                         </td>
+=======
+                        <td className="p-2 print:hidden">
+                          <Checkbox
+                            checked={Boolean(line.prepared)}
+                            disabled={busy || !line.line}
+                            onCheckedChange={(value) =>
+                              onToggleLinePrepared(line, value === true)
+                            }
+                            aria-label={`เตรียมบรรทัด ${line.line ?? ""}`}
+                          />
+                        </td>
+                        <td className="p-2">{line.line ?? "—"}</td>
+>>>>>>> origin/master
                         <td className="p-2">{line.bcode ?? "—"}</td>
                         <td className="p-2">{line.detail ?? "—"}</td>
                         <td className="p-2 font-medium">
                           {line.hq_location1 ?? "—"}
                         </td>
+<<<<<<< HEAD
                         <td className="p-2">
                           {line.qty ?? "—"} {line.ui ?? ""}
                         </td>
+=======
+                        <td className="p-2 font-medium">
+                          {line.hq_location2 ?? "—"}
+                        </td>
+                        <td className="p-2">
+                          {line.qty ?? "—"} {line.ui ?? ""}
+                        </td>
+                        <td className="p-2">{formatPoAmount(line.price)}</td>
+                        <td className="p-2">{formatPoAmount(line.amount)}</td>
+>>>>>>> origin/master
                       </tr>
                     );
                   })
