@@ -218,29 +218,29 @@ export default function PoSypDetailDialog({
               overflow: visible !important;
               background: white !important;
             }
-            /* visibility:hidden still leaves page chrome in the layout → blank trailing pages.
-               Drop non-print UI from the box tree entirely. */
-            body > *:not([data-radix-portal]) {
-              display: none !important;
-            }
-            [data-radix-dialog-overlay] {
+            /* DialogPortal uses asChild → Content is a direct body child (no portal wrapper).
+               Hide every other body child so page chrome cannot create blank pages. */
+            body > *:not([data-po-print-root]) {
               display: none !important;
             }
             [data-po-print-root] {
               position: static !important;
               inset: auto !important;
+              left: auto !important;
+              top: auto !important;
               width: 100% !important;
               max-width: none !important;
               max-height: none !important;
               height: auto !important;
               margin: 0 !important;
-              padding: 0 !important;
+              padding: 0.5rem !important;
               transform: none !important;
               border: none !important;
               box-shadow: none !important;
               border-radius: 0 !important;
               background: white !important;
               overflow: visible !important;
+              display: block !important;
             }
             [data-po-print-root] > button {
               display: none !important;
