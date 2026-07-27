@@ -113,8 +113,9 @@ New features almost never need new queue tables — only new `job_type` values a
 - Job: `sync_pomas_podet` with `{ "task":"sync_pomas_podet", "site":"HQ"|"SYP" }`
 - Before insert: if a row for that `site` is already `pending`/`running`, return **already running** (do not enqueue another).
 - Gate on the matching PC heartbeat (`HQ-PC` / `SYP-PC`).
-- UI shows `max(_ingested_at)` as last updated; SYP prepare marks live in `public.po_syp_prepare` (not PARTS9).
+- UI shows last updated via `fn_po_last_ingested_at`; list via `fn_po_list` (SYP left-joins `po_syp_prepare`).
 - **Note:** PostgREST does not expose schema `ops`. Webapp uses service-role RPCs `fn_po_worker_heartbeat`, `fn_po_find_inflight_sync`, `fn_po_enqueue_sync`, `fn_po_get_job` (see [bi/sql/fn_po_sync_ops.sql](./bi/sql/fn_po_sync_ops.sql)).
+- Open-PO indexes: [bi/sql/fn_po_list.sql](./bi/sql/fn_po_list.sql).
 
 ### Do / don’t
 
