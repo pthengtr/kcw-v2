@@ -406,4 +406,3 @@ COMMENT ON FUNCTION public.fn_bi_expense_overview(date, date, uuid, text, intege
   'Expense BI from public.expense_*: company entries + general; same amount rules as year-summary RPCs.';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_expense_overview(date, date, uuid, text, integer, text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_expense_overview(date, date, uuid, text, integer, text) TO authenticated;

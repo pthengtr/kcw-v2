@@ -620,4 +620,3 @@ COMMENT ON FUNCTION public.fn_bi_income_overview(date, date, text, text) IS
   'Income BI: margin on lines with LAST_PURCHASE_COST only; blank-cost lines excluded from totals but counted for drilldown; − app opex; HQ ออนไลน์→ONLINE.';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_income_overview(date, date, text, text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_income_overview(date, date, text, text) TO authenticated;

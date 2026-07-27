@@ -375,4 +375,3 @@ COMMENT ON FUNCTION public.fn_bi_product_overview(date, date, text, integer) IS
   'Product BI: line net revenue ranking by BCODE with category/CODE1 splits; ICMAS enrich.';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_product_overview(date, date, text, integer) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_product_overview(date, date, text, integer) TO authenticated;

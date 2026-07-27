@@ -232,4 +232,3 @@ COMMENT ON FUNCTION public.fn_bi_sales_overview(date, date, text) IS
   'Sales BI overview: net BEFORETAX; reporting_branch HQ/SYP/ONLINE (TAD/CNTAD not in HQ).';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_sales_overview(date, date, text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_sales_overview(date, date, text) TO authenticated;

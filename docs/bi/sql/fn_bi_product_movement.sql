@@ -459,4 +459,3 @@ COMMENT ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, int
   'Product movement BI; dead cost/value + sort modes; statement_timeout 60s; buys always HQ.';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text) TO authenticated;
