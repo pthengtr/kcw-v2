@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,63 @@ type BankAccountOption = {
   account_no: string;
   bank_name: string | null;
 };
+
+type ActiveMatchJob = {
+  agentId: string;
+  runId: string;
+  agentUrl: string;
+  accountNo: string;
+  from: string;
+  to: string;
+};
+
+const MATCH_JOB_STORAGE_KEY = "bank.match.activeJob.v1";
+
+function isTerminalMatchStatus(status: string) {
+  return ["FINISHED", "ERROR", "CANCELLED", "EXPIRED"].includes(
+    status.toUpperCase()
+  );
+}
+
+function matchRunStatusLabel(status: string) {
+  switch (status.toUpperCase()) {
+    case "CREATING":
+      return "กำลังสร้าง agent…";
+    case "RUNNING":
+      return "agent กำลังจับคู่…";
+    case "FINISHED":
+      return "จับคู่เสร็จแล้ว";
+    case "ERROR":
+      return "agent ล้มเหลว";
+    case "CANCELLED":
+      return "ยกเลิกงานแล้ว";
+    case "EXPIRED":
+      return "งานหมดอายุ";
+    default:
+      return `สถานะ: ${status}`;
+  }
+}
+
+function readStoredMatchJob(): ActiveMatchJob | null {
+  try {
+    const raw = sessionStorage.getItem(MATCH_JOB_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ActiveMatchJob;
+    if (!parsed?.agentId || !parsed?.runId || !parsed?.agentUrl) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredMatchJob(job: ActiveMatchJob | null) {
+  try {
+    if (!job) sessionStorage.removeItem(MATCH_JOB_STORAGE_KEY);
+    else sessionStorage.setItem(MATCH_JOB_STORAGE_KEY, JSON.stringify(job));
+  } catch {
+    // ignore
+  }
+}
 
 function prettyJson(value: unknown) {
   try {
@@ -172,6 +229,11 @@ export default function StatementLinesTab({
   const [matching, setMatching] = useState(false);
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
   const [matchAgentUrl, setMatchAgentUrl] = useState<string | null>(null);
+  const [matchRunStatus, setMatchRunStatus] = useState<string | null>(null);
+  const [activeMatchJob, setActiveMatchJob] = useState<ActiveMatchJob | null>(
+    null
+  );
+  const [reloadToken, setReloadToken] = useState(0);
 
   const selectedAccount = useMemo(
     () => accounts.find((a) => a.account_no === accountNo) ?? null,
@@ -179,8 +241,11 @@ export default function StatementLinesTab({
   );
 
   const canFetch = Boolean(accountNo && month);
+  const matchRunning =
+    matching ||
+    (!!matchRunStatus && !isTerminalMatchStatus(matchRunStatus));
   const canMatch =
-    canFetch && accountNo === BANK_MATCH_ACCOUNT_NO && !matching;
+    canFetch && accountNo === BANK_MATCH_ACCOUNT_NO && !matchRunning;
 
   const loadAccounts = useCallback(async (signal?: AbortSignal) => {
     setAccountsLoading(true);
@@ -274,7 +339,73 @@ export default function StatementLinesTab({
     const controller = new AbortController();
     fetchRows(controller.signal);
     return () => controller.abort();
-  }, [fetchRows, refreshToken]);
+  }, [fetchRows, refreshToken, reloadToken]);
+
+  useEffect(() => {
+    const stored = readStoredMatchJob();
+    if (!stored) return;
+    setActiveMatchJob(stored);
+    setMatchAgentUrl(stored.agentUrl);
+    setMatchRunStatus("RUNNING");
+    setMatchMessage(matchRunStatusLabel("RUNNING"));
+  }, []);
+
+  useEffect(() => {
+    if (!activeMatchJob) return;
+
+    let cancelled = false;
+
+    const pollOnce = async () => {
+      try {
+        const params = new URLSearchParams({
+          agentId: activeMatchJob.agentId,
+          runId: activeMatchJob.runId,
+        });
+        const res = await fetch(`/api/bank/match/status?${params.toString()}`, {
+          cache: "no-store",
+        });
+        const body = await res.json().catch(() => ({}));
+        if (cancelled) return;
+
+        if (!res.ok) {
+          setMatchMessage(
+            body?.error ??
+              body?.details ??
+              `เช็คสถานะไม่สำเร็จ (${res.status})`
+          );
+          return;
+        }
+
+        const status = String(body?.run?.status ?? "RUNNING");
+        setMatchRunStatus(status);
+        setMatchMessage(matchRunStatusLabel(status));
+        if (body?.agentUrl) setMatchAgentUrl(String(body.agentUrl));
+
+          if (body?.terminal || isTerminalMatchStatus(status)) {
+          writeStoredMatchJob(null);
+          setActiveMatchJob(null);
+          setMatching(false);
+          if (status.toUpperCase() === "FINISHED") {
+            setMatchMessage("จับคู่เสร็จแล้ว — รีเฟรชรายการแล้ว");
+            setReloadToken((n) => n + 1);
+          }
+        }
+      } catch (e) {
+        if (cancelled) return;
+        setMatchMessage(e instanceof Error ? e.message : String(e));
+      }
+    };
+
+    void pollOnce();
+    const timer = setInterval(() => {
+      void pollOnce();
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [activeMatchJob]);
 
   async function openRaw(row: StatementLineRow) {
     setSelected(row);
@@ -312,8 +443,9 @@ export default function StatementLinesTab({
     if (!range || accountNo !== BANK_MATCH_ACCOUNT_NO) return;
 
     setMatching(true);
-    setMatchMessage(null);
+    setMatchMessage("กำลังเริ่ม agent…");
     setMatchAgentUrl(null);
+    setMatchRunStatus("CREATING");
     try {
       const res = await fetch("/api/bank/match", {
         method: "POST",
@@ -330,13 +462,39 @@ export default function StatementLinesTab({
           body?.error ?? body?.details ?? `Match failed (${res.status})`
         );
       }
-      setMatchMessage(
-        body?.message ??
-          `${BANK_MATCH_AGENT_NAME} เริ่มทำงานแล้วสำหรับ ${formatMonthLabel(month)}`
-      );
-      setMatchAgentUrl(body?.agent?.agentUrl ?? null);
+
+      const agent = body?.agent as
+        | {
+            agentId?: string;
+            runId?: string;
+            agentUrl?: string;
+            status?: string;
+          }
+        | undefined;
+
+      if (!agent?.agentId || !agent?.runId || !agent?.agentUrl) {
+        throw new Error("API ไม่ส่ง agentId/runId กลับมา");
+      }
+
+      const status = String(agent.status ?? "CREATING");
+      const job: ActiveMatchJob = {
+        agentId: agent.agentId,
+        runId: agent.runId,
+        agentUrl: agent.agentUrl,
+        accountNo,
+        from: range.from,
+        to: range.to,
+      };
+
+      writeStoredMatchJob(job);
+      setMatchAgentUrl(agent.agentUrl);
+      setMatchRunStatus(status);
+      setMatchMessage(matchRunStatusLabel(status));
+      setActiveMatchJob(job);
     } catch (e) {
       setMatchMessage(e instanceof Error ? e.message : String(e));
+      setMatchRunStatus(null);
+      setMatching(false);
     } finally {
       setMatching(false);
     }
@@ -506,13 +664,19 @@ export default function StatementLinesTab({
               onClick={handleMatch}
               disabled={!canMatch}
               title={
-                accountNo && accountNo !== BANK_MATCH_ACCOUNT_NO
-                  ? `ตอนนี้รองรับเฉพาะบัญชี ${BANK_MATCH_ACCOUNT_NO}`
-                  : `${BANK_MATCH_AGENT_NAME} — จับคู่ยอดเข้าตามกฎใน prompts/`
+                matchRunning
+                  ? "agent กำลังจับคู่ — รอให้เสร็จก่อน"
+                  : accountNo && accountNo !== BANK_MATCH_ACCOUNT_NO
+                    ? `ตอนนี้รองรับเฉพาะบัญชี ${BANK_MATCH_ACCOUNT_NO}`
+                    : `${BANK_MATCH_AGENT_NAME} — จับคู่ยอดเข้าตามกฎใน prompts/`
               }
             >
-              <Eye className="h-4 w-4" />
-              {matching ? "กำลังจับคู่…" : BANK_MATCH_AGENT_NAME}
+              {matchRunning ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+              {matchRunning ? "agent กำลังจับคู่…" : BANK_MATCH_AGENT_NAME}
             </Button>
           </div>
         </div>
@@ -541,9 +705,22 @@ export default function StatementLinesTab({
             {BANK_MATCH_AGENT_NAME} ใช้ได้เฉพาะบัญชี {BANK_MATCH_ACCOUNT_NO}
           </p>
         ) : null}
-        {matchMessage ? (
-          <p className="text-sm text-muted-foreground">
-            {matchMessage}
+        {matchRunning || matchMessage ? (
+          <p
+            className={
+              matchRunning
+                ? "text-sm text-sky-800 flex flex-wrap items-center gap-x-1 gap-y-1"
+                : "text-sm text-muted-foreground"
+            }
+            role="status"
+            aria-live="polite"
+          >
+            {matchRunning ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+            ) : null}
+            <span>
+              {matchMessage ?? matchRunStatusLabel(matchRunStatus ?? "RUNNING")}
+            </span>
             {matchAgentUrl ? (
               <>
                 {" "}
