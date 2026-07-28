@@ -1,6 +1,12 @@
 -- RBAC initial setup: roles, membership, page permissions.
 -- Replaces binary kcw_admin checks for page access.
 -- Admin users bypass page permission checks in app code.
+--
+-- User directory approach (app expects ≤ ~30 Auth users):
+-- - Membership is stored as user_id in kcw_user_roles (Auth remains source of truth).
+-- - Role detail loads resolve emails with auth.admin.getUserById for those ids only.
+-- - Saves map emails → ids with one small auth.admin.listUsers page (≤50).
+-- - Do not add a separate mirrored users table unless Auth user count grows a lot.
 
 create table if not exists public.kcw_roles (
   role_key text primary key,

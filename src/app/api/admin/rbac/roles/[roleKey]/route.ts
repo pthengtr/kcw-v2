@@ -3,6 +3,11 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { ADMIN_RBAC_PAGE, RBAC_PROTECTED_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import {
+  getAuthUsersByIds,
+  listAuthEmailToIdMap,
+  resolveMemberIdsFromEmails,
+} from "@/lib/auth/rbac-users";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const UpdateSchema = z.object({
@@ -25,63 +30,54 @@ export async function GET(
   const { roleKey } = await params;
   const supabase = createAdminClient();
 
-  const { data: role, error: roleError } = await supabase
-    .from("kcw_roles")
-    .select("role_key,title,description")
-    .eq("role_key", roleKey)
-    .maybeSingle();
+  const [roleRes, membersRes, permsRes] = await Promise.all([
+    supabase
+      .from("kcw_roles")
+      .select("role_key,title,description")
+      .eq("role_key", roleKey)
+      .maybeSingle(),
+    supabase.from("kcw_user_roles").select("user_id").eq("role_key", roleKey),
+    supabase
+      .from("kcw_role_page_permissions")
+      .select("page_key")
+      .eq("role_key", roleKey),
+  ]);
 
-  if (roleError) {
+  if (roleRes.error) {
     return NextResponse.json(
       { error: "Unable to load role" },
       { status: 500 }
     );
   }
 
-  const { data: members, error: membersError } = await supabase
-    .from("kcw_user_roles")
-    .select("user_id")
-    .eq("role_key", roleKey);
-
-  if (membersError) {
+  if (membersRes.error) {
     return NextResponse.json(
       { error: "Unable to load members" },
       { status: 500 }
     );
   }
 
-  const memberIds = new Set((members ?? []).map((m) => m.user_id));
-
-  const { data: allUsers, error: usersError } =
-    await supabase.auth.admin.listUsers({ perPage: 1000, page: 1 });
-
-  if (usersError) {
-    return NextResponse.json(
-      { error: "Unable to load users" },
-      { status: 500 }
-    );
-  }
-
-  const filteredUsers = (allUsers?.users ?? [])
-    .filter((u) => memberIds.has(u.id))
-    .map((u) => ({ id: u.id, email: u.email }));
-
-  const { data: perms, error: permsError } = await supabase
-    .from("kcw_role_page_permissions")
-    .select("page_key")
-    .eq("role_key", roleKey);
-
-  if (permsError) {
+  if (permsRes.error) {
     return NextResponse.json(
       { error: "Unable to load page permissions" },
       { status: 500 }
     );
   }
 
+  const memberIds = (membersRes.data ?? []).map((m) => m.user_id);
+  const { users: filteredUsers, error: usersError } = await getAuthUsersByIds(
+    supabase,
+    memberIds
+  );
+
+  if (usersError) {
+    return NextResponse.json({ error: usersError }, { status: 500 });
+  }
+
   return NextResponse.json({
-    role: role ?? null,
+    role: roleRes.data ?? null,
     members: filteredUsers,
-    pageKeys: (perms ?? []).map((p) => p.page_key),
+    pageKeys: (permsRes.data ?? []).map((p) => p.page_key),
   });
 }
 
@@ -106,37 +102,29 @@ export async function POST(
   const { roleKey } = await params;
   const { memberEmails, pageKeys } = parsed.data;
 
-  const allowedPageKeys = new Set(RBAC_PROTECTED_PAGE_KEYS.filter((k) => k !== ADMIN_RBAC_PAGE));
+  const allowedPageKeys = new Set(
+    RBAC_PROTECTED_PAGE_KEYS.filter((k) => k !== ADMIN_RBAC_PAGE)
+  );
   const normalizedPageKeys = pageKeys.filter((k) => allowedPageKeys.has(k));
 
   const supabase = createAdminClient();
 
-  const { data: allUsers, error: usersError } =
-    await supabase.auth.admin.listUsers({ perPage: 1000, page: 1 });
+  // One small directory read is fine for ≤30 users when mapping emails → ids.
+  const { emailToId, error: usersError } = await listAuthEmailToIdMap(supabase);
 
   if (usersError) {
-    return NextResponse.json(
-      { error: "Unable to resolve users" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: usersError }, { status: 500 });
   }
 
-  const emailToId = new Map(
-    (allUsers?.users ?? [])
-      .filter((u) => u.email)
-      .map((u) => [u.email as string, u.id])
+  const { memberIds, missingEmail } = resolveMemberIdsFromEmails(
+    memberEmails,
+    emailToId
   );
-
-  const memberIds: string[] = [];
-  for (const email of memberEmails) {
-    const id = emailToId.get(email);
-    if (!id) {
-      return NextResponse.json(
-        { error: `User not found: ${email}` },
-        { status: 400 }
-      );
-    }
-    memberIds.push(id);
+  if (missingEmail) {
+    return NextResponse.json(
+      { error: `User not found: ${missingEmail}` },
+      { status: 400 }
+    );
   }
 
   const { error: clearMembersError } = await supabase
@@ -179,7 +167,10 @@ export async function POST(
     const { error: insertPermsError } = await supabase
       .from("kcw_role_page_permissions")
       .insert(
-        normalizedPageKeys.map((pageKey) => ({ role_key: roleKey, page_key: pageKey }))
+        normalizedPageKeys.map((pageKey) => ({
+          role_key: roleKey,
+          page_key: pageKey,
+        }))
       );
     if (insertPermsError) {
       return NextResponse.json(
@@ -189,6 +180,9 @@ export async function POST(
     }
   }
 
-  return NextResponse.json({ ok: true, memberEmails, pageKeys: normalizedPageKeys });
+  return NextResponse.json({
+    ok: true,
+    memberEmails,
+    pageKeys: normalizedPageKeys,
+  });
 }
-
