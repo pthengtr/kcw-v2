@@ -9,9 +9,9 @@ import {
 } from "@/lib/bank/match-prompt";
 
 describe("bank match prompt", () => {
-  it("targets account 7236 and uses Thai hawk-eye agent name", () => {
+  it("targets account 7236 and uses plain Thai match button name", () => {
     expect(BANK_MATCH_ACCOUNT_NO).toBe("7236");
-    expect(BANK_MATCH_AGENT_NAME).toBe("สายตาเหยี่ยว");
+    expect(BANK_MATCH_AGENT_NAME).toBe("จับคู่ยอดเข้า");
     expect(BANK_MATCH_PROMPT_RELATIVE_PATH).toBe(
       "prompts/bank-statement-match-7236.md"
     );

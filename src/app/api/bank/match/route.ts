@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   if (account_no !== BANK_MATCH_ACCOUNT_NO) {
     return NextResponse.json(
       {
-        error: `สายตาเหยี่ยวรองรับเฉพาะบัญชี ${BANK_MATCH_ACCOUNT_NO}`,
+        error: `จับคู่ยอดเข้า รองรับเฉพาะบัญชี ${BANK_MATCH_ACCOUNT_NO}`,
         account_no,
       },
       { status: 400 }
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      message: `ปล่อย${BANK_MATCH_AGENT_NAME}แล้ว สำหรับบัญชี ${account_no}`,
+      message: `เริ่ม${BANK_MATCH_AGENT_NAME}แล้ว สำหรับบัญชี ${account_no}`,
       account_no,
       from,
       to,

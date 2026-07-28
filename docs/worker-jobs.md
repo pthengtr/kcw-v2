@@ -125,9 +125,9 @@ New features almost never need new queue tables — only new `job_type` values a
 - UI **Bank Sync** button → `POST /api/bank/sync`, then poll `GET /api/bank/sync/:jobId`; meta via `GET /api/bank/meta`.
 - Service-role RPCs: `fn_bank_find_inflight_import`, `fn_bank_enqueue_import` (plus shared `fn_po_worker_heartbeat` / `fn_po_get_job`) — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql).
 
-### Bank statement match — สายตาเหยี่ยว (account 7236)
+### Bank statement match — จับคู่ยอดเข้า (account 7236)
 
-- Not a PC worker job. UI button **สายตาเหยี่ยว** on Statement Lines → `POST /api/bank/match`.
+- Not a PC worker job. UI button **จับคู่ยอดเข้า** on Statement Lines → `POST /api/bank/match`.
 - Scope comes from the selected month; only account `7236` is allowed.
 - Prompt source of truth: [`prompts/bank-statement-match-7236.md`](../prompts/bank-statement-match-7236.md) with `{{account_no}}` / `{{from}}` / `{{to}}` injected by the API.
 - Requires server env `CURSOR_API_KEY` (optional `CURSOR_AGENT_REPO_URL`, `CURSOR_AGENT_STARTING_REF`).

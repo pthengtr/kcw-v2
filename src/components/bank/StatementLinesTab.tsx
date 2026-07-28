@@ -512,7 +512,7 @@ export default function StatementLinesTab({
               }
             >
               <Eye className="h-4 w-4" />
-              {matching ? "กำลังปล่อยเหยี่ยว…" : BANK_MATCH_AGENT_NAME}
+              {matching ? "กำลังจับคู่…" : BANK_MATCH_AGENT_NAME}
             </Button>
           </div>
         </div>
