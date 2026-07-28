@@ -283,6 +283,10 @@ export default function ImportFilesTab({ refreshToken }: { refreshToken: number 
                           </div>
                         </div>
                         <div className="mt-1">{l.description ?? ""}</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-muted-foreground">
+                          <span>match: {l.match_status}</span>
+                          {l.match_reason ? <span>• {l.match_reason}</span> : null}
+                        </div>
                       </div>
                     ))
                   )}

@@ -41,7 +41,26 @@ function prettyJson(value: unknown) {
 
 function statusBadgeVariant(status: string): BadgeProps["variant"] {
   if (status === "matched") return "secondary";
+  if (status === "review") return "destructive";
   return "outline";
+}
+
+function formatConfidence(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "";
+  }
+  return Number(value).toLocaleString("th-TH", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
+}
+
+function formatMatchedRef(row: StatementLineRow) {
+  if (!row.matched_ref_type && !row.matched_ref_id) return "";
+  if (row.matched_ref_type && row.matched_ref_id) {
+    return `${row.matched_ref_type}:${row.matched_ref_id}`;
+  }
+  return row.matched_ref_type ?? row.matched_ref_id ?? "";
 }
 
 function currentMonthValue(): string {
@@ -219,8 +238,21 @@ export default function StatementLinesTab({
         cache: "no-store",
       });
       if (!res.ok) return;
-      const data = (await res.json()) as { row: { raw_json?: unknown } };
-      setSelectedRawJson(data?.row?.raw_json ?? null);
+      const data = (await res.json()) as { row?: StatementLineRow & { raw_json?: unknown } };
+      if (data?.row) {
+        setSelected({
+          ...row,
+          match_status: data.row.match_status ?? row.match_status,
+          match_reason: data.row.match_reason ?? null,
+          match_confidence: data.row.match_confidence ?? null,
+          matched_ref_type: data.row.matched_ref_type ?? null,
+          matched_ref_id: data.row.matched_ref_id ?? null,
+          match_notes: data.row.match_notes ?? null,
+          matched_at: data.row.matched_at ?? null,
+          matched_by: data.row.matched_by ?? null,
+        });
+        setSelectedRawJson(data.row.raw_json ?? null);
+      }
     } catch {
       // ignore
     }
@@ -270,6 +302,22 @@ export default function StatementLinesTab({
             {r.match_status}
           </Badge>
         ),
+      },
+      {
+        key: "match_reason",
+        header: "match_reason",
+        render: (r) => r.match_reason ?? "",
+      },
+      {
+        key: "match_confidence",
+        header: "match_confidence",
+        className: "text-right",
+        render: (r) => formatConfidence(r.match_confidence),
+      },
+      {
+        key: "match_notes",
+        header: "match_notes",
+        render: (r) => r.match_notes ?? "",
       },
       {
         key: "source_sheet_name",
@@ -416,8 +464,10 @@ export default function StatementLinesTab({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">ทั้งหมด</SelectItem>
+                <SelectItem value="review">review (ต้องตรวจ)</SelectItem>
                 <SelectItem value="unmatched">unmatched</SelectItem>
                 <SelectItem value="matched">matched</SelectItem>
+                <SelectItem value="ignored">ignored</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -451,13 +501,47 @@ export default function StatementLinesTab({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Statement Line raw_json</DialogTitle>
+            <DialogTitle>Statement Line detail</DialogTitle>
             <DialogDescription>
               {selected ? `${selected.txn_date} • ${selected.description ?? ""}` : ""}
             </DialogDescription>
           </DialogHeader>
+          {selected && (
+            <div className="grid gap-2 rounded-md border p-3 text-sm sm:grid-cols-2">
+              <div>
+                <div className="text-xs text-muted-foreground">match_status</div>
+                <Badge variant={statusBadgeVariant(selected.match_status)}>
+                  {selected.match_status}
+                </Badge>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">match_confidence</div>
+                <div>{formatConfidence(selected.match_confidence) || "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">match_reason</div>
+                <div>{selected.match_reason || "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">matched_ref</div>
+                <div>{formatMatchedRef(selected) || "-"}</div>
+              </div>
+              <div className="sm:col-span-2">
+                <div className="text-xs text-muted-foreground">match_notes</div>
+                <div className="whitespace-pre-wrap">{selected.match_notes || "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">matched_by</div>
+                <div>{selected.matched_by || "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">matched_at</div>
+                <div>{selected.matched_at || "-"}</div>
+              </div>
+            </div>
+          )}
           <div className="rounded-md border">
-            <ScrollArea className="h-[520px]">
+            <ScrollArea className="h-[420px]">
               <pre className="text-xs p-3 whitespace-pre-wrap">
                 {prettyJson(selectedRawJson)}
               </pre>
