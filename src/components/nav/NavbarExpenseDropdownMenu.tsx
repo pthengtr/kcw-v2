@@ -31,7 +31,10 @@ export default function NavbarExpenseDropdownMenu({
       <DropdownMenuTrigger asChild>
         <Button
           variant={active ? "secondary" : "ghost"}
-          className={cn(active && "bg-slate-200/80 text-slate-900")}
+          className={cn(
+            "whitespace-nowrap px-2.5",
+            active && "bg-slate-200/80 text-slate-900"
+          )}
         >
           <Banknote className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
           ค่าใช้จ่าย
