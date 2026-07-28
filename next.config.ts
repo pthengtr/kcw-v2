@@ -5,9 +5,9 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "10mb",
     },
-    outputFileTracingIncludes: {
-      "/api/bank/match": ["./prompts/bank-statement-match-7236.md"],
-    },
+  },
+  outputFileTracingIncludes: {
+    "/api/bank/match": ["./prompts/bank-statement-match-7236.md"],
   },
   images: {
     remotePatterns: [
