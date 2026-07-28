@@ -143,7 +143,8 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:px-6">
-        <div className="flex items-center gap-2 md:hidden">
+        {/* Sheet menu through tablet portrait; horizontal links from lg up. */}
+        <div className="flex items-center gap-2 lg:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="เปิดเมนู">
@@ -252,13 +253,13 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
           <BrandMark />
         </div>
 
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <BrandMark />
         </div>
 
-        <div className="hidden md:flex md:flex-1 md:items-center md:justify-end md:gap-1">
-          <NavigationMenu>
-            <NavigationMenuList className="flex flex-wrap justify-end gap-0.5">
+        <div className="hidden min-w-0 lg:flex lg:flex-1 lg:items-center lg:justify-end lg:gap-1">
+          <NavigationMenu className="max-w-full">
+            <NavigationMenuList className="flex flex-nowrap justify-end gap-0.5">
               {linksBeforeExpense.map((link) => (
                 <NavigationMenuItem key={link.href}>
                   <NavLinkButton
@@ -266,6 +267,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     label={link.label}
                     icon={link.icon}
                     active={isNavActive(pathname, link)}
+                    className="whitespace-nowrap px-2.5"
                   />
                 </NavigationMenuItem>
               ))}
@@ -282,6 +284,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     label={link.label}
                     icon={link.icon}
                     active={isNavActive(pathname, link)}
+                    className="whitespace-nowrap px-2.5"
                   />
                 </NavigationMenuItem>
               ))}
@@ -292,6 +295,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     label="TigerPay"
                     icon={Menu}
                     active={pathname === "/tiger-pay"}
+                    className="whitespace-nowrap px-2.5"
                   />
                 </NavigationMenuItem>
               ) : null}
@@ -302,6 +306,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     label="Bank Sync"
                     icon={Menu}
                     active={pathname === "/bank-statement-sync"}
+                    className="whitespace-nowrap px-2.5"
                   />
                 </NavigationMenuItem>
               ) : null}
@@ -312,6 +317,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     label="PO"
                     icon={Menu}
                     active={pathname === "/po" || pathname.startsWith("/po/")}
+                    className="whitespace-nowrap px-2.5"
                   />
                 </NavigationMenuItem>
               ) : null}
@@ -322,17 +328,18 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     label="RBAC"
                     icon={ShieldCheck}
                     active={pathname === "/admin/rbac"}
+                    className="whitespace-nowrap px-2.5"
                   />
                 </NavigationMenuItem>
               ) : null}
             </NavigationMenuList>
           </NavigationMenu>
-          <div className="ml-1 border-l border-slate-200 pl-1">
+          <div className="ml-1 shrink-0 border-l border-slate-200 pl-1">
             <LogoutButton />
           </div>
         </div>
 
-        <div className="ml-auto md:hidden">
+        <div className="ml-auto lg:hidden">
           <LogoutButton />
         </div>
       </div>
