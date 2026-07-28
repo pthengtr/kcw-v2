@@ -117,6 +117,14 @@ New features almost never need new queue tables — only new `job_type` values a
 - **Note:** PostgREST does not expose schema `ops`. Webapp uses service-role RPCs `fn_po_worker_heartbeat`, `fn_po_find_inflight_sync`, `fn_po_enqueue_sync`, `fn_po_get_job` (see [bi/sql/fn_po_sync_ops.sql](./bi/sql/fn_po_sync_ops.sql)).
 - Open-PO indexes: [bi/sql/fn_po_list.sql](./bi/sql/fn_po_list.sql).
 
+### Bank statement sync from `/bank-statement-sync` (kcw-v2)
+
+- Job: `bank_statement_import` with `{ "task":"bank_statement_import" }`, `worker_name=null` (either PC).
+- Before insert: if a `bank_statement_import` row is already `pending`/`running`, return **already running**.
+- Gate on **any** online PC heartbeat (`HQ-PC` or `SYP-PC`, ~30s).
+- UI **Bank Sync** button → `POST /api/bank/sync`, then poll `GET /api/bank/sync/:jobId`; meta via `GET /api/bank/meta`.
+- Service-role RPCs: `fn_bank_find_inflight_import`, `fn_bank_enqueue_import` (plus shared `fn_po_worker_heartbeat` / `fn_po_get_job`) — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql).
+
 ### Do / don’t
 
 | Do | Don’t |
