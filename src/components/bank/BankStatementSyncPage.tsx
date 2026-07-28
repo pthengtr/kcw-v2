@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCcw } from "lucide-react";
+import { Loader2, RefreshCcw } from "lucide-react";
 
 import PermissionGate from "@/components/auth/PermissionGate";
 import BackButton from "@/components/common/BackButton";
@@ -30,13 +30,12 @@ export default function BankStatementSyncPage() {
     "import-files"
   );
   const [refreshToken, setRefreshToken] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [meta, setMeta] = useState<BankSyncMeta | null>(null);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const refresh = useCallback(() => setRefreshToken((x) => x + 1), []);
 
   const loadMeta = useCallback(async (signal?: AbortSignal) => {
     setMetaError(null);
@@ -54,11 +53,21 @@ export default function BankStatementSyncPage() {
     }
   }, []);
 
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    setRefreshToken((x) => x + 1);
+    try {
+      await loadMeta();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadMeta]);
+
   useEffect(() => {
     const ac = new AbortController();
     void loadMeta(ac.signal);
     return () => ac.abort();
-  }, [loadMeta, refreshToken]);
+  }, [loadMeta]);
 
   useEffect(() => {
     return () => {
@@ -200,8 +209,18 @@ export default function BankStatementSyncPage() {
             >
               Bank Sync
             </Button>
-            <Button variant="outline" size="sm" onClick={refresh}>
-              <RefreshCcw strokeWidth={1} /> รีเฟรช
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void refresh()}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCcw strokeWidth={1} className="h-4 w-4" />
+              )}{" "}
+              รีเฟรช
             </Button>
           </div>
         </div>
