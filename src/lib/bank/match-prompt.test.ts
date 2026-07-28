@@ -30,16 +30,20 @@ describe("bank match prompt", () => {
     expect(template).toContain("{{account_no}}");
     expect(template).toContain("{{from}}");
     expect(template).toContain("{{to}}");
-    expect(template).toContain("บิลโอน TR");
+    expect(template).toContain("TR transfer bills");
     expect(template).toContain("TAR");
     expect(template).toContain("RVMAS");
+    expect(template).toContain("Account: `{{account_no}}`");
+    // Operator-facing values stored on rows stay Thai.
+    expect(template).toContain("บิลโอน TR (ใบเดียว)");
+    expect(template).toContain("match_notes");
 
     const filled = fillBankMatchPrompt(template, {
       account_no: "7236",
       from: "2026-05-01",
       to: "2026-05-31",
     });
-    expect(filled).toContain("บัญชี: `7236`");
+    expect(filled).toContain("Account: `7236`");
     expect(filled).toContain("2026-05-01");
     expect(filled).toContain("2026-05-31");
     expect(filled).not.toContain("{{account_no}}");
