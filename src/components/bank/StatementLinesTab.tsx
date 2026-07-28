@@ -1,11 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { BadgeProps } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +24,10 @@ import { Input } from "@/components/ui/input";
 
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import type { StatementLineRow } from "@/components/bank/types";
+import {
+  BANK_MATCH_ACCOUNT_NO,
+  BANK_MATCH_AGENT_NAME,
+} from "@/lib/bank/match-prompt";
 
 type BankAccountOption = {
   account_no: string;
@@ -39,10 +42,45 @@ function prettyJson(value: unknown) {
   }
 }
 
-function statusBadgeVariant(status: string): BadgeProps["variant"] {
-  if (status === "matched") return "secondary";
-  if (status === "review") return "destructive";
-  return "outline";
+function matchStatusLabel(status: string) {
+  switch (status) {
+    case "matched":
+      return "จับคู่แล้ว";
+    case "review":
+      return "ต้องตรวจ";
+    case "ignored":
+      return "ไม่ใช้";
+    case "unmatched":
+      return "ยังไม่จับคู่";
+    default:
+      return status;
+  }
+}
+
+function MatchStatusBadge({ status }: { status: string }) {
+  const label = matchStatusLabel(status);
+  if (status === "matched") {
+    return (
+      <Badge className="border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+        {label}
+      </Badge>
+    );
+  }
+  if (status === "review") {
+    return (
+      <Badge className="border-transparent bg-amber-100 text-amber-900 hover:bg-amber-100">
+        {label}
+      </Badge>
+    );
+  }
+  if (status === "ignored") {
+    return (
+      <Badge className="border-transparent bg-slate-200 text-slate-700 hover:bg-slate-200">
+        {label}
+      </Badge>
+    );
+  }
+  return <Badge variant="outline">{label}</Badge>;
 }
 
 function formatConfidence(value: number | null | undefined) {
@@ -131,12 +169,18 @@ export default function StatementLinesTab({
   const [selected, setSelected] = useState<StatementLineRow | null>(null);
   const [selectedRawJson, setSelectedRawJson] = useState<unknown>(null);
 
+  const [matching, setMatching] = useState(false);
+  const [matchMessage, setMatchMessage] = useState<string | null>(null);
+  const [matchAgentUrl, setMatchAgentUrl] = useState<string | null>(null);
+
   const selectedAccount = useMemo(
     () => accounts.find((a) => a.account_no === accountNo) ?? null,
     [accounts, accountNo]
   );
 
   const canFetch = Boolean(accountNo && month);
+  const canMatch =
+    canFetch && accountNo === BANK_MATCH_ACCOUNT_NO && !matching;
 
   const loadAccounts = useCallback(async (signal?: AbortSignal) => {
     setAccountsLoading(true);
@@ -155,7 +199,10 @@ export default function StatementLinesTab({
       setAccounts(list);
       setAccountNo((prev) => {
         if (prev && list.some((a) => a.account_no === prev)) return prev;
-        return list[0]?.account_no ?? "";
+        const preferred = list.find(
+          (a) => a.account_no === BANK_MATCH_ACCOUNT_NO
+        );
+        return preferred?.account_no ?? list[0]?.account_no ?? "";
       });
     } catch (e) {
       if (String(e).includes("AbortError")) return;
@@ -238,7 +285,9 @@ export default function StatementLinesTab({
         cache: "no-store",
       });
       if (!res.ok) return;
-      const data = (await res.json()) as { row?: StatementLineRow & { raw_json?: unknown } };
+      const data = (await res.json()) as {
+        row?: StatementLineRow & { raw_json?: unknown };
+      };
       if (data?.row) {
         setSelected({
           ...row,
@@ -258,17 +307,52 @@ export default function StatementLinesTab({
     }
   }
 
+  async function handleMatch() {
+    const range = monthToRange(month);
+    if (!range || accountNo !== BANK_MATCH_ACCOUNT_NO) return;
+
+    setMatching(true);
+    setMatchMessage(null);
+    setMatchAgentUrl(null);
+    try {
+      const res = await fetch("/api/bank/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          account_no: accountNo,
+          from: range.from,
+          to: range.to,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          body?.error ?? body?.details ?? `Match failed (${res.status})`
+        );
+      }
+      setMatchMessage(
+        body?.message ??
+          `${BANK_MATCH_AGENT_NAME} เริ่มทำงานแล้วสำหรับ ${formatMonthLabel(month)}`
+      );
+      setMatchAgentUrl(body?.agent?.agentUrl ?? null);
+    } catch (e) {
+      setMatchMessage(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMatching(false);
+    }
+  }
+
   const columns: Column<StatementLineRow>[] = useMemo(
     () => [
-      { key: "txn_date", header: "txn_date", render: (r) => r.txn_date },
+      { key: "txn_date", header: "วันที่", render: (r) => r.txn_date },
       {
         key: "description",
-        header: "description",
+        header: "รายละเอียด",
         render: (r) => r.description ?? "",
       },
       {
         key: "amount",
-        header: "amount",
+        header: "จำนวนเงิน",
         className: "text-right",
         render: (r) =>
           Number(r.amount).toLocaleString("th-TH", {
@@ -276,10 +360,19 @@ export default function StatementLinesTab({
             maximumFractionDigits: 2,
           }),
       },
-      { key: "direction", header: "direction", render: (r) => r.direction },
+      {
+        key: "direction",
+        header: "ทิศทาง",
+        render: (r) =>
+          r.direction === "in"
+            ? "เข้า"
+            : r.direction === "out"
+              ? "ออก"
+              : r.direction,
+      },
       {
         key: "balance_after",
-        header: "balance_after",
+        header: "ยอดคงเหลือ",
         className: "text-right",
         render: (r) =>
           r.balance_after === null
@@ -291,42 +384,38 @@ export default function StatementLinesTab({
       },
       {
         key: "bank_reference",
-        header: "bank_reference",
+        header: "อ้างอิงธนาคาร",
         render: (r) => r.bank_reference ?? "",
       },
       {
         key: "match_status",
-        header: "match_status",
-        render: (r) => (
-          <Badge variant={statusBadgeVariant(r.match_status)}>
-            {r.match_status}
-          </Badge>
-        ),
+        header: "สถานะจับคู่",
+        render: (r) => <MatchStatusBadge status={r.match_status} />,
       },
       {
         key: "match_reason",
-        header: "match_reason",
+        header: "เหตุผล",
         render: (r) => r.match_reason ?? "",
       },
       {
         key: "match_confidence",
-        header: "match_confidence",
+        header: "ความมั่นใจ",
         className: "text-right",
         render: (r) => formatConfidence(r.match_confidence),
       },
       {
         key: "match_notes",
-        header: "match_notes",
+        header: "หมายเหตุ",
         render: (r) => r.match_notes ?? "",
       },
       {
         key: "source_sheet_name",
-        header: "source_sheet_name",
+        header: "ชีทต้นทาง",
         render: (r) => r.source_sheet_name ?? "",
       },
       {
         key: "source_row_number",
-        header: "source_row_number",
+        header: "แถวต้นทาง",
         className: "text-right",
         render: (r) => r.source_row_number ?? "",
       },
@@ -345,6 +434,8 @@ export default function StatementLinesTab({
               onValueChange={(v) => {
                 setOffset(0);
                 setAccountNo(v);
+                setMatchMessage(null);
+                setMatchAgentUrl(null);
               }}
               disabled={accountsLoading || accounts.length === 0}
             >
@@ -407,6 +498,23 @@ export default function StatementLinesTab({
               </Button>
             </div>
           </div>
+
+          <div className="flex flex-col gap-1">
+            <div className="text-xs text-muted-foreground">จับคู่อัตโนมัติ</div>
+            <Button
+              type="button"
+              onClick={handleMatch}
+              disabled={!canMatch}
+              title={
+                accountNo && accountNo !== BANK_MATCH_ACCOUNT_NO
+                  ? `ตอนนี้รองรับเฉพาะบัญชี ${BANK_MATCH_ACCOUNT_NO}`
+                  : `${BANK_MATCH_AGENT_NAME} — จับคู่ยอดเข้าตามกฎใน prompts/`
+              }
+            >
+              <Eye className="h-4 w-4" />
+              {matching ? "กำลังปล่อยเหยี่ยว…" : BANK_MATCH_AGENT_NAME}
+            </Button>
+          </div>
         </div>
 
         {selectedAccount && month && (
@@ -428,9 +536,34 @@ export default function StatementLinesTab({
           </p>
         )}
 
+        {accountNo && accountNo !== BANK_MATCH_ACCOUNT_NO ? (
+          <p className="text-sm text-amber-800">
+            {BANK_MATCH_AGENT_NAME} ใช้ได้เฉพาะบัญชี {BANK_MATCH_ACCOUNT_NO}
+          </p>
+        ) : null}
+        {matchMessage ? (
+          <p className="text-sm text-muted-foreground">
+            {matchMessage}
+            {matchAgentUrl ? (
+              <>
+                {" "}
+                —{" "}
+                <a
+                  href={matchAgentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline underline-offset-2"
+                >
+                  เปิดดูงาน agent
+                </a>
+              </>
+            ) : null}
+          </p>
+        ) : null}
+
         <div className="flex flex-wrap items-end gap-3 pt-1 border-t border-slate-200">
           <div className="min-w-0 flex-1 sm:min-w-[140px] sm:flex-none">
-            <div className="text-xs text-muted-foreground mb-1">direction</div>
+            <div className="text-xs text-muted-foreground mb-1">ทิศทาง</div>
             <Select
               value={direction}
               onValueChange={(v) => {
@@ -443,15 +576,13 @@ export default function StatementLinesTab({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">ทั้งหมด</SelectItem>
-                <SelectItem value="in">in</SelectItem>
-                <SelectItem value="out">out</SelectItem>
+                <SelectItem value="in">เข้า</SelectItem>
+                <SelectItem value="out">ออก</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="min-w-0 flex-1 sm:min-w-[160px] sm:flex-none">
-            <div className="text-xs text-muted-foreground mb-1">
-              match_status
-            </div>
+          <div className="min-w-0 flex-1 sm:min-w-[180px] sm:flex-none">
+            <div className="text-xs text-muted-foreground mb-1">สถานะจับคู่</div>
             <Select
               value={matchStatus}
               onValueChange={(v) => {
@@ -459,15 +590,15 @@ export default function StatementLinesTab({
                 setMatchStatus(v);
               }}
             >
-              <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">ทั้งหมด</SelectItem>
-                <SelectItem value="review">review (ต้องตรวจ)</SelectItem>
-                <SelectItem value="unmatched">unmatched</SelectItem>
-                <SelectItem value="matched">matched</SelectItem>
-                <SelectItem value="ignored">ignored</SelectItem>
+                <SelectItem value="review">ต้องตรวจ</SelectItem>
+                <SelectItem value="unmatched">ยังไม่จับคู่</SelectItem>
+                <SelectItem value="matched">จับคู่แล้ว</SelectItem>
+                <SelectItem value="ignored">ไม่ใช้</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -501,41 +632,43 @@ export default function StatementLinesTab({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Statement Line detail</DialogTitle>
+            <DialogTitle>รายละเอียดรายการเดินบัญชี</DialogTitle>
             <DialogDescription>
-              {selected ? `${selected.txn_date} • ${selected.description ?? ""}` : ""}
+              {selected
+                ? `${selected.txn_date} • ${selected.description ?? ""}`
+                : ""}
             </DialogDescription>
           </DialogHeader>
           {selected && (
             <div className="grid gap-2 rounded-md border p-3 text-sm sm:grid-cols-2">
               <div>
-                <div className="text-xs text-muted-foreground">match_status</div>
-                <Badge variant={statusBadgeVariant(selected.match_status)}>
-                  {selected.match_status}
-                </Badge>
+                <div className="text-xs text-muted-foreground">สถานะจับคู่</div>
+                <MatchStatusBadge status={selected.match_status} />
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">match_confidence</div>
+                <div className="text-xs text-muted-foreground">ความมั่นใจ</div>
                 <div>{formatConfidence(selected.match_confidence) || "-"}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">match_reason</div>
+                <div className="text-xs text-muted-foreground">เหตุผล</div>
                 <div>{selected.match_reason || "-"}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">matched_ref</div>
+                <div className="text-xs text-muted-foreground">อ้างอิงที่จับคู่</div>
                 <div>{formatMatchedRef(selected) || "-"}</div>
               </div>
               <div className="sm:col-span-2">
-                <div className="text-xs text-muted-foreground">match_notes</div>
-                <div className="whitespace-pre-wrap">{selected.match_notes || "-"}</div>
+                <div className="text-xs text-muted-foreground">หมายเหตุ</div>
+                <div className="whitespace-pre-wrap">
+                  {selected.match_notes || "-"}
+                </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">matched_by</div>
+                <div className="text-xs text-muted-foreground">จับคู่โดย</div>
                 <div>{selected.matched_by || "-"}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">matched_at</div>
+                <div className="text-xs text-muted-foreground">เวลาจับคู่</div>
                 <div>{selected.matched_at || "-"}</div>
               </div>
             </div>
