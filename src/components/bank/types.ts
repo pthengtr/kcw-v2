@@ -25,6 +25,13 @@ export type StatementLineRow = {
   account_no: string;
   bank_name: string | null;
   match_status: string;
+  match_reason: string | null;
+  match_confidence: number | null;
+  matched_ref_type: string | null;
+  matched_ref_id: string | null;
+  match_notes: string | null;
+  matched_at: string | null;
+  matched_by: string | null;
   source_sheet_name: string | null;
   source_row_number: number | null;
   source_file_id: string | null;
