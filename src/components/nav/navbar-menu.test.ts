@@ -39,7 +39,11 @@ describe("Navbar menu order and design", () => {
     expect(navbar).toContain("sticky top-0");
     expect(navbar).toContain('href="/home"');
     expect(navbar).toContain("/kcw-logo.png");
-    expect(navbar).toContain("md:hidden");
+    // Keep sheet menu through tablet portrait (md); horizontal links from lg.
+    expect(navbar).toContain("lg:hidden");
+    expect(navbar).toContain("lg:flex");
+    expect(navbar).toContain("flex-nowrap");
+    expect(navbar).not.toMatch(/\bflex-wrap\b/);
     expect(navbar).toContain("SheetContent");
     expect(navbar).toContain('aria-label="เปิดเมนู"');
     expect(navbar).toContain("<SheetTitle");
