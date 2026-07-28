@@ -7,6 +7,11 @@ import {
   fillBankMatchPrompt,
   loadBankMatchPromptTemplate,
 } from "@/lib/bank/match-prompt";
+import {
+  BANK_MATCH_ACCOUNT_NO as ACCOUNT_NO,
+  BANK_MATCH_AGENT_NAME as AGENT_NAME,
+  BANK_MATCH_PROMPT_RELATIVE_PATH as PROMPT_PATH,
+} from "@/lib/bank/match-prompt-constants";
 
 describe("bank match prompt", () => {
   it("targets account 7236 and uses plain Thai match button name", () => {
@@ -15,6 +20,9 @@ describe("bank match prompt", () => {
     expect(BANK_MATCH_PROMPT_RELATIVE_PATH).toBe(
       "prompts/bank-statement-match-7236.md"
     );
+    expect(ACCOUNT_NO).toBe(BANK_MATCH_ACCOUNT_NO);
+    expect(AGENT_NAME).toBe(BANK_MATCH_AGENT_NAME);
+    expect(PROMPT_PATH).toBe(BANK_MATCH_PROMPT_RELATIVE_PATH);
   });
 
   it("loads v1 prompt and injects webapp scope placeholders", () => {

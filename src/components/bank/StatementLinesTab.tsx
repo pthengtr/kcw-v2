@@ -27,7 +27,7 @@ import type { StatementLineRow } from "@/components/bank/types";
 import {
   BANK_MATCH_ACCOUNT_NO,
   BANK_MATCH_AGENT_NAME,
-} from "@/lib/bank/match-prompt";
+} from "@/lib/bank/match-prompt-constants";
 
 type BankAccountOption = {
   account_no: string;
