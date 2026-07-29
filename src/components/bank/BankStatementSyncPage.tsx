@@ -27,7 +27,7 @@ type BankSyncMeta = {
 
 export default function BankStatementSyncPage() {
   const [tab, setTab] = useState<"import-files" | "statement-lines">(
-    "import-files"
+    "statement-lines"
   );
   const [refreshToken, setRefreshToken] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -234,15 +234,15 @@ export default function BankStatementSyncPage() {
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
-            <TabsTrigger value="import-files">Import Files</TabsTrigger>
             <TabsTrigger value="statement-lines">Statement Lines</TabsTrigger>
+            <TabsTrigger value="import-files">Import Files</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="import-files" className="mt-4">
-            <ImportFilesTab refreshToken={refreshToken} />
-          </TabsContent>
           <TabsContent value="statement-lines" className="mt-4">
             <StatementLinesTab refreshToken={refreshToken} />
+          </TabsContent>
+          <TabsContent value="import-files" className="mt-4">
+            <ImportFilesTab refreshToken={refreshToken} />
           </TabsContent>
         </Tabs>
       </div>
