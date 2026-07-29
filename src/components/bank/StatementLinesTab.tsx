@@ -111,44 +111,71 @@ function matchStatusLabel(status: string) {
   return matchStatusLabelTh(status);
 }
 
-function MatchStatusBadge({ status }: { status: string }) {
+function MatchStatusBadge({
+  status,
+  className,
+}: {
+  status: string;
+  className?: string;
+}) {
   const label = matchStatusLabel(status);
+  const base =
+    "whitespace-nowrap shrink-0 max-w-full inline-flex items-center";
   if (status === "matched" || status === "resolved" || status === "manual") {
     return (
-      <Badge className="border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+      <Badge
+        title={label}
+        className={`${base} border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100 ${className ?? ""}`}
+      >
         {label}
       </Badge>
     );
   }
   if (status === "review") {
     return (
-      <Badge className="border-transparent bg-amber-100 text-amber-900 hover:bg-amber-100">
+      <Badge
+        title={label}
+        className={`${base} border-transparent bg-amber-100 text-amber-900 hover:bg-amber-100 ${className ?? ""}`}
+      >
         {label}
       </Badge>
     );
   }
   if (status === "pending") {
     return (
-      <Badge className="border-transparent bg-sky-100 text-sky-900 hover:bg-sky-100">
+      <Badge
+        title={label}
+        className={`${base} border-transparent bg-sky-100 text-sky-900 hover:bg-sky-100 ${className ?? ""}`}
+      >
         {label}
       </Badge>
     );
   }
   if (status === "ignored") {
     return (
-      <Badge className="border-transparent bg-slate-200 text-slate-700 hover:bg-slate-200">
+      <Badge
+        title={label}
+        className={`${base} border-transparent bg-slate-200 text-slate-700 hover:bg-slate-200 ${className ?? ""}`}
+      >
         {label}
       </Badge>
     );
   }
   if (status === "unmatched") {
     return (
-      <Badge className="border-transparent bg-rose-100 text-rose-900 hover:bg-rose-100">
+      <Badge
+        title={label}
+        className={`${base} border-transparent bg-rose-100 text-rose-900 hover:bg-rose-100 ${className ?? ""}`}
+      >
         {label}
       </Badge>
     );
   }
-  return <Badge variant="outline">{label}</Badge>;
+  return (
+    <Badge title={label} variant="outline" className={`${base} ${className ?? ""}`}>
+      {label}
+    </Badge>
+  );
 }
 
 function formatConfidence(value: number | null | undefined) {
@@ -660,16 +687,24 @@ export default function StatementLinesTab({
 
   const columns: Column<StatementLineRow>[] = useMemo(
     () => [
-      { key: "txn_date", header: "วันที่", render: (r) => r.txn_date },
+      {
+        key: "txn_date",
+        header: "วันที่",
+        className: "whitespace-nowrap",
+        render: (r) => r.txn_date,
+      },
       {
         key: "description",
         header: "รายละเอียด",
-        render: (r) => r.description ?? "",
+        className: "min-w-[12rem] max-w-[20rem]",
+        render: (r) => (
+          <span className="line-clamp-2 break-words">{r.description ?? ""}</span>
+        ),
       },
       {
         key: "amount",
         header: "จำนวนเงิน",
-        className: "text-right",
+        className: "text-right whitespace-nowrap",
         render: (r) =>
           Number(r.amount).toLocaleString("th-TH", {
             minimumFractionDigits: 2,
@@ -679,6 +714,7 @@ export default function StatementLinesTab({
       {
         key: "direction",
         header: "ทิศทาง",
+        className: "whitespace-nowrap",
         render: (r) =>
           r.direction === "in"
             ? "เข้า"
@@ -687,9 +723,15 @@ export default function StatementLinesTab({
               : r.direction,
       },
       {
+        key: "match_status",
+        header: "สถานะจับคู่",
+        className: "whitespace-nowrap min-w-[8.5rem]",
+        render: (r) => <MatchStatusBadge status={r.match_status} />,
+      },
+      {
         key: "balance_after",
         header: "ยอดคงเหลือ",
-        className: "text-right",
+        className: "text-right whitespace-nowrap hidden xl:table-cell",
         render: (r) =>
           r.balance_after === null
             ? ""
@@ -701,47 +743,104 @@ export default function StatementLinesTab({
       {
         key: "bank_reference",
         header: "อ้างอิงธนาคาร",
+        className: "hidden xl:table-cell whitespace-nowrap",
         render: (r) => r.bank_reference ?? "",
-      },
-      {
-        key: "match_status",
-        header: "สถานะจับคู่",
-        render: (r) => <MatchStatusBadge status={r.match_status} />,
       },
       {
         key: "match_reason",
         header: "เหตุผล",
-        render: (r) => r.match_reason ?? "",
+        className: "min-w-[10rem] max-w-[16rem] hidden lg:table-cell",
+        render: (r) => (
+          <span className="line-clamp-2 break-words">{r.match_reason ?? ""}</span>
+        ),
       },
       {
         key: "match_confidence",
         header: "ความมั่นใจ",
-        className: "text-right",
+        className: "text-right whitespace-nowrap hidden xl:table-cell",
         render: (r) => formatConfidence(r.match_confidence),
       },
       {
         key: "match_notes",
         header: "หมายเหตุ",
-        render: (r) => r.match_notes ?? "",
+        className: "min-w-[12rem] max-w-[18rem] hidden xl:table-cell",
+        render: (r) => (
+          <span className="line-clamp-2 break-words">{r.match_notes ?? ""}</span>
+        ),
       },
       {
         key: "source_sheet_name",
         header: "ชีทต้นทาง",
+        className: "hidden xl:table-cell whitespace-nowrap",
         render: (r) => r.source_sheet_name ?? "",
       },
       {
         key: "source_row_number",
         header: "แถวต้นทาง",
-        className: "text-right",
+        className: "text-right whitespace-nowrap hidden xl:table-cell",
         render: (r) => r.source_row_number ?? "",
       },
     ],
     []
   );
 
+  function renderStatementMobileCard(row: StatementLineRow) {
+    return (
+      <button
+        type="button"
+        onClick={() => void openRaw(row)}
+        className="w-full rounded-md border bg-white p-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <MatchStatusBadge status={row.match_status} />
+          <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
+            {row.txn_date}
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2">
+          <div>
+            <div className="text-xs text-muted-foreground">รายละเอียด</div>
+            <div className="text-sm break-words">
+              {row.description || "—"}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground">จำนวนเงิน</div>
+              <div className="text-sm font-medium whitespace-nowrap">
+                {Number(row.amount).toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">ทิศทาง</div>
+              <div className="text-sm">
+                {row.direction === "in"
+                  ? "เข้า"
+                  : row.direction === "out"
+                    ? "ออก"
+                    : row.direction}
+              </div>
+            </div>
+          </div>
+          {row.match_reason ? (
+            <div>
+              <div className="text-xs text-muted-foreground">เหตุผล</div>
+              <div className="text-sm line-clamp-2 break-words">
+                {row.match_reason}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </button>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-md border p-4 bg-slate-50 flex flex-col gap-4">
+      <div className="rounded-md border p-3 sm:p-4 bg-slate-50 flex flex-col gap-3 sm:gap-4">
         <div className="flex flex-wrap items-end gap-4">
           <div className="min-w-0 flex-1 basis-full sm:min-w-[280px] sm:basis-auto">
             <div className="text-xs text-muted-foreground mb-1">บัญชี</div>
@@ -976,13 +1075,16 @@ export default function StatementLinesTab({
           offset={offset}
           onLimitChange={setLimit}
           onOffsetChange={setOffset}
-          onRowClick={openRaw}
+          onRowClick={(row) => void openRaw(row)}
           loading={loading}
+          tableMinWidthClassName="min-w-[52rem]"
+          rowKey={(row) => row.id}
+          mobileCardRender={renderStatementMobileCard}
         />
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-4xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>รายละเอียดรายการเดินบัญชี</DialogTitle>
             <DialogDescription>
