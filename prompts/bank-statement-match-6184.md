@@ -137,19 +137,63 @@ else:         CE = (2500 + y) − 543   (2-digit Buddhist, e.g. 69 → 2026)
 
 If no ศรีสยาม bundle matches, try all suppliers' PIMAS CHKAMT bundles same way.
 
+#### Paid-but-unlinked PIMAS fallback
+
+If the normal PIMAS `CHKAMT` bundle search produces no match, check for possible operator-entry or export-linkage errors.
+
+Eligible fallback bills must:
+
+- have `PAID = 'Y'`
+- have `coalesce(DUEAMT, 0) = 0`
+- have both `VOUCNO1` and `VOUCNO2` empty
+- not be cancelled
+- have `BILLDATE` on or before the bank clearing date
+- fall within a broad lookback of up to **180 days** before `txn_date`
+
+Search combinations of **2 to 4 bills belonging to the same `ACCTNO` only**. Evaluate each supplier independently. Do not perform an unrestricted subset-sum across bills from different suppliers.
+
+Rank possible combinations by:
+
+1. smallest absolute difference from the bank amount
+2. all bills belonging to the same supplier account
+3. latest bill date closest to the cheque-clearing date
+4. fewer bills
+5. bills not already linked to another voucher
+6. consistent supplier name and tax reference across the bills
+
+Amount handling:
+
+- Difference below ฿1.00: strong candidate
+- Difference from ฿1.00 through ฿10.00: plausible manual rounding or adjustment
+- Difference above ฿10.00: show only when exceptionally plausible; never auto-match
+- Maximum review tolerance: the smaller of **฿100.00** or **0.05% of the bank amount**
+
+This fallback is always `review`, never automatically `matched`, because the missing PVMAS linkage prevents confirmation.
+
 | Kind | `matched_ref_type` | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
 | PIMAS bundle exact | `pimas` | `matched` | `บิลซื้อ PIMAS (เช็คจ่ายชัดเจน)` |
 | PIMAS bundle ≈ (< 1฿ diff) | `pimas` | `matched` | `บิลซื้อ PIMAS (เช็คจ่ายชัดเจน)` |
-| no PIMAS hit | `bank_cheque` | `review` | `เช็คเคลียร์ (ยังไม่พบใบสั่งซื้อ)` |
+| Paid unlinked PIMAS combination | `pimas_possible_bundle` | `review` | `อาจเป็นเช็ครวมหลายบิล PIMAS ที่ไม่มีเลขใบสำคัญจ่าย` |
+| no PIMAS hit (after fallback) | `bank_cheque` | `review` | `เช็คเคลียร์ (ยังไม่พบใบสั่งซื้อ)` |
 
-`matched_ref_id` = comma-separated `BILLNO`s from the bundle.  
-Confidence: exact 0.95; ≈ match 0.90; no hit ≤ 0.55
+`matched_ref_id` = comma-separated `BILLNO`s from the bundle (or candidate bills for the paid-unlinked fallback).  
+Confidence: exact 0.95; ≈ match 0.90; paid-unlinked fallback **0.55–0.75** (amount difference, supplier consistency, date plausibility); no hit ≤ 0.55
+
+Operator note for paid-unlinked fallback must show:
+
+- cheque number and clearing date
+- supplier account and supplier name
+- each bill number, date, and amount
+- combination total
+- bank amount
+- difference
+- explicit warning that the bills are marked paid but have no PVMAS voucher linkage
 
 Notes from May/June 2026 probe:
 
 - 18 / 25 ICAS cheques matched to ศรีสยาม PIMAS bundles (lags 28–32 days)
-- 7 remaining ICAS cheques: no PIMAS or PVMAS hit found in `raw_kcw` — likely other suppliers not yet in extract; leave as `review`
+- Remaining ICAS cheques: try paid-unlinked PIMAS fallback before leaving as plain `bank_cheque` review — some may be multi-bill payments with empty `VOUCNO1`/`VOUCNO2`
 
 ### 4) Other residual outflows
 
@@ -160,7 +204,7 @@ Small personal TRs (e.g. 3,000 baht education / advances) with no unique expense
 - **Any update to `direction = 'in'`**
 - `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (account **3557**)
 - Expense receipts paid via **0393** / director reimbursement / online-fee skip methods
-- Blind unconstrained subset-sum across many receipts
+- Blind unconstrained subset-sum across many receipts or across different PIMAS suppliers (paid-unlinked fallback may combine **2–4** bills of the **same `ACCTNO` only**)
 - Changing money fields
 
 ## Fields to write on each decision
@@ -185,6 +229,7 @@ Examples:
 - `จับคู่เงินเดือนมิ.ย. HQ+SYP (Salary HQ 6/26 + Salary SYP 06/26) รวม 436,565.00 บาท — PAY1 435,851.00 กับโอนส่วนต่าง 714.00 วันที่ 26/06/2026`
 - `จับคู่กับใบสำคัญจ่ายค่าไฟฟ้า 000095634096 สุทธิ 8,274.37 บาท วันที่ 22/05/2026 ชำระผ่าน กรุงไทย xxxxxx6184 (Provincial Electricity)`
 - `เช็คเลขที่ 10127780 เคลียร์ ICAS ยอด 136,633.00 บาท วันที่ 05/05/2026 — ยังไม่พบ expense_receipt ยอดตรง รอตรวจ`
+- `เช็คเลขที่ 10127908 เคลียร์วันที่ 22/06/2026 ยอด 219,945.05 บาท — อาจตรงกับบิลของผู้ขาย 7SSY: D-O-260100347 78,382.58 บาท + D-O-260300852 141,558.89 บาท รวม 219,941.47 บาท ต่าง 3.58 บาท ทั้งสองบิลถูกระบุว่าชำระแล้วแต่ไม่มีเลข PVMAS รอตรวจสอบ`
 
 Do not use cryptic codes like `payroll:` or `ICAS=` as the main `match_notes` text.
 
@@ -194,7 +239,7 @@ Approximate (do not force these numbers; sanity check only):
 
 - Utility / direct 6184 expense PV ≈ **4** outs (electricity)
 - Payroll bundle ≈ **2** outs in June (PAY1 + residual); May salary may be absent from the window
-- ICAS cheque clears ≈ **25** outs → ~18 match PIMAS ศรีสยาม bundles (0.90–0.95); ~7 stay `review`
+- ICAS cheque clears ≈ **25** outs → ~18 match PIMAS ศรีสยาม bundles (0.90–0.95); leftovers try paid-unlinked fallback (`pimas_possible_bundle` / `review`) before plain `bank_cheque` review
 - Inflows ≈ **24** → **leave pending**
 
 If utility + payroll coverage collapses for the same months, re-check `total_net` VAT/WHT formula and payment_method text before inventing new rules.
@@ -205,5 +250,5 @@ Report briefly in English:
 
 - Counts of `matched` / `review` / `ignored` / `unmatched` for **outbound** only
 - Confirm inflows were left untouched
-- Breakdown: payroll / expense_pv / bank_cheque review / other
-- Rows that need human review (especially ICAS cheques)
+- Breakdown: payroll / expense_pv / pimas / pimas_possible_bundle review / bank_cheque review / other
+- Rows that need human review (especially ICAS cheques and paid-unlinked PIMAS candidates)
