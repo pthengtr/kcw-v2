@@ -5,9 +5,10 @@ import { requirePermission } from "@/lib/auth/requirePermission";
 import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { launchCursorCloudAgent } from "@/lib/bank/cursor-agents";
 import {
-  BANK_MATCH_ACCOUNT_NO,
   BANK_MATCH_AGENT_NAME,
+  bankMatchAccountsLabel,
   buildBankMatchPrompt,
+  isBankMatchAccount,
 } from "@/lib/bank/match-prompt";
 
 const BodySchema = z.object({
@@ -34,10 +35,10 @@ export async function POST(req: Request) {
   }
 
   const { account_no, from, to } = parsed.data;
-  if (account_no !== BANK_MATCH_ACCOUNT_NO) {
+  if (!isBankMatchAccount(account_no)) {
     return NextResponse.json(
       {
-        error: `จับคู่ยอดเข้า รองรับเฉพาะบัญชี ${BANK_MATCH_ACCOUNT_NO}`,
+        error: `จับคู่ยอดเข้า รองรับเฉพาะบัญชี ${bankMatchAccountsLabel()}`,
         account_no,
       },
       { status: 400 }
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
     const promptText = buildBankMatchPrompt({ account_no, from, to });
     const launched = await launchCursorCloudAgent({
       promptText,
-      name: `${BANK_MATCH_AGENT_NAME} ${from}..${to}`,
+      name: `${BANK_MATCH_AGENT_NAME} ${account_no} ${from}..${to}`,
     });
 
     return NextResponse.json({
