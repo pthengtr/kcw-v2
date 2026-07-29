@@ -21,7 +21,11 @@ import {
 describe("bank match prompt", () => {
   it("supports configured match accounts and Thai button name", () => {
     expect(BANK_MATCH_ACCOUNT_NO).toBe("7236");
-    expect(BANK_MATCH_ACCOUNT_NOS).toEqual(["7236", "3557"]);
+    expect(BANK_MATCH_ACCOUNT_NOS).toEqual([
+      "7236",
+      "3557",
+      "248-0-42113-9",
+    ]);
     expect(BANK_MATCH_AGENT_NAME).toBe("จับคู่ยอดเข้า");
     expect(BANK_MATCH_PROMPT_RELATIVE_PATH).toBe(
       "prompts/bank-statement-match-7236.md"
@@ -29,11 +33,19 @@ describe("bank match prompt", () => {
     expect(BANK_MATCH_PROMPTS["3557"]).toBe(
       "prompts/bank-statement-match-3557.md"
     );
+    expect(BANK_MATCH_PROMPTS["248-0-42113-9"]).toBe(
+      "prompts/bank-statement-match-1139.md"
+    );
     expect(isBankMatchAccount("7236")).toBe(true);
     expect(isBankMatchAccount("3557")).toBe(true);
+    expect(isBankMatchAccount("248-0-42113-9")).toBe(true);
+    expect(isBankMatchAccount("1139")).toBe(false);
     expect(isBankMatchAccount("9999")).toBe(false);
     expect(getBankMatchPromptPath("3557")).toBe(
       "prompts/bank-statement-match-3557.md"
+    );
+    expect(getBankMatchPromptPath("248-0-42113-9")).toBe(
+      "prompts/bank-statement-match-1139.md"
     );
     expect(ACCOUNT_NO).toBe(BANK_MATCH_ACCOUNT_NO);
     expect(AGENT_NAME).toBe(BANK_MATCH_AGENT_NAME);
@@ -87,6 +99,31 @@ describe("bank match prompt", () => {
     expect(filled).toContain("Account: `3557`");
     expect(filled).toContain("2026-06-01");
     expect(filled).toContain("2026-06-30");
+    expect(filled).not.toContain("{{account_no}}");
+  });
+
+  it("loads 1139 / 248-0-42113-9 RVI marketplace prompt", () => {
+    const template = loadBankMatchPromptTemplate("248-0-42113-9");
+    expect(template).toContain("{{account_no}}");
+    expect(template).toContain("{{from}}");
+    expect(template).toContain("{{to}}");
+    expect(template).toContain("248-0-42113-9");
+    expect(template).toContain("RVI");
+    expect(template).toContain("raw_hq_rvmas_notes_vouchers");
+    expect(template).toContain("ใบสำคัญรับเงินออนไลน์ RVI (วันเดียวกัน)");
+    expect(template).toContain("internal_transfer");
+    expect(template).toContain("Do **not** match individual TAD");
+    expect(template).toContain("match_status = 'pending'");
+    expect(template).toContain("agent:bank-matcher-1139-v1");
+
+    const filled = buildBankMatchPrompt({
+      account_no: "248-0-42113-9",
+      from: "2026-05-01",
+      to: "2026-05-31",
+    });
+    expect(filled).toContain("Account: `248-0-42113-9`");
+    expect(filled).toContain("2026-05-01");
+    expect(filled).toContain("2026-05-31");
     expect(filled).not.toContain("{{account_no}}");
   });
 });
