@@ -21,7 +21,7 @@ import {
 describe("bank match prompt", () => {
   it("supports configured match accounts and Thai button name", () => {
     expect(BANK_MATCH_ACCOUNT_NO).toBe("7236");
-    expect(BANK_MATCH_ACCOUNT_NOS).toEqual(["7236", "3557"]);
+    expect(BANK_MATCH_ACCOUNT_NOS).toEqual(["7236", "3557", "0393"]);
     expect(BANK_MATCH_AGENT_NAME).toBe("จับคู่ยอดเข้า");
     expect(BANK_MATCH_PROMPT_RELATIVE_PATH).toBe(
       "prompts/bank-statement-match-7236.md"
@@ -29,11 +29,18 @@ describe("bank match prompt", () => {
     expect(BANK_MATCH_PROMPTS["3557"]).toBe(
       "prompts/bank-statement-match-3557.md"
     );
+    expect(BANK_MATCH_PROMPTS["0393"]).toBe(
+      "prompts/bank-statement-match-0393.md"
+    );
     expect(isBankMatchAccount("7236")).toBe(true);
     expect(isBankMatchAccount("3557")).toBe(true);
+    expect(isBankMatchAccount("0393")).toBe(true);
     expect(isBankMatchAccount("9999")).toBe(false);
     expect(getBankMatchPromptPath("3557")).toBe(
       "prompts/bank-statement-match-3557.md"
+    );
+    expect(getBankMatchPromptPath("0393")).toBe(
+      "prompts/bank-statement-match-0393.md"
     );
     expect(ACCOUNT_NO).toBe(BANK_MATCH_ACCOUNT_NO);
     expect(AGENT_NAME).toBe(BANK_MATCH_AGENT_NAME);
@@ -87,6 +94,33 @@ describe("bank match prompt", () => {
     expect(filled).toContain("Account: `3557`");
     expect(filled).toContain("2026-06-01");
     expect(filled).toContain("2026-06-30");
+    expect(filled).not.toContain("{{account_no}}");
+  });
+
+  it("loads 0393 3TR/3TAR + expense PV prompt", () => {
+    const template = loadBankMatchPromptTemplate("0393");
+    expect(template).toContain("{{account_no}}");
+    expect(template).toContain("3TR");
+    expect(template).toContain("3TAR");
+    expect(template).toContain("fin_3tar_lines");
+    expect(template).toContain("fin_3cntar_lines");
+    expect(template).toContain("expense_receipt");
+    expect(template).toContain("expense_pv");
+    expect(template).toContain("กสิกร xxxxxx0393");
+    expect(template).toContain("คืนเงินสำรอง");
+    expect(template).toContain("total_net");
+    expect(template).toContain("match_status = 'pending'");
+    expect(template).toContain("direction = 'in'");
+    expect(template).toContain("direction = 'out'");
+
+    const filled = buildBankMatchPrompt({
+      account_no: "0393",
+      from: "2026-05-01",
+      to: "2026-05-31",
+    });
+    expect(filled).toContain("Account: `0393`");
+    expect(filled).toContain("2026-05-01");
+    expect(filled).toContain("2026-05-31");
     expect(filled).not.toContain("{{account_no}}");
   });
 });
