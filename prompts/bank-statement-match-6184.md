@@ -204,7 +204,7 @@ Small personal TRs (e.g. 3,000 baht education / advances) with no unique expense
 - **Any update to `direction = 'in'`**
 - `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (account **3557**)
 - Expense receipts paid via **0393** / director reimbursement / online-fee skip methods
-- Blind unconstrained subset-sum across many receipts
+- Blind unconstrained subset-sum across many receipts or across different PIMAS suppliers (paid-unlinked fallback may combine **2–4** bills of the **same `ACCTNO` only**)
 - Changing money fields
 
 ## Fields to write on each decision
