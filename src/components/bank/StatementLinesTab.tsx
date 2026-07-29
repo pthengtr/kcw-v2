@@ -34,6 +34,7 @@ import {
 import {
   canOperatorEditMatchFields,
   canOperatorTransitionMatchStatus,
+  BANK_MATCH_STATUSES,
   matchStatusLabelTh,
 } from "@/lib/bank/match-status";
 
@@ -159,6 +160,83 @@ function MatchStatusBadge({
   );
 }
 
+function MatchStatusCountBadge({
+  status,
+  count,
+}: {
+  status: string;
+  count: number;
+}) {
+  const label = matchStatusLabel(status);
+  const base =
+    "whitespace-nowrap shrink-0 max-w-full inline-flex items-center gap-1";
+  const countStr = count.toLocaleString("th-TH");
+
+  // Mirror the existing `MatchStatusBadge` color mapping.
+  if (status === "matched" || status === "resolved" || status === "manual") {
+    return (
+      <Badge
+        title={`${label}: ${countStr}`}
+        className={`${base} border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100`}
+      >
+        <span className="font-medium">{countStr}</span>
+        {label}
+      </Badge>
+    );
+  }
+  if (status === "review") {
+    return (
+      <Badge
+        title={`${label}: ${countStr}`}
+        className={`${base} border-transparent bg-amber-100 text-amber-900 hover:bg-amber-100`}
+      >
+        <span className="font-medium">{countStr}</span>
+        {label}
+      </Badge>
+    );
+  }
+  if (status === "pending") {
+    return (
+      <Badge
+        title={`${label}: ${countStr}`}
+        className={`${base} border-transparent bg-sky-100 text-sky-900 hover:bg-sky-100`}
+      >
+        <span className="font-medium">{countStr}</span>
+        {label}
+      </Badge>
+    );
+  }
+  if (status === "ignored") {
+    return (
+      <Badge
+        title={`${label}: ${countStr}`}
+        className={`${base} border-transparent bg-slate-200 text-slate-700 hover:bg-slate-200`}
+      >
+        <span className="font-medium">{countStr}</span>
+        {label}
+      </Badge>
+    );
+  }
+  if (status === "unmatched") {
+    return (
+      <Badge
+        title={`${label}: ${countStr}`}
+        className={`${base} border-transparent bg-rose-100 text-rose-900 hover:bg-rose-100`}
+      >
+        <span className="font-medium">{countStr}</span>
+        {label}
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge title={`${label}: ${countStr}`} variant="outline" className={base}>
+      <span className="font-medium">{countStr}</span>
+      {label}
+    </Badge>
+  );
+}
+
 function formatConfidence(value: number | null | undefined) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return "";
@@ -237,6 +315,15 @@ export default function StatementLinesTab({
   const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [statusSummary, setStatusSummary] = useState<{
+    total: number;
+    counts: Record<string, number>;
+  } | null>(null);
+  const [statusSummaryLoading, setStatusSummaryLoading] = useState(false);
+  const [statusSummaryError, setStatusSummaryError] = useState<string | null>(
+    null
+  );
 
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
@@ -368,6 +455,56 @@ export default function StatementLinesTab({
     fetchRows(controller.signal);
     return () => controller.abort();
   }, [fetchRows, refreshToken, reloadToken]);
+
+  useEffect(() => {
+    if (!canFetch) {
+      setStatusSummary(null);
+      setStatusSummaryError(null);
+      return;
+    }
+    const range = monthToRange(month);
+    if (!range) return;
+
+    const controller = new AbortController();
+    const run = async () => {
+      setStatusSummaryLoading(true);
+      setStatusSummaryError(null);
+      try {
+        const params = new URLSearchParams();
+        params.set("account_no", accountNo);
+        params.set("from", range.from);
+        params.set("to", range.to);
+        if (direction !== "all") params.set("direction", direction);
+
+        const res = await fetch(
+          `/api/bank/statement-lines/status-summary?${params.toString()}`,
+          { cache: "no-store", signal: controller.signal }
+        );
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(body?.error ?? `Request failed (${res.status})`);
+        }
+
+        const next = body as {
+          total?: number | null;
+          counts?: Record<string, number> | null;
+        };
+        setStatusSummary({
+          total: Number(next.total ?? 0),
+          counts: next.counts ?? {},
+        });
+      } catch (e) {
+        if (String(e).includes("AbortError")) return;
+        setStatusSummaryError(e instanceof Error ? e.message : String(e));
+        setStatusSummary(null);
+      } finally {
+        setStatusSummaryLoading(false);
+      }
+    };
+
+    void run();
+    return () => controller.abort();
+  }, [canFetch, accountNo, month, direction]);
 
   useEffect(() => {
     let cancelled = false;
@@ -927,14 +1064,27 @@ export default function StatementLinesTab({
             <span className="font-medium text-foreground">
               {formatMonthLabel(month)}
             </span>
-            {count !== null && (
-              <>
-                {" "}
-                — ทั้งหมด {count.toLocaleString("th-TH")} รายการ
-              </>
-            )}
           </p>
         )}
+
+        {statusSummaryLoading ? (
+          <p className="text-sm text-muted-foreground">กำลังสรุปสถานะ…</p>
+        ) : statusSummary ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <Badge variant="outline" className="text-muted-foreground">
+              ทั้งหมด {statusSummary.total.toLocaleString("th-TH")} รายการ
+            </Badge>
+            {BANK_MATCH_STATUSES.map((s) => {
+              const c = statusSummary.counts[s] ?? 0;
+              return (
+                <MatchStatusCountBadge key={s} status={s} count={c} />
+              );
+            })}
+            {statusSummaryError ? (
+              <span className="text-xs text-red-600">{statusSummaryError}</span>
+            ) : null}
+          </div>
+        ) : null}
 
         {accountNo && !isBankMatchAccount(accountNo) ? (
           <p className="text-sm text-amber-800">
