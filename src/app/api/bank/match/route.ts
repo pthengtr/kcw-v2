@@ -70,7 +70,8 @@ export async function POST(req: Request) {
       account_no,
       from,
       to,
-      model: model ?? null,
+      model: launched.model,
+      usedModelFallback: launched.usedModelFallback ?? false,
       agent: launched,
     });
   } catch (error) {
