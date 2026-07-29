@@ -27,6 +27,8 @@ import type { StatementLineRow } from "@/components/bank/types";
 import {
   BANK_MATCH_ACCOUNT_NO,
   BANK_MATCH_AGENT_NAME,
+  bankMatchAccountsLabel,
+  isBankMatchAccount,
 } from "@/lib/bank/match-prompt-constants";
 
 type BankAccountOption = {
@@ -245,7 +247,7 @@ export default function StatementLinesTab({
     matching ||
     (!!matchRunStatus && !isTerminalMatchStatus(matchRunStatus));
   const canMatch =
-    canFetch && accountNo === BANK_MATCH_ACCOUNT_NO && !matchRunning;
+    canFetch && isBankMatchAccount(accountNo) && !matchRunning;
 
   const loadAccounts = useCallback(async (signal?: AbortSignal) => {
     setAccountsLoading(true);
@@ -440,7 +442,7 @@ export default function StatementLinesTab({
 
   async function handleMatch() {
     const range = monthToRange(month);
-    if (!range || accountNo !== BANK_MATCH_ACCOUNT_NO) return;
+    if (!range || !isBankMatchAccount(accountNo)) return;
 
     setMatching(true);
     setMatchMessage("กำลังเริ่ม agent…");
@@ -666,9 +668,9 @@ export default function StatementLinesTab({
               title={
                 matchRunning
                   ? "agent กำลังจับคู่ — รอให้เสร็จก่อน"
-                  : accountNo && accountNo !== BANK_MATCH_ACCOUNT_NO
-                    ? `ตอนนี้รองรับเฉพาะบัญชี ${BANK_MATCH_ACCOUNT_NO}`
-                    : `${BANK_MATCH_AGENT_NAME} — จับคู่ยอดเข้าตามกฎใน prompts/`
+                  : accountNo && !isBankMatchAccount(accountNo)
+                    ? `ตอนนี้รองรับเฉพาะบัญชี ${bankMatchAccountsLabel()}`
+                    : `${BANK_MATCH_AGENT_NAME} — จับคู่ตามกฎใน prompts/`
               }
             >
               {matchRunning ? (
@@ -700,9 +702,9 @@ export default function StatementLinesTab({
           </p>
         )}
 
-        {accountNo && accountNo !== BANK_MATCH_ACCOUNT_NO ? (
+        {accountNo && !isBankMatchAccount(accountNo) ? (
           <p className="text-sm text-amber-800">
-            {BANK_MATCH_AGENT_NAME} ใช้ได้เฉพาะบัญชี {BANK_MATCH_ACCOUNT_NO}
+            {BANK_MATCH_AGENT_NAME} ใช้ได้เฉพาะบัญชี {bankMatchAccountsLabel()}
           </p>
         ) : null}
         {matchRunning || matchMessage ? (

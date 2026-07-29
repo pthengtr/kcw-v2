@@ -7,7 +7,10 @@ const nextConfig: NextConfig = {
     },
   },
   outputFileTracingIncludes: {
-    "/api/bank/match": ["./prompts/bank-statement-match-7236.md"],
+    "/api/bank/match": [
+      "./prompts/bank-statement-match-7236.md",
+      "./prompts/bank-statement-match-3557.md",
+    ],
   },
   images: {
     remotePatterns: [

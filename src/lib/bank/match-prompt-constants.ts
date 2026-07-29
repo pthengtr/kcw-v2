@@ -1,4 +1,34 @@
-export const BANK_MATCH_ACCOUNT_NO = "7236";
-export const BANK_MATCH_PROMPT_RELATIVE_PATH =
-  "prompts/bank-statement-match-7236.md";
 export const BANK_MATCH_AGENT_NAME = "จับคู่ยอดเข้า";
+
+/** Preferred default account in the Statement Lines picker. */
+export const BANK_MATCH_ACCOUNT_NO = "7236";
+
+/**
+ * Account → matcher prompt path.
+ * Keep browser-safe (no `fs`) so client components can import this module.
+ */
+export const BANK_MATCH_PROMPTS: Record<string, string> = {
+  "7236": "prompts/bank-statement-match-7236.md",
+  "3557": "prompts/bank-statement-match-3557.md",
+};
+
+/** Stable display / allow-list order. */
+export const BANK_MATCH_ACCOUNT_NOS = ["7236", "3557"] as const;
+
+/** @deprecated Prefer getBankMatchPromptPath(accountNo). Kept for older imports. */
+export const BANK_MATCH_PROMPT_RELATIVE_PATH =
+  BANK_MATCH_PROMPTS[BANK_MATCH_ACCOUNT_NO];
+
+export function isBankMatchAccount(accountNo: string): boolean {
+  return Object.prototype.hasOwnProperty.call(BANK_MATCH_PROMPTS, accountNo);
+}
+
+export function getBankMatchPromptPath(accountNo: string): string | null {
+  return BANK_MATCH_PROMPTS[accountNo] ?? null;
+}
+
+export function bankMatchAccountsLabel(
+  accounts: readonly string[] = BANK_MATCH_ACCOUNT_NOS
+): string {
+  return accounts.join(", ");
+}
