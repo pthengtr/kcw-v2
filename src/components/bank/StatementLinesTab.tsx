@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Eye, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,15 +43,17 @@ type BankAccountOption = {
 };
 
 type ActiveMatchJob = {
-  agentId: string;
-  runId: string;
-  agentUrl: string;
+  state: "launching" | "running";
+  agentId: string | null;
+  runId: string | null;
+  agentUrl: string | null;
+  runStatus: string | null;
   accountNo: string;
   from: string;
   to: string;
+  requestedAt: string;
+  updatedAt: string;
 };
-
-const MATCH_JOB_STORAGE_KEY = "bank.match.activeJob.v1";
 
 function isTerminalMatchStatus(status: string) {
   return ["FINISHED", "ERROR", "CANCELLED", "EXPIRED"].includes(
@@ -75,27 +77,6 @@ function matchRunStatusLabel(status: string) {
       return "งานหมดอายุ";
     default:
       return `สถานะ: ${status}`;
-  }
-}
-
-function readStoredMatchJob(): ActiveMatchJob | null {
-  try {
-    const raw = sessionStorage.getItem(MATCH_JOB_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as ActiveMatchJob;
-    if (!parsed?.agentId || !parsed?.runId || !parsed?.agentUrl) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredMatchJob(job: ActiveMatchJob | null) {
-  try {
-    if (!job) sessionStorage.removeItem(MATCH_JOB_STORAGE_KEY);
-    else sessionStorage.setItem(MATCH_JOB_STORAGE_KEY, JSON.stringify(job));
-  } catch {
-    // ignore
   }
 }
 
@@ -275,9 +256,7 @@ export default function StatementLinesTab({
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
   const [matchAgentUrl, setMatchAgentUrl] = useState<string | null>(null);
   const [matchRunStatus, setMatchRunStatus] = useState<string | null>(null);
-  const [activeMatchJob, setActiveMatchJob] = useState<ActiveMatchJob | null>(
-    null
-  );
+  const activeMatchJobRef = useRef<ActiveMatchJob | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   const selectedAccount = useMemo(
@@ -391,26 +370,11 @@ export default function StatementLinesTab({
   }, [fetchRows, refreshToken, reloadToken]);
 
   useEffect(() => {
-    const stored = readStoredMatchJob();
-    if (!stored) return;
-    setActiveMatchJob(stored);
-    setMatchAgentUrl(stored.agentUrl);
-    setMatchRunStatus("RUNNING");
-    setMatchMessage(matchRunStatusLabel("RUNNING"));
-  }, []);
-
-  useEffect(() => {
-    if (!activeMatchJob) return;
-
     let cancelled = false;
 
     const pollOnce = async () => {
       try {
-        const params = new URLSearchParams({
-          agentId: activeMatchJob.agentId,
-          runId: activeMatchJob.runId,
-        });
-        const res = await fetch(`/api/bank/match/status?${params.toString()}`, {
+        const res = await fetch("/api/bank/match/status", {
           cache: "no-store",
         });
         const body = await res.json().catch(() => ({}));
@@ -425,19 +389,34 @@ export default function StatementLinesTab({
           return;
         }
 
-        const status = String(body?.run?.status ?? "RUNNING");
-        setMatchRunStatus(status);
-        setMatchMessage(matchRunStatusLabel(status));
-        if (body?.agentUrl) setMatchAgentUrl(String(body.agentUrl));
-
-          if (body?.terminal || isTerminalMatchStatus(status)) {
-          writeStoredMatchJob(null);
-          setActiveMatchJob(null);
+        const job = body?.job as ActiveMatchJob | undefined;
+        if (body?.active && job) {
+          const status = String(
+            body?.run?.status ?? job.runStatus ?? "CREATING"
+          );
+          activeMatchJobRef.current = job;
+          setMatchAgentUrl(job.agentUrl ?? null);
+          setMatchRunStatus(status);
+          setMatchMessage(matchRunStatusLabel(status));
           setMatching(false);
+          return;
+        }
+
+        const previousJob = activeMatchJobRef.current;
+        if (previousJob || body?.terminal) {
+          const status = String(
+            body?.run?.status ?? previousJob?.runStatus ?? "FINISHED"
+          );
+          activeMatchJobRef.current = null;
+          setMatching(false);
+          setMatchRunStatus(status);
+          if (body?.agentUrl) setMatchAgentUrl(String(body.agentUrl));
           if (status.toUpperCase() === "FINISHED") {
             setMatchMessage("จับคู่เสร็จแล้ว — รีเฟรชรายการแล้ว");
-            setReloadToken((n) => n + 1);
+          } else {
+            setMatchMessage(matchRunStatusLabel(status));
           }
+          setReloadToken((n) => n + 1);
         }
       } catch (e) {
         if (cancelled) return;
@@ -454,7 +433,7 @@ export default function StatementLinesTab({
       cancelled = true;
       clearInterval(timer);
     };
-  }, [activeMatchJob]);
+  }, []);
 
   async function openRaw(row: StatementLineRow) {
     setSelected(row);
@@ -646,40 +625,36 @@ export default function StatementLinesTab({
         }),
       });
       const body = await res.json().catch(() => ({}));
+      const activeJob = body?.activeJob as ActiveMatchJob | undefined;
       if (!res.ok) {
+        if (res.status === 409 && activeJob) {
+          const status = activeJob.runStatus ?? "CREATING";
+          activeMatchJobRef.current = activeJob;
+          setMatchAgentUrl(activeJob.agentUrl);
+          setMatchRunStatus(status);
+          setMatchMessage(
+            body?.error ?? "มี agent จับคู่รายการเดินบัญชีกำลังทำงานอยู่"
+          );
+          return;
+        }
         const err = String(body?.error ?? `Match failed (${res.status})`);
         const details = body?.details ? String(body.details) : "";
         throw new Error(details ? `${err} — ${details}` : err);
       }
 
-      const agent = body?.agent as
-        | {
-            agentId?: string;
-            runId?: string;
-            agentUrl?: string;
-            status?: string;
-          }
-        | undefined;
-
-      if (!agent?.agentId || !agent?.runId || !agent?.agentUrl) {
-        throw new Error("API ไม่ส่ง agentId/runId กลับมา");
+      if (
+        !activeJob?.agentId ||
+        !activeJob.runId ||
+        !activeJob.agentUrl
+      ) {
+        throw new Error("API ไม่ส่งข้อมูลงาน agent กลับมา");
       }
 
-      const status = String(agent.status ?? "CREATING");
-      const job: ActiveMatchJob = {
-        agentId: agent.agentId,
-        runId: agent.runId,
-        agentUrl: agent.agentUrl,
-        accountNo,
-        from: range.from,
-        to: range.to,
-      };
-
-      writeStoredMatchJob(job);
-      setMatchAgentUrl(agent.agentUrl);
+      const status = String(activeJob.runStatus ?? "CREATING");
+      activeMatchJobRef.current = activeJob;
+      setMatchAgentUrl(activeJob.agentUrl);
       setMatchRunStatus(status);
       setMatchMessage(matchRunStatusLabel(status));
-      setActiveMatchJob(job);
     } catch (e) {
       setMatchMessage(e instanceof Error ? e.message : String(e));
       setMatchRunStatus(null);

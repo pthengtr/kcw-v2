@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
@@ -7,13 +6,15 @@ import {
   getCursorAgentRun,
   isCursorRunTerminal,
 } from "@/lib/bank/cursor-agents";
+import {
+  getBankMatchAgentJob,
+  publicBankMatchAgentJob,
+  releaseBankMatchAgentJob,
+  updateBankMatchAgentRunStatus,
+} from "@/lib/bank/match-agent-jobs";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-const QuerySchema = z.object({
-  agentId: z.string().trim().min(1),
-  runId: z.string().trim().min(1),
-});
-
-export async function GET(req: Request) {
+export async function GET() {
   const permCheck = await requirePermission(BANK_PAGE_KEYS.statementSync);
   if (!permCheck.ok) {
     return NextResponse.json(
@@ -22,23 +23,45 @@ export async function GET(req: Request) {
     );
   }
 
-  const url = new URL(req.url);
-  const parsed = QuerySchema.safeParse({
-    agentId: url.searchParams.get("agentId") ?? "",
-    runId: url.searchParams.get("runId") ?? "",
-  });
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid query", details: parsed.error.flatten() },
-      { status: 400 }
-    );
-  }
-
   try {
-    const run = await getCursorAgentRun(parsed.data);
+    const supabase = createAdminClient();
+    const job = await getBankMatchAgentJob(supabase);
+    if (!job) {
+      return NextResponse.json({ active: false });
+    }
+
+    if (!job.agentId || !job.runId) {
+      return NextResponse.json({
+        active: true,
+        job: publicBankMatchAgentJob(job),
+        run: null,
+      });
+    }
+
+    const run = await getCursorAgentRun({
+      agentId: job.agentId,
+      runId: job.runId,
+    });
+    const terminal = isCursorRunTerminal(run.status);
+
+    if (terminal) {
+      await releaseBankMatchAgentJob({
+        supabase,
+        lockToken: job.lockToken,
+      });
+    } else {
+      await updateBankMatchAgentRunStatus({
+        supabase,
+        lockToken: job.lockToken,
+        run,
+      });
+    }
+
     return NextResponse.json({
+      active: !terminal,
+      job: publicBankMatchAgentJob({ ...job, runStatus: run.status }),
       run,
-      terminal: isCursorRunTerminal(run.status),
+      terminal,
       agentUrl: `https://cursor.com/agents/${run.agentId}`,
     });
   } catch (error) {
