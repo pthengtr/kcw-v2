@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     "/api/bank/match": [
       "./prompts/bank-statement-match-7236.md",
       "./prompts/bank-statement-match-3557.md",
+      "./prompts/bank-statement-match-6184.md",
     ],
   },
   images: {

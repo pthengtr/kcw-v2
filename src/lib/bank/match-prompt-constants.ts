@@ -10,10 +10,16 @@ export const BANK_MATCH_ACCOUNT_NO = "7236";
 export const BANK_MATCH_PROMPTS: Record<string, string> = {
   "7236": "prompts/bank-statement-match-7236.md",
   "3557": "prompts/bank-statement-match-3557.md",
+  /** KTB payroll + OpEx cheques (account ends with 6184). */
+  "248-6-00618-4": "prompts/bank-statement-match-6184.md",
 };
 
 /** Stable display / allow-list order. */
-export const BANK_MATCH_ACCOUNT_NOS = ["7236", "3557"] as const;
+export const BANK_MATCH_ACCOUNT_NOS = [
+  "7236",
+  "3557",
+  "248-6-00618-4",
+] as const;
 
 /** @deprecated Prefer getBankMatchPromptPath(accountNo). Kept for older imports. */
 export const BANK_MATCH_PROMPT_RELATIVE_PATH =
