@@ -33,6 +33,10 @@ describe("bank match prompt", () => {
     expect(template).toContain("TR transfer bills");
     expect(template).toContain("TAR");
     expect(template).toContain("RVMAS");
+    expect(template).toContain("K SHOP");
+    expect(template).toContain("interest_income");
+    expect(template).toContain("credit_note_refund");
+    expect(template).toContain("Non-VAT SIDET");
     expect(template).toContain("Account: `{{account_no}}`");
     // Operator-facing values stored on rows stay Thai.
     expect(template).toContain("บิลโอน TR (ใบเดียว)");
