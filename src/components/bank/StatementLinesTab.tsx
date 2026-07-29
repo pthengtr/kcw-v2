@@ -521,7 +521,9 @@ export default function StatementLinesTab({
 
     void run();
     return () => controller.abort();
-  }, [canFetch, accountNo, month, direction]);
+    // Also refresh when the page refresh button fires (`refreshToken`)
+    // or when a match agent finishes (`reloadToken`).
+  }, [canFetch, accountNo, month, direction, refreshToken, reloadToken]);
 
   useEffect(() => {
     let cancelled = false;
