@@ -15,10 +15,11 @@ Scope rules:
 1. Only account **3557**
 2. If `{{account_no}}` is not `3557`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Primary target: `direction = 'out'` and `match_status = 'unmatched'` (or rows you are re-reviewing in this pass)
-5. Inbound (`direction = 'in'`) rows in this account are rare — leave them `unmatched` unless a clear non-sales / transfer rule applies; do not force PVMAS/PIMAS onto inflows
+4. Primary target: `direction = 'out'` and `match_status = 'pending'`
+5. Inbound (`direction = 'in'`) rows in this account are rare — if still `pending`, set `unmatched` or `ignored` with a Thai note; do not force PVMAS/PIMAS onto inflows
 6. Never change amount / description / source_* / any money fields
 7. Write only `match_*` and `matched_*` fields
+8. **Never** update rows in `matched` / `review` / `resolved` / `unmatched` / `manual` / `ignored` — those belong to finished agent work or operators
 
 ## Match sources (priority order)
 
@@ -55,7 +56,7 @@ Notes from May/June probe:
 
 Source: `raw_kcw.raw_hq_pimas_purchase_bills`
 
-Use **only** for outbound rows still `unmatched` after PVMAS.
+Use **only** for outbound rows still `pending` after PVMAS claims are written (or still pending because PVMAS had no unique hit).
 
 - Not canceled (`CANCELED = 'N'`)
 - Prefer amount fields in this order: `AFTERTAX`, then `CHKAMT` (cheque), then `DUEAMT` / `CASHAMT` if uniquely needed
@@ -77,7 +78,7 @@ Confidence: strong same-day unique ≈ **0.85–0.90**; near-window / weaker ≤
 
 ### 3) Large / residual outflows
 
-Large transfers with **no** exact PVMAS `PAYAMT` and no unique PIMAS hit (often 50k–400k+) should stay `unmatched` or go to `review` with a Thai note — do **not** invent blind subset-sums across many vouchers/bills.
+Large transfers with **no** exact PVMAS `PAYAMT` and no unique PIMAS hit (often 50k–400k+) should be set to `unmatched` or `review` with a Thai note — do **not** invent blind subset-sums across many vouchers/bills.
 
 ## Exclusions (do not use)
 
@@ -90,7 +91,9 @@ Large transfers with **no** exact PVMAS `PAYAMT` and no unique PIMAS hit (often 
 
 Always set:
 
-- `match_status`: `matched` | `review` | `ignored` | keep `unmatched` if still unknown
+- `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
+  - Start from `pending` only; never write back to `pending`
+  - Operators own `resolved` / `manual` — do not touch those rows
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
 - `matched_ref_type` / `matched_ref_id`
@@ -123,7 +126,8 @@ If your run lands far below that for the same months, re-check filters (`CANCELE
 
 Report briefly in English:
 
-- Counts of `matched` / `review` / `ignored` / still `unmatched`
+- Counts of `matched` / `review` / `ignored` / `unmatched`
+- Confirm zero remaining `pending` in scope (or list any still pending and why)
 - Breakdown by source: PVMAS / PIMAS
 - How many large open outflows remain and their amounts
 - Rows that need human review

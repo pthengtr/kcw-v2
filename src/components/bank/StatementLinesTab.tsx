@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import type { StatementLineRow } from "@/components/bank/types";
@@ -30,6 +31,11 @@ import {
   bankMatchAccountsLabel,
   isBankMatchAccount,
 } from "@/lib/bank/match-prompt-constants";
+import {
+  canOperatorEditMatchFields,
+  canOperatorTransitionMatchStatus,
+  matchStatusLabelTh,
+} from "@/lib/bank/match-status";
 
 type BankAccountOption = {
   account_no: string;
@@ -102,23 +108,12 @@ function prettyJson(value: unknown) {
 }
 
 function matchStatusLabel(status: string) {
-  switch (status) {
-    case "matched":
-      return "จับคู่แล้ว";
-    case "review":
-      return "ต้องตรวจ";
-    case "ignored":
-      return "ไม่ใช้";
-    case "unmatched":
-      return "ยังไม่จับคู่";
-    default:
-      return status;
-  }
+  return matchStatusLabelTh(status);
 }
 
 function MatchStatusBadge({ status }: { status: string }) {
   const label = matchStatusLabel(status);
-  if (status === "matched") {
+  if (status === "matched" || status === "resolved" || status === "manual") {
     return (
       <Badge className="border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
         {label}
@@ -132,9 +127,23 @@ function MatchStatusBadge({ status }: { status: string }) {
       </Badge>
     );
   }
+  if (status === "pending") {
+    return (
+      <Badge className="border-transparent bg-sky-100 text-sky-900 hover:bg-sky-100">
+        {label}
+      </Badge>
+    );
+  }
   if (status === "ignored") {
     return (
       <Badge className="border-transparent bg-slate-200 text-slate-700 hover:bg-slate-200">
+        {label}
+      </Badge>
+    );
+  }
+  if (status === "unmatched") {
+    return (
+      <Badge className="border-transparent bg-rose-100 text-rose-900 hover:bg-rose-100">
         {label}
       </Badge>
     );
@@ -227,6 +236,13 @@ export default function StatementLinesTab({
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<StatementLineRow | null>(null);
   const [selectedRawJson, setSelectedRawJson] = useState<unknown>(null);
+  const [editReason, setEditReason] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editRefType, setEditRefType] = useState("");
+  const [editRefId, setEditRefId] = useState("");
+  const [savingMatch, setSavingMatch] = useState(false);
+  const [saveMatchError, setSaveMatchError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const [matching, setMatching] = useState(false);
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
@@ -412,6 +428,11 @@ export default function StatementLinesTab({
   async function openRaw(row: StatementLineRow) {
     setSelected(row);
     setSelectedRawJson(null);
+    setEditReason(row.match_reason ?? "");
+    setEditNotes(row.match_notes ?? "");
+    setEditRefType(row.matched_ref_type ?? "");
+    setEditRefId(row.matched_ref_id ?? "");
+    setSaveMatchError(null);
     setOpen(true);
     try {
       const res = await fetch(`/api/bank/statement-lines/${row.id}`, {
@@ -422,7 +443,7 @@ export default function StatementLinesTab({
         row?: StatementLineRow & { raw_json?: unknown };
       };
       if (data?.row) {
-        setSelected({
+        const next = {
           ...row,
           match_status: data.row.match_status ?? row.match_status,
           match_reason: data.row.match_reason ?? null,
@@ -432,11 +453,146 @@ export default function StatementLinesTab({
           match_notes: data.row.match_notes ?? null,
           matched_at: data.row.matched_at ?? null,
           matched_by: data.row.matched_by ?? null,
-        });
+        };
+        setSelected(next);
+        setEditReason(next.match_reason ?? "");
+        setEditNotes(next.match_notes ?? "");
+        setEditRefType(next.matched_ref_type ?? "");
+        setEditRefId(next.matched_ref_id ?? "");
         setSelectedRawJson(data.row.raw_json ?? null);
       }
     } catch {
       // ignore
+    }
+  }
+
+  async function saveMatchUpdate(nextStatus?: string) {
+    if (!selected) return;
+    const status = nextStatus ?? selected.match_status;
+    if (!canOperatorTransitionMatchStatus(selected.match_status, status)) {
+      setSaveMatchError(
+        `เปลี่ยนสถานะจาก ${matchStatusLabel(selected.match_status)} เป็น ${matchStatusLabel(status)} ไม่ได้`
+      );
+      return;
+    }
+
+    setSavingMatch(true);
+    setSaveMatchError(null);
+    try {
+      const res = await fetch(`/api/bank/statement-lines/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          match_status: status,
+          match_reason: editReason.trim() ? editReason.trim() : null,
+          match_notes: editNotes.trim() ? editNotes.trim() : null,
+          matched_ref_type: editRefType.trim() ? editRefType.trim() : null,
+          matched_ref_id: editRefId.trim() ? editRefId.trim() : null,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          body?.error ?? body?.details ?? `บันทึกไม่สำเร็จ (${res.status})`
+        );
+      }
+      const updated = body?.row as StatementLineRow | undefined;
+      if (updated) {
+        setSelected(updated);
+        setRows((prev) =>
+          prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r))
+        );
+        setEditReason(updated.match_reason ?? "");
+        setEditNotes(updated.match_notes ?? "");
+        setEditRefType(updated.matched_ref_type ?? "");
+        setEditRefId(updated.matched_ref_id ?? "");
+      }
+    } catch (e) {
+      setSaveMatchError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingMatch(false);
+    }
+  }
+
+  async function exportCsv() {
+    const range = monthToRange(month);
+    if (!range || !accountNo) return;
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("account_no", accountNo);
+      params.set("from", range.from);
+      params.set("to", range.to);
+      if (direction !== "all") params.set("direction", direction);
+      if (matchStatus !== "all") params.set("match_status", matchStatus);
+      params.set("limit", "5000");
+      params.set("offset", "0");
+
+      const res = await fetch(`/api/bank/statement-lines?${params.toString()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `Export failed (${res.status})`);
+      }
+      const data = (await res.json()) as { rows: StatementLineRow[] };
+      const exportRows = data.rows ?? [];
+
+      const header = [
+        "txn_date",
+        "description",
+        "amount",
+        "direction",
+        "match_status",
+        "match_reason",
+        "match_notes",
+        "match_confidence",
+        "matched_ref_type",
+        "matched_ref_id",
+        "matched_by",
+        "matched_at",
+      ];
+      const escape = (v: unknown) => {
+        const s = v == null ? "" : String(v);
+        if (/[",\n]/.test(s)) return `"${s.replaceAll('"', '""')}"`;
+        return s;
+      };
+      const lines = [
+        header.join(","),
+        ...exportRows.map((r) =>
+          [
+            r.txn_date,
+            r.description,
+            r.amount,
+            r.direction,
+            r.match_status,
+            r.match_reason,
+            r.match_notes,
+            r.match_confidence,
+            r.matched_ref_type,
+            r.matched_ref_id,
+            r.matched_by,
+            r.matched_at,
+          ]
+            .map(escape)
+            .join(",")
+        ),
+      ];
+      const blob = new Blob([lines.join("\n")], {
+        type: "text/csv;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `statement-${accountNo}-${month}${
+        matchStatus !== "all" ? `-${matchStatus}` : ""
+      }.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -760,7 +916,7 @@ export default function StatementLinesTab({
               </SelectContent>
             </Select>
           </div>
-          <div className="min-w-0 flex-1 sm:min-w-[180px] sm:flex-none">
+          <div className="min-w-0 flex-1 sm:min-w-[200px] sm:flex-none">
             <div className="text-xs text-muted-foreground mb-1">สถานะจับคู่</div>
             <Select
               value={matchStatus}
@@ -769,17 +925,34 @@ export default function StatementLinesTab({
                 setMatchStatus(v);
               }}
             >
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">ทั้งหมด</SelectItem>
+                <SelectItem value="pending">ยังไม่ประมวลผล</SelectItem>
                 <SelectItem value="review">ต้องตรวจ</SelectItem>
-                <SelectItem value="unmatched">ยังไม่จับคู่</SelectItem>
+                <SelectItem value="unmatched">จับคู่ไม่ได้</SelectItem>
+                <SelectItem value="resolved">ตรวจแล้ว</SelectItem>
+                <SelectItem value="manual">จับคู่ด้วยมือ</SelectItem>
                 <SelectItem value="matched">จับคู่แล้ว</SelectItem>
                 <SelectItem value="ignored">ไม่ใช้</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <div className="text-xs text-muted-foreground">ส่งออก</div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void exportCsv()}
+              disabled={!canFetch || exporting}
+            >
+              {exporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
+              ดาวน์โหลด CSV
+            </Button>
           </div>
         </div>
       </div>
@@ -819,41 +992,157 @@ export default function StatementLinesTab({
             </DialogDescription>
           </DialogHeader>
           {selected && (
-            <div className="grid gap-2 rounded-md border p-3 text-sm sm:grid-cols-2">
-              <div>
-                <div className="text-xs text-muted-foreground">สถานะจับคู่</div>
-                <MatchStatusBadge status={selected.match_status} />
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">ความมั่นใจ</div>
-                <div>{formatConfidence(selected.match_confidence) || "-"}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">เหตุผล</div>
-                <div>{selected.match_reason || "-"}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">อ้างอิงที่จับคู่</div>
-                <div>{formatMatchedRef(selected) || "-"}</div>
-              </div>
-              <div className="sm:col-span-2">
-                <div className="text-xs text-muted-foreground">หมายเหตุ</div>
-                <div className="whitespace-pre-wrap">
-                  {selected.match_notes || "-"}
+            <div className="grid gap-3 rounded-md border p-3 text-sm">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <div className="text-xs text-muted-foreground">สถานะจับคู่</div>
+                  <MatchStatusBadge status={selected.match_status} />
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">ความมั่นใจ</div>
+                  <div>
+                    {formatConfidence(selected.match_confidence) || "-"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">จับคู่โดย</div>
+                  <div>{selected.matched_by || "-"}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">เวลาจับคู่</div>
+                  <div>{selected.matched_at || "-"}</div>
                 </div>
               </div>
-              <div>
-                <div className="text-xs text-muted-foreground">จับคู่โดย</div>
-                <div>{selected.matched_by || "-"}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">เวลาจับคู่</div>
-                <div>{selected.matched_at || "-"}</div>
-              </div>
+
+              {canOperatorEditMatchFields(selected.match_status) ? (
+                <div className="grid gap-3 border-t pt-3">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">
+                        เหตุผล
+                      </div>
+                      <Input
+                        value={editReason}
+                        onChange={(e) => setEditReason(e.target.value)}
+                        placeholder="เช่น จับคู่ด้วยมือจากใบสำคัญ P69…"
+                        disabled={savingMatch}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">
+                          ชนิดอ้างอิง
+                        </div>
+                        <Input
+                          value={editRefType}
+                          onChange={(e) => setEditRefType(e.target.value)}
+                          placeholder="pvmas / pimas / …"
+                          disabled={savingMatch}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">
+                          รหัสอ้างอิง
+                        </div>
+                        <Input
+                          value={editRefId}
+                          onChange={(e) => setEditRefId(e.target.value)}
+                          placeholder="VOUCNO / BILLNO"
+                          disabled={savingMatch}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">
+                      หมายเหตุ
+                    </div>
+                    <Textarea
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      placeholder="รายละเอียดให้เจ้าหน้าที่อ่าน"
+                      rows={3}
+                      disabled={savingMatch}
+                    />
+                  </div>
+                  {saveMatchError ? (
+                    <p className="text-sm text-red-600">{saveMatchError}</p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={savingMatch}
+                      onClick={() => void saveMatchUpdate()}
+                    >
+                      {savingMatch ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : null}
+                      บันทึกเหตุผล/หมายเหตุ
+                    </Button>
+                    {canOperatorTransitionMatchStatus(
+                      selected.match_status,
+                      "resolved"
+                    ) ? (
+                      <Button
+                        type="button"
+                        disabled={savingMatch}
+                        onClick={() => void saveMatchUpdate("resolved")}
+                      >
+                        บันทึกเป็นตรวจแล้ว
+                      </Button>
+                    ) : null}
+                    {canOperatorTransitionMatchStatus(
+                      selected.match_status,
+                      "manual"
+                    ) ? (
+                      <Button
+                        type="button"
+                        disabled={savingMatch}
+                        onClick={() => void saveMatchUpdate("manual")}
+                      >
+                        บันทึกเป็นจับคู่ด้วยมือ
+                      </Button>
+                    ) : null}
+                    {canOperatorTransitionMatchStatus(
+                      selected.match_status,
+                      "ignored"
+                    ) ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={savingMatch}
+                        onClick={() => void saveMatchUpdate("ignored")}
+                      >
+                        ไม่ใช้
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-2 border-t pt-3 sm:grid-cols-2">
+                  <div>
+                    <div className="text-xs text-muted-foreground">เหตุผล</div>
+                    <div>{selected.match_reason || "-"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">
+                      อ้างอิงที่จับคู่
+                    </div>
+                    <div>{formatMatchedRef(selected) || "-"}</div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <div className="text-xs text-muted-foreground">หมายเหตุ</div>
+                    <div className="whitespace-pre-wrap">
+                      {selected.match_notes || "-"}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <div className="rounded-md border">
-            <ScrollArea className="h-[420px]">
+            <ScrollArea className="h-[320px]">
               <pre className="text-xs p-3 whitespace-pre-wrap">
                 {prettyJson(selectedRawJson)}
               </pre>

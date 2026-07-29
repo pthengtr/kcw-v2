@@ -53,6 +53,7 @@ describe("bank match prompt", () => {
     expect(template).toContain("credit_note_refund");
     expect(template).toContain("Non-VAT SIDET");
     expect(template).toContain("Account: `{{account_no}}`");
+    expect(template).toContain("match_status = 'pending'");
     expect(template).toContain("บิลโอน TR (ใบเดียว)");
     expect(template).toContain("match_notes");
 
@@ -75,6 +76,7 @@ describe("bank match prompt", () => {
     expect(template).toContain("raw_hq_pvmas_notes_vouchers");
     expect(template).toContain("raw_hq_pimas_purchase_bills");
     expect(template).toContain("ใบสำคัญจ่าย (วันเดียวกัน)");
+    expect(template).toContain("match_status = 'pending'");
     expect(template).toContain("direction = 'out'");
 
     const filled = buildBankMatchPrompt({
