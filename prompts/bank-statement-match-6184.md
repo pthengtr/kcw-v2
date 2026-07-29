@@ -117,19 +117,39 @@ Notes from May/June 2026 probe:
 - Tax / SSO / phones that historically used 6184 moved to **0393** in this period — do not pull 0393-paid receipts onto 6184
 - `expense_general` with payment 6184 was **not** observed — do not invent general-row matches unless a unique hit appears
 
-### 3) Company cheque clears without an expense hit (ICAS)
+### 3) Supplier cheque clears — PIMAS purchase bills (`raw_kcw.raw_hq_pimas_purchase_bills`)
 
-Rows with description like `SBK:11 SBR:642 ICAS INCL R1` and a cheque number in `bank_reference` / `raw_json->>'CHEQUE NO.'` are **cleared company cheques**.
+Rows with description like `SBK:11 SBR:642 ICAS INCL R1` and a cheque number in `bank_reference` / `raw_json->>'CHEQUE NO.'` are **cleared supplier cheques** paid via PIMAS (not PVMAS).
 
-May/June probe: these amounts did **not** uniquely hit `expense_receipt` (`total_net` / `signed_total`) nor PARTS9 PVMAS `PAYAMT`/`CHKAMT`. Do **not** force PVMAS/PIMAS onto this account.
+**Key insight from May/June 2026 probe:** almost all ICAS cheques on this account are payments to **บจก.ศรีสยามกลการ (สาขาที่ 00001)** (`ACCTNAME ILIKE '%ศรีสยาม%'`). The cheque payment date is stored in `REMARKS` as `D/M/YY##<tax-id>` (Thai Buddhist year, 2-digit: `69` = 2026). Match by grouping `CHKAMT` bills per parsed `REMARKS` date and comparing the **bundle sum** to the statement amount.
+
+**Date lag:** cheques typically clear ICAS **28–32 days** after the `REMARKS` payment date (Thailand 30-day payment terms). Use a window of `chk_date` between `txn_date − 60` and `txn_date + 2`.
+
+**Amount tolerance:** PIMAS stores CHKAMT with sub-baht precision; the bank statement rounds to whole baht. Accept `abs(bundle_sum − amount) < 1.00`.
+
+**Date parsing** for `REMARKS` (format `D/M/YY##ref` or `DD/MM/YYYY##ref`):
+```text
+y = parsed year integer
+if y >= 2400: CE = y − 543        (4-digit Buddhist, e.g. 2568 → 2025)
+if y >= 100:  CE = y              (already CE)
+else:         CE = (2500 + y) − 543   (2-digit Buddhist, e.g. 69 → 2026)
+```
+
+If no ศรีสยาม bundle matches, try all suppliers' PIMAS CHKAMT bundles same way.
 
 | Kind | `matched_ref_type` | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
-| cheque clear, no expense | `bank_cheque` | `review` | `เช็คเคลียร์ (ยังไม่พบใบสำคัญ)` |
+| PIMAS bundle exact | `pimas` | `matched` | `บิลซื้อ PIMAS (เช็คจ่ายชัดเจน)` |
+| PIMAS bundle ≈ (< 1฿ diff) | `pimas` | `matched` | `บิลซื้อ PIMAS (เช็คจ่ายชัดเจน)` |
+| no PIMAS hit | `bank_cheque` | `review` | `เช็คเคลียร์ (ยังไม่พบใบสั่งซื้อ)` |
 
-Set `matched_ref_id` to the cheque number. Explain in Thai that the cheque cleared but no `expense_receipt` net matched.
+`matched_ref_id` = comma-separated `BILLNO`s from the bundle.  
+Confidence: exact 0.95; ≈ match 0.90; no hit ≤ 0.55
 
-Confidence ≤ **0.55**
+Notes from May/June 2026 probe:
+
+- 18 / 25 ICAS cheques matched to ศรีสยาม PIMAS bundles (lags 28–32 days)
+- 7 remaining ICAS cheques: no PIMAS or PVMAS hit found in `raw_kcw` — likely other suppliers not yet in extract; leave as `review`
 
 ### 4) Other residual outflows
 
@@ -174,7 +194,7 @@ Approximate (do not force these numbers; sanity check only):
 
 - Utility / direct 6184 expense PV ≈ **4** outs (electricity)
 - Payroll bundle ≈ **2** outs in June (PAY1 + residual); May salary may be absent from the window
-- ICAS cheque clears ≈ **25** outs → mostly `review` until expense cheques are tagged in-app
+- ICAS cheque clears ≈ **25** outs → ~18 match PIMAS ศรีสยาม bundles (0.90–0.95); ~7 stay `review`
 - Inflows ≈ **24** → **leave pending**
 
 If utility + payroll coverage collapses for the same months, re-check `total_net` VAT/WHT formula and payment_method text before inventing new rules.
