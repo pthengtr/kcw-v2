@@ -13,9 +13,10 @@ Scope rules:
 1. Only account **7236**
 2. If `{{account_no}}` is not `7236`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Only touch rows with `direction = 'in'` and `match_status = 'unmatched'` (or rows you are re-reviewing in this pass)
+4. Only touch rows with `direction = 'in'` and `match_status = 'pending'`
 5. Never change amount / description / source_* / any money fields
 6. Write only `match_*` and `matched_*` fields
+7. **Never** update rows in `matched` / `review` / `resolved` / `unmatched` / `manual` / `ignored` — those belong to finished agent work or operators
 
 ## Match sources (priority order)
 
@@ -45,7 +46,7 @@ Notes:
 
 - Daily TR bill count is usually small (~3–8), so same-day allocation / subset-sum is fine
 - Do not mix daily TAR−CNTAR net rows into TR matching
-- If same-day match fails, leave `unmatched` (do not expand to T+1)
+- If same-day match fails, set `unmatched` (do not expand to T+1)
 
 ### 2) Daily net TAR − CNTAR
 
@@ -130,7 +131,9 @@ For these categories set:
 
 Always set:
 
-- `match_status`: `matched` | `review` | `ignored` | keep `unmatched` if still unknown
+- `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
+  - Start from `pending` only; never write back to `pending`
+  - Operators own `resolved` / `manual` — do not touch those rows
 - `match_reason`: short Thai text from the tables above (shown in the Thai UI)
 - `match_confidence`: 0 to 1
 - `matched_ref_type` / `matched_ref_id`
@@ -164,14 +167,15 @@ Do not use cryptic codes like `tr_remainder:` or `T+1 net=` as the main `match_n
 - Match any account other than 7236
 - Change money fields or source descriptions
 - Use non-VAT SIDET or unconstrained blind subset-sum
-- Force a match when unsure — use `review` or leave `unmatched`
+- Force a match when unsure — use `review` or set `unmatched`
 - Open a PR / change repo code for this job unless required to update data
 
 ## End-of-run summary
 
 Report briefly in English:
 
-- Counts of `matched` / `review` / `ignored` / still `unmatched`
+- Counts of `matched` / `review` / `ignored` / `unmatched`
+- Confirm zero remaining `pending` in scope (or list any still pending and why)
 - Breakdown by source: TR / TAR / RVMAS / non-sales categories
 - Any TAR shortfall catch-up pairs found
 - Rows that need human review
