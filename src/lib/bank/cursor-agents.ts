@@ -15,6 +15,11 @@ export type CursorAgentRunStatus = {
   result?: string | null;
 };
 
+export type CursorAgentModelSelection = {
+  id: string;
+  params?: Array<{ id: string; value: string }>;
+};
+
 const TERMINAL_RUN_STATUSES = new Set([
   "FINISHED",
   "ERROR",
@@ -22,8 +27,60 @@ const TERMINAL_RUN_STATUSES = new Set([
   "EXPIRED",
 ]);
 
+const ROUTER_OPTIMIZE_FOR = new Set(["cost", "balanced", "intelligence"]);
+
 export function isCursorRunTerminal(status: string): boolean {
   return TERMINAL_RUN_STATUSES.has(status.toUpperCase());
+}
+
+/**
+ * Resolve which model the match agent should use.
+ *
+ * - Default: Cursor Router Auto (`auto-smart` + `optimize_for=balanced`)
+ * - `CURSOR_AGENT_MODEL=omit|default` → omit model (user/team/system default)
+ * - `CURSOR_AGENT_MODEL=auto` → `{ id: "auto" }`
+ * - `CURSOR_AGENT_MODEL=auto-smart` (or any explicit id) → that model
+ * - `CURSOR_AGENT_MODEL_OPTIMIZE_FOR=cost|balanced|intelligence` for Router
+ */
+export function resolveCursorAgentModel(params?: {
+  modelId?: string | null;
+  optimizeFor?: string | null;
+}): CursorAgentModelSelection | undefined {
+  const rawId = (
+    params?.modelId ??
+    process.env.CURSOR_AGENT_MODEL ??
+    "auto-smart"
+  )
+    .trim()
+    .toLowerCase();
+
+  if (!rawId || rawId === "omit" || rawId === "default") {
+    return undefined;
+  }
+
+  if (rawId === "auto") {
+    return { id: "auto" };
+  }
+
+  const optimizeRaw = (
+    params?.optimizeFor ??
+    process.env.CURSOR_AGENT_MODEL_OPTIMIZE_FOR ??
+    "balanced"
+  )
+    .trim()
+    .toLowerCase();
+  const optimizeFor = ROUTER_OPTIMIZE_FOR.has(optimizeRaw)
+    ? optimizeRaw
+    : "balanced";
+
+  if (rawId === "auto-smart" || rawId === "auto_smart") {
+    return {
+      id: "auto-smart",
+      params: [{ id: "optimize_for", value: optimizeFor }],
+    };
+  }
+
+  return { id: rawId };
 }
 
 function requireCursorApiKey(apiKey?: string): string {
@@ -40,6 +97,7 @@ export async function launchCursorCloudAgent(params: {
   apiKey?: string;
   repoUrl?: string;
   startingRef?: string;
+  model?: CursorAgentModelSelection | null;
 }): Promise<CursorAgentLaunchResult> {
   const apiKey = requireCursorApiKey(params.apiKey);
 
@@ -50,18 +108,26 @@ export async function launchCursorCloudAgent(params: {
   const startingRef =
     params.startingRef ?? process.env.CURSOR_AGENT_STARTING_REF ?? "master";
 
+  const model =
+    params.model === null
+      ? undefined
+      : (params.model ?? resolveCursorAgentModel());
+
+  const body: Record<string, unknown> = {
+    name: params.name,
+    prompt: { text: params.promptText },
+    repos: [{ url: repoUrl, startingRef }],
+    autoCreatePR: false,
+  };
+  if (model) body.model = model;
+
   const res = await fetch("https://api.cursor.com/v1/agents", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      name: params.name,
-      prompt: { text: params.promptText },
-      repos: [{ url: repoUrl, startingRef }],
-      autoCreatePR: false,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {

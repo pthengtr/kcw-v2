@@ -3,7 +3,10 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
-import { launchCursorCloudAgent } from "@/lib/bank/cursor-agents";
+import {
+  launchCursorCloudAgent,
+  resolveCursorAgentModel,
+} from "@/lib/bank/cursor-agents";
 import {
   BANK_MATCH_AGENT_NAME,
   bankMatchAccountsLabel,
@@ -54,9 +57,11 @@ export async function POST(req: Request) {
 
   try {
     const promptText = buildBankMatchPrompt({ account_no, from, to });
+    const model = resolveCursorAgentModel();
     const launched = await launchCursorCloudAgent({
       promptText,
       name: `${BANK_MATCH_AGENT_NAME} ${account_no} ${from}..${to}`,
+      model,
     });
 
     return NextResponse.json({
@@ -65,6 +70,7 @@ export async function POST(req: Request) {
       account_no,
       from,
       to,
+      model: model ?? null,
       agent: launched,
     });
   } catch (error) {
