@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
+import PoAccountDialog from "@/components/po/PoAccountDialog";
 import {
   billedLabel,
   formatPoAmount,
@@ -48,6 +49,8 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
   const [selected, setSelected] = useState<PoHeaderRow | null>(null);
   const [lines, setLines] = useState<PoLineRow[]>([]);
   const [linesLoading, setLinesLoading] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountRow, setAccountRow] = useState<PoHeaderRow | null>(null);
 
   useEffect(() => {
     setOffset(0);
@@ -125,6 +128,26 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
         key: "docdate",
         header: "วันที่",
         render: (r) => formatPoDate(r.docdate),
+      },
+      {
+        key: "acctno",
+        header: "ACCTNO",
+        render: (r) =>
+          r.acctno ? (
+            <button
+              type="button"
+              className="font-mono text-left text-primary underline-offset-2 hover:underline"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAccountRow(r);
+                setAccountOpen(true);
+              }}
+            >
+              {r.acctno}
+            </button>
+          ) : (
+            "—"
+          ),
       },
       {
         key: "acctname",
@@ -249,6 +272,15 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      <PoAccountDialog
+        open={accountOpen}
+        onOpenChange={setAccountOpen}
+        acctno={accountRow?.acctno ?? null}
+        site="HQ"
+        docno={accountRow?.docno}
+        fallbackName={accountRow?.acctname}
+      />
     </div>
   );
 }
