@@ -13,6 +13,8 @@ export const BANK_MATCH_PROMPTS: Record<string, string> = {
   "0393": "prompts/bank-statement-match-0393.md",
   /** KTB marketplace settlements (account ends with 1139). */
   "248-0-42113-9": "prompts/bank-statement-match-1139.md",
+  /** KTB payroll + OpEx cheques (account ends with 6184). */
+  "248-6-00618-4": "prompts/bank-statement-match-6184.md",
 };
 
 /** Stable display / allow-list order. */
@@ -21,6 +23,7 @@ export const BANK_MATCH_ACCOUNT_NOS = [
   "3557",
   "0393",
   "248-0-42113-9",
+  "248-6-00618-4",
 ] as const;
 
 /** @deprecated Prefer getBankMatchPromptPath(accountNo). Kept for older imports. */

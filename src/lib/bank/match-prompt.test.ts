@@ -26,6 +26,7 @@ describe("bank match prompt", () => {
       "3557",
       "0393",
       "248-0-42113-9",
+      "248-6-00618-4",
     ]);
     expect(BANK_MATCH_AGENT_NAME).toBe("จับคู่ยอดเข้า");
     expect(BANK_MATCH_PROMPT_RELATIVE_PATH).toBe(
@@ -40,10 +41,14 @@ describe("bank match prompt", () => {
     expect(BANK_MATCH_PROMPTS["248-0-42113-9"]).toBe(
       "prompts/bank-statement-match-1139.md"
     );
+    expect(BANK_MATCH_PROMPTS["248-6-00618-4"]).toBe(
+      "prompts/bank-statement-match-6184.md"
+    );
     expect(isBankMatchAccount("7236")).toBe(true);
     expect(isBankMatchAccount("3557")).toBe(true);
     expect(isBankMatchAccount("0393")).toBe(true);
     expect(isBankMatchAccount("248-0-42113-9")).toBe(true);
+    expect(isBankMatchAccount("248-6-00618-4")).toBe(true);
     expect(isBankMatchAccount("1139")).toBe(false);
     expect(isBankMatchAccount("9999")).toBe(false);
     expect(getBankMatchPromptPath("3557")).toBe(
@@ -54,6 +59,9 @@ describe("bank match prompt", () => {
     );
     expect(getBankMatchPromptPath("248-0-42113-9")).toBe(
       "prompts/bank-statement-match-1139.md"
+    );
+    expect(getBankMatchPromptPath("248-6-00618-4")).toBe(
+      "prompts/bank-statement-match-6184.md"
     );
     expect(ACCOUNT_NO).toBe(BANK_MATCH_ACCOUNT_NO);
     expect(AGENT_NAME).toBe(BANK_MATCH_AGENT_NAME);
@@ -159,6 +167,33 @@ describe("bank match prompt", () => {
     expect(filled).toContain("Account: `248-0-42113-9`");
     expect(filled).toContain("2026-05-01");
     expect(filled).toContain("2026-05-31");
+    expect(filled).not.toContain("{{account_no}}");
+  });
+
+  it("loads 6184 payroll/expense cheque prompt", () => {
+    const template = loadBankMatchPromptTemplate("248-6-00618-4");
+    expect(template).toContain("{{account_no}}");
+    expect(template).toContain("248-6-00618-4");
+    expect(template).toContain("expense_receipt");
+    expect(template).toContain("payment_method");
+    expect(template).toContain("expense_payroll");
+    expect(template).toContain("expense_pv");
+    expect(template).toContain("bank_cheque");
+    expect(template).toContain("do nothing");
+    expect(template).toContain("direction = 'in'");
+    expect(template).toContain("match_status = 'pending'");
+    expect(template).toContain("agent:bank-matcher-6184-v1");
+    expect(template).toContain("เงินเดือน (PAY1 รวมส่วนต่าง)");
+    expect(template).toContain("ใบสำคัญจ่าย PV (ค่าสาธารณูปโภค)");
+
+    const filled = buildBankMatchPrompt({
+      account_no: "248-6-00618-4",
+      from: "2026-05-01",
+      to: "2026-06-30",
+    });
+    expect(filled).toContain("Account: `248-6-00618-4`");
+    expect(filled).toContain("2026-05-01");
+    expect(filled).toContain("2026-06-30");
     expect(filled).not.toContain("{{account_no}}");
   });
 });
