@@ -342,6 +342,10 @@ export default function StatementLinesTab({
 
       setLoading(true);
       setError(null);
+      // Clear existing rows so `ServerPagedTable` can show the loading spinner.
+      // Otherwise it only displays the loader when `loading && !rows.length`.
+      setRows([]);
+      setCount(null);
       try {
         const params = new URLSearchParams();
         params.set("account_no", accountNo);
