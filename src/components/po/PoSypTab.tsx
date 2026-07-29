@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
+import PoAccountDialog from "@/components/po/PoAccountDialog";
 import PoSypDetailDialog from "@/components/po/PoSypDetailDialog";
 import {
   billedLabel,
@@ -55,6 +56,8 @@ export default function PoSypTab({
   const [lines, setLines] = useState<PoLineRow[]>([]);
   const [linesLoading, setLinesLoading] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountRow, setAccountRow] = useState<PoHeaderRow | null>(null);
 
   useEffect(() => {
     setOffset(0);
@@ -241,6 +244,26 @@ export default function PoSypTab({
         render: (r) => formatPoDate(r.docdate),
       },
       {
+        key: "acctno",
+        header: "ACCTNO",
+        render: (r) =>
+          r.acctno ? (
+            <button
+              type="button"
+              className="font-mono text-left text-primary underline-offset-2 hover:underline"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAccountRow(r);
+                setAccountOpen(true);
+              }}
+            >
+              {r.acctno}
+            </button>
+          ) : (
+            "—"
+          ),
+      },
+      {
         key: "aftertax",
         header: "ยอด",
         render: (r) => formatPoAmount(r.aftertax),
@@ -357,6 +380,15 @@ export default function PoSypTab({
         onToggleLinePrepared={(line, prepared) => {
           void setLinePrepared(line, prepared);
         }}
+      />
+
+      <PoAccountDialog
+        open={accountOpen}
+        onOpenChange={setAccountOpen}
+        acctno={accountRow?.acctno ?? null}
+        site="SYP"
+        docno={accountRow?.docno}
+        fallbackName={accountRow?.acctname}
       />
     </div>
   );

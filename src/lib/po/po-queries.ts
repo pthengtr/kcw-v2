@@ -387,3 +387,127 @@ export async function upsertSypPrepare(params: {
     lines,
   };
 }
+
+export type PoAccountDetail = {
+  acctno: string;
+  acctname: string | null;
+  addr1: string | null;
+  addr2: string | null;
+  phone: string | null;
+  /** APMAS MOBILE = tax id (not phone). */
+  tax_id: string | null;
+  fax: string | null;
+  contact: string | null;
+  email: string | null;
+  term: string | null;
+  remarks: string | null;
+  canceled: string | null;
+  /** Snapshot from the selected PO header when docno is provided. */
+  po_snapshot: {
+    docno: string;
+    acctname: string | null;
+    addr1: string | null;
+    addr2: string | null;
+    attn: string | null;
+  } | null;
+  source: "apmas" | "po_only";
+};
+
+function headerTable(site: PoSyncSite) {
+  return site === "HQ"
+    ? "raw_hq_pomas_purchase_orders"
+    : "raw_syp_pomas_purchase_orders";
+}
+
+export async function fetchPoAccountDetail(params: {
+  supabase: SupabaseClient;
+  acctno: string;
+  site: PoSyncSite;
+  docno?: string | null;
+}): Promise<PoAccountDetail | null> {
+  const acctno = params.acctno.trim();
+  if (!acctno) return null;
+
+  const { data: apmas, error: apmasError } = await raw(params.supabase)
+    .from("raw_hq_apmas_payable")
+    .select(
+      "ACCTNO, ACCTNAME, ADDR1, ADDR2, PHONE, MOBILE, FAX, CONTACT, EMAIL, TERM, REMARKS, CANCELED"
+    )
+    .eq("ACCTNO", acctno)
+    .maybeSingle();
+  if (apmasError) throw apmasError;
+
+  let poSnapshot: PoAccountDetail["po_snapshot"] = null;
+  if (params.docno?.trim()) {
+    const { data: po, error: poError } = await raw(params.supabase)
+      .from(headerTable(params.site))
+      .select("DOCNO, ACCTNO, ACCTNAME, ADDR1, ADDR2, ATTN")
+      .eq("DOCNO", params.docno.trim())
+      .maybeSingle();
+    if (poError) throw poError;
+    if (po) {
+      poSnapshot = {
+        docno: String(po.DOCNO ?? params.docno),
+        acctname: (po.ACCTNAME as string | null) ?? null,
+        addr1: (po.ADDR1 as string | null) ?? null,
+        addr2: (po.ADDR2 as string | null) ?? null,
+        attn: (po.ATTN as string | null) ?? null,
+      };
+    }
+  }
+
+  if (!apmas && !poSnapshot) {
+    return {
+      acctno,
+      acctname: null,
+      addr1: null,
+      addr2: null,
+      phone: null,
+      tax_id: null,
+      fax: null,
+      contact: null,
+      email: null,
+      term: null,
+      remarks: null,
+      canceled: null,
+      po_snapshot: null,
+      source: "po_only",
+    };
+  }
+
+  if (!apmas) {
+    return {
+      acctno,
+      acctname: poSnapshot?.acctname ?? null,
+      addr1: poSnapshot?.addr1 ?? null,
+      addr2: poSnapshot?.addr2 ?? null,
+      phone: null,
+      tax_id: null,
+      fax: null,
+      contact: null,
+      email: null,
+      term: null,
+      remarks: null,
+      canceled: null,
+      po_snapshot: poSnapshot,
+      source: "po_only",
+    };
+  }
+
+  return {
+    acctno: String(apmas.ACCTNO ?? acctno),
+    acctname: (apmas.ACCTNAME as string | null) ?? poSnapshot?.acctname ?? null,
+    addr1: (apmas.ADDR1 as string | null) ?? poSnapshot?.addr1 ?? null,
+    addr2: (apmas.ADDR2 as string | null) ?? poSnapshot?.addr2 ?? null,
+    phone: (apmas.PHONE as string | null) ?? null,
+    tax_id: (apmas.MOBILE as string | null) ?? null,
+    fax: (apmas.FAX as string | null) ?? null,
+    contact: (apmas.CONTACT as string | null) ?? null,
+    email: (apmas.EMAIL as string | null) ?? null,
+    term: apmas.TERM != null ? String(apmas.TERM) : null,
+    remarks: (apmas.REMARKS as string | null) ?? null,
+    canceled: (apmas.CANCELED as string | null) ?? null,
+    po_snapshot: poSnapshot,
+    source: "apmas",
+  };
+}
