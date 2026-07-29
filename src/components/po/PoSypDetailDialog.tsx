@@ -77,7 +77,7 @@ export default function PoSypDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-5xl print:max-w-none print:border-0 print:shadow-none"
+        className="w-[calc(100vw-1.5rem)] max-w-5xl max-h-[90dvh] overflow-y-auto print:max-w-none print:max-h-none print:w-auto print:border-0 print:shadow-none"
         data-po-print-root
       >
         <DialogHeader className="print:mb-2">

@@ -122,16 +122,19 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
       {
         key: "docno",
         header: "DOCNO",
+        className: "whitespace-nowrap",
         render: (r) => <span className="font-medium">{r.docno}</span>,
       },
       {
         key: "docdate",
         header: "วันที่",
+        className: "whitespace-nowrap",
         render: (r) => formatPoDate(r.docdate),
       },
       {
         key: "acctno",
         header: "ACCTNO",
+        className: "whitespace-nowrap",
         render: (r) =>
           r.acctno ? (
             <button
@@ -152,19 +155,27 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
       {
         key: "acctname",
         header: "ผู้ขาย",
-        className: "max-w-[14rem] truncate",
-        render: (r) => r.acctname ?? "—",
+        className: "max-w-[14rem] hidden lg:table-cell",
+        render: (r) => (
+          <span className="line-clamp-2 break-words">{r.acctname ?? "—"}</span>
+        ),
       },
       {
         key: "aftertax",
         header: "ยอด",
+        className: "text-right whitespace-nowrap",
         render: (r) => formatPoAmount(r.aftertax),
       },
       {
         key: "billed",
         header: "สถานะ",
+        className: "whitespace-nowrap min-w-[5.5rem]",
         render: (r) => (
-          <Badge variant={billedVariant(r.billed)}>
+          <Badge
+            variant={billedVariant(r.billed)}
+            className="whitespace-nowrap shrink-0"
+            title={billedLabel(r.billed)}
+          >
             {billedLabel(r.billed)}
           </Badge>
         ),
@@ -172,6 +183,54 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
     ],
     []
   );
+
+  function renderPoHqMobileCard(row: PoHeaderRow) {
+    return (
+      <button
+        type="button"
+        onClick={() => void openDetail(row)}
+        className="w-full rounded-md border bg-white p-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <Badge
+            variant={billedVariant(row.billed)}
+            className="whitespace-nowrap shrink-0"
+          >
+            {billedLabel(row.billed)}
+          </Badge>
+          <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
+            {formatPoDate(row.docdate)}
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2">
+          <div>
+            <div className="text-xs text-muted-foreground">DOCNO</div>
+            <div className="font-medium break-all">{row.docno}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">ผู้ขาย</div>
+            <div className="text-sm line-clamp-2 break-words">
+              {row.acctname || "—"}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground">ACCTNO</div>
+              <div className="text-sm font-mono break-all">
+                {row.acctno || "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">ยอด</div>
+              <div className="text-sm font-medium whitespace-nowrap">
+                {formatPoAmount(row.aftertax)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </button>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -209,10 +268,13 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
         onLimitChange={setLimit}
         onRowClick={openDetail}
         loading={loading}
+        tableMinWidthClassName="min-w-[40rem]"
+        rowKey={(row) => row.docno}
+        mobileCardRender={renderPoHqMobileCard}
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>HQ PO {selected?.docno}</DialogTitle>
           </DialogHeader>

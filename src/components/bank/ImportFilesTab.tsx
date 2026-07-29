@@ -143,8 +143,15 @@ export default function ImportFilesTab({ refreshToken }: { refreshToken: number 
       {
         key: "status",
         header: "status",
+        className: "whitespace-nowrap min-w-[6rem]",
         render: (r) => (
-          <Badge variant={statusBadgeVariant(r.status)}>{r.status}</Badge>
+          <Badge
+            variant={statusBadgeVariant(r.status)}
+            className="whitespace-nowrap shrink-0"
+            title={r.status}
+          >
+            {r.status}
+          </Badge>
         ),
       },
       { key: "row_count", header: "row_count", className: "text-right", render: (r) => r.row_count },
@@ -241,10 +248,11 @@ export default function ImportFilesTab({ refreshToken }: { refreshToken: number 
         onOffsetChange={setOffset}
         onRowClick={openDetail}
         loading={loading}
+        tableMinWidthClassName="min-w-[56rem]"
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-5xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Import File Detail</DialogTitle>
             <DialogDescription>

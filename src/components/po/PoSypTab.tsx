@@ -236,16 +236,19 @@ export default function PoSypTab({
       {
         key: "docno",
         header: "DOCNO",
+        className: "whitespace-nowrap",
         render: (r) => <span className="font-medium">{r.docno}</span>,
       },
       {
         key: "docdate",
         header: "วันที่",
+        className: "whitespace-nowrap",
         render: (r) => formatPoDate(r.docdate),
       },
       {
         key: "acctno",
         header: "ACCTNO",
+        className: "whitespace-nowrap",
         render: (r) =>
           r.acctno ? (
             <button
@@ -266,13 +269,19 @@ export default function PoSypTab({
       {
         key: "aftertax",
         header: "ยอด",
+        className: "text-right whitespace-nowrap",
         render: (r) => formatPoAmount(r.aftertax),
       },
       {
         key: "billed",
         header: "PARTS9",
+        className: "whitespace-nowrap min-w-[5.5rem]",
         render: (r) => (
-          <Badge variant={billedVariant(r.billed)}>
+          <Badge
+            variant={billedVariant(r.billed)}
+            className="whitespace-nowrap shrink-0"
+            title={billedLabel(r.billed)}
+          >
             {billedLabel(r.billed)}
           </Badge>
         ),
@@ -280,9 +289,10 @@ export default function PoSypTab({
       {
         key: "prepared",
         header: "เตรียมแล้ว",
+        className: "min-w-[9rem]",
         render: (r) => (
           <div
-            className="flex items-center gap-2"
+            className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
           >
@@ -292,7 +302,7 @@ export default function PoSypTab({
               onCheckedChange={(checked) => void setPrepared(r, checked)}
             />
             {r.prepared_at ? (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
                 {formatPoTs(r.prepared_at)}
               </span>
             ) : null}
@@ -303,6 +313,62 @@ export default function PoSypTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [savingDocno]
   );
+
+  function renderPoSypMobileCard(row: PoHeaderRow) {
+    return (
+      <button
+        type="button"
+        onClick={() => void openDetail(row)}
+        className="w-full rounded-md border bg-white p-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <Badge
+            variant={billedVariant(row.billed)}
+            className="whitespace-nowrap shrink-0"
+          >
+            {billedLabel(row.billed)}
+          </Badge>
+          <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
+            {formatPoDate(row.docdate)}
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2">
+          <div>
+            <div className="text-xs text-muted-foreground">DOCNO</div>
+            <div className="font-medium break-all">{row.docno}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground">ACCTNO</div>
+              <div className="text-sm font-mono break-all">
+                {row.acctno || "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">ยอด</div>
+              <div className="text-sm font-medium whitespace-nowrap">
+                {formatPoAmount(row.aftertax)}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs text-muted-foreground">เตรียมแล้ว</div>
+            <div
+              className="flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <Switch
+                checked={Boolean(row.prepared)}
+                disabled={savingDocno === row.docno}
+                onCheckedChange={(checked) => void setPrepared(row, checked)}
+              />
+            </div>
+          </div>
+        </div>
+      </button>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -357,6 +423,9 @@ export default function PoSypTab({
         onLimitChange={setLimit}
         onRowClick={openDetail}
         loading={loading}
+        tableMinWidthClassName="min-w-[44rem]"
+        rowKey={(row) => row.docno}
+        mobileCardRender={renderPoSypMobileCard}
       />
 
       <PoSypDetailDialog
