@@ -460,9 +460,9 @@ export default function StatementLinesTab({
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(
-          body?.error ?? body?.details ?? `Match failed (${res.status})`
-        );
+        const err = String(body?.error ?? `Match failed (${res.status})`);
+        const details = body?.details ? String(body.details) : "";
+        throw new Error(details ? `${err} — ${details}` : err);
       }
 
       const agent = body?.agent as

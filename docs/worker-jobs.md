@@ -134,7 +134,7 @@ New features almost never need new queue tables — only new `job_type` values a
   - 3557 outbound payments: [`prompts/bank-statement-match-3557.md`](../prompts/bank-statement-match-3557.md)
 - Placeholders `{{account_no}}` / `{{from}}` / `{{to}}` are injected by the API.
 - Requires server env `CURSOR_API_KEY` (optional `CURSOR_AGENT_REPO_URL`, `CURSOR_AGENT_STARTING_REF`, `CURSOR_AGENT_MODEL`, `CURSOR_AGENT_MODEL_OPTIMIZE_FOR`).
-- Launches Cursor Cloud Agent via `POST https://api.cursor.com/v1/agents` with Cursor Router Auto by default (`model.id=auto-smart`, `optimize_for=balanced`). Override with `CURSOR_AGENT_MODEL` (`auto-smart` | `auto` | explicit id | `omit`).
+- Launches Cursor Cloud Agent via `POST https://api.cursor.com/v1/agents` with Cursor Router Auto by default (`model.id=auto-smart`, `optimize_for=balanced`). If Auto/Router is rejected for the API key, the launcher retries with no `model` (user/team/system default). Override with `CURSOR_AGENT_MODEL` (`auto-smart` | `auto` | explicit id | `omit`).
 - Agent updates `bank.statement_lines` match_* fields only.
 
 ### Do / don’t

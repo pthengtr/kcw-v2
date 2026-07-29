@@ -3,6 +3,10 @@ export type CursorAgentLaunchResult = {
   agentUrl: string;
   runId: string;
   status: string;
+  /** Model actually sent on the successful create call; null if omitted. */
+  model: CursorAgentModelSelection | null;
+  /** True when Auto/Router was rejected and we retried without a model. */
+  usedModelFallback?: boolean;
 };
 
 export type CursorAgentRunStatus = {
@@ -31,6 +35,16 @@ const ROUTER_OPTIMIZE_FOR = new Set(["cost", "balanced", "intelligence"]);
 
 export function isCursorRunTerminal(status: string): boolean {
   return TERMINAL_RUN_STATUSES.has(status.toUpperCase());
+}
+
+export function isCursorInvalidModelError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("invalid_model") ||
+    m.includes("invalid model") ||
+    m.includes("not available or invalid") ||
+    (m.includes("model") && m.includes("(400)"))
+  );
 }
 
 /**
@@ -91,40 +105,26 @@ function requireCursorApiKey(apiKey?: string): string {
   return key;
 }
 
-export async function launchCursorCloudAgent(params: {
-  promptText: string;
+async function postCursorAgentCreate(params: {
+  apiKey: string;
   name?: string;
-  apiKey?: string;
-  repoUrl?: string;
-  startingRef?: string;
-  model?: CursorAgentModelSelection | null;
+  promptText: string;
+  repoUrl: string;
+  startingRef: string;
+  model?: CursorAgentModelSelection;
 }): Promise<CursorAgentLaunchResult> {
-  const apiKey = requireCursorApiKey(params.apiKey);
-
-  const repoUrl =
-    params.repoUrl ??
-    process.env.CURSOR_AGENT_REPO_URL ??
-    "https://github.com/pthengtr/kcw-v2";
-  const startingRef =
-    params.startingRef ?? process.env.CURSOR_AGENT_STARTING_REF ?? "master";
-
-  const model =
-    params.model === null
-      ? undefined
-      : (params.model ?? resolveCursorAgentModel());
-
   const body: Record<string, unknown> = {
     name: params.name,
     prompt: { text: params.promptText },
-    repos: [{ url: repoUrl, startingRef }],
+    repos: [{ url: params.repoUrl, startingRef: params.startingRef }],
     autoCreatePR: false,
   };
-  if (model) body.model = model;
+  if (params.model) body.model = params.model;
 
   const res = await fetch("https://api.cursor.com/v1/agents", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${params.apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
@@ -154,7 +154,63 @@ export async function launchCursorCloudAgent(params: {
     agentUrl,
     runId,
     status: data.run?.status ?? "CREATING",
+    model: params.model ?? null,
   };
+}
+
+export async function launchCursorCloudAgent(params: {
+  promptText: string;
+  name?: string;
+  apiKey?: string;
+  repoUrl?: string;
+  startingRef?: string;
+  model?: CursorAgentModelSelection | null;
+}): Promise<CursorAgentLaunchResult> {
+  const apiKey = requireCursorApiKey(params.apiKey);
+
+  const repoUrl =
+    params.repoUrl ??
+    process.env.CURSOR_AGENT_REPO_URL ??
+    "https://github.com/pthengtr/kcw-v2";
+  const startingRef =
+    params.startingRef ?? process.env.CURSOR_AGENT_STARTING_REF ?? "master";
+
+  const model =
+    params.model === null
+      ? undefined
+      : (params.model ?? resolveCursorAgentModel());
+
+  try {
+    return await postCursorAgentCreate({
+      apiKey,
+      name: params.name,
+      promptText: params.promptText,
+      repoUrl,
+      startingRef,
+      model,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const canFallback =
+      !!model &&
+      (model.id === "auto-smart" || model.id === "auto") &&
+      isCursorInvalidModelError(message);
+
+    if (!canFallback) throw error;
+
+    console.warn(
+      "Cursor Auto model rejected; retrying match launch without model",
+      message
+    );
+    const launched = await postCursorAgentCreate({
+      apiKey,
+      name: params.name,
+      promptText: params.promptText,
+      repoUrl,
+      startingRef,
+    });
+    return { ...launched, usedModelFallback: true };
+  }
 }
 
 export async function getCursorAgentRun(params: {

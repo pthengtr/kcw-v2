@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isCursorInvalidModelError,
   isCursorRunTerminal,
   resolveCursorAgentModel,
 } from "@/lib/bank/cursor-agents";
@@ -16,6 +17,22 @@ describe("cursor agent run status", () => {
   it("treats creating and running as non-terminal", () => {
     expect(isCursorRunTerminal("CREATING")).toBe(false);
     expect(isCursorRunTerminal("RUNNING")).toBe(false);
+  });
+});
+
+describe("isCursorInvalidModelError", () => {
+  it("detects common Cursor invalid-model responses", () => {
+    expect(
+      isCursorInvalidModelError(
+        `Cursor Agents API failed (400): {"error":"Model 'auto-smart' is not available or invalid."}`
+      )
+    ).toBe(true);
+    expect(
+      isCursorInvalidModelError(
+        'Cursor Agents API failed (400): {"code":"invalid_model"}'
+      )
+    ).toBe(true);
+    expect(isCursorInvalidModelError("Missing CURSOR_API_KEY")).toBe(false);
   });
 });
 
