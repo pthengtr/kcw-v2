@@ -62,8 +62,18 @@ function mapLockRow(row: LockRow): BankMatchAgentJob {
 export function publicBankMatchAgentJob(
   job: BankMatchAgentJob
 ): PublicBankMatchAgentJob {
-  const { lockToken: _lockToken, requestedBy: _requestedBy, ...publicJob } = job;
-  return publicJob;
+  return {
+    state: job.state,
+    accountNo: job.accountNo,
+    from: job.from,
+    to: job.to,
+    requestedAt: job.requestedAt,
+    updatedAt: job.updatedAt,
+    agentId: job.agentId,
+    runId: job.runId,
+    agentUrl: job.agentUrl,
+    runStatus: job.runStatus,
+  };
 }
 
 export function isUniqueViolation(error: unknown): boolean {
