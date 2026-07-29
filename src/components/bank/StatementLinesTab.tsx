@@ -470,29 +470,46 @@ export default function StatementLinesTab({
       setStatusSummaryLoading(true);
       setStatusSummaryError(null);
       try {
-        const params = new URLSearchParams();
-        params.set("account_no", accountNo);
-        params.set("from", range.from);
-        params.set("to", range.to);
-        if (direction !== "all") params.set("direction", direction);
+        // Use the same counting logic as the main statement-lines endpoint
+        // to guarantee consistency (table `count` vs. summary badges).
+        const baseParams = new URLSearchParams();
+        baseParams.set("account_no", accountNo);
+        baseParams.set("from", range.from);
+        baseParams.set("to", range.to);
+        if (direction !== "all") baseParams.set("direction", direction);
+        // keep responses tiny: we only care about the `count` field
+        baseParams.set("limit", "1");
+        baseParams.set("offset", "0");
 
-        const res = await fetch(
-          `/api/bank/statement-lines/status-summary?${params.toString()}`,
-          { cache: "no-store", signal: controller.signal }
-        );
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(body?.error ?? `Request failed (${res.status})`);
-        }
+        const fetchCount = async (matchStatus?: string): Promise<number> => {
+          const p = new URLSearchParams(baseParams);
+          if (matchStatus) p.set("match_status", matchStatus);
 
-        const next = body as {
-          total?: number | null;
-          counts?: Record<string, number> | null;
+          const res = await fetch(
+            `/api/bank/statement-lines?${p.toString()}`,
+            { cache: "no-store", signal: controller.signal }
+          );
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body?.error ?? `Request failed (${res.status})`);
+          }
+          const body = (await res.json().catch(() => ({}))) as {
+            count?: number | null;
+          };
+          return Number(body.count ?? 0);
         };
-        setStatusSummary({
-          total: Number(next.total ?? 0),
-          counts: next.counts ?? {},
+
+        const [total, ...countsArray] = await Promise.all([
+          fetchCount(),
+          ...BANK_MATCH_STATUSES.map((s) => fetchCount(s)),
+        ]);
+
+        const counts: Record<string, number> = {};
+        BANK_MATCH_STATUSES.forEach((s, idx) => {
+          counts[s] = countsArray[idx] ?? 0;
         });
+
+        setStatusSummary({ total, counts });
       } catch (e) {
         if (String(e).includes("AbortError")) return;
         setStatusSummaryError(e instanceof Error ? e.message : String(e));
