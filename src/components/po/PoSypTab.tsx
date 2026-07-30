@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
+import PoPendingReceiveTab from "@/components/po/PoPendingReceiveTab";
 import PoSypDetailDialog from "@/components/po/PoSypDetailDialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   formatPoAmount,
   formatPoDate,
@@ -28,6 +30,7 @@ export default function PoSypTab({
   refreshToken: number;
   onChanged?: () => void;
 }) {
+  const [view, setView] = useState<"list" | "pending">("list");
   const [rows, setRows] = useState<PoHeaderRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +59,7 @@ export default function PoSypTab({
   }, [status, prepare, q]);
 
   useEffect(() => {
+    if (view !== "list") return;
     const ac = new AbortController();
     async function fetchRows() {
       setLoading(true);
@@ -93,7 +97,7 @@ export default function PoSypTab({
     }
     void fetchRows();
     return () => ac.abort();
-  }, [status, prepare, q, limit, offset, refreshToken]);
+  }, [view, status, prepare, q, limit, offset, refreshToken]);
 
   async function setPrepared(row: PoHeaderRow, prepared: boolean, note?: string) {
     setSavingDocno(row.docno);
@@ -341,93 +345,115 @@ export default function PoSypTab({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">
-        SYP สั่งจาก HQ — ทำเครื่องหมายเมื่อเตรียมสินค้าโอนแล้ว จากนั้นเมื่อ SYP
-        รับของและคีย์ใน PARTS9 ให้ Sync เพื่ออัปเดตสถานะ
-      </p>
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <Select
-          value={status}
-          onValueChange={(v) => setStatus(v as typeof status)}
-        >
-          <SelectTrigger className="w-full sm:w-[140px]">
-            <SelectValue placeholder="สถานะ" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="open">เปิด</SelectItem>
-            <SelectItem value="billed">รับแล้ว</SelectItem>
-            <SelectItem value="all">ทั้งหมด</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={prepare}
-          onValueChange={(v) => setPrepare(v as typeof prepare)}
-        >
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="เตรียม" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="not_prepared">ยังไม่เตรียม</SelectItem>
-            <SelectItem value="prepared">เตรียมแล้ว</SelectItem>
-            <SelectItem value="all">เตรียมทั้งหมด</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input
-          className="w-full sm:max-w-xs"
-          placeholder="ค้นหา DOCNO"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </div>
+      <Tabs
+        value={view}
+        onValueChange={(v) => setView(v as typeof view)}
+      >
+        <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
+          <TabsTrigger value="list">รายการ PO</TabsTrigger>
+          <TabsTrigger value="pending">รอรับของ (ทดลองใช้)</TabsTrigger>
+        </TabsList>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <TabsContent value="list" className="mt-3">
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              SYP สั่งจาก HQ — ทำเครื่องหมายเมื่อเตรียมสินค้าโอนแล้ว จากนั้นเมื่อ
+              SYP รับของและคีย์ใน PARTS9 ให้ Sync เพื่ออัปเดตสถานะ
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as typeof status)}
+              >
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue placeholder="สถานะ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">เปิด</SelectItem>
+                  <SelectItem value="billed">รับแล้ว</SelectItem>
+                  <SelectItem value="all">ทั้งหมด</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={prepare}
+                onValueChange={(v) => setPrepare(v as typeof prepare)}
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="เตรียม" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_prepared">ยังไม่เตรียม</SelectItem>
+                  <SelectItem value="prepared">เตรียมแล้ว</SelectItem>
+                  <SelectItem value="all">เตรียมทั้งหมด</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                className="w-full sm:max-w-xs"
+                placeholder="ค้นหา DOCNO"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
 
-      <ServerPagedTable
-        columns={columns}
-        rows={rows}
-        count={count}
-        limit={limit}
-        offset={offset}
-        onOffsetChange={setOffset}
-        onLimitChange={setLimit}
-        onRowClick={openDetail}
-        loading={loading}
-        tableMinWidthClassName="min-w-[44rem]"
-        rowKey={(row) => row.docno}
-        mobileCardRender={renderPoSypMobileCard}
-      />
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-      <PoSypDetailDialog
-        open={open}
-        onOpenChange={setOpen}
-        selected={selected}
-        lines={lines}
-        linesLoading={linesLoading}
-        savingDocno={savingDocno}
-        savingLine={savingLine}
-        noteDraft={noteDraft}
-        onNoteDraftChange={setNoteDraft}
-        onToggleHeaderPrepared={(prepared) => {
-          if (!selected) return;
-          void setPrepared(selected, prepared, noteDraft);
-        }}
-        onSaveNote={() => {
-          if (!selected) return;
-          void setPrepared(selected, Boolean(selected.prepared), noteDraft);
-        }}
-        onToggleLinePrepared={(line, prepared) => {
-          void setLinePrepared(line, prepared);
-        }}
-      />
+            <ServerPagedTable
+              columns={columns}
+              rows={rows}
+              count={count}
+              limit={limit}
+              offset={offset}
+              onOffsetChange={setOffset}
+              onLimitChange={setLimit}
+              onRowClick={openDetail}
+              loading={loading}
+              tableMinWidthClassName="min-w-[44rem]"
+              rowKey={(row) => row.docno}
+              mobileCardRender={renderPoSypMobileCard}
+            />
 
-      <PoAccountDialog
-        open={accountOpen}
-        onOpenChange={setAccountOpen}
-        acctno={accountRow?.acctno ?? null}
-        site="SYP"
-        docno={accountRow?.docno}
-        fallbackName={accountRow?.acctname}
-      />
+            <PoSypDetailDialog
+              open={open}
+              onOpenChange={setOpen}
+              selected={selected}
+              lines={lines}
+              linesLoading={linesLoading}
+              savingDocno={savingDocno}
+              savingLine={savingLine}
+              noteDraft={noteDraft}
+              onNoteDraftChange={setNoteDraft}
+              onToggleHeaderPrepared={(prepared) => {
+                if (!selected) return;
+                void setPrepared(selected, prepared, noteDraft);
+              }}
+              onSaveNote={() => {
+                if (!selected) return;
+                void setPrepared(
+                  selected,
+                  Boolean(selected.prepared),
+                  noteDraft
+                );
+              }}
+              onToggleLinePrepared={(line, prepared) => {
+                void setLinePrepared(line, prepared);
+              }}
+            />
+
+            <PoAccountDialog
+              open={accountOpen}
+              onOpenChange={setAccountOpen}
+              acctno={accountRow?.acctno ?? null}
+              site="SYP"
+              docno={accountRow?.docno}
+              fallbackName={accountRow?.acctname}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="pending" className="mt-3">
+          <PoPendingReceiveTab site="SYP" refreshToken={refreshToken} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

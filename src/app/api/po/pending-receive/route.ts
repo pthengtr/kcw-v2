@@ -7,6 +7,7 @@ import { listPoPendingReceive } from "@/lib/po/po-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const QuerySchema = z.object({
+  site: z.enum(["HQ", "SYP"]),
   q: z.string().optional(),
   acctno: z.string().optional(),
   from: z
@@ -33,6 +34,7 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const parsed = QuerySchema.safeParse({
+    site: url.searchParams.get("site") ?? undefined,
     q: url.searchParams.get("q") || undefined,
     acctno: url.searchParams.get("acctno") || undefined,
     from: url.searchParams.get("from") || undefined,
@@ -50,6 +52,7 @@ export async function GET(req: Request) {
     const supabase = createAdminClient();
     const { rows, count } = await listPoPendingReceive({
       supabase,
+      site: parsed.data.site,
       q: parsed.data.q,
       acctno: parsed.data.acctno,
       from: parsed.data.from,

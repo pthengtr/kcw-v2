@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import PoHqTab from "@/components/po/PoHqTab";
-import PoPendingReceiveTab from "@/components/po/PoPendingReceiveTab";
 import PoSypTab from "@/components/po/PoSypTab";
 import { formatPoTs } from "@/lib/po/format";
 import type { JobQueueRow } from "@/lib/po/worker-jobs";
@@ -34,7 +33,7 @@ type InventoryMeta = {
 };
 
 export default function PoStatusPage() {
-  const [tab, setTab] = useState<"hq" | "syp" | "pending">("syp");
+  const [tab, setTab] = useState<"hq" | "syp">("syp");
   const [refreshToken, setRefreshToken] = useState(0);
   const [meta, setMeta] = useState<PoMeta | null>(null);
   const [inventoryMeta, setInventoryMeta] = useState<InventoryMeta | null>(
@@ -389,7 +388,6 @@ export default function PoStatusPage() {
           <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
             <TabsTrigger value="syp">SYP (โอนจาก HQ)</TabsTrigger>
             <TabsTrigger value="hq">HQ (ซัพพลายเออร์)</TabsTrigger>
-            <TabsTrigger value="pending">รอรับของ (ทดลองใช้)</TabsTrigger>
           </TabsList>
 
           <TabsContent value="syp" className="mt-4">
@@ -397,9 +395,6 @@ export default function PoStatusPage() {
           </TabsContent>
           <TabsContent value="hq" className="mt-4">
             <PoHqTab refreshToken={refreshToken} />
-          </TabsContent>
-          <TabsContent value="pending" className="mt-4">
-            <PoPendingReceiveTab refreshToken={refreshToken} />
           </TabsContent>
         </Tabs>
       </div>

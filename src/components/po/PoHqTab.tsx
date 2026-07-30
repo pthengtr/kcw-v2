@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
+import PoPendingReceiveTab from "@/components/po/PoPendingReceiveTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   billedLabel,
   formatPoAmount,
@@ -27,6 +29,7 @@ import {
 import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
 
 export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
+  const [view, setView] = useState<"list" | "pending">("list");
   const [rows, setRows] = useState<PoHeaderRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +52,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
   }, [status, q]);
 
   useEffect(() => {
+    if (view !== "list") return;
     const ac = new AbortController();
     async function fetchRows() {
       setLoading(true);
@@ -85,7 +89,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
     }
     void fetchRows();
     return () => ac.abort();
-  }, [status, q, limit, offset, refreshToken]);
+  }, [view, status, q, limit, offset, refreshToken]);
 
   async function openDetail(row: PoHeaderRow) {
     setSelected(row);
@@ -203,115 +207,136 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <Select
-          value={status}
-          onValueChange={(v) => setStatus(v as typeof status)}
-        >
-          <SelectTrigger className="w-full sm:w-[160px]">
-            <SelectValue placeholder="สถานะ" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="open">เปิด</SelectItem>
-            <SelectItem value="billed">รับแล้ว</SelectItem>
-            <SelectItem value="all">ทั้งหมด</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input
-          className="w-full sm:max-w-xs"
-          placeholder="ค้นหา DOCNO / ผู้ขาย"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </div>
+      <Tabs
+        value={view}
+        onValueChange={(v) => setView(v as typeof view)}
+      >
+        <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
+          <TabsTrigger value="list">รายการ PO</TabsTrigger>
+          <TabsTrigger value="pending">รอรับของ (ทดลองใช้)</TabsTrigger>
+        </TabsList>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-      <ServerPagedTable
-        columns={columns}
-        rows={rows}
-        count={count}
-        limit={limit}
-        offset={offset}
-        onOffsetChange={setOffset}
-        onLimitChange={setLimit}
-        onRowClick={openDetail}
-        loading={loading}
-        tableMinWidthClassName="min-w-[40rem]"
-        rowKey={(row) => row.docno}
-        mobileCardRender={renderPoHqMobileCard}
-      />
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>HQ PO {selected?.docno}</DialogTitle>
-          </DialogHeader>
-          {selected ? (
-            <div className="space-y-2 text-sm">
-              <div>
-                ผู้ขาย: {selected.acctname ?? "—"} ({selected.acctno ?? "—"})
-              </div>
-              <div>
-                วันที่: {formatPoDate(selected.docdate)} · สถานะ:{" "}
-                {billedLabel(selected.billed)}
-              </div>
-              <div>ยอด: {formatPoAmount(selected.aftertax)}</div>
+        <TabsContent value="list" className="mt-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as typeof status)}
+              >
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="สถานะ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">เปิด</SelectItem>
+                  <SelectItem value="billed">รับแล้ว</SelectItem>
+                  <SelectItem value="all">ทั้งหมด</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                className="w-full sm:max-w-xs"
+                placeholder="ค้นหา DOCNO / ผู้ขาย"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
             </div>
-          ) : null}
-          <ScrollArea className="max-h-[50vh] rounded-md border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40 text-left">
-                  <th className="p-2">Line</th>
-                  <th className="p-2">BCODE</th>
-                  <th className="p-2">รายละเอียด</th>
-                  <th className="p-2">Qty</th>
-                  <th className="p-2">ราคา</th>
-                  <th className="p-2">จำนวนเงิน</th>
-                </tr>
-              </thead>
-              <tbody>
-                {linesLoading ? (
-                  <tr>
-                    <td className="p-2" colSpan={6}>
-                      กำลังโหลดรายการ…
-                    </td>
-                  </tr>
-                ) : lines.length === 0 ? (
-                  <tr>
-                    <td className="p-2" colSpan={6}>
-                      ไม่มีรายการ
-                    </td>
-                  </tr>
-                ) : (
-                  lines.map((line, i) => (
-                    <tr key={`${line.line}-${i}`} className="border-b">
-                      <td className="p-2">{line.line ?? "—"}</td>
-                      <td className="p-2">{line.bcode ?? "—"}</td>
-                      <td className="p-2">{line.detail ?? "—"}</td>
-                      <td className="p-2">
-                        {line.qty ?? "—"} {line.ui ?? ""}
-                      </td>
-                      <td className="p-2">{formatPoAmount(line.price)}</td>
-                      <td className="p-2">{formatPoAmount(line.amount)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
 
-      <PoAccountDialog
-        open={accountOpen}
-        onOpenChange={setAccountOpen}
-        acctno={accountRow?.acctno ?? null}
-        site="HQ"
-        docno={accountRow?.docno}
-        fallbackName={accountRow?.acctname}
-      />
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+            <ServerPagedTable
+              columns={columns}
+              rows={rows}
+              count={count}
+              limit={limit}
+              offset={offset}
+              onOffsetChange={setOffset}
+              onLimitChange={setLimit}
+              onRowClick={openDetail}
+              loading={loading}
+              tableMinWidthClassName="min-w-[40rem]"
+              rowKey={(row) => row.docno}
+              mobileCardRender={renderPoHqMobileCard}
+            />
+
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90dvh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>HQ PO {selected?.docno}</DialogTitle>
+                </DialogHeader>
+                {selected ? (
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      ผู้ขาย: {selected.acctname ?? "—"} (
+                      {selected.acctno ?? "—"})
+                    </div>
+                    <div>
+                      วันที่: {formatPoDate(selected.docdate)} · สถานะ:{" "}
+                      {billedLabel(selected.billed)}
+                    </div>
+                    <div>ยอด: {formatPoAmount(selected.aftertax)}</div>
+                  </div>
+                ) : null}
+                <ScrollArea className="max-h-[50vh] rounded-md border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/40 text-left">
+                        <th className="p-2">Line</th>
+                        <th className="p-2">BCODE</th>
+                        <th className="p-2">รายละเอียด</th>
+                        <th className="p-2">Qty</th>
+                        <th className="p-2">ราคา</th>
+                        <th className="p-2">จำนวนเงิน</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {linesLoading ? (
+                        <tr>
+                          <td className="p-2" colSpan={6}>
+                            กำลังโหลดรายการ…
+                          </td>
+                        </tr>
+                      ) : lines.length === 0 ? (
+                        <tr>
+                          <td className="p-2" colSpan={6}>
+                            ไม่มีรายการ
+                          </td>
+                        </tr>
+                      ) : (
+                        lines.map((line, i) => (
+                          <tr key={`${line.line}-${i}`} className="border-b">
+                            <td className="p-2">{line.line ?? "—"}</td>
+                            <td className="p-2">{line.bcode ?? "—"}</td>
+                            <td className="p-2">{line.detail ?? "—"}</td>
+                            <td className="p-2">
+                              {line.qty ?? "—"} {line.ui ?? ""}
+                            </td>
+                            <td className="p-2">{formatPoAmount(line.price)}</td>
+                            <td className="p-2">
+                              {formatPoAmount(line.amount)}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+
+            <PoAccountDialog
+              open={accountOpen}
+              onOpenChange={setAccountOpen}
+              acctno={accountRow?.acctno ?? null}
+              site="HQ"
+              docno={accountRow?.docno}
+              fallbackName={accountRow?.acctname}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="pending" className="mt-3">
+          <PoPendingReceiveTab site="HQ" refreshToken={refreshToken} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

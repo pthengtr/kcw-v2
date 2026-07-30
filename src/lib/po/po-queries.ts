@@ -283,6 +283,7 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
 
 export async function listPoPendingReceive(params: {
   supabase: SupabaseClient;
+  site: PoSyncSite;
   q?: string;
   acctno?: string;
   from?: string;
@@ -291,9 +292,20 @@ export async function listPoPendingReceive(params: {
   limit: number;
   offset: number;
 }): Promise<{ rows: PoPendingReceiveRow[]; count: number | null }> {
-  const { supabase, q, acctno, from, to, months = 12, limit, offset } = params;
+  const {
+    supabase,
+    site,
+    q,
+    acctno,
+    from,
+    to,
+    months = 12,
+    limit,
+    offset,
+  } = params;
 
   const { data, error } = await supabase.rpc("fn_po_pending_receive", {
+    p_site: site,
     p_q: q?.trim() || null,
     p_acctno: acctno?.trim() || null,
     p_from: from?.trim() || null,

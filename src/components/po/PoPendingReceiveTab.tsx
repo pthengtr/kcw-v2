@@ -11,10 +11,13 @@ import {
   formatPoQty,
 } from "@/lib/po/format";
 import type { PoPendingReceiveRow } from "@/lib/po/po-queries";
+import type { PoSyncSite } from "@/lib/po/worker-jobs";
 
 export default function PoPendingReceiveTab({
+  site,
   refreshToken,
 }: {
+  site: PoSyncSite;
   refreshToken: number;
 }) {
   const [rows, setRows] = useState<PoPendingReceiveRow[]>([]);
@@ -34,7 +37,7 @@ export default function PoPendingReceiveTab({
 
   useEffect(() => {
     setOffset(0);
-  }, [q, from, to]);
+  }, [q, from, to, site]);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -43,6 +46,7 @@ export default function PoPendingReceiveTab({
       setError(null);
       try {
         const params = new URLSearchParams();
+        params.set("site", site);
         if (q.trim()) params.set("q", q.trim());
         if (from.trim()) params.set("from", from.trim());
         if (to.trim()) params.set("to", to.trim());
@@ -75,7 +79,7 @@ export default function PoPendingReceiveTab({
     }
     void fetchRows();
     return () => ac.abort();
-  }, [q, from, to, limit, offset, refreshToken]);
+  }, [site, q, from, to, limit, offset, refreshToken]);
 
   const columns: Column<PoPendingReceiveRow>[] = useMemo(
     () => [
@@ -164,7 +168,7 @@ export default function PoPendingReceiveTab({
         render: (r) => (
           <span className="inline-flex items-center gap-1.5 justify-end">
             {formatPoQty(r.remaining)}
-            {r.billed === "Y" ? (
+            {site === "HQ" && r.billed === "Y" ? (
               <Badge variant="outline" className="font-normal">
                 รับบางส่วน
               </Badge>
@@ -173,7 +177,7 @@ export default function PoPendingReceiveTab({
         ),
       },
     ],
-    []
+    [site]
   );
 
   function renderMobileCard(row: PoPendingReceiveRow) {
@@ -209,7 +213,7 @@ export default function PoPendingReceiveTab({
             <div>{formatPoQty(row.recv_qty)}</div>
           </div>
         </div>
-        {row.billed === "Y" ? (
+        {site === "HQ" && row.billed === "Y" ? (
           <Badge variant="outline" className="mt-2">
             รับบางส่วน
           </Badge>
@@ -226,8 +230,9 @@ export default function PoPendingReceiveTab({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        รายการบรรทัด PO ที่ยังค้างรับ (ทดลองใช้) — คำนวณจากจำนวนสั่ง −
-        จำนวนที่คีย์รับแล้วตาม BCODE อาจไม่ตรงกับระบบเดิมทุกกรณี
+        {site === "HQ"
+          ? "รายการบรรทัด PO HQ ที่ยังค้างรับ (ทดลองใช้) — จำนวนสั่ง − จำนวนที่คีย์รับแล้วตาม BCODE อาจไม่ตรงกับระบบเดิมทุกกรณี"
+          : "รายการบรรทัด PO SYP ที่ยังเปิดอยู่ (ทดลองใช้) — ยังไม่มีข้อมูลคีย์รับรายบรรทัดของ SYP จึงแสดง PO ที่ยังไม่รับทั้งใบ"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
@@ -272,7 +277,7 @@ export default function PoPendingReceiveTab({
         open={accountOpen}
         onOpenChange={setAccountOpen}
         acctno={accountRow?.acctno ?? null}
-        site="HQ"
+        site={site}
         docno={accountRow?.docno}
         fallbackName={accountRow?.acctname}
       />
