@@ -152,9 +152,7 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
 
   const [hqInventoryUpdatedAt, inventoryInFlight] = await Promise.all([
     fetchInventoryLastUpdatedAt(supabase, "HQ"),
-    Promise.all(
-      sites.map(async (site) => findInFlightInventorySync(supabase, site))
-    ),
+    findInFlightInventorySync(supabase),
   ]);
 
   return {
@@ -171,9 +169,7 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     >,
     inventory: {
       hqLastUpdatedAt: hqInventoryUpdatedAt,
-      inFlightJobs: inventoryInFlight.filter(
-        (job): job is JobQueueRow => Boolean(job)
-      ),
+      inFlightJobs: inventoryInFlight,
     },
   };
 }
