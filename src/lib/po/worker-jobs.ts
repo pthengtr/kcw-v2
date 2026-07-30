@@ -155,34 +155,12 @@ export async function getJobById(
 }
 
 export async function findInFlightInventorySync(
-  supabase: SupabaseClient,
-  site: PoSyncSite
-): Promise<JobQueueRow | null> {
-  const { data, error } = await supabase.rpc("fn_inventory_find_inflight_sync", {
-    p_site: site,
-  });
+  supabase: SupabaseClient
+): Promise<JobQueueRow[]> {
+  const { data, error } = await supabase.rpc("fn_inventory_find_inflight_sync");
   if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return null;
-  return mapJob(row as Record<string, unknown>);
-}
-
-export async function enqueueInventorySyncSite(params: {
-  supabase: SupabaseClient;
-  site: PoSyncSite;
-  requestedBy: string;
-}): Promise<JobQueueRow> {
-  const { supabase, site, requestedBy } = params;
-  const workerName = workerNameForSite(site);
-  const { data, error } = await supabase.rpc("fn_inventory_enqueue_sync", {
-    p_site: site,
-    p_worker_name: workerName,
-    p_requested_by: requestedBy,
-  });
-  if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) throw new Error("Inventory enqueue returned no row");
-  return mapJob(row as Record<string, unknown>);
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  return rows.map((row) => mapJob(row as Record<string, unknown>));
 }
 
 export async function enqueueInventorySync(params: {
@@ -203,19 +181,12 @@ export async function enqueueInventorySync(params: {
 > {
   const { supabase, requestedBy } = params;
 
-  const inFlightBySite = await Promise.all(
-    INVENTORY_SYNC_SITES.map(async (site) => ({
-      site,
-      job: await findInFlightInventorySync(supabase, site),
-    }))
-  );
-  const running = inFlightBySite
-    .map((x) => x.job)
-    .filter((job): job is JobQueueRow => Boolean(job));
+  const running = await findInFlightInventorySync(supabase);
   if (running.length > 0) {
     return { alreadyRunning: true, jobs: running };
   }
 
+  // Gate like bank: need at least one PC online; still enqueue both site jobs.
   const heartbeats = await Promise.all(
     INVENTORY_SYNC_SITES.map(async (site) => {
       const workerName = workerNameForSite(site);
@@ -235,7 +206,7 @@ export async function enqueueInventorySync(params: {
       site: h.site,
       lastSeen: h.lastSeen,
     }));
-  if (offlineWorkers.length > 0) {
+  if (offlineWorkers.length === INVENTORY_SYNC_SITES.length) {
     return {
       alreadyRunning: false,
       workerOnline: false,
@@ -243,21 +214,17 @@ export async function enqueueInventorySync(params: {
     };
   }
 
-  const jobs: JobQueueRow[] = [];
-  for (const site of INVENTORY_SYNC_SITES) {
-    jobs.push(
-      await enqueueInventorySyncSite({
-        supabase,
-        site,
-        requestedBy,
-      })
-    );
-  }
+  const { data, error } = await supabase.rpc("fn_inventory_enqueue_sync", {
+    p_requested_by: requestedBy,
+  });
+  if (error) throw error;
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  if (rows.length === 0) throw new Error("Inventory enqueue returned no rows");
 
   return {
     alreadyRunning: false,
     workerOnline: true,
-    jobs,
+    jobs: rows.map((row) => mapJob(row as Record<string, unknown>)),
   };
 }
 
