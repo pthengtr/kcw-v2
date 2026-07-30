@@ -343,18 +343,30 @@ export default function PoStatusPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleSync(activeSite)}
-              disabled={syncingSite === activeSite || !!siteMeta?.inFlightJob}
+              onClick={() => void handleInventorySync()}
+              disabled={inventoryInFlight}
             >
-              Sync {activeSite}
+              อัพเดตสต๊อก
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void handleInventorySync()}
-              disabled={inventoryInFlight}
+              onClick={() => handleSync("SYP")}
+              disabled={
+                syncingSite === "SYP" || !!meta?.SYP?.inFlightJob
+              }
             >
-              Inventory Sync
+              อัพเดต PO SYP
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSync("HQ")}
+              disabled={
+                syncingSite === "HQ" || !!meta?.HQ?.inFlightJob
+              }
+            >
+              อัพเดต PO HQ
             </Button>
             <Button variant="outline" size="sm" onClick={refresh}>
               <RefreshCcw strokeWidth={1} /> รีเฟรช
