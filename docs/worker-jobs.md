@@ -125,7 +125,7 @@ New features almost never need new queue tables — only new `job_type` values a
 - UI **Bank Sync** button → `POST /api/bank/sync`, then poll `GET /api/bank/sync/:jobId`; meta via `GET /api/bank/meta`.
 - Service-role RPCs: `fn_bank_find_inflight_import`, `fn_bank_enqueue_import` (plus shared `fn_po_worker_heartbeat` / `fn_po_get_job`) — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql).
 
-### Bank statement match — จับคู่ยอดเข้า (accounts 7236, 3557, 0393, 248-0-42113-9, 248-6-00618-4)
+### Bank statement match — จับคู่ยอดเข้า (accounts 7236, 3557, 0393, 4759, 248-0-42113-9, 248-6-00618-4)
 
 - Not a PC worker job. UI button **จับคู่ยอดเข้า** on Statement Lines → `POST /api/bank/match`.
 - Scope comes from the selected month; allowed accounts come from `BANK_MATCH_PROMPTS` in [`match-prompt-constants.ts`](../src/lib/bank/match-prompt-constants.ts).
@@ -133,6 +133,7 @@ New features almost never need new queue tables — only new `job_type` values a
   - 7236 inbound: [`prompts/bank-statement-match-7236.md`](../prompts/bank-statement-match-7236.md)
   - 3557 outbound payments: [`prompts/bank-statement-match-3557.md`](../prompts/bank-statement-match-3557.md)
   - 0393 SYP sales (3TR / 3TAR) + app expense PV: [`prompts/bank-statement-match-0393.md`](../prompts/bank-statement-match-0393.md)
+  - 4759 SYP OpEx (took over 0393 expense payments from Jul 2026): [`prompts/bank-statement-match-4759.md`](../prompts/bank-statement-match-4759.md)
   - 248-0-42113-9 (KTB / ends 1139) marketplace RVI: [`prompts/bank-statement-match-1139.md`](../prompts/bank-statement-match-1139.md)
   - 248-6-00618-4 payroll / expense cheques: [`prompts/bank-statement-match-6184.md`](../prompts/bank-statement-match-6184.md)
 - Placeholders `{{account_no}}` / `{{from}}` / `{{to}}` are injected by the API.

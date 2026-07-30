@@ -7,6 +7,7 @@ Account **0393** (Kasikorn) is the **SYP / สี่แยกพัฒนา** o
 
 - **Inbound** ≈ SYP sales settlements (`3TR` transfer bills + daily `3TAR−3CNTAR` net) — same logic as account **7236**, but with the SYP `3…` prefixes and `billgen.fin_3*` tables
 - **Outbound** ≈ app payment vouchers (**PV / 3PV**) from `public.expense_*` (not PARTS9 `raw_kcw` PVMAS)
+- From **July 2026**, most direct OpEx payments moved to account **4759** (`กสิกร xxxxxx4759`). Keep matching `%0393%` receipts here when they appear; do **not** pull `%4759%` receipts onto 0393
 
 ## Job scope (injected by the system)
 
@@ -116,6 +117,7 @@ Filter payment methods:
 
 1. **Direct 0393 pay** — `payment_description ILIKE '%0393%'` (stored as `กสิกร xxxxxx0393`, `voucher_type = individual`)
 2. **Director reimbursement** — `payment_description ILIKE '%คืนเงินสำรอง%'` (`voucher_type = group`). These are often banked as transfers to Narumon / X2446 who paid cash; they still belong to the PV expense workflow
+3. Do **not** use `payment_description ILIKE '%4759%'` — those belong to account **4759**
 
 **Amount to match (critical):** bank `amount` equals the voucher **net paid**, not raw `signed_total` alone:
 
