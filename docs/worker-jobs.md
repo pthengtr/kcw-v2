@@ -88,7 +88,7 @@ Poll with `select ... from ops.job_queue where id = :id` until `done` / `failed`
 
 | job_type | worker_name | payload notes |
 |----------|-------------|----------------|
-| `sync_inventory` | HQ-PC + SYP-PC (**2 jobs**) | `{ "site": "HQ"\|"SYP" }` |
+| `sync_inventory` | HQ-PC + SYP-PC (**2 jobs**, shared `batch_id`) | `{ "site": "HQ"\|"SYP", "batch_id" }` |
 | `sync_product_images` | HQ-PC + SYP-PC | site + bucket/folder |
 | `sync_online_sales` | HQ-PC | site HQ |
 | `sync_pomas_podet` | HQ-PC + SYP-PC | `{ "task","site" }` |
@@ -127,12 +127,13 @@ New features almost never need new queue tables — only new `job_type` values a
 
 ### Inventory sync from `/po` (kcw-v2)
 
-- Job: `sync_inventory` with `{ "site":"HQ"|"SYP" }` — **two rows** (HQ-PC + SYP-PC).
-- Before insert: if either site already has `pending`/`running`, return **already running**.
-- Gate on **both** PC heartbeats (`HQ-PC` and `SYP-PC`, ~30s).
-- UI **Inventory Sync** button → `POST /api/po/inventory-sync`, then poll `GET /api/po/inventory-sync/:jobId` for each job; meta includes `inventory.hqLastUpdatedAt` + `inventory.inFlightJobs` via `GET /api/po/meta`.
+- Job: `sync_inventory` — **one button** enqueues **two rows** (HQ-PC + SYP-PC) with shared `batch_id`.
+- Payload: `{ "site":"HQ"|"SYP", "batch_id":"<uuid>" }` (same shape as LINE/kcw-api).
+- Before insert: if any recent (`< 30 min`) `sync_inventory` is `pending`/`running`, return **already running**.
+- Gate: at least one PC online (~30s); still enqueue both site jobs.
+- UI **Inventory Sync** → `POST /api/po/inventory-sync`, poll `GET /api/po/inventory-sync/:jobId` for each job; meta includes `inventory.hqLastUpdatedAt` + `inventory.inFlightJobs`.
 - SYP PO line detail shows HQ on-hand from `curated_kcw.inventory_qty_latest` (`branch='HQ'`) next to ICMAS location — see [bi/sql/po_syp_prepare_line.sql](./bi/sql/po_syp_prepare_line.sql).
-- Service-role RPCs: `fn_inventory_find_inflight_sync`, `fn_inventory_enqueue_sync`, `fn_inventory_last_updated_at` — see [bi/sql/fn_inventory_sync_ops.sql](./bi/sql/fn_inventory_sync_ops.sql).
+- Service-role RPCs: `fn_inventory_find_inflight_sync()`, `fn_inventory_enqueue_sync(p_requested_by)`, `fn_inventory_last_updated_at` — see [bi/sql/fn_inventory_sync_ops.sql](./bi/sql/fn_inventory_sync_ops.sql).
 
 ### Bank statement match — จับคู่ยอดเข้า (accounts 7236, 3557, 0393, 4759, 248-0-42113-9, 248-6-00618-4)
 

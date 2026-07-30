@@ -33,10 +33,9 @@ export async function POST() {
     }
 
     if (!result.workerOnline) {
-      const names = result.offlineWorkers.map((w) => w.workerName).join(", ");
       return NextResponse.json(
         {
-          error: `Inventory sync worker offline: ${names}`,
+          error: "No inventory sync worker is online (HQ-PC or SYP-PC)",
           offlineWorkers: result.offlineWorkers,
         },
         { status: 503 }

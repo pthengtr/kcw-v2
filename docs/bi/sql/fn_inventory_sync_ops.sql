@@ -1,8 +1,14 @@
 -- Service-role RPCs for inventory sync (ops schema is not exposed to PostgREST).
 -- Reuses public.fn_po_worker_heartbeat / public.fn_po_get_job for heartbeat + poll by id.
--- Job: sync_inventory with payload { "site": "HQ"|"SYP" }, worker HQ-PC / SYP-PC (2 jobs).
+-- One web action enqueues BOTH sites with shared batch_id (same shape as LINE/kcw-api).
+-- Payload: { "site": "HQ"|"SYP", "batch_id": "<uuid>" }
 
-create or replace function public.fn_inventory_find_inflight_sync(p_site text)
+-- Drop site-scoped overloads from the first revision.
+drop function if exists public.fn_inventory_find_inflight_sync(text);
+drop function if exists public.fn_inventory_enqueue_sync(text, text, text);
+
+-- Recent pending/running inventory jobs only (ignore stuck ancient rows).
+create or replace function public.fn_inventory_find_inflight_sync()
 returns table (
   id bigint,
   job_type text,
@@ -27,16 +33,12 @@ as $$
   from ops.job_queue j
   where j.job_type = 'sync_inventory'
     and j.status in ('pending', 'running')
-    and j.payload->>'site' = p_site
-  order by j.requested_at desc
-  limit 1;
+    and j.requested_at > now() - interval '30 minutes'
+  order by j.requested_at desc;
 $$;
 
-create or replace function public.fn_inventory_enqueue_sync(
-  p_site text,
-  p_worker_name text,
-  p_requested_by text
-)
+-- Enqueue HQ + SYP as one batch (2 rows, shared batch_id).
+create or replace function public.fn_inventory_enqueue_sync(p_requested_by text)
 returns table (
   id bigint,
   job_type text,
@@ -56,21 +58,28 @@ security definer
 set search_path = ops, public
 as $$
 declare
-  v_payload jsonb := jsonb_build_object('site', p_site);
+  v_batch_id text := gen_random_uuid()::text;
 begin
-  if p_site is null or btrim(p_site) = '' then
-    raise exception 'missing site';
-  end if;
-  if p_worker_name is null or btrim(p_worker_name) = '' then
-    raise exception 'missing worker_name';
-  end if;
-
   return query
   insert into ops.job_queue (
     job_type, payload, status, worker_name, requested_by, source
-  ) values (
-    'sync_inventory', v_payload, 'pending', p_worker_name, p_requested_by, 'web'
-  )
+  ) values
+    (
+      'sync_inventory',
+      jsonb_build_object('site', 'HQ', 'batch_id', v_batch_id),
+      'pending',
+      'HQ-PC',
+      p_requested_by,
+      'web'
+    ),
+    (
+      'sync_inventory',
+      jsonb_build_object('site', 'SYP', 'batch_id', v_batch_id),
+      'pending',
+      'SYP-PC',
+      p_requested_by,
+      'web'
+    )
   returning
     job_queue.id, job_queue.job_type, job_queue.payload, job_queue.status,
     job_queue.worker_name, job_queue.requested_by, job_queue.source,
@@ -91,10 +100,10 @@ as $$
   where inv.branch = p_branch;
 $$;
 
-revoke all on function public.fn_inventory_find_inflight_sync(text) from public, anon, authenticated;
-revoke all on function public.fn_inventory_enqueue_sync(text, text, text) from public, anon, authenticated;
+revoke all on function public.fn_inventory_find_inflight_sync() from public, anon, authenticated;
+revoke all on function public.fn_inventory_enqueue_sync(text) from public, anon, authenticated;
 revoke all on function public.fn_inventory_last_updated_at(text) from public, anon, authenticated;
 
-grant execute on function public.fn_inventory_find_inflight_sync(text) to service_role;
-grant execute on function public.fn_inventory_enqueue_sync(text, text, text) to service_role;
+grant execute on function public.fn_inventory_find_inflight_sync() to service_role;
+grant execute on function public.fn_inventory_enqueue_sync(text) to service_role;
 grant execute on function public.fn_inventory_last_updated_at(text) to service_role;
