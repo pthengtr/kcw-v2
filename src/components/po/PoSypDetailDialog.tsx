@@ -18,6 +18,7 @@ import {
   billedLabel,
   formatPoAmount,
   formatPoDate,
+  formatPoQty,
   formatPoTs,
 } from "@/lib/po/format";
 import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
@@ -151,20 +152,22 @@ export default function PoSypDetailDialog({
           {linesLoading ? (
             <TableLoadingState label="กำลังโหลดรายการ…" />
           ) : (
-            <table className="w-full min-w-[52rem] border-collapse text-sm print:min-w-0">
+            <table className="w-full min-w-[60rem] border-collapse text-sm print:min-w-0">
               <thead>
                 <tr className="border-b bg-muted/40 text-left">
                   <th className="w-14 p-2 text-center">เตรียม</th>
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
                   <th className="p-2">ที่เก็บ HQ</th>
+                  <th className="p-2">สต็อก HQ</th>
+                  <th className="p-2">อัปเดตสต็อก</th>
                   <th className="p-2">จำนวน</th>
                 </tr>
               </thead>
               <tbody>
                 {lines.length === 0 ? (
                   <tr>
-                    <td className="p-2 text-muted-foreground" colSpan={5}>
+                    <td className="p-2 text-muted-foreground" colSpan={7}>
                       ไม่มีรายการ
                     </td>
                   </tr>
@@ -197,6 +200,12 @@ export default function PoSypDetailDialog({
                         <td className="p-2">{line.detail ?? "—"}</td>
                         <td className="p-2 font-medium">
                           {formatHqLocation(line.hq_location1, line.hq_location2)}
+                        </td>
+                        <td className="p-2 font-medium tabular-nums">
+                          {formatPoQty(line.hq_qty)}
+                        </td>
+                        <td className="p-2 text-muted-foreground whitespace-nowrap">
+                          {formatPoTs(line.hq_qty_updated_at)}
                         </td>
                         <td className="p-2">
                           {line.qty ?? "—"} {line.ui ?? ""}

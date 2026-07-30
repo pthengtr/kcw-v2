@@ -125,6 +125,15 @@ New features almost never need new queue tables — only new `job_type` values a
 - UI **Bank Sync** button → `POST /api/bank/sync`, then poll `GET /api/bank/sync/:jobId`; meta via `GET /api/bank/meta`.
 - Service-role RPCs: `fn_bank_find_inflight_import`, `fn_bank_enqueue_import` (plus shared `fn_po_worker_heartbeat` / `fn_po_get_job`) — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql).
 
+### Inventory sync from `/po` (kcw-v2)
+
+- Job: `sync_inventory` with `{ "site":"HQ"|"SYP" }` — **two rows** (HQ-PC + SYP-PC).
+- Before insert: if either site already has `pending`/`running`, return **already running**.
+- Gate on **both** PC heartbeats (`HQ-PC` and `SYP-PC`, ~30s).
+- UI **Inventory Sync** button → `POST /api/po/inventory-sync`, then poll `GET /api/po/inventory-sync/:jobId` for each job; meta includes `inventory.hqLastUpdatedAt` + `inventory.inFlightJobs` via `GET /api/po/meta`.
+- SYP PO line detail shows HQ on-hand from `curated_kcw.inventory_qty_latest` (`branch='HQ'`) next to ICMAS location — see [bi/sql/po_syp_prepare_line.sql](./bi/sql/po_syp_prepare_line.sql).
+- Service-role RPCs: `fn_inventory_find_inflight_sync`, `fn_inventory_enqueue_sync`, `fn_inventory_last_updated_at` — see [bi/sql/fn_inventory_sync_ops.sql](./bi/sql/fn_inventory_sync_ops.sql).
+
 ### Bank statement match — จับคู่ยอดเข้า (accounts 7236, 3557, 0393, 4759, 248-0-42113-9, 248-6-00618-4)
 
 - Not a PC worker job. UI button **จับคู่ยอดเข้า** on Statement Lines → `POST /api/bank/match`.

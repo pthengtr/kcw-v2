@@ -27,14 +27,24 @@ type SiteMeta = {
 
 type PoMeta = Record<PoSyncSite, SiteMeta>;
 
+type InventoryMeta = {
+  hqLastUpdatedAt: string | null;
+  inFlightJobs: JobQueueRow[];
+};
+
 export default function PoStatusPage() {
   const [tab, setTab] = useState<"hq" | "syp">("syp");
   const [refreshToken, setRefreshToken] = useState(0);
   const [meta, setMeta] = useState<PoMeta | null>(null);
+  const [inventoryMeta, setInventoryMeta] = useState<InventoryMeta | null>(
+    null
+  );
   const [metaError, setMetaError] = useState<string | null>(null);
   const [syncingSite, setSyncingSite] = useState<PoSyncSite | null>(null);
+  const [inventorySyncing, setInventorySyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inventoryPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(() => setRefreshToken((x) => x + 1), []);
 
@@ -46,8 +56,12 @@ export default function PoStatusPage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error ?? `Request failed (${res.status})`);
       }
-      const data = (await res.json()) as { meta: PoMeta };
+      const data = (await res.json()) as {
+        meta: PoMeta;
+        inventory: InventoryMeta;
+      };
       setMeta(data.meta);
+      setInventoryMeta(data.inventory);
     } catch (e) {
       if (String(e).includes("AbortError")) return;
       setMetaError(e instanceof Error ? e.message : String(e));
@@ -63,6 +77,7 @@ export default function PoStatusPage() {
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      if (inventoryPollRef.current) clearInterval(inventoryPollRef.current);
     };
   }, []);
 
@@ -72,6 +87,14 @@ export default function PoStatusPage() {
       pollRef.current = null;
     }
     setSyncingSite(null);
+  }, []);
+
+  const stopInventoryPolling = useCallback(() => {
+    if (inventoryPollRef.current) {
+      clearInterval(inventoryPollRef.current);
+      inventoryPollRef.current = null;
+    }
+    setInventorySyncing(false);
   }, []);
 
   const startPolling = useCallback(
@@ -107,6 +130,71 @@ export default function PoStatusPage() {
     [refresh, stopPolling]
   );
 
+  const startInventoryPolling = useCallback(
+    (jobs: JobQueueRow[]) => {
+      stopInventoryPolling();
+      const jobIds = jobs.map((j) => j.id);
+      if (jobIds.length === 0) return;
+
+      setInventorySyncing(true);
+      setSyncMessage(
+        `กำลัง sync สต็อก HQ+SYP (job ${jobIds.map((id) => `#${id}`).join(", ")})…`
+      );
+
+      const pending = new Map(
+        jobIds.map((id) => [id, "pending" as string])
+      );
+
+      inventoryPollRef.current = setInterval(async () => {
+        try {
+          await Promise.all(
+            jobIds.map(async (jobId) => {
+              if (
+                pending.get(jobId) === "done" ||
+                pending.get(jobId) === "failed"
+              ) {
+                return;
+              }
+              const res = await fetch(`/api/po/inventory-sync/${jobId}`, {
+                cache: "no-store",
+              });
+              if (!res.ok) return;
+              const data = (await res.json()) as { job: JobQueueRow };
+              pending.set(jobId, data.job.status);
+              if (data.job.status === "failed") {
+                pending.set(
+                  jobId,
+                  `failed:${data.job.error_message || "failed"}`
+                );
+              }
+            })
+          );
+
+          const values = [...pending.values()];
+          const allTerminal = values.every(
+            (s) => s === "done" || s.startsWith("failed")
+          );
+          if (!allTerminal) return;
+
+          stopInventoryPolling();
+          const failed = values.filter((s) => s.startsWith("failed"));
+          if (failed.length === 0) {
+            setSyncMessage("Sync สต็อก สำเร็จ");
+          } else {
+            const msgs = failed
+              .map((s) => s.replace(/^failed:?/, "") || "ล้มเหลว")
+              .join("; ");
+            setSyncMessage(`Sync สต็อก ล้มเหลว: ${msgs}`);
+          }
+          refresh();
+        } catch {
+          // keep polling
+        }
+      }, 2000);
+    },
+    [refresh, stopInventoryPolling]
+  );
+
   // Resume polling if meta already has in-flight job for active site
   useEffect(() => {
     if (!meta || syncingSite) return;
@@ -116,6 +204,14 @@ export default function PoStatusPage() {
       startPolling(site, job.id);
     }
   }, [meta, tab, syncingSite, startPolling]);
+
+  // Resume inventory polling if meta already has in-flight inventory jobs
+  useEffect(() => {
+    if (!inventoryMeta || inventorySyncing) return;
+    if (inventoryMeta.inFlightJobs.length > 0) {
+      startInventoryPolling(inventoryMeta.inFlightJobs);
+    }
+  }, [inventoryMeta, inventorySyncing, startInventoryPolling]);
 
   async function handleSync(site: PoSyncSite) {
     setSyncMessage(null);
@@ -154,14 +250,52 @@ export default function PoStatusPage() {
     }
   }
 
+  async function handleInventorySync() {
+    setSyncMessage(null);
+    setInventorySyncing(true);
+    try {
+      const res = await fetch("/api/po/inventory-sync", { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+
+      if (res.status === 409 && Array.isArray(body?.jobs) && body.jobs.length) {
+        setSyncMessage("มี sync สต็อก กำลังรันอยู่แล้ว");
+        startInventoryPolling(body.jobs as JobQueueRow[]);
+        return;
+      }
+
+      if (res.status === 503) {
+        setInventorySyncing(false);
+        setSyncMessage(body?.error ?? "Worker offline");
+        return;
+      }
+
+      if (!res.ok) {
+        setInventorySyncing(false);
+        setSyncMessage(body?.error ?? `Inventory sync failed (${res.status})`);
+        return;
+      }
+
+      const jobs = (body?.jobs ?? []) as JobQueueRow[];
+      startInventoryPolling(jobs);
+    } catch (e) {
+      setInventorySyncing(false);
+      setSyncMessage(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   const activeSite: PoSyncSite = tab === "hq" ? "HQ" : "SYP";
   const siteMeta = meta?.[activeSite] ?? null;
+  const inventoryInFlight =
+    inventorySyncing || (inventoryMeta?.inFlightJobs.length ?? 0) > 0;
 
   const headerHint = useMemo(() => {
     if (!siteMeta) return null;
     return (
       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
         <span>อัปเดตล่าสุด: {formatPoTs(siteMeta.lastIngestedAt)}</span>
+        <span>
+          สต็อก HQ: {formatPoTs(inventoryMeta?.hqLastUpdatedAt ?? null)}
+        </span>
         <Badge variant={siteMeta.workerOnline ? "secondary" : "outline"}>
           {siteMeta.workerName}{" "}
           {siteMeta.workerOnline ? "online" : "offline"}
@@ -169,9 +303,18 @@ export default function PoStatusPage() {
         {siteMeta.inFlightJob || syncingSite === activeSite ? (
           <Badge variant="outline">กำลัง sync…</Badge>
         ) : null}
+        {inventoryInFlight ? (
+          <Badge variant="outline">กำลัง sync สต็อก…</Badge>
+        ) : null}
       </div>
     );
-  }, [siteMeta, syncingSite, activeSite]);
+  }, [
+    siteMeta,
+    syncingSite,
+    activeSite,
+    inventoryMeta?.hqLastUpdatedAt,
+    inventoryInFlight,
+  ]);
 
   return (
     <PermissionGate
@@ -204,6 +347,14 @@ export default function PoStatusPage() {
               disabled={syncingSite === activeSite || !!siteMeta?.inFlightJob}
             >
               Sync {activeSite}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleInventorySync()}
+              disabled={inventoryInFlight}
+            >
+              Inventory Sync
             </Button>
             <Button variant="outline" size="sm" onClick={refresh}>
               <RefreshCcw strokeWidth={1} /> รีเฟรช

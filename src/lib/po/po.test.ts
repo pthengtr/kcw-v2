@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { isWorkerOnline, WORKER_ONLINE_WINDOW_MS } from "@/lib/po/worker-jobs";
+import {
+  INVENTORY_SYNC_JOB_TYPE,
+  INVENTORY_SYNC_SITES,
+  isWorkerOnline,
+  WORKER_ONLINE_WINDOW_MS,
+  workerNameForSite,
+} from "@/lib/po/worker-jobs";
 import {
   billedLabel,
   formatPoAmount,
   formatPoDate,
+  formatPoQty,
 } from "@/lib/po/format";
 import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { canAccessPoStatus } from "@/lib/auth/client-permissions";
@@ -20,6 +27,13 @@ describe("PO worker helpers", () => {
     ).toBe(false);
     expect(isWorkerOnline(null, now)).toBe(false);
   });
+
+  it("maps inventory sync to both site workers", () => {
+    expect(INVENTORY_SYNC_JOB_TYPE).toBe("sync_inventory");
+    expect(INVENTORY_SYNC_SITES).toEqual(["HQ", "SYP"]);
+    expect(workerNameForSite("HQ")).toBe("HQ-PC");
+    expect(workerNameForSite("SYP")).toBe("SYP-PC");
+  });
 });
 
 describe("PO format helpers", () => {
@@ -29,6 +43,12 @@ describe("PO format helpers", () => {
     expect(formatPoDate("2026-07-27")).toBe("2026-07-27");
     expect(billedLabel("N")).toBe("เปิด");
     expect(billedLabel("Y")).toBe("รับแล้ว");
+  });
+
+  it("formats inventory qty", () => {
+    expect(formatPoQty("12.5")).toBe("12.5");
+    expect(formatPoQty(0)).toBe("0");
+    expect(formatPoQty(null)).toBe("—");
   });
 });
 

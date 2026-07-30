@@ -15,6 +15,15 @@ export function formatPoAmount(value: string | null | undefined) {
   });
 }
 
+export function formatPoQty(value: string | number | null | undefined) {
+  if (value == null || value === "") return "—";
+  const n = Number(value);
+  if (Number.isNaN(n)) return String(value);
+  return n.toLocaleString("th-TH", {
+    maximumFractionDigits: 3,
+  });
+}
+
 export function formatPoDate(value: string | null | undefined) {
   if (!value) return "—";
   // DOCDATE often comes as YYYY-MM-DD already
