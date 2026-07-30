@@ -26,7 +26,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = raw_kcw, public
+set search_path = raw_kcw, curated_kcw, public
 as $$
 declare
   v_docno text := btrim(coalesce(p_docno, ''));
@@ -53,12 +53,16 @@ begin
       d."AMOUNT" as amount,
       i."LOCATION1" as hq_location1,
       i."LOCATION2" as hq_location2,
+      inv.qty as hq_qty,
+      inv.updated_at as hq_qty_updated_at,
       coalesce(pl.prepared, false) as prepared,
       pl.prepared_at,
       pl.prepared_by::text as prepared_by
     from raw_kcw.raw_syp_podet_purchase_order_lines d
     left join raw_kcw.raw_hq_icmas_products i
       on i."BCODE" = d."BCODE"
+    left join curated_kcw.inventory_qty_latest inv
+      on inv.branch = 'HQ' and inv.bcode = d."BCODE"
     left join public.po_syp_prepare_line pl
       on pl.docno = d."DOCNO" and pl.line = d."LINE"
     where d."DOCNO" = v_docno

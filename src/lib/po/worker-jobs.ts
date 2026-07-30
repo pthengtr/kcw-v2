@@ -3,7 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type PoSyncSite = "HQ" | "SYP";
 
 export const PO_SYNC_JOB_TYPE = "sync_pomas_podet";
+export const INVENTORY_SYNC_JOB_TYPE = "sync_inventory";
 export const WORKER_ONLINE_WINDOW_MS = 30_000;
+export const INVENTORY_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
 
 const SITE_WORKER: Record<PoSyncSite, "HQ-PC" | "SYP-PC"> = {
   HQ: "HQ-PC",
@@ -150,4 +152,122 @@ export async function getJobById(
   const row = Array.isArray(data) ? data[0] : data;
   if (!row) return null;
   return mapJob(row as Record<string, unknown>);
+}
+
+export async function findInFlightInventorySync(
+  supabase: SupabaseClient,
+  site: PoSyncSite
+): Promise<JobQueueRow | null> {
+  const { data, error } = await supabase.rpc("fn_inventory_find_inflight_sync", {
+    p_site: site,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return mapJob(row as Record<string, unknown>);
+}
+
+export async function enqueueInventorySyncSite(params: {
+  supabase: SupabaseClient;
+  site: PoSyncSite;
+  requestedBy: string;
+}): Promise<JobQueueRow> {
+  const { supabase, site, requestedBy } = params;
+  const workerName = workerNameForSite(site);
+  const { data, error } = await supabase.rpc("fn_inventory_enqueue_sync", {
+    p_site: site,
+    p_worker_name: workerName,
+    p_requested_by: requestedBy,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error("Inventory enqueue returned no row");
+  return mapJob(row as Record<string, unknown>);
+}
+
+export async function enqueueInventorySync(params: {
+  supabase: SupabaseClient;
+  requestedBy: string;
+}): Promise<
+  | { alreadyRunning: true; jobs: JobQueueRow[] }
+  | { alreadyRunning: false; jobs: JobQueueRow[]; workerOnline: true }
+  | {
+      alreadyRunning: false;
+      workerOnline: false;
+      offlineWorkers: Array<{
+        workerName: string;
+        site: PoSyncSite;
+        lastSeen: string | null;
+      }>;
+    }
+> {
+  const { supabase, requestedBy } = params;
+
+  const inFlightBySite = await Promise.all(
+    INVENTORY_SYNC_SITES.map(async (site) => ({
+      site,
+      job: await findInFlightInventorySync(supabase, site),
+    }))
+  );
+  const running = inFlightBySite
+    .map((x) => x.job)
+    .filter((job): job is JobQueueRow => Boolean(job));
+  if (running.length > 0) {
+    return { alreadyRunning: true, jobs: running };
+  }
+
+  const heartbeats = await Promise.all(
+    INVENTORY_SYNC_SITES.map(async (site) => {
+      const workerName = workerNameForSite(site);
+      const heartbeat = await getWorkerHeartbeat(supabase, workerName);
+      return {
+        site,
+        workerName,
+        lastSeen: heartbeat?.last_seen ?? null,
+        online: isWorkerOnline(heartbeat?.last_seen ?? null),
+      };
+    })
+  );
+  const offlineWorkers = heartbeats
+    .filter((h) => !h.online)
+    .map((h) => ({
+      workerName: h.workerName,
+      site: h.site,
+      lastSeen: h.lastSeen,
+    }));
+  if (offlineWorkers.length > 0) {
+    return {
+      alreadyRunning: false,
+      workerOnline: false,
+      offlineWorkers,
+    };
+  }
+
+  const jobs: JobQueueRow[] = [];
+  for (const site of INVENTORY_SYNC_SITES) {
+    jobs.push(
+      await enqueueInventorySyncSite({
+        supabase,
+        site,
+        requestedBy,
+      })
+    );
+  }
+
+  return {
+    alreadyRunning: false,
+    workerOnline: true,
+    jobs,
+  };
+}
+
+export async function fetchInventoryLastUpdatedAt(
+  supabase: SupabaseClient,
+  branch: PoSyncSite = "HQ"
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc("fn_inventory_last_updated_at", {
+    p_branch: branch,
+  });
+  if (error) throw error;
+  return (data as string | null) ?? null;
 }

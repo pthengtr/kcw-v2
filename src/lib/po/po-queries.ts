@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
+  findInFlightInventorySync,
   findInFlightPoSync,
+  fetchInventoryLastUpdatedAt,
   getWorkerHeartbeat,
   isWorkerOnline,
   workerNameForSite,
@@ -45,6 +47,8 @@ export type PoLineRow = {
   amount: string | null;
   hq_location1?: string | null;
   hq_location2?: string | null;
+  hq_qty?: string | null;
+  hq_qty_updated_at?: string | null;
   prepared?: boolean;
   prepared_at?: string | null;
   prepared_by?: string | null;
@@ -74,6 +78,12 @@ function mapLine(row: Record<string, unknown>): PoLineRow {
     amount: ((row.AMOUNT ?? row.amount) as string | null) ?? null,
     hq_location1: (row.hq_location1 as string | null | undefined) ?? null,
     hq_location2: (row.hq_location2 as string | null | undefined) ?? null,
+    hq_qty:
+      row.hq_qty === undefined || row.hq_qty === null
+        ? null
+        : String(row.hq_qty),
+    hq_qty_updated_at:
+      (row.hq_qty_updated_at as string | null | undefined) ?? null,
     prepared:
       row.prepared === undefined ? undefined : Boolean(row.prepared),
     prepared_at: (row.prepared_at as string | null | undefined) ?? null,
@@ -117,36 +127,8 @@ export async function fetchLastIngestedAt(
 
 export async function fetchPoMeta(supabase: SupabaseClient) {
   const sites: PoSyncSite[] = ["HQ", "SYP"];
-  const result: Record<
-    PoSyncSite,
-    {
-      lastIngestedAt: string | null;
-      workerName: string;
-      workerOnline: boolean;
-      workerLastSeen: string | null;
-      workerStatus: string | null;
-      inFlightJob: JobQueueRow | null;
-    }
-  > = {
-    HQ: {
-      lastIngestedAt: null,
-      workerName: "HQ-PC",
-      workerOnline: false,
-      workerLastSeen: null,
-      workerStatus: null,
-      inFlightJob: null,
-    },
-    SYP: {
-      lastIngestedAt: null,
-      workerName: "SYP-PC",
-      workerOnline: false,
-      workerLastSeen: null,
-      workerStatus: null,
-      inFlightJob: null,
-    },
-  };
 
-  await Promise.all(
+  const siteEntries = await Promise.all(
     sites.map(async (site) => {
       const workerName = workerNameForSite(site);
       const [lastIngestedAt, heartbeat, inFlightJob] = await Promise.all([
@@ -154,18 +136,46 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
         getWorkerHeartbeat(supabase, workerName),
         findInFlightPoSync(supabase, site),
       ]);
-      result[site] = {
-        lastIngestedAt,
-        workerName,
-        workerOnline: isWorkerOnline(heartbeat?.last_seen ?? null),
-        workerLastSeen: heartbeat?.last_seen ?? null,
-        workerStatus: heartbeat?.status ?? null,
-        inFlightJob,
-      };
+      return [
+        site,
+        {
+          lastIngestedAt,
+          workerName,
+          workerOnline: isWorkerOnline(heartbeat?.last_seen ?? null),
+          workerLastSeen: heartbeat?.last_seen ?? null,
+          workerStatus: heartbeat?.status ?? null,
+          inFlightJob,
+        },
+      ] as const;
     })
   );
 
-  return result;
+  const [hqInventoryUpdatedAt, inventoryInFlight] = await Promise.all([
+    fetchInventoryLastUpdatedAt(supabase, "HQ"),
+    Promise.all(
+      sites.map(async (site) => findInFlightInventorySync(supabase, site))
+    ),
+  ]);
+
+  return {
+    sites: Object.fromEntries(siteEntries) as Record<
+      PoSyncSite,
+      {
+        lastIngestedAt: string | null;
+        workerName: string;
+        workerOnline: boolean;
+        workerLastSeen: string | null;
+        workerStatus: string | null;
+        inFlightJob: JobQueueRow | null;
+      }
+    >,
+    inventory: {
+      hqLastUpdatedAt: hqInventoryUpdatedAt,
+      inFlightJobs: inventoryInFlight.filter(
+        (job): job is JobQueueRow => Boolean(job)
+      ),
+    },
+  };
 }
 
 export async function listPoHeaders(params: {

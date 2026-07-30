@@ -16,8 +16,8 @@ export async function GET() {
 
   try {
     const supabase = createAdminClient();
-    const meta = await fetchPoMeta(supabase);
-    return NextResponse.json({ meta });
+    const { sites, inventory } = await fetchPoMeta(supabase);
+    return NextResponse.json({ meta: sites, inventory });
   } catch (error) {
     console.error("po meta", error);
     return NextResponse.json(
