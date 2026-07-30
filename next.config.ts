@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
       "./prompts/bank-statement-match-7236.md",
       "./prompts/bank-statement-match-3557.md",
       "./prompts/bank-statement-match-0393.md",
+      "./prompts/bank-statement-match-4759.md",
       "./prompts/bank-statement-match-1139.md",
       "./prompts/bank-statement-match-6184.md",
     ],

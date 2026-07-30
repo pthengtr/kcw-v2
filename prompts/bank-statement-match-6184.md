@@ -114,7 +114,7 @@ Confidence: clear same-day utility ≥ **0.95**; near-day unique ≈ **0.85–0.
 Notes from May/June 2026 probe:
 
 - Direct 6184 individual receipts in-window are almost only **electricity** (4 outs matched 1:1)
-- Tax / SSO / phones that historically used 6184 moved to **0393** in this period — do not pull 0393-paid receipts onto 6184
+- Tax / SSO / phones that historically used 6184 moved to **0393**, then from **July 2026** to **4759** — do not pull 0393/4759-paid receipts onto 6184
 - `expense_general` with payment 6184 was **not** observed — do not invent general-row matches unless a unique hit appears
 
 ### 3) Supplier cheque clears — PIMAS purchase bills (`raw_kcw.raw_hq_pimas_purchase_bills`)
@@ -203,8 +203,13 @@ Small personal TRs (e.g. 3,000 baht education / advances) with no unique expense
 
 - **Any update to `direction = 'in'`**
 - `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (account **3557**)
+<<<<<<< HEAD
+- Expense receipts paid via **0393** / **4759** / director reimbursement / online-fee skip methods
+- Blind unconstrained subset-sum across many receipts
+=======
 - Expense receipts paid via **0393** / director reimbursement / online-fee skip methods
 - Blind unconstrained subset-sum across many receipts or across different PIMAS suppliers (paid-unlinked fallback may combine **2–4** bills of the **same `ACCTNO` only**)
+>>>>>>> origin/master
 - Changing money fields
 
 ## Fields to write on each decision

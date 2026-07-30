@@ -25,6 +25,7 @@ describe("bank match prompt", () => {
       "7236",
       "3557",
       "0393",
+      "4759",
       "248-0-42113-9",
       "248-6-00618-4",
     ]);
@@ -38,6 +39,9 @@ describe("bank match prompt", () => {
     expect(BANK_MATCH_PROMPTS["0393"]).toBe(
       "prompts/bank-statement-match-0393.md"
     );
+    expect(BANK_MATCH_PROMPTS["4759"]).toBe(
+      "prompts/bank-statement-match-4759.md"
+    );
     expect(BANK_MATCH_PROMPTS["248-0-42113-9"]).toBe(
       "prompts/bank-statement-match-1139.md"
     );
@@ -47,6 +51,7 @@ describe("bank match prompt", () => {
     expect(isBankMatchAccount("7236")).toBe(true);
     expect(isBankMatchAccount("3557")).toBe(true);
     expect(isBankMatchAccount("0393")).toBe(true);
+    expect(isBankMatchAccount("4759")).toBe(true);
     expect(isBankMatchAccount("248-0-42113-9")).toBe(true);
     expect(isBankMatchAccount("248-6-00618-4")).toBe(true);
     expect(isBankMatchAccount("1139")).toBe(false);
@@ -56,6 +61,9 @@ describe("bank match prompt", () => {
     );
     expect(getBankMatchPromptPath("0393")).toBe(
       "prompts/bank-statement-match-0393.md"
+    );
+    expect(getBankMatchPromptPath("4759")).toBe(
+      "prompts/bank-statement-match-4759.md"
     );
     expect(getBankMatchPromptPath("248-0-42113-9")).toBe(
       "prompts/bank-statement-match-1139.md"
@@ -129,6 +137,7 @@ describe("bank match prompt", () => {
     expect(template).toContain("expense_pv");
     expect(template).toContain("กสิกร xxxxxx0393");
     expect(template).toContain("คืนเงินสำรอง");
+    expect(template).toContain("4759");
     expect(template).toContain("total_net");
     expect(template).toContain("match_status = 'pending'");
     expect(template).toContain("direction = 'in'");
@@ -142,6 +151,34 @@ describe("bank match prompt", () => {
     expect(filled).toContain("Account: `0393`");
     expect(filled).toContain("2026-05-01");
     expect(filled).toContain("2026-05-31");
+    expect(filled).not.toContain("{{account_no}}");
+  });
+
+  it("loads 4759 expense PV prompt (OpEx moved from 0393)", () => {
+    const template = loadBankMatchPromptTemplate("4759");
+    expect(template).toContain("{{account_no}}");
+    expect(template).toContain("4759");
+    expect(template).toContain("expense_receipt");
+    expect(template).toContain("expense_pv");
+    expect(template).toContain("กสิกร xxxxxx4759");
+    expect(template).toContain("คืนเงินสำรอง");
+    expect(template).toContain("total_net");
+    expect(template).toContain("internal_transfer");
+    expect(template).toContain("No sales matching");
+    expect(template).toContain("3TR");
+    expect(template).toContain("match_status = 'pending'");
+    expect(template).toContain("direction = 'out'");
+    expect(template).toContain("agent:bank-matcher-4759-v1");
+    expect(template).toContain("ใบสำคัญจ่าย PV (วันเดียวกัน)");
+
+    const filled = buildBankMatchPrompt({
+      account_no: "4759",
+      from: "2026-07-01",
+      to: "2026-07-31",
+    });
+    expect(filled).toContain("Account: `4759`");
+    expect(filled).toContain("2026-07-01");
+    expect(filled).toContain("2026-07-31");
     expect(filled).not.toContain("{{account_no}}");
   });
 
