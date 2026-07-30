@@ -243,6 +243,81 @@ export async function fetchPoLines(params: {
   return ((data ?? []) as Record<string, unknown>[]).map(mapLine);
 }
 
+export type PoPendingReceiveRow = {
+  docno: string;
+  docdate: string | null;
+  acctno: string | null;
+  acctname: string | null;
+  billed: string | null;
+  billno: string | null;
+  line: string | null;
+  bcode: string | null;
+  detail: string | null;
+  ui: string | null;
+  po_qty: number;
+  recv_qty: number;
+  remaining: number;
+};
+
+function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow {
+  const num = (v: unknown) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  return {
+    docno: String(row.docno ?? ""),
+    docdate: (row.docdate as string | null) ?? null,
+    acctno: (row.acctno as string | null) ?? null,
+    acctname: (row.acctname as string | null) ?? null,
+    billed: (row.billed as string | null) ?? null,
+    billno: (row.billno as string | null) ?? null,
+    line: ((row.line as string | null) ?? null),
+    bcode: (row.bcode as string | null) ?? null,
+    detail: (row.detail as string | null) ?? null,
+    ui: (row.ui as string | null) ?? null,
+    po_qty: num(row.po_qty),
+    recv_qty: num(row.recv_qty),
+    remaining: num(row.remaining),
+  };
+}
+
+export async function listPoPendingReceive(params: {
+  supabase: SupabaseClient;
+  q?: string;
+  acctno?: string;
+  from?: string;
+  to?: string;
+  months?: number;
+  limit: number;
+  offset: number;
+}): Promise<{ rows: PoPendingReceiveRow[]; count: number | null }> {
+  const { supabase, q, acctno, from, to, months = 12, limit, offset } = params;
+
+  const { data, error } = await supabase.rpc("fn_po_pending_receive", {
+    p_q: q?.trim() || null,
+    p_acctno: acctno?.trim() || null,
+    p_from: from?.trim() || null,
+    p_to: to?.trim() || null,
+    p_months: months,
+    p_limit: limit,
+    p_offset: offset,
+  });
+
+  if (error) throw error;
+
+  const payload = data as
+    | { rows?: Record<string, unknown>[]; count?: number | null }
+    | null;
+
+  const rows = (payload?.rows ?? []).map(mapPendingReceiveRow);
+  const count =
+    payload?.count === null || payload?.count === undefined
+      ? null
+      : Number(payload.count);
+
+  return { rows, count: Number.isFinite(count) ? count : null };
+}
+
 async function syncHeaderPreparedFromLines(params: {
   supabase: SupabaseClient;
   docno: string;

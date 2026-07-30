@@ -162,6 +162,7 @@ WHERE ISNULL(h.CANCELED, '') <> 'Y';
 | Supabase raw | `raw_kcw.raw_{hq\|syp}_pomas_purchase_orders` + `raw_{hq\|syp}_podet_purchase_order_lines` | Confirmed |
 | Sync job | `sync_pomas_podet` — see [worker-jobs.md](../worker-jobs.md); enqueue via `ops.job_queue` | Confirmed |
 | App list API | `fn_po_list` / `fn_po_last_ingested_at` (service-role); open partial indexes on POMAS | Confirmed |
+| Pending receive (trial) | `fn_po_pending_receive` — HQ line remaining = PODET.QTY − linked PIDET by BCODE; link via normalized `PIMAS.PO` (no `/`) or `POMAS.BILLNO` | Confirmed |
 | App prepare overlay (SYP only) | `public.po_syp_prepare` — webapp marks prepared for HQ→SYP transfer; not PARTS9 | Confirmed |
 | HQ vs SYP product meaning | **HQ** = open POs to external vendors; **SYP** = orders on HQ (transfer prep) | Confirmed |
 

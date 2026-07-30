@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import type { BadgeProps } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -27,12 +25,6 @@ import {
   formatPoDate,
 } from "@/lib/po/format";
 import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
-
-function billedVariant(billed: string | null | undefined): BadgeProps["variant"] {
-  if (billed === "Y") return "secondary";
-  if (billed === "N") return "outline";
-  return "outline";
-}
 
 export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
   const [rows, setRows] = useState<PoHeaderRow[]>([]);
@@ -166,20 +158,6 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
         className: "text-right whitespace-nowrap",
         render: (r) => formatPoAmount(r.aftertax),
       },
-      {
-        key: "billed",
-        header: "สถานะ",
-        className: "whitespace-nowrap min-w-[5.5rem]",
-        render: (r) => (
-          <Badge
-            variant={billedVariant(r.billed)}
-            className="whitespace-nowrap shrink-0"
-            title={billedLabel(r.billed)}
-          >
-            {billedLabel(r.billed)}
-          </Badge>
-        ),
-      },
     ],
     []
   );
@@ -192,21 +170,12 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
         className="w-full rounded-md border bg-white p-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
       >
         <div className="flex items-start justify-between gap-2">
-          <Badge
-            variant={billedVariant(row.billed)}
-            className="whitespace-nowrap shrink-0"
-          >
-            {billedLabel(row.billed)}
-          </Badge>
+          <div className="font-medium break-all">{row.docno}</div>
           <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
             {formatPoDate(row.docdate)}
           </div>
         </div>
         <div className="mt-3 grid gap-2">
-          <div>
-            <div className="text-xs text-muted-foreground">DOCNO</div>
-            <div className="font-medium break-all">{row.docno}</div>
-          </div>
           <div>
             <div className="text-xs text-muted-foreground">ผู้ขาย</div>
             <div className="text-sm line-clamp-2 break-words">
