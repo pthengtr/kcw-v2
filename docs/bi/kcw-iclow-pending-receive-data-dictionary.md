@@ -132,7 +132,8 @@ Exclude from all buckets:
 - `ORDERED = 'X'` (**TBD** — hidden until confirmed)
 
 **Ordered grain = `DOCNO + BCODE`** (sum ICLOW `QTY`).  
-**HQ received qty** = sum `PIDET.QTY` joined on distinct `ICLOW.RCVDNO = PIDET.BILLNO` + same `BCODE`.  
+**HQ received qty** = sum `PIDET.QTY` joined on distinct `ICLOW.RCVDNO` → `PIDET.BILLNO` + same `BCODE`.  
+Legacy PARTS9 truncates `ICLOW.RCVDNO` to **12 chars** while `PIMAS.BILLNO` can be longer — match exact `BILLNO = RCVDNO`, else `left(BILLNO,12) = RCVDNO` when `length(RCVDNO)=12`.  
 Do **not** use `PIMAS.PO` (unreliable).  
 `RECEIVED='Y'` alone is not “fully received” — it means complete **or** partial after the PIDET qty check.
 
@@ -201,6 +202,7 @@ Click a partial DOCNO:
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-08-01 | Match truncated RCVDNO via `left(PIMAS.BILLNO,12)` (legacy 12-char ICLOW field) | Agent |
 | 2026-08-01 | UI shows `(ไม่พบลิงก์ PIMAS)` when ICLOW.RCVDNO has no matching ingested PIMAS bill | Agent |
 | 2026-08-01 | BCODE grain: RECEIVED=Y → complete/partial via RCVDNO→PIDET qty; drop mixed DOCNO + PIMAS.PO | Agent |
 | 2026-08-01 | `partially_received` = ICLOW line rows on mixed DOCNO with receive_state + PIMAS BILLNO | Agent |
