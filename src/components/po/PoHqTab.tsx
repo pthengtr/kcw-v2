@@ -213,7 +213,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
       >
         <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
           <TabsTrigger value="list">รายการ PO</TabsTrigger>
-          <TabsTrigger value="pending">รอรับของ (ทดลองใช้)</TabsTrigger>
+          <TabsTrigger value="pending">รอรับของ (ICLOW)</TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="mt-3">

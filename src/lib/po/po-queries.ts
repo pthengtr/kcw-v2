@@ -243,20 +243,31 @@ export async function fetchPoLines(params: {
   return ((data ?? []) as Record<string, unknown>[]).map(mapLine);
 }
 
+export const PO_PENDING_RECEIVE_STATUSES = [
+  "to_be_ordered",
+  "pending_receive",
+  "partially_received",
+  "complete",
+] as const;
+
+export type PoPendingReceiveStatus =
+  (typeof PO_PENDING_RECEIVE_STATUSES)[number];
+
 export type PoPendingReceiveRow = {
-  docno: string;
+  id: string;
+  docno: string | null;
   docdate: string | null;
-  acctno: string | null;
+  vendor: string | null;
   acctname: string | null;
-  billed: string | null;
-  billno: string | null;
-  line: string | null;
   bcode: string | null;
-  detail: string | null;
+  descr: string | null;
+  qty: number;
   ui: string | null;
-  po_qty: number;
-  recv_qty: number;
-  remaining: number;
+  ordered: string | null;
+  received: string | null;
+  rcvddate: string | null;
+  rcvdno: string | null;
+  status: PoPendingReceiveStatus;
 };
 
 function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow {
@@ -264,28 +275,37 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   };
+  const statusRaw = String(row.status ?? "pending_receive");
+  const status = (
+    PO_PENDING_RECEIVE_STATUSES as readonly string[]
+  ).includes(statusRaw)
+    ? (statusRaw as PoPendingReceiveStatus)
+    : "pending_receive";
+
   return {
-    docno: String(row.docno ?? ""),
+    id: String(row.id ?? ""),
+    docno: (row.docno as string | null) ?? null,
     docdate: (row.docdate as string | null) ?? null,
-    acctno: (row.acctno as string | null) ?? null,
+    vendor: (row.vendor as string | null) ?? null,
     acctname: (row.acctname as string | null) ?? null,
-    billed: (row.billed as string | null) ?? null,
-    billno: (row.billno as string | null) ?? null,
-    line: ((row.line as string | null) ?? null),
     bcode: (row.bcode as string | null) ?? null,
-    detail: (row.detail as string | null) ?? null,
+    descr: (row.descr as string | null) ?? null,
+    qty: num(row.qty),
     ui: (row.ui as string | null) ?? null,
-    po_qty: num(row.po_qty),
-    recv_qty: num(row.recv_qty),
-    remaining: num(row.remaining),
+    ordered: (row.ordered as string | null) ?? null,
+    received: (row.received as string | null) ?? null,
+    rcvddate: (row.rcvddate as string | null) ?? null,
+    rcvdno: (row.rcvdno as string | null) ?? null,
+    status,
   };
 }
 
 export async function listPoPendingReceive(params: {
   supabase: SupabaseClient;
   site: PoSyncSite;
+  status?: PoPendingReceiveStatus;
   q?: string;
-  acctno?: string;
+  vendor?: string;
   from?: string;
   to?: string;
   months?: number;
@@ -295,8 +315,9 @@ export async function listPoPendingReceive(params: {
   const {
     supabase,
     site,
+    status = "pending_receive",
     q,
-    acctno,
+    vendor,
     from,
     to,
     months = 12,
@@ -306,8 +327,9 @@ export async function listPoPendingReceive(params: {
 
   const { data, error } = await supabase.rpc("fn_po_pending_receive", {
     p_site: site,
+    p_status: status,
     p_q: q?.trim() || null,
-    p_acctno: acctno?.trim() || null,
+    p_vendor: vendor?.trim() || null,
     p_from: from?.trim() || null,
     p_to: to?.trim() || null,
     p_months: months,

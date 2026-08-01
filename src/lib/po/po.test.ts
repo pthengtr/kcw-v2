@@ -13,6 +13,7 @@ import {
   formatPoDate,
   formatPoQty,
 } from "@/lib/po/format";
+import { PO_PENDING_RECEIVE_STATUSES } from "@/lib/po/po-queries";
 import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { canAccessPoStatus } from "@/lib/auth/client-permissions";
 
@@ -58,5 +59,16 @@ describe("PO RBAC", () => {
     expect(canAccessPoStatus(["*"])).toBe(true);
     expect(canAccessPoStatus(["po_status"])).toBe(true);
     expect(canAccessPoStatus(["bi_sales"])).toBe(false);
+  });
+});
+
+describe("PO pending receive statuses", () => {
+  it("lists ICLOW-backed UI statuses", () => {
+    expect(PO_PENDING_RECEIVE_STATUSES).toEqual([
+      "to_be_ordered",
+      "pending_receive",
+      "partially_received",
+      "complete",
+    ]);
   });
 });
