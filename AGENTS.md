@@ -54,6 +54,7 @@ await s.from('kcw_user_roles').upsert({ user_id: id, role_key: 'admin' });
 
 ### Notes / gotchas
 
+- **Malformed secret values:** if Supabase requests fail with `Invalid URL` or `Your project's URL and Key are required`, check that the injected secret *values* did not accidentally include the `NAME=` prefix (e.g. a value of `NEXT_PUBLIC_SUPABASE_URL=https://...` instead of just `https://...`). The correct fix is to re-enter the secret values without the leading `NAME=`. As a stopgap you can strip it at the shell before starting the server, e.g. `export NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL#NEXT_PUBLIC_SUPABASE_URL=}"` (same for the anon key). `SUPABASE_SERVICE_KEY` is a JWT starting with `eyJ` and is easy to sanity-check.
 - `next.config.ts` hard-codes the Supabase Storage hostname `jdzitzsucntqbjvwiwxm.supabase.co` for `next/image`; the provisioned `NEXT_PUBLIC_SUPABASE_URL` should point at that same project.
 - `npm run build` runs static prerendering and **fails without Supabase env** (some pages instantiate Supabase at build time). For dev, `npm run dev` is what matters; provide the env vars before `build`.
 - Known pre-existing test failure on `master`: `src/lib/webapp-mobile.test.ts` asserts `src/components/nav/NavbarClient.tsx` contains `md:hidden` / `hidden md:flex`, but the navbar now uses `lg:` breakpoints. This is a stale assertion in the repo, unrelated to environment setup (113/114 tests pass).
