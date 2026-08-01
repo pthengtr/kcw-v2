@@ -55,16 +55,17 @@ function formatRcvdnoWithPimasNote(
   opts?: { pimasLinkMissing?: boolean; site?: PoSyncSite }
 ): ReactNode {
   const value = billno?.trim() || "—";
-  if (value === "—" || opts?.site !== "HQ" || !opts.pimasLinkMissing) {
-    return value;
-  }
+  const showNote =
+    value !== "—" && opts?.site === "HQ" && Boolean(opts.pimasLinkMissing);
   return (
-    <>
-      {value}{" "}
-      <span className="font-sans text-muted-foreground">
-        (ไม่พบลิงก์ PIMAS)
-      </span>
-    </>
+    <span className="inline-flex max-w-[14rem] flex-col gap-0.5">
+      <span className="break-all font-mono">{value}</span>
+      {showNote ? (
+        <span className="whitespace-normal font-sans text-xs text-muted-foreground">
+          (ไม่พบลิงก์ PIMAS)
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -291,7 +292,7 @@ export default function PoPendingReceiveTab({
         {
           key: "billno",
           header: "RCVDNO",
-          className: "whitespace-nowrap font-mono hidden xl:table-cell",
+          className: "min-w-[8rem] align-top",
           render: (r) =>
             formatRcvdnoWithPimasNote(r.billno ?? r.rcvdno, {
               site,
@@ -355,7 +356,7 @@ export default function PoPendingReceiveTab({
               </div>
               <div className="col-span-2">
                 <div className="text-xs text-muted-foreground">RCVDNO</div>
-                <div className="font-mono break-all">
+                <div>
                   {formatRcvdnoWithPimasNote(row.billno || row.rcvdno, {
                     site,
                     pimasLinkMissing: row.pimas_link_missing,
@@ -544,12 +545,12 @@ export default function PoPendingReceiveTab({
                                 {line.source}
                               </Badge>
                             </td>
-                            <td className="p-2 font-mono whitespace-nowrap">
+                            <td className="p-2 align-top">
                               {formatRcvdnoWithPimasNote(line.billno, {
                                 site,
                                 pimasLinkMissing: line.pimas_link_missing,
                               })}
-                              <div className="text-xs text-muted-foreground">
+                              <div className="mt-0.5 text-xs text-muted-foreground">
                                 {formatPoDate(line.billdate)}
                               </div>
                             </td>
