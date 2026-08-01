@@ -49,15 +49,6 @@ function statusBadgeVariant(
   }
 }
 
-function receiveStateLabel(row: PoPendingReceiveRow): string {
-  if (row.receive_state === "received" || row.received === "Y") return "รับแล้ว";
-  return "ค้าง";
-}
-
-function isReceivedLine(row: PoPendingReceiveRow): boolean {
-  return row.receive_state === "received" || row.received === "Y";
-}
-
 export default function PoPendingReceiveTab({
   site,
   status,
@@ -89,6 +80,10 @@ export default function PoPendingReceiveTab({
   const [detailError, setDetailError] = useState<string | null>(null);
 
   const showDates = status !== "to_be_ordered";
+  const isBcodeQty =
+    status === "pending_receive" ||
+    status === "partially_received" ||
+    status === "complete";
   const isPartial = status === "partially_received";
 
   useEffect(() => {
@@ -192,84 +187,7 @@ export default function PoPendingReceiveTab({
         ),
     };
 
-    if (isPartial) {
-      return [
-        {
-          key: "docno",
-          header: "DOCNO",
-          className: "whitespace-nowrap",
-          render: (r) => (
-            <span className="font-medium">{r.docno ?? "—"}</span>
-          ),
-        },
-        {
-          key: "docdate",
-          header: "วันที่",
-          className: "whitespace-nowrap",
-          render: (r) => formatPoDate(r.docdate),
-        },
-        vendorCol,
-        {
-          key: "acctname",
-          header: "ผู้ขาย",
-          className: "max-w-[12rem] hidden lg:table-cell",
-          render: (r) => (
-            <span className="line-clamp-2 break-words">
-              {r.acctname ?? "—"}
-            </span>
-          ),
-        },
-        {
-          key: "bcode",
-          header: "BCODE",
-          className: "whitespace-nowrap font-mono",
-          render: (r) => r.bcode ?? "—",
-        },
-        {
-          key: "descr",
-          header: "รายละเอียด",
-          className: "max-w-[14rem] hidden md:table-cell",
-          render: (r) => (
-            <span className="line-clamp-2 break-words">{r.descr ?? "—"}</span>
-          ),
-        },
-        {
-          key: "qty",
-          header: "จำนวน",
-          className: "text-right whitespace-nowrap",
-          render: (r) => (
-            <span>
-              {formatPoQty(r.qty)}
-              {r.ui ? ` ${r.ui}` : ""}
-            </span>
-          ),
-        },
-        {
-          key: "receive_state",
-          header: "สถานะรับ",
-          className: "whitespace-nowrap",
-          render: (r) => (
-            <Badge variant={isReceivedLine(r) ? "secondary" : "default"}>
-              {receiveStateLabel(r)}
-            </Badge>
-          ),
-        },
-        {
-          key: "billno",
-          header: site === "HQ" ? "BILLNO (PIMAS)" : "เลขรับ (RCVDNO)",
-          className: "whitespace-nowrap font-mono",
-          render: (r) => r.billno ?? r.rcvdno ?? "—",
-        },
-        {
-          key: "rcvddate",
-          header: "วันรับ",
-          className: "whitespace-nowrap hidden xl:table-cell",
-          render: (r) => formatPoDate(r.billdate ?? r.rcvddate),
-        },
-      ];
-    }
-
-    return [
+    const baseCols: Column<PoPendingReceiveRow>[] = [
       {
         key: "status",
         header: "สถานะ",
@@ -300,7 +218,9 @@ export default function PoPendingReceiveTab({
         header: "ผู้ขาย",
         className: "max-w-[12rem] hidden lg:table-cell",
         render: (r) => (
-          <span className="line-clamp-2 break-words">{r.acctname ?? "—"}</span>
+          <span className="line-clamp-2 break-words">
+            {r.acctname ?? "—"}
+          </span>
         ),
       },
       {
@@ -317,6 +237,49 @@ export default function PoPendingReceiveTab({
           <span className="line-clamp-2 break-words">{r.descr ?? "—"}</span>
         ),
       },
+    ];
+
+    if (isBcodeQty) {
+      return [
+        ...baseCols,
+        {
+          key: "ordered_qty",
+          header: "สั่ง",
+          className: "text-right whitespace-nowrap",
+          render: (r) => (
+            <span>
+              {formatPoQty(r.ordered_qty ?? r.qty)}
+              {r.ui ? ` ${r.ui}` : ""}
+            </span>
+          ),
+        },
+        {
+          key: "received_qty",
+          header: site === "HQ" ? "รับ (PIDET)" : "รับ",
+          className: "text-right whitespace-nowrap",
+          render: (r) => formatPoQty(r.received_qty ?? 0),
+        },
+        {
+          key: "missing_qty",
+          header: "ค้าง",
+          className: "text-right whitespace-nowrap",
+          render: (r) =>
+            formatPoQty(
+              r.missing_qty ??
+                Math.max((r.ordered_qty ?? r.qty) - (r.received_qty ?? 0), 0)
+            ),
+        },
+        {
+          key: "billno",
+          header: "RCVDNO",
+          className: "whitespace-nowrap font-mono hidden xl:table-cell",
+          render: (r) => r.billno ?? r.rcvdno ?? "—",
+        },
+      ];
+    }
+
+    return [
+      ...baseCols,
       {
         key: "qty",
         header: "จำนวน",
@@ -328,60 +291,10 @@ export default function PoPendingReceiveTab({
           </span>
         ),
       },
-      {
-        key: "rcvddate",
-        header: "วันรับ",
-        className: "whitespace-nowrap hidden xl:table-cell",
-        render: (r) => formatPoDate(r.rcvddate),
-      },
-      {
-        key: "rcvdno",
-        header: "เลขรับ",
-        className: "whitespace-nowrap hidden xl:table-cell font-mono",
-        render: (r) => r.rcvdno ?? "—",
-      },
     ];
-  }, [isPartial, site]);
+  }, [isBcodeQty, site]);
 
   function renderMobileCard(row: PoPendingReceiveRow) {
-    if (isPartial) {
-      return (
-        <div className="w-full rounded-md border bg-white p-3 text-left">
-          <div className="flex items-start justify-between gap-2">
-            <div className="font-medium break-all">{row.docno || "—"}</div>
-            <Badge variant={isReceivedLine(row) ? "secondary" : "default"}>
-              {receiveStateLabel(row)}
-            </Badge>
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {formatPoDate(row.docdate)}
-          </div>
-          <div className="mt-2 text-sm line-clamp-2 break-words">
-            {row.acctname || row.vendor || "—"}
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-xs text-muted-foreground">BCODE</div>
-              <div className="font-mono break-all">{row.bcode || "—"}</div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">จำนวน</div>
-              <div className="font-semibold">
-                {formatPoQty(row.qty)}
-                {row.ui ? ` ${row.ui}` : ""}
-              </div>
-            </div>
-          </div>
-          <div className="mt-2 text-xs">
-            <span className="text-muted-foreground">
-              {site === "HQ" ? "BILLNO: " : "RCVDNO: "}
-            </span>
-            <span className="font-mono">{row.billno || row.rcvdno || "—"}</span>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="w-full rounded-md border bg-white p-3 text-left">
         <div className="flex items-start justify-between gap-2">
@@ -401,13 +314,38 @@ export default function PoPendingReceiveTab({
             <div className="text-xs text-muted-foreground">BCODE</div>
             <div className="font-mono break-all">{row.bcode || "—"}</div>
           </div>
-          <div>
-            <div className="text-xs text-muted-foreground">จำนวน</div>
-            <div className="font-semibold">
-              {formatPoQty(row.qty)}
-              {row.ui ? ` ${row.ui}` : ""}
+          {isBcodeQty ? (
+            <>
+              <div>
+                <div className="text-xs text-muted-foreground">สั่ง / รับ / ค้าง</div>
+                <div className="font-semibold">
+                  {formatPoQty(row.ordered_qty ?? row.qty)} /{" "}
+                  {formatPoQty(row.received_qty ?? 0)} /{" "}
+                  {formatPoQty(
+                    row.missing_qty ??
+                      Math.max(
+                        (row.ordered_qty ?? row.qty) - (row.received_qty ?? 0),
+                        0
+                      )
+                  )}
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-xs text-muted-foreground">RCVDNO</div>
+                <div className="font-mono break-all">
+                  {row.billno || row.rcvdno || "—"}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div>
+              <div className="text-xs text-muted-foreground">จำนวน</div>
+              <div className="font-semibold">
+                {formatPoQty(row.qty)}
+                {row.ui ? ` ${row.ui}` : ""}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         {row.descr ? (
           <div className="mt-2 text-xs text-muted-foreground line-clamp-2">
@@ -421,18 +359,18 @@ export default function PoPendingReceiveTab({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        {isPartial
+        {isBcodeQty
           ? site === "HQ"
-            ? "แยกจากรายการ PO (POMAS) — รายการ ICLOW บน DOCNO ที่รับบางส่วน; แสดงค้าง/รับแล้ว และ BILLNO จาก PIMAS (RCVDNO)"
-            : "แยกจากรายการ PO (POMAS) — รายการ ICLOW บน DOCNO ที่รับบางส่วน; แสดงค้าง/รับแล้ว และเลขรับ (RCVDNO)"
+            ? "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). RECEIVED=Y = รับแล้วหรือรับบางส่วนตามจำนวน PIDET"
+            : "เกรน DOCNO+BCODE — สั่ง/รับจาก ICLOW (ไม่มี PIDET ที่ SYP)"
           : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
           className="w-full sm:max-w-xs"
           placeholder={
-            isPartial
-              ? "ค้นหา DOCNO / BCODE / BILLNO / ผู้ขาย"
+            isBcodeQty
+              ? "ค้นหา DOCNO / BCODE / RCVDNO / ผู้ขาย"
               : "ค้นหา DOCNO / BCODE / ผู้ขาย"
           }
           value={q}
@@ -496,7 +434,7 @@ export default function PoPendingReceiveTab({
                 </div>
                 <div>วันที่ (ICLOW DOCDATE): {formatPoDate(detail.docdate)}</div>
                 <div>
-                  ค้าง {detail.missing_count} รายการ · รับแล้วบน ICLOW{" "}
+                  BCODE ค้าง qty {detail.missing_count} · รับบน ICLOW{" "}
                   {detail.received_iclow_count} · แสดงรับ{" "}
                   {detail.received_display_count}
                 </div>
@@ -504,7 +442,7 @@ export default function PoPendingReceiveTab({
 
               <div>
                 <h3 className="mb-2 text-sm font-semibold">
-                  ของที่ยังค้าง (ICLOW RECEIVED=N)
+                  ของที่ยังค้าง (สั่ง − PIDET ผ่าน RCVDNO)
                 </h3>
                 <ScrollArea className="max-h-[28vh] rounded-md border">
                   <table className="w-full text-sm">
@@ -512,7 +450,7 @@ export default function PoPendingReceiveTab({
                       <tr className="border-b bg-muted/40 text-left">
                         <th className="p-2">BCODE</th>
                         <th className="p-2">รายละเอียด</th>
-                        <th className="p-2 text-right">จำนวน</th>
+                        <th className="p-2 text-right">ค้าง</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -556,7 +494,7 @@ export default function PoPendingReceiveTab({
                     <thead>
                       <tr className="border-b bg-muted/40 text-left">
                         <th className="p-2">ที่มา</th>
-                        <th className="p-2">เลขรับ</th>
+                        <th className="p-2">RCVDNO</th>
                         <th className="p-2">BCODE</th>
                         <th className="p-2">รายละเอียด</th>
                         <th className="p-2 text-right">จำนวน</th>

@@ -274,7 +274,7 @@ export const PO_ICLOW_STATUS_TABS: {
   { value: "complete", label: "รับแล้ว" },
 ];
 
-export type PoPendingReceiveGrain = "line" | "docno";
+export type PoPendingReceiveGrain = "line" | "docno" | "bcode";
 
 export type PoPendingReceiveRow = {
   id: string;
@@ -288,18 +288,13 @@ export type PoPendingReceiveRow = {
   ui: string | null;
   ordered: string | null;
   received: string | null;
-  /** pending | received — set for partially_received line rows */
-  receive_state?: "pending" | "received" | string | null;
   rcvddate: string | null;
   rcvdno: string | null;
-  /** PIMAS.BILLNO (HQ) or ICLOW.RCVDNO fallback */
+  /** ICLOW.RCVDNO → PIMAS/PIDET bill ref (HQ) or RCVDNO (SYP) */
   billno?: string | null;
   billdate?: string | null;
   status: PoPendingReceiveStatus;
   grain: PoPendingReceiveGrain;
-  ordered_count?: number;
-  missing_count?: number;
-  received_count?: number;
   ordered_qty?: number;
   missing_qty?: number;
   received_qty?: number;
@@ -356,19 +351,14 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     ? (statusRaw as PoPendingReceiveStatus)
     : "pending_receive";
   const grain: PoPendingReceiveGrain =
-    row.grain === "docno" || row.grain === "po" ? "docno" : "line";
-  const receiveStateRaw = row.receive_state ?? null;
-  const receive_state =
-    receiveStateRaw === "pending" || receiveStateRaw === "received"
-      ? receiveStateRaw
-      : row.received === "Y"
-        ? "received"
-        : row.received === "N"
-          ? "pending"
-          : (receiveStateRaw as string | null);
+    row.grain === "docno" || row.grain === "po"
+      ? "docno"
+      : row.grain === "bcode"
+        ? "bcode"
+        : "line";
 
   return {
-    id: String(row.id ?? row.docno ?? ""),
+    id: String(row.id ?? `${row.docno ?? ""}|${row.bcode ?? ""}`),
     docno: (row.docno as string | null) ?? null,
     docdate: (row.docdate as string | null) ?? null,
     vendor: (row.vendor as string | null) ?? null,
@@ -379,19 +369,12 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     ui: (row.ui as string | null) ?? null,
     ordered: (row.ordered as string | null) ?? null,
     received: (row.received as string | null) ?? null,
-    receive_state,
     rcvddate: (row.rcvddate as string | null) ?? null,
     rcvdno: (row.rcvdno as string | null) ?? null,
     billno: (row.billno as string | null) ?? null,
     billdate: (row.billdate as string | null) ?? null,
     status,
     grain,
-    ordered_count:
-      row.ordered_count === undefined ? undefined : num(row.ordered_count),
-    missing_count:
-      row.missing_count === undefined ? undefined : num(row.missing_count),
-    received_count:
-      row.received_count === undefined ? undefined : num(row.received_count),
     ordered_qty:
       row.ordered_qty === undefined ? undefined : num(row.ordered_qty),
     missing_qty:
@@ -458,7 +441,11 @@ export async function listPoPendingReceive(params: {
       ? null
       : Number(payload.count);
   const grain: PoPendingReceiveGrain =
-    payload?.grain === "docno" || payload?.grain === "po" ? "docno" : "line";
+    payload?.grain === "docno" || payload?.grain === "po"
+      ? "docno"
+      : payload?.grain === "bcode"
+        ? "bcode"
+        : "line";
 
   return {
     rows,
