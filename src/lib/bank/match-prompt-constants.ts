@@ -1,18 +1,22 @@
 export const BANK_MATCH_AGENT_NAME = "จับคู่ยอดเข้า";
 
 /** Preferred default account in the Statement Lines picker. */
-export const BANK_MATCH_ACCOUNT_NO = "7236";
+export const BANK_MATCH_ACCOUNT_NO = "064-8-91723-6";
 
 /**
  * Account → matcher prompt path.
+ * Keys must match `bank.statement_lines.account_no` (full account numbers).
  * Keep browser-safe (no `fs`) so client components can import this module.
  */
 export const BANK_MATCH_PROMPTS: Record<string, string> = {
-  "7236": "prompts/bank-statement-match-7236.md",
-  "3557": "prompts/bank-statement-match-3557.md",
-  "0393": "prompts/bank-statement-match-0393.md",
-  /** KBANK OpEx paying account (took over 0393 expense payments from Jul 2026). */
-  "4759": "prompts/bank-statement-match-4759.md",
+  /** KBANK HQ operating / inbound sales (ends 7236). */
+  "064-8-91723-6": "prompts/bank-statement-match-7236.md",
+  /** KBANK HQ payment / outflow (ends 3557). */
+  "141-1-72355-7": "prompts/bank-statement-match-3557.md",
+  /** KBANK SYP operating (ends 0393). */
+  "064-8-92039-3": "prompts/bank-statement-match-0393.md",
+  /** KBANK SYP OpEx paying account (ends 4759; took over 0393 expense payments from Jul 2026). */
+  "233-1-18475-9": "prompts/bank-statement-match-4759.md",
   /** KTB marketplace settlements (account ends with 1139). */
   "248-0-42113-9": "prompts/bank-statement-match-1139.md",
   /** KTB payroll + OpEx cheques (account ends with 6184). */
@@ -21,10 +25,10 @@ export const BANK_MATCH_PROMPTS: Record<string, string> = {
 
 /** Stable display / allow-list order. */
 export const BANK_MATCH_ACCOUNT_NOS = [
-  "7236",
-  "3557",
-  "0393",
-  "4759",
+  "064-8-91723-6",
+  "141-1-72355-7",
+  "064-8-92039-3",
+  "233-1-18475-9",
   "248-0-42113-9",
   "248-6-00618-4",
 ] as const;

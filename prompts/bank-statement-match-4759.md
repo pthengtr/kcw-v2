@@ -1,14 +1,14 @@
-# Match expenses for account 4759
+# Match expenses for account 233-1-18475-9
 
 You are a matching agent for bank rows in `bank.statement_lines`.
 Follow the rules below strictly, then update rows in Supabase directly.
 
-Account **4759** (Kasikorn) is the **SYP / สี่แยกพัฒนา OpEx paying account** that took over day-to-day expense payments previously paid from **0393**:
+Account **233-1-18475-9** (Kasikorn, ends **4759**) is the **SYP / สี่แยกพัฒนา OpEx paying account** that took over day-to-day expense payments previously paid from **064-8-92039-3** (ends 0393):
 
 - **Outbound** ≈ app payment vouchers (**PV / 3PV**) from `public.expense_*` (not PARTS9 `raw_kcw` PVMAS)
 - Payment method text is `กสิกร xxxxxx4759` (same pattern as the old `กสิกร xxxxxx0393`)
-- **Inbound** ≈ funding sweeps from **0393** / **7236** — mark as internal transfers; do **not** run sales matching here
-- Sales settlements (`3TR` / `3TAR−3CNTAR`) stay on account **0393** — never use those sources on 4759
+- **Inbound** ≈ funding sweeps from **064-8-92039-3** / **064-8-91723-6** — mark as internal transfers; do **not** run sales matching here
+- Sales settlements (`3TR` / `3TAR−3CNTAR`) stay on account **064-8-92039-3** — never use those sources on this account
 
 Observed cutover: from **July 2026**, almost all direct KBANK OpEx receipts switched from `%0393%` to `%4759%`.
 
@@ -19,8 +19,8 @@ Observed cutover: from **July 2026**, almost all direct KBANK OpEx receipts swit
 
 Scope rules:
 
-1. Only account **4759**
-2. If `{{account_no}}` is not `4759`, stop immediately and do not change any rows
+1. Only account **233-1-18475-9**
+2. If `{{account_no}}` is not `233-1-18475-9`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
 4. Touch both directions while `match_status = 'pending'`:
    - `direction = 'out'` → expense PV sources first, then residual outflows
@@ -41,10 +41,10 @@ These are the in-app expenses that print as **PV…** (HQ) / **3PV…** (SYP ส
 
 Filter payment methods:
 
-1. **Direct 4759 pay** — `payment_description ILIKE '%4759%'` (stored as `กสิกร xxxxxx4759`, `voucher_type = individual`)
-2. **Director reimbursement** — `payment_description ILIKE '%คืนเงินสำรอง%'` (`voucher_type = group`). These are often banked as transfers to Narumon / X2446 who paid cash; they still belong to the PV expense workflow (same as on 0393)
+1. **Direct 4759 pay** — `payment_description ILIKE '%4759%'` (stored as `กสิกร xxxxxx4759`, `voucher_type = individual`; last-4 of this account)
+2. **Director reimbursement** — `payment_description ILIKE '%คืนเงินสำรอง%'` (`voucher_type = group`). These are often banked as transfers to Narumon / X2446 who paid cash; they still belong to the PV expense workflow (same as on `064-8-92039-3`)
 
-Do **not** use `payment_description ILIKE '%0393%'` on this account — those receipts belong to historical **0393** outflows.
+Do **not** use `payment_description ILIKE '%0393%'` on this account — those receipts belong to historical **064-8-92039-3** outflows.
 
 **Amount to match (critical):** bank `amount` equals the voucher **net paid**, not raw `signed_total` alone:
 
@@ -76,12 +76,12 @@ Date window:
 Notes from July 2026 probe:
 
 - Direct OpEx receipts moved to `กสิกร xxxxxx4759` in July; director-reimbursement receipts continue as `คืนเงินสำรองจ่ายกรรมการ`
-- Using `total_net` (not `signed_total`) covers most outflows 1:1 against 4759 + director-reimbursement receipts
+- Using `total_net` (not `signed_total`) covers most outflows 1:1 against `%4759%` + director-reimbursement receipts
 - Same-day hits dominate for tax / SSO / suppliers / reimbursements to X2446
 - Duplicate same-day nets (e.g. two identical phone / 2C2P bills) → `review`, do not pick arbitrarily
 - Some late-month bank outs may not have an expense receipt yet — leave `unmatched` / `review`; do not invent matches
 - Some `receipt_number` values already look like `PV…` / `3PV…` / tax refs — still match via `expense_receipt`, not PARTS9 PVMAS
-- `expense_general` with payment 4759 was **not** required in the July probe — do not invent general-row matches unless a unique hit appears
+- `expense_general` with `%4759%` payment was **not** required in the July probe — do not invent general-row matches unless a unique hit appears
 
 ### 2) Large / residual outflows
 
@@ -103,11 +103,11 @@ July 2026 inflows observed were funding sweeps from **X0393** and **X7236** only
 
 ## Exclusions (do not use)
 
-- SYP sales sources: `3TR%`, `billgen.fin_3tar_lines`, `fin_3cntar_lines` (those belong to **0393**)
-- HQ `TR%` / `billgen.fin_tar_lines` / `fin_cntar_lines` (those belong to **7236**)
-- `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (those belong to **3557**)
-- Payment methods for **0393** / **6184** / **1139** — wrong paying account
-- Online fee receipts with `voucher_type = skip` / `หักจากรายได้` — not banked on 4759
+- SYP sales sources: `3TR%`, `billgen.fin_3tar_lines`, `fin_3cntar_lines` (those belong to **064-8-92039-3**)
+- HQ `TR%` / `billgen.fin_tar_lines` / `fin_cntar_lines` (those belong to **064-8-91723-6**)
+- `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (those belong to **141-1-72355-7**)
+- Payment methods for **0393** / **6184** / **1139** — wrong paying account (last-4 filters)
+- Online fee receipts with `voucher_type = skip` / `หักจากรายได้` — not banked on `233-1-18475-9`
 - Blind unconstrained subset-sum without a payment-method constraint
 - Changing money fields or opening PRs for a pure matching data job
 

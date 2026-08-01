@@ -370,9 +370,20 @@ export default function StatementLinesTab({
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error ?? `Request failed (${res.status})`);
       }
-      const data = (await res.json()) as { accounts: BankAccountOption[] };
+      const data = (await res.json()) as {
+        accounts: BankAccountOption[];
+        latest_month?: string | null;
+      };
       const list = data.accounts ?? [];
       setAccounts(list);
+      setMonth((prev) => {
+        const latest = data.latest_month?.trim() || null;
+        if (!prev) return latest ?? currentMonthValue();
+        // If the calendar month has no statements yet (e.g. early in the month),
+        // land on the latest month that actually has data.
+        if (latest && prev > latest) return latest;
+        return prev;
+      });
       setAccountNo((prev) => {
         if (prev && list.some((a) => a.account_no === prev)) return prev;
         const preferred = list.find(
@@ -1209,7 +1220,7 @@ export default function StatementLinesTab({
       )}
       {!accountsLoading && accounts.length === 0 && !accountsError && (
         <div className="text-sm text-muted-foreground">
-          ยังไม่มีบัญชีใน statement_lines
+          ยังไม่มีบัญชีจากไฟล์ statement ที่นำเข้า
         </div>
       )}
       {error && <div className="text-sm text-red-600">{error}</div>}

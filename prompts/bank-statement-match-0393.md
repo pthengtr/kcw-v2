@@ -1,13 +1,13 @@
-# Match sales and expenses for account 0393
+# Match sales and expenses for account 064-8-92039-3
 
 You are a matching agent for bank rows in `bank.statement_lines`.
 Follow the rules below strictly, then update rows in Supabase directly.
 
-Account **0393** (Kasikorn) is the **SYP / สี่แยกพัฒนา** operating account:
+Account **064-8-92039-3** (Kasikorn, ends **0393**) is the **SYP / สี่แยกพัฒนา** operating account:
 
-- **Inbound** ≈ SYP sales settlements (`3TR` transfer bills + daily `3TAR−3CNTAR` net) — same logic as account **7236**, but with the SYP `3…` prefixes and `billgen.fin_3*` tables
+- **Inbound** ≈ SYP sales settlements (`3TR` transfer bills + daily `3TAR−3CNTAR` net) — same logic as account **064-8-91723-6** (ends 7236), but with the SYP `3…` prefixes and `billgen.fin_3*` tables
 - **Outbound** ≈ app payment vouchers (**PV / 3PV**) from `public.expense_*` (not PARTS9 `raw_kcw` PVMAS)
-- From **July 2026**, most direct OpEx payments moved to account **4759** (`กสิกร xxxxxx4759`). Keep matching `%0393%` receipts here when they appear; do **not** pull `%4759%` receipts onto 0393
+- From **July 2026**, most direct OpEx payments moved to account **233-1-18475-9** (ends 4759, payment text `กสิกร xxxxxx4759`). Keep matching `%0393%` receipts here when they appear; do **not** pull `%4759%` receipts onto this account
 
 ## Job scope (injected by the system)
 
@@ -16,8 +16,8 @@ Account **0393** (Kasikorn) is the **SYP / สี่แยกพัฒนา** o
 
 Scope rules:
 
-1. Only account **0393**
-2. If `{{account_no}}` is not `0393`, stop immediately and do not change any rows
+1. Only account **064-8-92039-3**
+2. If `{{account_no}}` is not `064-8-92039-3`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
 4. Touch both directions while `match_status = 'pending'`:
    - `direction = 'in'` → sales sources first, then non-sales inflows
@@ -37,7 +37,7 @@ Source: `curated_kcw.fact_sales_bills_all`
 
 - Use bills where `BILLNO LIKE '3TR%'` and not canceled (`CANCELED = 'N'`)
 - Bill amount uses `AFTERTAX` (or `CHKAMT` if needed)
-- Same idea as HQ `TR%` on 7236, with two timing differences confirmed on May/June 2026:
+- Same idea as HQ `TR%` on `064-8-91723-6`, with two timing differences confirmed on May/June 2026:
   - **Thai QR / K SHOP** remainder (and many small single bills) usually hit **same calendar day**
   - Separate bank transfers for 3TR bills often arrive **T+1** (sometimes T+2 / T+3 around weekends / holidays)
 - Each bill-date, partition that day’s 3TR bills across one or more inbound rows:
@@ -102,7 +102,7 @@ Matching to inbound deposits:
 |---|---|---|---|---|
 | Internal transfer in | `internal_transfer` | `ignored` | From another KCW account (e.g. X3557 / company name) | `โอนภายใน` |
 | Vendor rebate / misc | `vendor_rebate` | `matched` or `review` | No internal bill — match by description; confidence ~0.85–0.90 | `เงินคืนจากผู้ขาย` |
-| Bank interest / WHT | `interest_income` / `withholding_tax` | `ignored` | Same pattern as 7236 if present | `ดอกเบี้ยเงินฝาก` / `ภาษีหัก ณ ที่จ่ายดอกเบี้ย` |
+| Bank interest / WHT | `interest_income` / `withholding_tax` | `ignored` | Same pattern as `064-8-91723-6` if present | `ดอกเบี้ยเงินฝาก` / `ภาษีหัก ณ ที่จ่ายดอกเบี้ย` |
 
 ## Match sources — OUTBOUND (priority order)
 
@@ -115,9 +115,9 @@ These are the in-app expenses that print as **PV…** (HQ) / **3PV…** (SYP ส
 
 Filter payment methods:
 
-1. **Direct 0393 pay** — `payment_description ILIKE '%0393%'` (stored as `กสิกร xxxxxx0393`, `voucher_type = individual`)
+1. **Direct 0393 pay** — `payment_description ILIKE '%0393%'` (stored as `กสิกร xxxxxx0393`, `voucher_type = individual`; last-4 of this account)
 2. **Director reimbursement** — `payment_description ILIKE '%คืนเงินสำรอง%'` (`voucher_type = group`). These are often banked as transfers to Narumon / X2446 who paid cash; they still belong to the PV expense workflow
-3. Do **not** use `payment_description ILIKE '%4759%'` — those belong to account **4759**
+3. Do **not** use `payment_description ILIKE '%4759%'` — those belong to account **233-1-18475-9**
 
 **Amount to match (critical):** bank `amount` equals the voucher **net paid**, not raw `signed_total` alone:
 
@@ -148,11 +148,11 @@ Date window:
 
 Notes from May/June probe:
 
-- Using `total_net` (not `signed_total`) covers ~**88%** of outflows 1:1 against 0393 + director-reimbursement receipts
-- Same-day hits dominate for direct 0393 payments (tax, SSO, rent, suppliers)
+- Using `total_net` (not `signed_total`) covers ~**88%** of outflows 1:1 against `%0393%` + director-reimbursement receipts
+- Same-day hits dominate for direct `%0393%` payments (tax, SSO, rent, suppliers)
 - Small director reimbursements to X2446 are usually 1:1 same day; phone / multi-bill days may need a **bundle**
 - Some `receipt_number` values already look like `PV69…` / `3PV69…` (rent etc.) — still match via `expense_receipt`, not PARTS9 PVMAS
-- `expense_general` with payment 0393 was **not** observed in May/June — do not invent general-row matches unless a unique hit appears
+- `expense_general` with `%0393%` payment was **not** observed in May/June — do not invent general-row matches unless a unique hit appears
 
 ### 2) Large / residual outflows
 
@@ -163,9 +163,9 @@ Notes from May/June probe:
 
 ## Exclusions (do not use)
 
-- HQ `TR%` / `billgen.fin_tar_lines` / `fin_cntar_lines` (those belong to **7236**)
-- `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (those belong to **3557**)
-- Online fee receipts with `voucher_type = skip` / `หักจากรายได้` — not banked on 0393
+- HQ `TR%` / `billgen.fin_tar_lines` / `fin_cntar_lines` (those belong to **064-8-91723-6**)
+- `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (those belong to **141-1-72355-7**)
+- Online fee receipts with `voucher_type = skip` / `หักจากรายได้` — not banked on `064-8-92039-3`
 - Blind unconstrained subset-sum without a payment-method or same-day 3TR constraint
 - Changing money fields or opening PRs for a pure matching data job
 
@@ -209,7 +209,7 @@ Do not use cryptic codes like `3tr_remainder:` or `T+1 net=` as the main `match_
 Approximate unique candidates observed (do not force these numbers; use as sanity check):
 
 - Inbound: most large transfers are 3TAR T+1; most QR / small transfers are 3TR
-- Outbound: expense `total_net` vs 0393 + director-reimbursement receipts ≈ **88%** 1:1
+- Outbound: expense `total_net` vs `%0393%` + director-reimbursement receipts ≈ **88%** 1:1
 - Remaining large outflows are usually internal sweeps to X6184 → `ignored`
 
 If your run lands far below that for the same months, re-check filters (`CANCELED`, 3TR prefix, `total_net` VAT/WHT formula, payment_method text) before inventing new rules.
