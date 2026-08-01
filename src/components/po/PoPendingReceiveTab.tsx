@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,25 @@ function statusBadgeVariant(
     default:
       return "outline";
   }
+}
+
+/** HQ: annotate RCVDNO when ingested PIMAS bill is missing */
+function formatRcvdnoWithPimasNote(
+  billno: string | null | undefined,
+  opts?: { pimasLinkMissing?: boolean; site?: PoSyncSite }
+): ReactNode {
+  const value = billno?.trim() || "—";
+  if (value === "—" || opts?.site !== "HQ" || !opts.pimasLinkMissing) {
+    return value;
+  }
+  return (
+    <>
+      {value}{" "}
+      <span className="font-sans text-muted-foreground">
+        (ไม่พบลิงก์ PIMAS)
+      </span>
+    </>
+  );
 }
 
 export default function PoPendingReceiveTab({
@@ -273,7 +292,11 @@ export default function PoPendingReceiveTab({
           key: "billno",
           header: "RCVDNO",
           className: "whitespace-nowrap font-mono hidden xl:table-cell",
-          render: (r) => r.billno ?? r.rcvdno ?? "—",
+          render: (r) =>
+            formatRcvdnoWithPimasNote(r.billno ?? r.rcvdno, {
+              site,
+              pimasLinkMissing: r.pimas_link_missing,
+            }),
         },
       ];
     }
@@ -333,7 +356,10 @@ export default function PoPendingReceiveTab({
               <div className="col-span-2">
                 <div className="text-xs text-muted-foreground">RCVDNO</div>
                 <div className="font-mono break-all">
-                  {row.billno || row.rcvdno || "—"}
+                  {formatRcvdnoWithPimasNote(row.billno || row.rcvdno, {
+                    site,
+                    pimasLinkMissing: row.pimas_link_missing,
+                  })}
                 </div>
               </div>
             </>
@@ -519,7 +545,10 @@ export default function PoPendingReceiveTab({
                               </Badge>
                             </td>
                             <td className="p-2 font-mono whitespace-nowrap">
-                              {line.billno ?? "—"}
+                              {formatRcvdnoWithPimasNote(line.billno, {
+                                site,
+                                pimasLinkMissing: line.pimas_link_missing,
+                              })}
                               <div className="text-xs text-muted-foreground">
                                 {formatPoDate(line.billdate)}
                               </div>

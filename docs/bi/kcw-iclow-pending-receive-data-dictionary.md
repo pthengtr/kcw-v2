@@ -201,6 +201,7 @@ Click a partial DOCNO:
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-08-01 | UI shows `(ไม่พบลิงก์ PIMAS)` when ICLOW.RCVDNO has no matching ingested PIMAS bill | Agent |
 | 2026-08-01 | BCODE grain: RECEIVED=Y → complete/partial via RCVDNO→PIDET qty; drop mixed DOCNO + PIMAS.PO | Agent |
 | 2026-08-01 | `partially_received` = ICLOW line rows on mixed DOCNO with receive_state + PIMAS BILLNO | Agent |
 | 2026-08-01 | Document PARTS9 ค้างรับ = `ICLOW` (`ORDERED=Y`, `RECEIVED=N`, `CANCELED=N`); match Excel 616 rows | Owner |

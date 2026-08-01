@@ -293,6 +293,8 @@ export type PoPendingReceiveRow = {
   /** ICLOW.RCVDNO → PIMAS/PIDET bill ref (HQ) or RCVDNO (SYP) */
   billno?: string | null;
   billdate?: string | null;
+  /** HQ: true when at least one RCVDNO has no matching PIMAS bill */
+  pimas_link_missing?: boolean;
   status: PoPendingReceiveStatus;
   grain: PoPendingReceiveGrain;
   ordered_qty?: number;
@@ -324,6 +326,7 @@ export type PoPendingReceiveDetailReceived = {
   qty: number;
   ui: string | null;
   iclow_id: string | null;
+  pimas_link_missing?: boolean;
 };
 
 export type PoPendingReceiveDetail = {
@@ -373,6 +376,7 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     rcvdno: (row.rcvdno as string | null) ?? null,
     billno: (row.billno as string | null) ?? null,
     billdate: (row.billdate as string | null) ?? null,
+    pimas_link_missing: Boolean(row.pimas_link_missing),
     status,
     grain,
     ordered_qty:
@@ -502,6 +506,7 @@ export async function fetchPoPendingReceiveDetail(params: {
       qty: num(r.qty),
       ui: (r.ui as string | null) ?? null,
       iclow_id: (r.iclow_id as string | null) ?? null,
+      pimas_link_missing: Boolean(r.pimas_link_missing),
     })),
   };
 }
