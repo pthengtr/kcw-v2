@@ -135,8 +135,8 @@ Exclude from all buckets:
 |------------|-----------|-------|-----------|
 | `to_be_ordered` | รอสั่งซื้อ | line | `ORDERED=N`. `DOCNO` null in practice. |
 | `pending_receive` | ค้างรับ | line | Canonical ค้างรับ (§2) **and** no sibling on same `DOCNO` has `RECEIVED='Y'`. Whole PO still waiting. |
-| `partially_received` | รับบางส่วน | line | Same `DOCNO` has both `RECEIVED='Y'` and `RECEIVED='N'` siblings — list **all** ICLOW lines on that DOCNO (pending + received). |
-| `complete` | รับแล้ว | line | `ORDERED='Y' AND RECEIVED='Y'` on a DOCNO with **no** pending sibling. |
+| `partially_received` | รับบางส่วน | **DOCNO** | Same ICLOW `DOCNO` has both `RECEIVED='Y'` and `RECEIVED='N'`. Columns: ordered / received / pending counts (+ qty). |
+| `complete` | รับแล้ว | line | `ORDERED='Y' AND RECEIVED='Y'`. |
 
 ### 6.2 Partial PO detail (`fn_po_pending_receive_detail`)
 
@@ -196,7 +196,7 @@ If every ICLOW line on the PO is `RECEIVED='Y'` → that PO is **complete**, not
 
 | Date | Change | By |
 |------|--------|-----|
-| 2026-08-01 | `partially_received` list grain changed from DOCNO to line (still-pending lines on mixed DOCNO) | Agent |
+| 2026-08-01 | `partially_received` DOCNO grain with ordered/received/pending count columns | Agent |
 | 2026-08-01 | Document PARTS9 ค้างรับ = `ICLOW` (`ORDERED=Y`, `RECEIVED=N`, `CANCELED=N`); match Excel 616 rows | Owner |
 | 2026-08-01 | Confirm ingest tables; define `/po` four-status design; reject PODET−PIDET for membership | Agent |
 | 2026-08-01 | รับบางส่วน = ICLOW DOCNO group with mixed receive; detail via `RCVDNO→PIDET`; no POMAS join | Agent |

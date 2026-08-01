@@ -292,8 +292,10 @@ export type PoPendingReceiveRow = {
   rcvdno: string | null;
   status: PoPendingReceiveStatus;
   grain: PoPendingReceiveGrain;
+  ordered_count?: number;
   missing_count?: number;
   received_count?: number;
+  ordered_qty?: number;
   missing_qty?: number;
   received_qty?: number;
 };
@@ -349,7 +351,11 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     ? (statusRaw as PoPendingReceiveStatus)
     : "pending_receive";
   const grain: PoPendingReceiveGrain =
-    row.grain === "docno" || row.grain === "po" ? "docno" : "line";
+    row.grain === "docno" ||
+    row.grain === "po" ||
+    status === "partially_received"
+      ? "docno"
+      : "line";
 
   return {
     id: String(row.id ?? row.docno ?? ""),
@@ -367,10 +373,14 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     rcvdno: (row.rcvdno as string | null) ?? null,
     status,
     grain,
+    ordered_count:
+      row.ordered_count === undefined ? undefined : num(row.ordered_count),
     missing_count:
       row.missing_count === undefined ? undefined : num(row.missing_count),
     received_count:
       row.received_count === undefined ? undefined : num(row.received_count),
+    ordered_qty:
+      row.ordered_qty === undefined ? undefined : num(row.ordered_qty),
     missing_qty:
       row.missing_qty === undefined ? undefined : num(row.missing_qty),
     received_qty:
@@ -435,7 +445,11 @@ export async function listPoPendingReceive(params: {
       ? null
       : Number(payload.count);
   const grain: PoPendingReceiveGrain =
-    payload?.grain === "docno" || payload?.grain === "po" ? "docno" : "line";
+    payload?.grain === "docno" ||
+    payload?.grain === "po" ||
+    status === "partially_received"
+      ? "docno"
+      : "line";
 
   return {
     rows,
