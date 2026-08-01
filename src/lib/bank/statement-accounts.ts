@@ -3,18 +3,13 @@ export type BankAccountOption = {
   bank_name: string | null;
 };
 
-export type StatementAccountDateRange = {
-  from: string;
-  to: string;
-};
-
 type AccountBankRow = {
   account_no: string | null;
   bank_name: string | null;
 };
 
 /**
- * Collapse statement_lines rows into distinct accounts.
+ * Collapse rows into distinct accounts.
  * When the same account_no appears under multiple bank_name values,
  * keep the majority label (ties prefer the first seen non-null name).
  */
@@ -58,16 +53,22 @@ type QueryResult = {
   error: { message: string } | null;
 };
 
+type LatestTxnResult = {
+  data: { txn_date: string | null }[] | null;
+  error: { message: string } | null;
+};
+
 type StatementAccountQuery = {
-  eq: (column: string, value: string) => StatementAccountQuery;
-  gte: (column: string, value: string) => StatementAccountQuery;
-  lte: (column: string, value: string) => StatementAccountQuery;
   not: (
     column: string,
     operator: string,
     value: null
   ) => StatementAccountQuery;
-  limit: (count: number) => PromiseLike<QueryResult>;
+  order: (
+    column: string,
+    options: { ascending: boolean }
+  ) => StatementAccountQuery;
+  limit: (count: number) => PromiseLike<QueryResult | LatestTxnResult>;
 };
 
 /** Loose client shape — real Supabase admin client and vitest mocks both work. */
@@ -76,105 +77,51 @@ export type StatementLinesAccountsClient = {
   schema: (schema: string) => any;
 };
 
-/** Sample size for bank_name majority within one account+month probe. */
-const ACCOUNT_PROBE_SAMPLE = 20;
+export type StatementAccountsResult = {
+  accounts: BankAccountOption[];
+  /** YYYY-MM of the latest statement line, if any. */
+  latestMonth: string | null;
+};
 
-/**
- * Candidate account numbers come from import files (small table), not from
- * scanning every statement line.
- */
-export async function listCandidateAccountNos(
-  supabase: StatementLinesAccountsClient
-): Promise<string[]> {
-  const query = supabase
-    .schema("bank")
-    .from("statement_import_files")
-    .select("account_no") as StatementAccountQuery;
-
-  const { data, error } = await query
-    .not("account_no", "is", null)
-    .limit(1000);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const seen = new Set<string>();
-  for (const row of data ?? []) {
-    const accountNo = row.account_no?.trim();
-    if (accountNo) seen.add(accountNo);
-  }
-  return [...seen].sort((a, b) => a.localeCompare(b));
+function toYearMonth(isoDate: string | null | undefined): string | null {
+  if (!isoDate) return null;
+  const match = /^(\d{4}-\d{2})/.exec(isoDate);
+  return match?.[1] ?? null;
 }
 
 /**
- * Probe one account inside a month window (uses account_no + txn_date index).
- * Returns null when that account has no lines in range.
- */
-export async function probeStatementAccountInRange(
-  supabase: StatementLinesAccountsClient,
-  accountNo: string,
-  range: StatementAccountDateRange,
-  sampleSize = ACCOUNT_PROBE_SAMPLE
-): Promise<BankAccountOption | null> {
-  const trimmed = accountNo.trim();
-  if (!trimmed) return null;
-
-  const query = supabase
-    .schema("bank")
-    .from("statement_lines")
-    .select("account_no, bank_name") as StatementAccountQuery;
-
-  const { data, error } = await query
-    .eq("account_no", trimmed)
-    .gte("txn_date", range.from)
-    .lte("txn_date", range.to)
-    .limit(sampleSize);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const collapsed = collapseStatementAccounts(data ?? []);
-  return collapsed[0] ?? null;
-}
-
-/**
- * List accounts that have statement lines in `[from, to]`.
- * Never scans "month + all accounts" as one query — candidates come from
- * import files, then each account is probed with month + account_no.
+ * Dropdown options come from the small import-files table (known accounts).
+ * Statement line fetches stay scoped by month + account separately.
  */
 export async function listStatementAccounts(
-  supabase: StatementLinesAccountsClient,
-  range: StatementAccountDateRange,
-  options?: {
-    candidateAccountNos?: readonly string[];
-    sampleSize?: number;
+  supabase: StatementLinesAccountsClient
+): Promise<StatementAccountsResult> {
+  const filesQuery = supabase
+    .schema("bank")
+    .from("statement_import_files")
+    .select("account_no, bank_name") as StatementAccountQuery;
+
+  const latestQuery = supabase
+    .schema("bank")
+    .from("statement_lines")
+    .select("txn_date") as StatementAccountQuery;
+
+  const [filesRes, latestRes] = await Promise.all([
+    filesQuery.not("account_no", "is", null).limit(1000) as PromiseLike<QueryResult>,
+    latestQuery
+      .order("txn_date", { ascending: false })
+      .limit(1) as PromiseLike<LatestTxnResult>,
+  ]);
+
+  if (filesRes.error) {
+    throw new Error(filesRes.error.message);
   }
-): Promise<BankAccountOption[]> {
-  if (!range.from || !range.to) {
-    throw new Error("`from` and `to` are required");
-  }
-  if (range.from > range.to) {
-    throw new Error("`from` must be on or before `to`");
+  if (latestRes.error) {
+    throw new Error(latestRes.error.message);
   }
 
-  const candidates =
-    options?.candidateAccountNos?.map((a) => a.trim()).filter(Boolean) ??
-    (await listCandidateAccountNos(supabase));
-
-  const found = await Promise.all(
-    candidates.map((accountNo) =>
-      probeStatementAccountInRange(
-        supabase,
-        accountNo,
-        range,
-        options?.sampleSize
-      )
-    )
-  );
-
-  return found
-    .filter((a): a is BankAccountOption => a != null)
-    .sort((a, b) => a.account_no.localeCompare(b.account_no));
+  return {
+    accounts: collapseStatementAccounts(filesRes.data ?? []),
+    latestMonth: toYearMonth(latestRes.data?.[0]?.txn_date),
+  };
 }

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/auth/requirePermission";
@@ -11,12 +10,7 @@ import {
 
 export type { BankAccountOption };
 
-const QuerySchema = z.object({
-  from: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
-  to: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
-});
-
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const permCheck = await requirePermission(BANK_PAGE_KEYS.statementSync);
     if (!permCheck.ok) {
@@ -26,31 +20,14 @@ export async function GET(req: Request) {
       );
     }
 
-    const url = new URL(req.url);
-    const parsed = QuerySchema.safeParse(Object.fromEntries(url.searchParams));
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid query",
-          details: parsed.error.flatten(),
-        },
-        { status: 400 }
-      );
-    }
-
-    const { from, to } = parsed.data;
-    if (from > to) {
-      return NextResponse.json(
-        { error: "`from` must be on or before `to`" },
-        { status: 400 }
-      );
-    }
-
     const supabase = createAdminClient();
 
     try {
-      const accounts = await listStatementAccounts(supabase, { from, to });
-      return NextResponse.json({ accounts, from, to });
+      const { accounts, latestMonth } = await listStatementAccounts(supabase);
+      return NextResponse.json({
+        accounts,
+        latest_month: latestMonth,
+      });
     } catch (error) {
       return NextResponse.json(
         {

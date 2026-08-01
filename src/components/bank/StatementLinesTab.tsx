@@ -358,55 +358,47 @@ export default function StatementLinesTab({
   const canMatch =
     canFetch && isBankMatchAccount(accountNo) && !matchRunning;
 
-  const loadAccounts = useCallback(
-    async (signal?: AbortSignal) => {
-      const range = monthToRange(month);
-      if (!range) {
-        setAccounts([]);
-        setAccountNo("");
-        setAccountsLoading(false);
-        setAccountsError(null);
-        return;
+  const loadAccounts = useCallback(async (signal?: AbortSignal) => {
+    setAccountsLoading(true);
+    setAccountsError(null);
+    try {
+      const res = await fetch("/api/bank/statement-lines/accounts", {
+        cache: "no-store",
+        signal,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `Request failed (${res.status})`);
       }
-
-      setAccountsLoading(true);
-      setAccountsError(null);
-      try {
-        const params = new URLSearchParams({
-          from: range.from,
-          to: range.to,
-        });
-        const res = await fetch(
-          `/api/bank/statement-lines/accounts?${params.toString()}`,
-          {
-            cache: "no-store",
-            signal,
-          }
+      const data = (await res.json()) as {
+        accounts: BankAccountOption[];
+        latest_month?: string | null;
+      };
+      const list = data.accounts ?? [];
+      setAccounts(list);
+      setMonth((prev) => {
+        const latest = data.latest_month?.trim() || null;
+        if (!prev) return latest ?? currentMonthValue();
+        // If the calendar month has no statements yet (e.g. early in the month),
+        // land on the latest month that actually has data.
+        if (latest && prev > latest) return latest;
+        return prev;
+      });
+      setAccountNo((prev) => {
+        if (prev && list.some((a) => a.account_no === prev)) return prev;
+        const preferred = list.find(
+          (a) => a.account_no === BANK_MATCH_ACCOUNT_NO
         );
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body?.error ?? `Request failed (${res.status})`);
-        }
-        const data = (await res.json()) as { accounts: BankAccountOption[] };
-        const list = data.accounts ?? [];
-        setAccounts(list);
-        setAccountNo((prev) => {
-          if (prev && list.some((a) => a.account_no === prev)) return prev;
-          const preferred = list.find(
-            (a) => a.account_no === BANK_MATCH_ACCOUNT_NO
-          );
-          return preferred?.account_no ?? list[0]?.account_no ?? "";
-        });
-      } catch (e) {
-        if (String(e).includes("AbortError")) return;
-        setAccountsError(e instanceof Error ? e.message : String(e));
-        setAccounts([]);
-      } finally {
-        setAccountsLoading(false);
-      }
-    },
-    [month]
-  );
+        return preferred?.account_no ?? list[0]?.account_no ?? "";
+      });
+    } catch (e) {
+      if (String(e).includes("AbortError")) return;
+      setAccountsError(e instanceof Error ? e.message : String(e));
+      setAccounts([]);
+    } finally {
+      setAccountsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1228,8 +1220,7 @@ export default function StatementLinesTab({
       )}
       {!accountsLoading && accounts.length === 0 && !accountsError && (
         <div className="text-sm text-muted-foreground">
-          ยังไม่มีบัญชีใน statement_lines สำหรับ{" "}
-          {month ? formatMonthLabel(month) : "เดือนที่เลือก"}
+          ยังไม่มีบัญชีจากไฟล์ statement ที่นำเข้า
         </div>
       )}
       {error && <div className="text-sm text-red-600">{error}</div>}
