@@ -412,7 +412,7 @@ export async function listPoPendingReceive(params: {
     vendor,
     from,
     to,
-    months = 12,
+    months = 1,
     limit,
     offset,
   } = params;

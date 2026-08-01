@@ -9,6 +9,8 @@ import {
 } from "@/lib/po/po-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const maxDuration = 60;
+
 const QuerySchema = z.object({
   site: z.enum(["HQ", "SYP"]),
   status: z.enum(PO_PENDING_RECEIVE_STATUSES).default("pending_receive"),
@@ -22,7 +24,8 @@ const QuerySchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
-  months: z.coerce.number().int().min(1).max(60).default(12),
+  /** Fallback only when from/to omitted — prefer explicit last-30-days from UI. */
+  months: z.coerce.number().int().min(1).max(60).default(1),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });

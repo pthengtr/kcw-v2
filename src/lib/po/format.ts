@@ -40,3 +40,20 @@ export function billedLabel(billed: string | null | undefined) {
   if (billed === "N") return "เปิด";
   return billed ?? "—";
 }
+
+/** Default ICLOW list window — keep queries under statement_timeout. */
+export function last30DaysPoDateRange(now = new Date()): {
+  from: string;
+  to: string;
+} {
+  const to = new Date(now);
+  const from = new Date(now);
+  from.setDate(from.getDate() - 30);
+  const iso = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  return { from: iso(from), to: iso(to) };
+}

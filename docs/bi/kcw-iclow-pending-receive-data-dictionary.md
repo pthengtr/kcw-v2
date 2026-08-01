@@ -163,8 +163,8 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 - Do **not** use mixed-DOCNO sibling logic for รับบางส่วน.
 - Do **not** use `PIMAS.PO` or `PODET.QTY − PIDET.QTY` for membership.
 - Default UI filter: **`pending_receive`**.
-- `complete` / `partially_received` / `pending_receive` keep a date / months window on `DOCDATE` (default 12).
-- `to_be_ordered` skips the months cutoff.
+- `complete` / `partially_received` / `pending_receive` keep a date window on `DOCDATE` (UI default: **last 30 days**).
+- `to_be_ordered` skips the date cutoff.
 
 ### 6.4 Observed HQ counts (ingested snapshot 2026-08-01)
 
@@ -205,6 +205,7 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-08-01 | Default ICLOW dated tabs to last 30 days (avoid 12‑month statement timeouts) | Agent |
 | 2026-08-01 | Simplify UI: DOCNO→POMAS/PODET, RCVDNO→PIMAS/PIDET; drop partial missing/received dialog | Agent |
 | 2026-08-01 | Match truncated RCVDNO via `left(PIMAS.BILLNO,12)` (legacy 12-char ICLOW field) | Agent |
 | 2026-08-01 | UI shows `(ไม่พบลิงก์ PIMAS)` when ICLOW.RCVDNO has no matching ingested PIMAS bill | Agent |

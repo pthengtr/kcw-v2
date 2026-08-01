@@ -18,6 +18,7 @@ import {
   formatPoAmount,
   formatPoDate,
   formatPoQty,
+  last30DaysPoDateRange,
 } from "@/lib/po/format";
 import {
   PO_ICLOW_STATUS_TABS,
@@ -129,8 +130,8 @@ export default function PoPendingReceiveTab({
   const [error, setError] = useState<string | null>(null);
 
   const [q, setQ] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(() => last30DaysPoDateRange().from);
+  const [to, setTo] = useState(() => last30DaysPoDateRange().to);
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -161,7 +162,12 @@ export default function PoPendingReceiveTab({
     if (!showDates) {
       setFrom("");
       setTo("");
+      return;
     }
+    // Entering dated tabs: default to last 30 days (avoids 12‑month timeouts).
+    const range = last30DaysPoDateRange();
+    setFrom(range.from);
+    setTo(range.to);
   }, [showDates]);
 
   useEffect(() => {
@@ -174,9 +180,11 @@ export default function PoPendingReceiveTab({
         params.set("site", site);
         params.set("status", status);
         if (q.trim()) params.set("q", q.trim());
-        if (showDates && from.trim()) params.set("from", from.trim());
-        if (showDates && to.trim()) params.set("to", to.trim());
-        if (showDates && !from.trim() && !to.trim()) params.set("months", "12");
+        if (showDates) {
+          const range = last30DaysPoDateRange();
+          params.set("from", from.trim() || range.from);
+          params.set("to", to.trim() || range.to);
+        }
         params.set("limit", String(limit));
         params.set("offset", String(offset));
 
@@ -505,8 +513,8 @@ export default function PoPendingReceiveTab({
       <p className="text-sm text-muted-foreground">
         {isBcodeQty
           ? site === "HQ"
-            ? "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET"
-            : "เกรน DOCNO+BCODE — สั่ง/รับจาก ICLOW (ไม่มี PIDET ที่ SYP). คลิก DOCNO → POMAS/PODET"
+            ? "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
+            : "เกรน DOCNO+BCODE — สั่ง/รับจาก ICLOW (ไม่มี PIDET ที่ SYP). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
           : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว. คลิก DOCNO → POMAS/PODET"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
