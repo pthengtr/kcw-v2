@@ -135,18 +135,18 @@ New features almost never need new queue tables — only new `job_type` values a
 - SYP PO line detail shows HQ on-hand from `curated_kcw.inventory_qty_latest` (`branch='HQ'`) next to ICMAS location — see [bi/sql/po_syp_prepare_line.sql](./bi/sql/po_syp_prepare_line.sql).
 - Service-role RPCs: `fn_inventory_find_inflight_sync()`, `fn_inventory_enqueue_sync(p_requested_by)`, `fn_inventory_last_updated_at` — see [bi/sql/fn_inventory_sync_ops.sql](./bi/sql/fn_inventory_sync_ops.sql).
 
-### Bank statement match — จับคู่ยอดเข้า (accounts 7236, 3557, 0393, 4759, 248-0-42113-9, 248-6-00618-4)
+### Bank statement match — จับคู่ยอดเข้า (full account numbers)
 
 - Not a PC worker job. UI button **จับคู่ยอดเข้า** on Statement Lines → `POST /api/bank/match`.
-- Scope comes from the selected month; allowed accounts come from `BANK_MATCH_PROMPTS` in [`match-prompt-constants.ts`](../src/lib/bank/match-prompt-constants.ts).
+- Scope comes from the selected month; allowed accounts come from `BANK_MATCH_PROMPTS` in [`match-prompt-constants.ts`](../src/lib/bank/match-prompt-constants.ts). Keys must match `bank.statement_lines.account_no` (KBANK now stores full numbers, same as KTB).
 - Prompt sources:
-  - 7236 inbound: [`prompts/bank-statement-match-7236.md`](../prompts/bank-statement-match-7236.md)
-  - 3557 outbound payments: [`prompts/bank-statement-match-3557.md`](../prompts/bank-statement-match-3557.md)
-  - 0393 SYP sales (3TR / 3TAR) + app expense PV: [`prompts/bank-statement-match-0393.md`](../prompts/bank-statement-match-0393.md)
-  - 4759 SYP OpEx (took over 0393 expense payments from Jul 2026): [`prompts/bank-statement-match-4759.md`](../prompts/bank-statement-match-4759.md)
-  - 248-0-42113-9 (KTB / ends 1139) marketplace RVI: [`prompts/bank-statement-match-1139.md`](../prompts/bank-statement-match-1139.md)
-  - 248-6-00618-4 payroll / expense cheques: [`prompts/bank-statement-match-6184.md`](../prompts/bank-statement-match-6184.md)
-- Placeholders `{{account_no}}` / `{{from}}` / `{{to}}` are injected by the API.
+  - `064-8-91723-6` (ends 7236) inbound: [`prompts/bank-statement-match-7236.md`](../prompts/bank-statement-match-7236.md)
+  - `141-1-72355-7` (ends 3557) outbound payments: [`prompts/bank-statement-match-3557.md`](../prompts/bank-statement-match-3557.md)
+  - `064-8-92039-3` (ends 0393) SYP sales (3TR / 3TAR) + app expense PV: [`prompts/bank-statement-match-0393.md`](../prompts/bank-statement-match-0393.md)
+  - `233-1-18475-9` (ends 4759) SYP OpEx (took over 0393 expense payments from Jul 2026): [`prompts/bank-statement-match-4759.md`](../prompts/bank-statement-match-4759.md)
+  - `248-0-42113-9` (KTB / ends 1139) marketplace RVI: [`prompts/bank-statement-match-1139.md`](../prompts/bank-statement-match-1139.md)
+  - `248-6-00618-4` payroll / expense cheques: [`prompts/bank-statement-match-6184.md`](../prompts/bank-statement-match-6184.md)
+- Placeholders `{{account_no}}` / `{{from}}` / `{{to}}` are injected by the API with the full selected `account_no`.
 - Requires server env `CURSOR_API_KEY` (optional `CURSOR_AGENT_REPO_URL`, `CURSOR_AGENT_STARTING_REF`, `CURSOR_AGENT_MODEL`, `CURSOR_AGENT_MODEL_OPTIMIZE_FOR`).
 - Launches Cursor Cloud Agent via `POST https://api.cursor.com/v1/agents` with Cursor Router Auto by default (`model.id=auto-smart`, `optimize_for=balanced`). If Auto/Router is rejected for the API key, the launcher retries with no `model` (user/team/system default). Override with `CURSOR_AGENT_MODEL` (`auto-smart` | `auto` | explicit id | `omit`).
 - Agent updates `bank.statement_lines` match_* fields only, and **only** rows with `match_status = 'pending'`.

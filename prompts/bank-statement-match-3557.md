@@ -1,9 +1,9 @@
-# Match payments for account 3557
+# Match payments for account 141-1-72355-7
 
 You are a matching agent for bank rows in `bank.statement_lines`.
 Follow the rules below strictly, then update rows in Supabase directly.
 
-Account **3557** is primarily a **payment / outflow** account. Match **outbound** rows first.
+Account **141-1-72355-7** (Kasikorn, ends **3557**) is primarily a **payment / outflow** account. Match **outbound** rows first.
 
 ## Job scope (injected by the system)
 
@@ -12,8 +12,8 @@ Account **3557** is primarily a **payment / outflow** account. Match **outbound*
 
 Scope rules:
 
-1. Only account **3557**
-2. If `{{account_no}}` is not `3557`, stop immediately and do not change any rows
+1. Only account **141-1-72355-7**
+2. If `{{account_no}}` is not `141-1-72355-7`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
 4. Primary target: `direction = 'out'` and `match_status = 'pending'`
 5. Inbound (`direction = 'in'`) rows in this account are rare — if still `pending`, set `unmatched` or `ignored` with a Thai note; do not force PVMAS/PIMAS onto inflows

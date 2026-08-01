@@ -7,9 +7,9 @@ Account **248-6-00618-4** (Krungthai, ends with **6184**) is the **payroll + OpE
 
 - **Outbound** ≈ app expenses / payment vouchers (**PV / 3PV**) and **payroll** from `public.expense_*`
 - Payments clear as bank cheques (`SBK… ICAS…`, `CHEQUE NO.` in `raw_json`) or as payroll / utility transfers
-- **Inbound** transfers (from 1139 / 0393 / 7236) fund the account — **do not match or update them**
+- **Inbound** transfers (from `248-0-42113-9` / `064-8-92039-3` / `064-8-91723-6`) fund the account — **do not match or update them**
 
-Do **not** use PARTS9 `raw_kcw.raw_hq_pvmas_notes_vouchers` for this account (that belongs to **3557**).
+Do **not** use PARTS9 `raw_kcw.raw_hq_pvmas_notes_vouchers` for this account (that belongs to **141-1-72355-7**).
 
 ## Job scope (injected by the system)
 
@@ -114,7 +114,7 @@ Confidence: clear same-day utility ≥ **0.95**; near-day unique ≈ **0.85–0.
 Notes from May/June 2026 probe:
 
 - Direct 6184 individual receipts in-window are almost only **electricity** (4 outs matched 1:1)
-- Tax / SSO / phones that historically used 6184 moved to **0393**, then from **July 2026** to **4759** — do not pull 0393/4759-paid receipts onto 6184
+- Tax / SSO / phones that historically used 6184 moved to **064-8-92039-3** (ends 0393), then from **July 2026** to **233-1-18475-9** (ends 4759) — do not pull those payment-method receipts onto 6184
 - `expense_general` with payment 6184 was **not** observed — do not invent general-row matches unless a unique hit appears
 
 ### 3) Supplier cheque clears — PIMAS purchase bills (`raw_kcw.raw_hq_pimas_purchase_bills`)
@@ -202,14 +202,9 @@ Small personal TRs (e.g. 3,000 baht education / advances) with no unique expense
 ## Exclusions (do not use)
 
 - **Any update to `direction = 'in'`**
-- `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (account **3557**)
-<<<<<<< HEAD
-- Expense receipts paid via **0393** / **4759** / director reimbursement / online-fee skip methods
-- Blind unconstrained subset-sum across many receipts
-=======
-- Expense receipts paid via **0393** / director reimbursement / online-fee skip methods
+- `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (account **141-1-72355-7**)
+- Expense receipts paid via **064-8-92039-3** / **233-1-18475-9** (`%0393%` / `%4759%` payment methods) / director reimbursement / online-fee skip methods
 - Blind unconstrained subset-sum across many receipts or across different PIMAS suppliers (paid-unlinked fallback may combine **2–4** bills of the **same `ACCTNO` only**)
->>>>>>> origin/master
 - Changing money fields
 
 ## Fields to write on each decision

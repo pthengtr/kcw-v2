@@ -75,7 +75,7 @@ If an operator asks conceptually: this account **supports online sales (TAD) eco
 
 ### 3) Classic RC customer receipts — exclude for this account
 
-`VOUCNO LIKE 'RC%'` customer receipts (trade debtors) settle on **7236**, not here.
+`VOUCNO LIKE 'RC%'` customer receipts (trade debtors) settle on **064-8-91723-6** (ends 7236), not here.
 
 - Do not force `RC…` onto `248-0-42113-9` inflows
 - May/Jun probe: **0** unique same-day `RC` hits on this account
