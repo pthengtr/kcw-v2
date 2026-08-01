@@ -11,39 +11,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SSRDatePicker } from "@/components/common/SSRDatePicker";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
 import {
   formatPoDate,
   formatPoQty,
 } from "@/lib/po/format";
-import type {
-  PoPendingReceiveDetail,
-  PoPendingReceiveGrain,
-  PoPendingReceiveRow,
-  PoPendingReceiveStatus,
+import {
+  PO_ICLOW_STATUS_TABS,
+  type PoPendingReceiveDetail,
+  type PoPendingReceiveGrain,
+  type PoPendingReceiveRow,
+  type PoPendingReceiveStatus,
 } from "@/lib/po/po-queries";
 import type { PoSyncSite } from "@/lib/po/worker-jobs";
 
-const STATUS_OPTIONS: {
-  value: PoPendingReceiveStatus;
-  label: string;
-}[] = [
-  { value: "to_be_ordered", label: "รอสั่ง" },
-  { value: "pending_receive", label: "ค้างรับ" },
-  { value: "partially_received", label: "รับบางส่วน" },
-  { value: "complete", label: "รับแล้ว" },
-];
+export { PO_ICLOW_STATUS_TABS };
 
 function statusLabel(status: PoPendingReceiveStatus): string {
-  return STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status;
+  return PO_ICLOW_STATUS_TABS.find((o) => o.value === status)?.label ?? status;
 }
 
 function statusBadgeVariant(
@@ -65,9 +52,11 @@ function statusBadgeVariant(
 
 export default function PoPendingReceiveTab({
   site,
+  status,
   refreshToken,
 }: {
   site: PoSyncSite;
+  status: PoPendingReceiveStatus;
   refreshToken: number;
 }) {
   const [rows, setRows] = useState<PoPendingReceiveRow[]>([]);
@@ -76,8 +65,6 @@ export default function PoPendingReceiveTab({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [status, setStatus] =
-    useState<PoPendingReceiveStatus>("pending_receive");
   const [q, setQ] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -100,6 +87,13 @@ export default function PoPendingReceiveTab({
   useEffect(() => {
     setOffset(0);
   }, [q, from, to, site, status]);
+
+  useEffect(() => {
+    if (!showDates) {
+      setFrom("");
+      setTo("");
+    }
+  }, [showDates]);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -415,21 +409,6 @@ export default function PoPendingReceiveTab({
           : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <Select
-          value={status}
-          onValueChange={(v) => setStatus(v as PoPendingReceiveStatus)}
-        >
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="สถานะ" />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <Input
           className="w-full sm:max-w-xs"
           placeholder={
@@ -442,19 +421,21 @@ export default function PoPendingReceiveTab({
         />
         {showDates ? (
           <>
-            <Input
-              type="date"
-              className="w-full sm:w-[160px]"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              aria-label="จากวันที่"
+            <SSRDatePicker
+              name="from-date"
+              placeholder="จากวันที่"
+              value={from || undefined}
+              onChange={(val) => setFrom(val ?? "")}
+              className="sm:w-[180px]"
+              clearable
             />
-            <Input
-              type="date"
-              className="w-full sm:w-[160px]"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              aria-label="ถึงวันที่"
+            <SSRDatePicker
+              name="to-date"
+              placeholder="ถึงวันที่"
+              value={to || undefined}
+              onChange={(val) => setTo(val ?? "")}
+              className="sm:w-[180px]"
+              clearable
             />
           </>
         ) : null}

@@ -253,6 +253,16 @@ export const PO_PENDING_RECEIVE_STATUSES = [
 export type PoPendingReceiveStatus =
   (typeof PO_PENDING_RECEIVE_STATUSES)[number];
 
+export const PO_ICLOW_STATUS_TABS: {
+  value: PoPendingReceiveStatus;
+  label: string;
+}[] = [
+  { value: "to_be_ordered", label: "รอสั่งซื้อ" },
+  { value: "pending_receive", label: "ค้างรับ" },
+  { value: "partially_received", label: "รับบางส่วน" },
+  { value: "complete", label: "รับแล้ว" },
+];
+
 export type PoPendingReceiveGrain = "line" | "docno";
 
 export type PoPendingReceiveRow = {

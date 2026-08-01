@@ -13,7 +13,10 @@ import {
   formatPoDate,
   formatPoQty,
 } from "@/lib/po/format";
-import { PO_PENDING_RECEIVE_STATUSES } from "@/lib/po/po-queries";
+import {
+  PO_ICLOW_STATUS_TABS,
+  PO_PENDING_RECEIVE_STATUSES,
+} from "@/lib/po/po-queries";
 import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { canAccessPoStatus } from "@/lib/auth/client-permissions";
 
@@ -69,6 +72,18 @@ describe("PO pending receive statuses", () => {
       "pending_receive",
       "partially_received",
       "complete",
+    ]);
+  });
+
+  it("exposes four ICLOW status tab labels", () => {
+    expect(PO_ICLOW_STATUS_TABS.map((t) => t.label)).toEqual([
+      "รอสั่งซื้อ",
+      "ค้างรับ",
+      "รับบางส่วน",
+      "รับแล้ว",
+    ]);
+    expect(PO_ICLOW_STATUS_TABS.map((t) => t.value)).toEqual([
+      ...PO_PENDING_RECEIVE_STATUSES,
     ]);
   });
 });

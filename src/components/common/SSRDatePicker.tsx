@@ -137,7 +137,7 @@ export function SSRDatePicker({
     : undefined;
 
   return (
-    <div className="flex gap-2 items-center">
+    <div className="flex w-full min-w-0 items-center gap-1 sm:w-auto">
       <Popover modal open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -149,17 +149,17 @@ export function SSRDatePicker({
             )}
             aria-label={name}
           >
-            <span className={cn(!date && "text-muted-foreground")}>
+            <span className={cn("truncate", !date && "text-muted-foreground")}>
               {displayText ?? placeholder}
             </span>
-            <CalendarIcon className="ml-2 h-4 w-4 opacity-60" />
+            <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-60" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2" align="start">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2 px-1">
               <div className="text-sm font-medium">เลือกวันที่</div>
-              {clearable && (
+              {clearable && date ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -170,7 +170,7 @@ export function SSRDatePicker({
                   <Trash className="h-4 w-4" />
                   <span className="sr-only">ล้างค่า</span>
                 </Button>
-              )}
+              ) : null}
             </div>
 
             <Calendar
@@ -255,6 +255,18 @@ export function SSRDatePicker({
           </div>
         </PopoverContent>
       </Popover>
+      {clearable && date ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 shrink-0"
+          onClick={handleClear}
+          aria-label={`ล้าง${placeholder}`}
+        >
+          <Trash className="h-4 w-4" />
+        </Button>
+      ) : null}
     </div>
   );
 }

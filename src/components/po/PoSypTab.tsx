@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
-import PoPendingReceiveTab from "@/components/po/PoPendingReceiveTab";
+import PoPendingReceiveTab, {
+  PO_ICLOW_STATUS_TABS,
+} from "@/components/po/PoPendingReceiveTab";
 import PoSypDetailDialog from "@/components/po/PoSypDetailDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -21,7 +23,13 @@ import {
   formatPoDate,
   formatPoTs,
 } from "@/lib/po/format";
-import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
+import type {
+  PoHeaderRow,
+  PoLineRow,
+  PoPendingReceiveStatus,
+} from "@/lib/po/po-queries";
+
+type PoSypView = "list" | PoPendingReceiveStatus;
 
 export default function PoSypTab({
   refreshToken,
@@ -30,7 +38,7 @@ export default function PoSypTab({
   refreshToken: number;
   onChanged?: () => void;
 }) {
-  const [view, setView] = useState<"list" | "pending">("list");
+  const [view, setView] = useState<PoSypView>("list");
   const [rows, setRows] = useState<PoHeaderRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -351,7 +359,11 @@ export default function PoSypTab({
       >
         <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
           <TabsTrigger value="list">รายการ PO</TabsTrigger>
-          <TabsTrigger value="pending">รอรับของ (ICLOW)</TabsTrigger>
+          {PO_ICLOW_STATUS_TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="list" className="mt-3">
@@ -450,9 +462,15 @@ export default function PoSypTab({
           </div>
         </TabsContent>
 
-        <TabsContent value="pending" className="mt-3">
-          <PoPendingReceiveTab site="SYP" refreshToken={refreshToken} />
-        </TabsContent>
+        {PO_ICLOW_STATUS_TABS.map((tab) => (
+          <TabsContent key={tab.value} value={tab.value} className="mt-3">
+            <PoPendingReceiveTab
+              site="SYP"
+              status={tab.value}
+              refreshToken={refreshToken}
+            />
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   );
