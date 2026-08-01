@@ -288,8 +288,13 @@ export type PoPendingReceiveRow = {
   ui: string | null;
   ordered: string | null;
   received: string | null;
+  /** pending | received — set for partially_received line rows */
+  receive_state?: "pending" | "received" | string | null;
   rcvddate: string | null;
   rcvdno: string | null;
+  /** PIMAS.BILLNO (HQ) or ICLOW.RCVDNO fallback */
+  billno?: string | null;
+  billdate?: string | null;
   status: PoPendingReceiveStatus;
   grain: PoPendingReceiveGrain;
   ordered_count?: number;
@@ -351,11 +356,16 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     ? (statusRaw as PoPendingReceiveStatus)
     : "pending_receive";
   const grain: PoPendingReceiveGrain =
-    row.grain === "docno" ||
-    row.grain === "po" ||
-    status === "partially_received"
-      ? "docno"
-      : "line";
+    row.grain === "docno" || row.grain === "po" ? "docno" : "line";
+  const receiveStateRaw = row.receive_state ?? null;
+  const receive_state =
+    receiveStateRaw === "pending" || receiveStateRaw === "received"
+      ? receiveStateRaw
+      : row.received === "Y"
+        ? "received"
+        : row.received === "N"
+          ? "pending"
+          : (receiveStateRaw as string | null);
 
   return {
     id: String(row.id ?? row.docno ?? ""),
@@ -369,8 +379,11 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     ui: (row.ui as string | null) ?? null,
     ordered: (row.ordered as string | null) ?? null,
     received: (row.received as string | null) ?? null,
+    receive_state,
     rcvddate: (row.rcvddate as string | null) ?? null,
     rcvdno: (row.rcvdno as string | null) ?? null,
+    billno: (row.billno as string | null) ?? null,
+    billdate: (row.billdate as string | null) ?? null,
     status,
     grain,
     ordered_count:
@@ -445,11 +458,7 @@ export async function listPoPendingReceive(params: {
       ? null
       : Number(payload.count);
   const grain: PoPendingReceiveGrain =
-    payload?.grain === "docno" ||
-    payload?.grain === "po" ||
-    status === "partially_received"
-      ? "docno"
-      : "line";
+    payload?.grain === "docno" || payload?.grain === "po" ? "docno" : "line";
 
   return {
     rows,
