@@ -481,13 +481,21 @@ export type PiLineRow = {
   amount: string | null;
 };
 
+function billKey12(value: string | null | undefined): string {
+  return String(value ?? "")
+    .trim()
+    .slice(0, 12);
+}
+
 /** Resolve ICLOW RCVDNO / PIMAS BILLNO and load PIDET lines (HQ purchase invoice). */
 export async function fetchPiDetail(params: {
   supabase: SupabaseClient;
   billnoOrRcvdno: string;
 }): Promise<{ header: PiHeader; lines: PiLineRow[] } | null> {
+  // PARTS9 may pad BILLNO/RCVDNO with spaces and trunc RCVDNO to 12 chars.
   const key = params.billnoOrRcvdno.trim();
   if (!key) return null;
+  const key12 = billKey12(key);
 
   const db = raw(params.supabase);
 
@@ -502,31 +510,41 @@ export async function fetchPiDetail(params: {
   if (exact.error) throw exact.error;
   bill = (exact.data as Record<string, unknown> | null) ?? null;
 
-  if (!bill && key.length === 12) {
+  if (!bill) {
+    // Leading-space / truncated variants: scan a small candidate set, then
+    // match on left(btrim(BILLNO),12) — same rule as fn_po_pending_receive.
     const prefix = await db
       .from("raw_hq_pimas_purchase_bills")
       .select('"BILLNO","BILLDATE","ACCTNO","PO","AFTERTAX","CANCELED","REMARKS"')
-      .like("BILLNO", `${key}%`)
+      .like("BILLNO", `%${key12}%`)
       .neq("CANCELED", "Y")
-      .limit(20);
+      .limit(40);
     if (prefix.error) throw prefix.error;
     const candidates = ((prefix.data as Record<string, unknown>[] | null) ?? [])
-      .filter((row) => {
-        const billno = String(row.BILLNO ?? "").trim();
-        return billno.length > 12 && billno.slice(0, 12) === key;
-      })
-      .sort((a, b) =>
-        String(a.BILLNO ?? "").localeCompare(String(b.BILLNO ?? ""))
-      );
+      .filter((row) => billKey12(String(row.BILLNO ?? "")) === key12)
+      .sort((a, b) => {
+        const aBill = String(a.BILLNO ?? "");
+        const bBill = String(b.BILLNO ?? "");
+        const aExact = aBill.trim() === key ? 0 : 1;
+        const bExact = bBill.trim() === key ? 0 : 1;
+        if (aExact !== bExact) return aExact - bExact;
+        if (aBill.trim().length !== bBill.trim().length) {
+          return aBill.trim().length - bBill.trim().length;
+        }
+        return aBill.localeCompare(bBill);
+      });
     if (candidates.length > 0) {
       bill = candidates[0] ?? null;
-      matchedRcvdno = key;
+      const resolved = String(bill?.BILLNO ?? "").trim();
+      if (resolved !== key) matchedRcvdno = key;
     }
   }
 
   if (!bill) return null;
 
-  const billno = String(bill.BILLNO ?? key).trim();
+  // Keep raw BILLNO for PIDET join (PIDET often shares the same leading space).
+  const billnoRaw = String(bill.BILLNO ?? key);
+  const billno = billnoRaw.trim();
   const acctno = (bill.ACCTNO as string | null) ?? null;
   let acctname: string | null = null;
   if (acctno) {
@@ -541,18 +559,28 @@ export async function fetchPiDetail(params: {
       null;
   }
 
-  const linesRes = await db
+  let linesRes = await db
     .from("raw_hq_pidet_purchase_lines")
     .select('"BILLNO","BCODE","DETAIL","QTY","UI","PRICE","AMOUNT","BILLTYPE","CANCELED"')
-    .eq("BILLNO", billno)
+    .eq("BILLNO", billnoRaw)
     .in("BILLTYPE", ["1", "2", "3"])
     .limit(500);
   if (linesRes.error) throw linesRes.error;
 
+  if (((linesRes.data as unknown[] | null) ?? []).length === 0 && billno !== billnoRaw) {
+    linesRes = await db
+      .from("raw_hq_pidet_purchase_lines")
+      .select('"BILLNO","BCODE","DETAIL","QTY","UI","PRICE","AMOUNT","BILLTYPE","CANCELED"')
+      .eq("BILLNO", billno)
+      .in("BILLTYPE", ["1", "2", "3"])
+      .limit(500);
+    if (linesRes.error) throw linesRes.error;
+  }
+
   const lines = ((linesRes.data as Record<string, unknown>[] | null) ?? [])
     .filter((row) => String(row.CANCELED ?? "") !== "Y")
     .map((row) => ({
-      billno: String(row.BILLNO ?? billno),
+      billno: String(row.BILLNO ?? billno).trim(),
       bcode: (row.BCODE as string | null) ?? null,
       detail: (row.DETAIL as string | null) ?? null,
       qty: row.QTY == null ? null : String(row.QTY),
