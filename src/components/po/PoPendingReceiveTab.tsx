@@ -21,7 +21,6 @@ import {
 import {
   PO_ICLOW_STATUS_TABS,
   type PoPendingReceiveDetail,
-  type PoPendingReceiveGrain,
   type PoPendingReceiveRow,
   type PoPendingReceiveStatus,
 } from "@/lib/po/po-queries";
@@ -61,7 +60,6 @@ export default function PoPendingReceiveTab({
 }) {
   const [rows, setRows] = useState<PoPendingReceiveRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
-  const [grain, setGrain] = useState<PoPendingReceiveGrain>("line");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,11 +120,9 @@ export default function PoPendingReceiveTab({
         const data = (await res.json()) as {
           rows: PoPendingReceiveRow[];
           count: number | null;
-          grain?: PoPendingReceiveGrain;
         };
         setRows(data.rows ?? []);
         setCount(data.count ?? null);
-        setGrain(data.grain ?? (isPartial ? "docno" : "line"));
       } catch (e) {
         if (String(e).includes("AbortError")) return;
         setError(e instanceof Error ? e.message : String(e));
@@ -138,7 +134,7 @@ export default function PoPendingReceiveTab({
     }
     void fetchRows();
     return () => ac.abort();
-  }, [site, status, q, from, to, limit, offset, refreshToken, showDates, isPartial]);
+  }, [site, status, q, from, to, limit, offset, refreshToken, showDates]);
 
   async function openPartialDetail(row: PoPendingReceiveRow) {
     if (!row.docno) return;
@@ -260,109 +256,7 @@ export default function PoPendingReceiveTab({
     []
   );
 
-  const poColumns: Column<PoPendingReceiveRow>[] = useMemo(
-    () => [
-      {
-        key: "docno",
-        header: "DOCNO",
-        className: "whitespace-nowrap",
-        render: (r) => (
-          <span className="font-medium">{r.docno ?? "—"}</span>
-        ),
-      },
-      {
-        key: "docdate",
-        header: "วันที่",
-        className: "whitespace-nowrap",
-        render: (r) => formatPoDate(r.docdate),
-      },
-      {
-        key: "vendor",
-        header: "VENDOR",
-        className: "whitespace-nowrap",
-        render: (r) =>
-          r.vendor ? (
-            <button
-              type="button"
-              className="font-mono text-left text-primary underline-offset-2 hover:underline"
-              onClick={(e) => {
-                e.stopPropagation();
-                setAccountRow(r);
-                setAccountOpen(true);
-              }}
-            >
-              {r.vendor}
-            </button>
-          ) : (
-            "—"
-          ),
-      },
-      {
-        key: "acctname",
-        header: "ผู้ขาย",
-        className: "max-w-[14rem] hidden md:table-cell",
-        render: (r) => (
-          <span className="line-clamp-2 break-words">{r.acctname ?? "—"}</span>
-        ),
-      },
-      {
-        key: "missing_count",
-        header: "ค้าง (รายการ)",
-        className: "text-right whitespace-nowrap font-semibold",
-        render: (r) => formatPoQty(r.missing_count ?? 0),
-      },
-      {
-        key: "received_count",
-        header: "รับแล้ว (รายการ)",
-        className: "text-right whitespace-nowrap",
-        render: (r) => formatPoQty(r.received_count ?? 0),
-      },
-      {
-        key: "missing_qty",
-        header: "ค้าง (qty)",
-        className: "text-right whitespace-nowrap hidden lg:table-cell",
-        render: (r) => formatPoQty(r.missing_qty ?? 0),
-      },
-      {
-        key: "received_qty",
-        header: "รับแล้ว (qty)",
-        className: "text-right whitespace-nowrap hidden lg:table-cell",
-        render: (r) => formatPoQty(r.received_qty ?? 0),
-      },
-    ],
-    []
-  );
-
   function renderMobileCard(row: PoPendingReceiveRow) {
-    if (grain === "docno") {
-      return (
-        <div className="w-full rounded-md border bg-white p-3 text-left">
-          <div className="flex items-start justify-between gap-2">
-            <div className="font-medium break-all">{row.docno || "—"}</div>
-            <Badge variant="outline">รับบางส่วน</Badge>
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {formatPoDate(row.docdate)}
-          </div>
-          <div className="mt-2 text-sm line-clamp-2 break-words">
-            {row.acctname || row.vendor || "—"}
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-xs text-muted-foreground">ค้าง</div>
-              <div className="font-semibold">
-                {formatPoQty(row.missing_count ?? 0)} รายการ
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">รับแล้ว</div>
-              <div>{formatPoQty(row.received_count ?? 0)} รายการ</div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="w-full rounded-md border bg-white p-3 text-left">
         <div className="flex items-start justify-between gap-2">
@@ -404,18 +298,14 @@ export default function PoPendingReceiveTab({
       <p className="text-sm text-muted-foreground">
         {isPartial
           ? site === "HQ"
-            ? "แยกจากรายการ PO (POMAS) — กลุ่ม DOCNO ใน ICLOW ที่รับบางส่วน; คลิกดูค้าง vs รับแล้ว (RCVDNO → PIDET)"
-            : "แยกจากรายการ PO (POMAS) — กลุ่ม DOCNO ใน ICLOW ที่รับบางส่วน; คลิกดูค้าง vs รับแล้วจาก ICLOW"
+            ? "แยกจากรายการ PO (POMAS) — รายการ ICLOW ที่ยังค้างบน DOCNO ที่รับบางส่วนแล้ว; คลิกดูค้าง vs รับแล้ว (RCVDNO → PIDET)"
+            : "แยกจากรายการ PO (POMAS) — รายการ ICLOW ที่ยังค้างบน DOCNO ที่รับบางส่วนแล้ว; คลิกดูค้าง vs รับแล้วจาก ICLOW"
           : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
           className="w-full sm:max-w-xs"
-          placeholder={
-            isPartial
-              ? "ค้นหา DOCNO / ผู้ขาย"
-              : "ค้นหา DOCNO / BCODE / ผู้ขาย"
-          }
+          placeholder="ค้นหา DOCNO / BCODE / ผู้ขาย"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -444,7 +334,7 @@ export default function PoPendingReceiveTab({
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <ServerPagedTable
-        columns={grain === "docno" ? poColumns : lineColumns}
+        columns={lineColumns}
         rows={rows}
         count={count}
         limit={limit}
@@ -452,14 +342,8 @@ export default function PoPendingReceiveTab({
         onOffsetChange={setOffset}
         onLimitChange={setLimit}
         loading={loading}
-        tableMinWidthClassName={
-          grain === "docno" ? "min-w-[44rem]" : "min-w-[56rem]"
-        }
-        rowKey={(row) =>
-          grain === "docno"
-            ? row.docno || row.id
-            : row.id || `${row.docno}-${row.bcode}`
-        }
+        tableMinWidthClassName="min-w-[56rem]"
+        rowKey={(row) => row.id || `${row.docno}-${row.bcode}`}
         onRowClick={isPartial ? openPartialDetail : undefined}
         mobileCardRender={renderMobileCard}
       />
