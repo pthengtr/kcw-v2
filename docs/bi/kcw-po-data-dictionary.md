@@ -157,12 +157,13 @@ WHERE ISNULL(h.CANCELED, '') <> 'Y';
 |-------|------|--------|
 | PO vs PI | **PO** = order (`POMAS`/`PODET`); **PI** = received bill (`PIMAS`/`PIDET`) | Confirmed |
 | Stock / last purchase | Product-movement BI uses **PIDET** receive lines, not open POs | Confirmed (see [purchase dictionary](./kcw-purchase-data-dictionary.md)) |
-| Open commitments | Use `POMAS`/`PODET` where `BILLED='N'` | Confirmed pattern |
+| Open commitments (header) | Use `POMAS`/`PODET` where `BILLED='N'` for “open PO” lists — **not** the same as line ค้างรับ | Confirmed pattern |
 | Vendor | `POMAS.ACCTNO` → APMAS / `party` supplier | Inferred |
 | Supabase raw | `raw_kcw.raw_{hq\|syp}_pomas_purchase_orders` + `raw_{hq\|syp}_podet_purchase_order_lines` | Confirmed |
 | Sync job | `sync_pomas_podet` — see [worker-jobs.md](../worker-jobs.md); enqueue via `ops.job_queue` | Confirmed |
 | App list API | `fn_po_list` / `fn_po_last_ingested_at` (service-role); open partial indexes on POMAS | Confirmed |
-| Pending receive (trial) | `fn_po_pending_receive(p_site, …)` — per HQ/SYP; HQ = PODET − linked PIDET by BCODE; SYP = open-header lines (no PI mirror) | Confirmed |
+| **Pending receive (ค้างรับ)** | **`ICLOW`** — `ORDERED='Y'` AND `RECEIVED='N'` AND `CANCELED='N'`. See [ICLOW dictionary](./kcw-iclow-pending-receive-data-dictionary.md) | Confirmed |
+| Pending receive UI (trial) | `/po` sub-tab still uses interim `fn_po_pending_receive` (PODET−PIDET heuristic) — **replace after `ICLOW` ingest** | Interim |
 | App prepare overlay (SYP only) | `public.po_syp_prepare` — webapp marks prepared for HQ→SYP transfer; not PARTS9 | Confirmed |
 | HQ vs SYP product meaning | **HQ** = open POs to external vendors; **SYP** = orders on HQ (transfer prep) | Confirmed |
 
@@ -180,6 +181,8 @@ Do **not** confuse sales-bill column `"PO"` (CN original bill / TAD txn id — s
 - [ ] PO-level VAT/`TAXIC`/`BEFORETAX` rules (mirror PIDET/sales or different?)
 - [ ] Whether open-PO qty should use `QTY*MTP` like sales/PIDET
 - [ ] Curated open-PO fact (optional; v1 reads raw)
+- [x] Line ค้างรับ source = `ICLOW` (not `PODET`/`BILLED`) — Confirmed 2026-08-01
+- [ ] Ingest `ICLOW` → `raw_kcw` + revise `/po` pending-receive UI
 
 ---
 
@@ -189,3 +192,4 @@ Do **not** confuse sales-bill column `"PO"` (CN original bill / TAD txn id — s
 |------|--------|----|
 | 2026-07-28 | Start PO dictionary from PARTS9 `POMAS`/`PODET` inspection | Owner |
 | 2026-07-28 | Mark `raw_kcw` ingest Confirmed (`sync_pomas_podet`); SYP = HQ→SYP transfer; note `po_syp_prepare` | Owner |
+| 2026-08-01 | Pending receive = `ICLOW` (not PODET−PIDET); link [ICLOW dictionary](./kcw-iclow-pending-receive-data-dictionary.md) | Owner |

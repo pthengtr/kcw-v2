@@ -1,7 +1,11 @@
--- Pending-receive lines per site (ทดลองใช้).
--- HQ: PODET qty − linked HQ PIDET qty by BCODE
---      link = single-PO PIMAS.PO (optional PO prefix, no slash) OR POMAS.BILLNO = PIMAS.BILLNO
--- SYP: no PI mirror — open PO lines (BILLED <> Y) with recv_qty = 0
+-- INTERIM pending-receive RPC (PODET − linked PIDET / open SYP headers).
+-- PARTS9 source of truth for ค้างรับ is dbo.ICLOW — see
+-- docs/bi/kcw-iclow-pending-receive-data-dictionary.md
+-- Rewrite this function after ICLOW is ingested into raw_kcw.
+
+-- HQ path: PODET qty − linked HQ PIDET qty by BCODE
+--   link = single-PO PIMAS.PO (optional PO prefix, no slash) OR POMAS.BILLNO = PIMAS.BILLNO
+-- SYP path: no PI mirror — open PO lines (BILLED <> Y) with recv_qty = 0
 
 create index if not exists raw_hq_pimas_po_idx
   on raw_kcw.raw_hq_pimas_purchase_bills ("PO")
