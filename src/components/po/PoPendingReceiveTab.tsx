@@ -132,7 +132,7 @@ export default function PoPendingReceiveTab({
         };
         setRows(data.rows ?? []);
         setCount(data.count ?? null);
-        setGrain(data.grain ?? (isPartial ? "po" : "line"));
+        setGrain(data.grain ?? (isPartial ? "docno" : "line"));
       } catch (e) {
         if (String(e).includes("AbortError")) return;
         setError(e instanceof Error ? e.message : String(e));
@@ -340,7 +340,7 @@ export default function PoPendingReceiveTab({
   );
 
   function renderMobileCard(row: PoPendingReceiveRow) {
-    if (grain === "po") {
+    if (grain === "docno") {
       return (
         <div className="w-full rounded-md border bg-white p-3 text-left">
           <div className="flex items-start justify-between gap-2">
@@ -410,9 +410,9 @@ export default function PoPendingReceiveTab({
       <p className="text-sm text-muted-foreground">
         {isPartial
           ? site === "HQ"
-            ? "PO ที่รับบางส่วน — คลิกเพื่อดูของที่ยังค้าง (ICLOW) และของที่รับแล้ว (RCVDNO → PIDET)"
-            : "PO ที่รับบางส่วน — คลิกเพื่อดูของที่ยังค้างและที่รับแล้วจาก ICLOW (SYP ไม่มี PIDET)"
-          : "รายการจาก ICLOW — ค้างรับ = ยังไม่ได้รับทั้งใบ; รับแล้ว = RECEIVED=Y"}
+            ? "แยกจากรายการ PO (POMAS) — กลุ่ม DOCNO ใน ICLOW ที่รับบางส่วน; คลิกดูค้าง vs รับแล้ว (RCVDNO → PIDET)"
+            : "แยกจากรายการ PO (POMAS) — กลุ่ม DOCNO ใน ICLOW ที่รับบางส่วน; คลิกดูค้าง vs รับแล้วจาก ICLOW"
+          : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Select
@@ -463,7 +463,7 @@ export default function PoPendingReceiveTab({
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <ServerPagedTable
-        columns={grain === "po" ? poColumns : lineColumns}
+        columns={grain === "docno" ? poColumns : lineColumns}
         rows={rows}
         count={count}
         limit={limit}
@@ -472,10 +472,10 @@ export default function PoPendingReceiveTab({
         onLimitChange={setLimit}
         loading={loading}
         tableMinWidthClassName={
-          grain === "po" ? "min-w-[44rem]" : "min-w-[56rem]"
+          grain === "docno" ? "min-w-[44rem]" : "min-w-[56rem]"
         }
         rowKey={(row) =>
-          grain === "po"
+          grain === "docno"
             ? row.docno || row.id
             : row.id || `${row.docno}-${row.bcode}`
         }
@@ -500,7 +500,7 @@ export default function PoPendingReceiveTab({
                 <div>
                   ผู้ขาย: {detail.acctname ?? "—"} ({detail.vendor ?? "—"})
                 </div>
-                <div>วันที่ PO: {formatPoDate(detail.docdate)}</div>
+                <div>วันที่ (ICLOW DOCDATE): {formatPoDate(detail.docdate)}</div>
                 <div>
                   ค้าง {detail.missing_count} รายการ · รับแล้วบน ICLOW{" "}
                   {detail.received_iclow_count} · แสดงรับ{" "}

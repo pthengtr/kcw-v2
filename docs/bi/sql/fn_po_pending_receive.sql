@@ -85,24 +85,14 @@ begin
         p.docno,
         p.docdate,
         p.vendor,
-        coalesce(
-          nullif(btrim(coalesce(h."ACCTNAME", '')), ''),
-          nullif(btrim(coalesce(ap."ACCTNAME", '')), '')
-        ) as acctname,
+        nullif(btrim(coalesce(ap."ACCTNAME", '')), '') as acctname,
         p.missing_count,
         p.received_count,
         p.missing_qty,
         p.received_qty,
         'partially_received'::text as status,
-        'po'::text as grain
+        'docno'::text as grain
       from po p
-      left join lateral (
-        select h0."ACCTNAME"
-        from raw_kcw.raw_hq_pomas_purchase_orders h0
-        where h0."DOCNO" = p.docno
-        order by h0."DOCDATE" desc nulls last
-        limit 1
-      ) h on true
       left join raw_kcw.raw_hq_apmas_payable ap on ap."ACCTNO" = p.vendor
     ),
     filtered as (
@@ -125,7 +115,7 @@ begin
     )
     select jsonb_build_object(
       'count', (select count(*)::bigint from filtered),
-      'grain', 'po',
+      'grain', 'docno',
       'rows', coalesce((
         select jsonb_agg(to_jsonb(r) order by r.docdate desc nulls last, r.docno)
         from (
@@ -168,24 +158,14 @@ begin
         p.docno,
         p.docdate,
         p.vendor,
-        coalesce(
-          nullif(btrim(coalesce(h."ACCTNAME", '')), ''),
-          nullif(btrim(coalesce(ap."ACCTNAME", '')), '')
-        ) as acctname,
+        nullif(btrim(coalesce(ap."ACCTNAME", '')), '') as acctname,
         p.missing_count,
         p.received_count,
         p.missing_qty,
         p.received_qty,
         'partially_received'::text as status,
-        'po'::text as grain
+        'docno'::text as grain
       from po p
-      left join lateral (
-        select h0."ACCTNAME"
-        from raw_kcw.raw_syp_pomas_purchase_orders h0
-        where h0."DOCNO" = p.docno
-        order by h0."DOCDATE" desc nulls last
-        limit 1
-      ) h on true
       left join raw_kcw.raw_hq_apmas_payable ap on ap."ACCTNO" = p.vendor
     ),
     filtered as (
@@ -208,7 +188,7 @@ begin
     )
     select jsonb_build_object(
       'count', (select count(*)::bigint from filtered),
-      'grain', 'po',
+      'grain', 'docno',
       'rows', coalesce((
         select jsonb_agg(to_jsonb(r) order by r.docdate desc nulls last, r.docno)
         from (
@@ -234,10 +214,7 @@ begin
         nullif(btrim(coalesce(i."DOCNO", '')), '') as docno,
         left(i."DOCDATE"::text, 10) as docdate,
         nullif(btrim(coalesce(i."VENDOR", '')), '') as vendor,
-        coalesce(
-          nullif(btrim(coalesce(h."ACCTNAME", '')), ''),
-          nullif(btrim(coalesce(ap."ACCTNAME", '')), '')
-        ) as acctname,
+        nullif(btrim(coalesce(ap."ACCTNAME", '')), '') as acctname,
         nullif(btrim(coalesce(i."BCODE", '')), '') as bcode,
         nullif(btrim(coalesce(i."DESCR", '')), '') as descr,
         coalesce(i."QTY"::numeric, 0) as qty,
@@ -250,13 +227,6 @@ begin
       from raw_kcw.raw_hq_iclow_stock_orders i
       left join sibling_received sr
         on sr.docno = nullif(btrim(coalesce(i."DOCNO", '')), '')
-      left join lateral (
-        select h0."ACCTNAME"
-        from raw_kcw.raw_hq_pomas_purchase_orders h0
-        where h0."DOCNO" = i."DOCNO"
-        order by h0."DOCDATE" desc nulls last
-        limit 1
-      ) h on true
       left join raw_kcw.raw_hq_apmas_payable ap on ap."ACCTNO" = i."VENDOR"
       where coalesce(i."CANCELED", 'N') <> 'Y'
         and coalesce(i."ORDERED", 'N') <> 'X'
@@ -330,10 +300,7 @@ begin
         nullif(btrim(coalesce(i."DOCNO", '')), '') as docno,
         left(i."DOCDATE"::text, 10) as docdate,
         nullif(btrim(coalesce(i."VENDOR", '')), '') as vendor,
-        coalesce(
-          nullif(btrim(coalesce(h."ACCTNAME", '')), ''),
-          nullif(btrim(coalesce(ap."ACCTNAME", '')), '')
-        ) as acctname,
+        nullif(btrim(coalesce(ap."ACCTNAME", '')), '') as acctname,
         nullif(btrim(coalesce(i."BCODE", '')), '') as bcode,
         nullif(btrim(coalesce(i."DESCR", '')), '') as descr,
         coalesce(i."QTY"::numeric, 0) as qty,
@@ -346,13 +313,6 @@ begin
       from raw_kcw.raw_syp_iclow_stock_orders i
       left join sibling_received sr
         on sr.docno = nullif(btrim(coalesce(i."DOCNO", '')), '')
-      left join lateral (
-        select h0."ACCTNAME"
-        from raw_kcw.raw_syp_pomas_purchase_orders h0
-        where h0."DOCNO" = i."DOCNO"
-        order by h0."DOCDATE" desc nulls last
-        limit 1
-      ) h on true
       left join raw_kcw.raw_hq_apmas_payable ap on ap."ACCTNO" = i."VENDOR"
       where coalesce(i."CANCELED", 'N') <> 'Y'
         and coalesce(i."ORDERED", 'N') <> 'X'
@@ -513,17 +473,10 @@ begin
         v_docno as docno,
         (select max(docdate) from ic) as docdate,
         (select max(vendor) from ic) as vendor,
-        coalesce(
-          nullif(btrim(coalesce((
-            select h."ACCTNAME" from raw_kcw.raw_hq_pomas_purchase_orders h
-            where h."DOCNO" = v_docno
-            order by h."DOCDATE" desc nulls last limit 1
-          ), '')), ''),
-          nullif(btrim(coalesce((
-            select a."ACCTNAME" from raw_kcw.raw_hq_apmas_payable a
-            where a."ACCTNO" = (select max(vendor) from ic) limit 1
-          ), '')), '')
-        ) as acctname,
+        nullif(btrim(coalesce((
+          select a."ACCTNAME" from raw_kcw.raw_hq_apmas_payable a
+          where a."ACCTNO" = (select max(vendor) from ic) limit 1
+        ), '')), '') as acctname,
         (select count(*)::int from missing) as missing_count,
         (select count(*)::int from ic where received = 'Y') as received_iclow_count,
         (select count(*)::int from received) as received_display_count
@@ -582,17 +535,10 @@ begin
         v_docno as docno,
         (select max(docdate) from ic) as docdate,
         (select max(vendor) from ic) as vendor,
-        coalesce(
-          nullif(btrim(coalesce((
-            select h."ACCTNAME" from raw_kcw.raw_syp_pomas_purchase_orders h
-            where h."DOCNO" = v_docno
-            order by h."DOCDATE" desc nulls last limit 1
-          ), '')), ''),
-          nullif(btrim(coalesce((
-            select a."ACCTNAME" from raw_kcw.raw_hq_apmas_payable a
-            where a."ACCTNO" = (select max(vendor) from ic) limit 1
-          ), '')), '')
-        ) as acctname,
+        nullif(btrim(coalesce((
+          select a."ACCTNAME" from raw_kcw.raw_hq_apmas_payable a
+          where a."ACCTNO" = (select max(vendor) from ic) limit 1
+        ), '')), '') as acctname,
         (select count(*)::int from missing) as missing_count,
         (select count(*)::int from received) as received_iclow_count,
         (select count(*)::int from received) as received_display_count

@@ -14,6 +14,8 @@ Last reviewed: 2026-08-01
 
 Pending receive comes from **`dbo.ICLOW`** (PARTS9 / KSS HQ).
 
+**Separate from the PO list:** `/po` **รายการ PO** reads `POMAS`/`PODET`; **/po รอรับของ** reads `ICLOW` only. Same page, two sources — do not mix membership logic.
+
 It is **not** driven by flags on `POMAS` / `PODET`, and **not** by `PODET.QTY − PIDET.QTY`.
 
 Validated against operator Excel: the filter below returns **616 rows** with matching dates, BCODEs, and qtys (ingested HQ snapshot ≈ **603** — sync lag).
@@ -81,7 +83,7 @@ Same grain as the legacy report. Observed / used fields include:
 |-------|---------|-------|
 | Identity | `ID` | PARTS9 row id (stable key for app list) |
 | PO link | `DOCNO`, `DOCDATE` | PO identity when ordered; **null** while still “to be ordered” |
-| Vendor | `VENDOR` | = `POMAS.ACCTNO` when PO exists; join APMAS / POMAS for name |
+| Vendor | `VENDOR` | Supplier code; join **APMAS** for name (not POMAS) |
 | Product | `BCODE`, `DESCR`, `MCODE`, `PCODE` | Match / display |
 | Qty | `QTY`, `UI`, `MTP` | Qty on the ICLOW row |
 | Order flags | `ORDERED`, `RECEIVED`, `CANCELED` | Receive lifecycle |
@@ -97,15 +99,14 @@ Same grain as the legacy report. Observed / used fields include:
 | `ICLOW` row | 1 row ≈ 1 stock-order / receive-tracking line in PARTS9 |
 
 ```text
-ICLOW  →  POMAS   on  DOCNO (+ DOCDATE when needed)
-ICLOW  →  APMAS   on  VENDOR = ACCTNO
-ICLOW  →  product on  BCODE  (ICMAS)
+ICLOW  →  APMAS   on  VENDOR = ACCTNO   (vendor name only)
+ICLOW  →  product on  BCODE  (ICMAS)     (optional display)
 ```
 
-Join to `PODET` is optional for display enrichment.
+Do **not** join `POMAS`/`PODET` for pending-receive membership or list status.
 
 - **ค้างรับ membership** = `ICLOW` alone (§2).
-- **`DOCNO` = PO** (`POMAS.DOCNO`). Pending rows have no `RCVDNO`.
+- **`DOCNO` on ICLOW** is the PO number string (same format as `POMAS.DOCNO`) but the pending-receive feature does not read POMAS. Pending rows have no `RCVDNO`.
 - **Received link to PI** (when `RECEIVED='Y'`):
 
 ```text
@@ -134,7 +135,7 @@ Exclude from all buckets:
 |------------|-----------|-------|-----------|
 | `to_be_ordered` | รอสั่ง | line | `ORDERED=N`. `DOCNO` null in practice. |
 | `pending_receive` | ค้างรับ | line | Canonical ค้างรับ (§2) **and** no sibling on same `DOCNO` has `RECEIVED='Y'`. Whole PO still waiting. |
-| `partially_received` | รับบางส่วน | **PO** | Same `DOCNO` has both `RECEIVED='Y'` and `RECEIVED='N'` ICLOW lines. |
+| `partially_received` | รับบางส่วน | **DOCNO** (ICLOW group) | Same ICLOW `DOCNO` has both `RECEIVED='Y'` and `RECEIVED='N'` lines. |
 | `complete` | รับแล้ว | line | `ORDERED='Y' AND RECEIVED='Y'`. |
 
 ### 6.2 Partial PO detail (`fn_po_pending_receive_detail`)
@@ -197,4 +198,4 @@ If every ICLOW line on the PO is `RECEIVED='Y'` → that PO is **complete**, not
 |------|--------|-----|
 | 2026-08-01 | Document PARTS9 ค้างรับ = `ICLOW` (`ORDERED=Y`, `RECEIVED=N`, `CANCELED=N`); match Excel 616 rows | Owner |
 | 2026-08-01 | Confirm ingest tables; define `/po` four-status design; reject PODET−PIDET for membership | Agent |
-| 2026-08-01 | รับบางส่วน = PO with mixed ICLOW receive; detail via `RCVDNO→PIDET`; missing = pending ICLOW | Agent |
+| 2026-08-01 | รับบางส่วน = ICLOW DOCNO group with mixed receive; detail via `RCVDNO→PIDET`; no POMAS join | Agent |

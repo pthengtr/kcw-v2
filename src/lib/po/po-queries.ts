@@ -253,7 +253,7 @@ export const PO_PENDING_RECEIVE_STATUSES = [
 export type PoPendingReceiveStatus =
   (typeof PO_PENDING_RECEIVE_STATUSES)[number];
 
-export type PoPendingReceiveGrain = "line" | "po";
+export type PoPendingReceiveGrain = "line" | "docno";
 
 export type PoPendingReceiveRow = {
   id: string;
@@ -328,7 +328,11 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     ? (statusRaw as PoPendingReceiveStatus)
     : "pending_receive";
   const grain: PoPendingReceiveGrain =
-    row.grain === "po" || status === "partially_received" ? "po" : "line";
+    row.grain === "docno" ||
+    row.grain === "po" ||
+    status === "partially_received"
+      ? "docno"
+      : "line";
 
   return {
     id: String(row.id ?? row.docno ?? ""),
@@ -414,7 +418,11 @@ export async function listPoPendingReceive(params: {
       ? null
       : Number(payload.count);
   const grain: PoPendingReceiveGrain =
-    payload?.grain === "po" || status === "partially_received" ? "po" : "line";
+    payload?.grain === "docno" ||
+    payload?.grain === "po" ||
+    status === "partially_received"
+      ? "docno"
+      : "line";
 
   return {
     rows,
