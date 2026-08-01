@@ -11,39 +11,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SSRDatePicker } from "@/components/common/SSRDatePicker";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
 import {
   formatPoDate,
   formatPoQty,
 } from "@/lib/po/format";
-import type {
-  PoPendingReceiveDetail,
-  PoPendingReceiveGrain,
-  PoPendingReceiveRow,
-  PoPendingReceiveStatus,
+import {
+  PO_ICLOW_STATUS_TABS,
+  type PoPendingReceiveDetail,
+  type PoPendingReceiveRow,
+  type PoPendingReceiveStatus,
 } from "@/lib/po/po-queries";
 import type { PoSyncSite } from "@/lib/po/worker-jobs";
 
-const STATUS_OPTIONS: {
-  value: PoPendingReceiveStatus;
-  label: string;
-}[] = [
-  { value: "to_be_ordered", label: "รอสั่ง" },
-  { value: "pending_receive", label: "ค้างรับ" },
-  { value: "partially_received", label: "รับบางส่วน" },
-  { value: "complete", label: "รับแล้ว" },
-];
+export { PO_ICLOW_STATUS_TABS };
 
 function statusLabel(status: PoPendingReceiveStatus): string {
-  return STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status;
+  return PO_ICLOW_STATUS_TABS.find((o) => o.value === status)?.label ?? status;
 }
 
 function statusBadgeVariant(
@@ -65,19 +51,18 @@ function statusBadgeVariant(
 
 export default function PoPendingReceiveTab({
   site,
+  status,
   refreshToken,
 }: {
   site: PoSyncSite;
+  status: PoPendingReceiveStatus;
   refreshToken: number;
 }) {
   const [rows, setRows] = useState<PoPendingReceiveRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
-  const [grain, setGrain] = useState<PoPendingReceiveGrain>("line");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [status, setStatus] =
-    useState<PoPendingReceiveStatus>("pending_receive");
   const [q, setQ] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -95,11 +80,22 @@ export default function PoPendingReceiveTab({
   const [detailError, setDetailError] = useState<string | null>(null);
 
   const showDates = status !== "to_be_ordered";
+  const isBcodeQty =
+    status === "pending_receive" ||
+    status === "partially_received" ||
+    status === "complete";
   const isPartial = status === "partially_received";
 
   useEffect(() => {
     setOffset(0);
   }, [q, from, to, site, status]);
+
+  useEffect(() => {
+    if (!showDates) {
+      setFrom("");
+      setTo("");
+    }
+  }, [showDates]);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -128,11 +124,9 @@ export default function PoPendingReceiveTab({
         const data = (await res.json()) as {
           rows: PoPendingReceiveRow[];
           count: number | null;
-          grain?: PoPendingReceiveGrain;
         };
         setRows(data.rows ?? []);
         setCount(data.count ?? null);
-        setGrain(data.grain ?? (isPartial ? "docno" : "line"));
       } catch (e) {
         if (String(e).includes("AbortError")) return;
         setError(e instanceof Error ? e.message : String(e));
@@ -144,7 +138,7 @@ export default function PoPendingReceiveTab({
     }
     void fetchRows();
     return () => ac.abort();
-  }, [site, status, q, from, to, limit, offset, refreshToken, showDates, isPartial]);
+  }, [site, status, q, from, to, limit, offset, refreshToken, showDates]);
 
   async function openPartialDetail(row: PoPendingReceiveRow) {
     if (!row.docno) return;
@@ -170,8 +164,30 @@ export default function PoPendingReceiveTab({
     }
   }
 
-  const lineColumns: Column<PoPendingReceiveRow>[] = useMemo(
-    () => [
+  const lineColumns: Column<PoPendingReceiveRow>[] = useMemo(() => {
+    const vendorCol: Column<PoPendingReceiveRow> = {
+      key: "vendor",
+      header: "VENDOR",
+      className: "whitespace-nowrap",
+      render: (r) =>
+        r.vendor ? (
+          <button
+            type="button"
+            className="font-mono text-left text-primary underline-offset-2 hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              setAccountRow(r);
+              setAccountOpen(true);
+            }}
+          >
+            {r.vendor}
+          </button>
+        ) : (
+          "—"
+        ),
+    };
+
+    const baseCols: Column<PoPendingReceiveRow>[] = [
       {
         key: "status",
         header: "สถานะ",
@@ -196,33 +212,15 @@ export default function PoPendingReceiveTab({
         className: "whitespace-nowrap",
         render: (r) => formatPoDate(r.docdate),
       },
-      {
-        key: "vendor",
-        header: "VENDOR",
-        className: "whitespace-nowrap",
-        render: (r) =>
-          r.vendor ? (
-            <button
-              type="button"
-              className="font-mono text-left text-primary underline-offset-2 hover:underline"
-              onClick={(e) => {
-                e.stopPropagation();
-                setAccountRow(r);
-                setAccountOpen(true);
-              }}
-            >
-              {r.vendor}
-            </button>
-          ) : (
-            "—"
-          ),
-      },
+      vendorCol,
       {
         key: "acctname",
         header: "ผู้ขาย",
         className: "max-w-[12rem] hidden lg:table-cell",
         render: (r) => (
-          <span className="line-clamp-2 break-words">{r.acctname ?? "—"}</span>
+          <span className="line-clamp-2 break-words">
+            {r.acctname ?? "—"}
+          </span>
         ),
       },
       {
@@ -239,6 +237,49 @@ export default function PoPendingReceiveTab({
           <span className="line-clamp-2 break-words">{r.descr ?? "—"}</span>
         ),
       },
+    ];
+
+    if (isBcodeQty) {
+      return [
+        ...baseCols,
+        {
+          key: "ordered_qty",
+          header: "สั่ง",
+          className: "text-right whitespace-nowrap",
+          render: (r) => (
+            <span>
+              {formatPoQty(r.ordered_qty ?? r.qty)}
+              {r.ui ? ` ${r.ui}` : ""}
+            </span>
+          ),
+        },
+        {
+          key: "received_qty",
+          header: site === "HQ" ? "รับ (PIDET)" : "รับ",
+          className: "text-right whitespace-nowrap",
+          render: (r) => formatPoQty(r.received_qty ?? 0),
+        },
+        {
+          key: "missing_qty",
+          header: "ค้าง",
+          className: "text-right whitespace-nowrap",
+          render: (r) =>
+            formatPoQty(
+              r.missing_qty ??
+                Math.max((r.ordered_qty ?? r.qty) - (r.received_qty ?? 0), 0)
+            ),
+        },
+        {
+          key: "billno",
+          header: "RCVDNO",
+          className: "whitespace-nowrap font-mono hidden xl:table-cell",
+          render: (r) => r.billno ?? r.rcvdno ?? "—",
+        },
+      ];
+    }
+
+    return [
+      ...baseCols,
       {
         key: "qty",
         header: "จำนวน",
@@ -250,125 +291,10 @@ export default function PoPendingReceiveTab({
           </span>
         ),
       },
-      {
-        key: "rcvddate",
-        header: "วันรับ",
-        className: "whitespace-nowrap hidden xl:table-cell",
-        render: (r) => formatPoDate(r.rcvddate),
-      },
-      {
-        key: "rcvdno",
-        header: "เลขรับ",
-        className: "whitespace-nowrap hidden xl:table-cell font-mono",
-        render: (r) => r.rcvdno ?? "—",
-      },
-    ],
-    []
-  );
-
-  const poColumns: Column<PoPendingReceiveRow>[] = useMemo(
-    () => [
-      {
-        key: "docno",
-        header: "DOCNO",
-        className: "whitespace-nowrap",
-        render: (r) => (
-          <span className="font-medium">{r.docno ?? "—"}</span>
-        ),
-      },
-      {
-        key: "docdate",
-        header: "วันที่",
-        className: "whitespace-nowrap",
-        render: (r) => formatPoDate(r.docdate),
-      },
-      {
-        key: "vendor",
-        header: "VENDOR",
-        className: "whitespace-nowrap",
-        render: (r) =>
-          r.vendor ? (
-            <button
-              type="button"
-              className="font-mono text-left text-primary underline-offset-2 hover:underline"
-              onClick={(e) => {
-                e.stopPropagation();
-                setAccountRow(r);
-                setAccountOpen(true);
-              }}
-            >
-              {r.vendor}
-            </button>
-          ) : (
-            "—"
-          ),
-      },
-      {
-        key: "acctname",
-        header: "ผู้ขาย",
-        className: "max-w-[14rem] hidden md:table-cell",
-        render: (r) => (
-          <span className="line-clamp-2 break-words">{r.acctname ?? "—"}</span>
-        ),
-      },
-      {
-        key: "missing_count",
-        header: "ค้าง (รายการ)",
-        className: "text-right whitespace-nowrap font-semibold",
-        render: (r) => formatPoQty(r.missing_count ?? 0),
-      },
-      {
-        key: "received_count",
-        header: "รับแล้ว (รายการ)",
-        className: "text-right whitespace-nowrap",
-        render: (r) => formatPoQty(r.received_count ?? 0),
-      },
-      {
-        key: "missing_qty",
-        header: "ค้าง (qty)",
-        className: "text-right whitespace-nowrap hidden lg:table-cell",
-        render: (r) => formatPoQty(r.missing_qty ?? 0),
-      },
-      {
-        key: "received_qty",
-        header: "รับแล้ว (qty)",
-        className: "text-right whitespace-nowrap hidden lg:table-cell",
-        render: (r) => formatPoQty(r.received_qty ?? 0),
-      },
-    ],
-    []
-  );
+    ];
+  }, [isBcodeQty, site]);
 
   function renderMobileCard(row: PoPendingReceiveRow) {
-    if (grain === "docno") {
-      return (
-        <div className="w-full rounded-md border bg-white p-3 text-left">
-          <div className="flex items-start justify-between gap-2">
-            <div className="font-medium break-all">{row.docno || "—"}</div>
-            <Badge variant="outline">รับบางส่วน</Badge>
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {formatPoDate(row.docdate)}
-          </div>
-          <div className="mt-2 text-sm line-clamp-2 break-words">
-            {row.acctname || row.vendor || "—"}
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-xs text-muted-foreground">ค้าง</div>
-              <div className="font-semibold">
-                {formatPoQty(row.missing_count ?? 0)} รายการ
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">รับแล้ว</div>
-              <div>{formatPoQty(row.received_count ?? 0)} รายการ</div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="w-full rounded-md border bg-white p-3 text-left">
         <div className="flex items-start justify-between gap-2">
@@ -388,13 +314,38 @@ export default function PoPendingReceiveTab({
             <div className="text-xs text-muted-foreground">BCODE</div>
             <div className="font-mono break-all">{row.bcode || "—"}</div>
           </div>
-          <div>
-            <div className="text-xs text-muted-foreground">จำนวน</div>
-            <div className="font-semibold">
-              {formatPoQty(row.qty)}
-              {row.ui ? ` ${row.ui}` : ""}
+          {isBcodeQty ? (
+            <>
+              <div>
+                <div className="text-xs text-muted-foreground">สั่ง / รับ / ค้าง</div>
+                <div className="font-semibold">
+                  {formatPoQty(row.ordered_qty ?? row.qty)} /{" "}
+                  {formatPoQty(row.received_qty ?? 0)} /{" "}
+                  {formatPoQty(
+                    row.missing_qty ??
+                      Math.max(
+                        (row.ordered_qty ?? row.qty) - (row.received_qty ?? 0),
+                        0
+                      )
+                  )}
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-xs text-muted-foreground">RCVDNO</div>
+                <div className="font-mono break-all">
+                  {row.billno || row.rcvdno || "—"}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div>
+              <div className="text-xs text-muted-foreground">จำนวน</div>
+              <div className="font-semibold">
+                {formatPoQty(row.qty)}
+                {row.ui ? ` ${row.ui}` : ""}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         {row.descr ? (
           <div className="mt-2 text-xs text-muted-foreground line-clamp-2">
@@ -408,33 +359,18 @@ export default function PoPendingReceiveTab({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        {isPartial
+        {isBcodeQty
           ? site === "HQ"
-            ? "แยกจากรายการ PO (POMAS) — กลุ่ม DOCNO ใน ICLOW ที่รับบางส่วน; คลิกดูค้าง vs รับแล้ว (RCVDNO → PIDET)"
-            : "แยกจากรายการ PO (POMAS) — กลุ่ม DOCNO ใน ICLOW ที่รับบางส่วน; คลิกดูค้าง vs รับแล้วจาก ICLOW"
+            ? "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). RECEIVED=Y = รับแล้วหรือรับบางส่วนตามจำนวน PIDET"
+            : "เกรน DOCNO+BCODE — สั่ง/รับจาก ICLOW (ไม่มี PIDET ที่ SYP)"
           : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <Select
-          value={status}
-          onValueChange={(v) => setStatus(v as PoPendingReceiveStatus)}
-        >
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="สถานะ" />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <Input
           className="w-full sm:max-w-xs"
           placeholder={
-            isPartial
-              ? "ค้นหา DOCNO / ผู้ขาย"
+            isBcodeQty
+              ? "ค้นหา DOCNO / BCODE / RCVDNO / ผู้ขาย"
               : "ค้นหา DOCNO / BCODE / ผู้ขาย"
           }
           value={q}
@@ -442,19 +378,21 @@ export default function PoPendingReceiveTab({
         />
         {showDates ? (
           <>
-            <Input
-              type="date"
-              className="w-full sm:w-[160px]"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              aria-label="จากวันที่"
+            <SSRDatePicker
+              name="from-date"
+              placeholder="จากวันที่"
+              value={from || undefined}
+              onChange={(val) => setFrom(val ?? "")}
+              className="sm:w-[180px]"
+              clearable
             />
-            <Input
-              type="date"
-              className="w-full sm:w-[160px]"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              aria-label="ถึงวันที่"
+            <SSRDatePicker
+              name="to-date"
+              placeholder="ถึงวันที่"
+              value={to || undefined}
+              onChange={(val) => setTo(val ?? "")}
+              className="sm:w-[180px]"
+              clearable
             />
           </>
         ) : null}
@@ -463,7 +401,7 @@ export default function PoPendingReceiveTab({
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <ServerPagedTable
-        columns={grain === "docno" ? poColumns : lineColumns}
+        columns={lineColumns}
         rows={rows}
         count={count}
         limit={limit}
@@ -471,14 +409,8 @@ export default function PoPendingReceiveTab({
         onOffsetChange={setOffset}
         onLimitChange={setLimit}
         loading={loading}
-        tableMinWidthClassName={
-          grain === "docno" ? "min-w-[44rem]" : "min-w-[56rem]"
-        }
-        rowKey={(row) =>
-          grain === "docno"
-            ? row.docno || row.id
-            : row.id || `${row.docno}-${row.bcode}`
-        }
+        tableMinWidthClassName="min-w-[56rem]"
+        rowKey={(row) => row.id || `${row.docno}-${row.bcode}`}
         onRowClick={isPartial ? openPartialDetail : undefined}
         mobileCardRender={renderMobileCard}
       />
@@ -502,7 +434,7 @@ export default function PoPendingReceiveTab({
                 </div>
                 <div>วันที่ (ICLOW DOCDATE): {formatPoDate(detail.docdate)}</div>
                 <div>
-                  ค้าง {detail.missing_count} รายการ · รับแล้วบน ICLOW{" "}
+                  BCODE ค้าง qty {detail.missing_count} · รับบน ICLOW{" "}
                   {detail.received_iclow_count} · แสดงรับ{" "}
                   {detail.received_display_count}
                 </div>
@@ -510,7 +442,7 @@ export default function PoPendingReceiveTab({
 
               <div>
                 <h3 className="mb-2 text-sm font-semibold">
-                  ของที่ยังค้าง (ICLOW RECEIVED=N)
+                  ของที่ยังค้าง (สั่ง − PIDET ผ่าน RCVDNO)
                 </h3>
                 <ScrollArea className="max-h-[28vh] rounded-md border">
                   <table className="w-full text-sm">
@@ -518,7 +450,7 @@ export default function PoPendingReceiveTab({
                       <tr className="border-b bg-muted/40 text-left">
                         <th className="p-2">BCODE</th>
                         <th className="p-2">รายละเอียด</th>
-                        <th className="p-2 text-right">จำนวน</th>
+                        <th className="p-2 text-right">ค้าง</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -562,7 +494,7 @@ export default function PoPendingReceiveTab({
                     <thead>
                       <tr className="border-b bg-muted/40 text-left">
                         <th className="p-2">ที่มา</th>
-                        <th className="p-2">เลขรับ</th>
+                        <th className="p-2">RCVDNO</th>
                         <th className="p-2">BCODE</th>
                         <th className="p-2">รายละเอียด</th>
                         <th className="p-2 text-right">จำนวน</th>

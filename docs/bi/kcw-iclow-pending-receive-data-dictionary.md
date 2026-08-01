@@ -14,7 +14,7 @@ Last reviewed: 2026-08-01
 
 Pending receive comes from **`dbo.ICLOW`** (PARTS9 / KSS HQ).
 
-**Separate from the PO list:** `/po` **รายการ PO** reads `POMAS`/`PODET`; **/po รอรับของ** reads `ICLOW` only. Same page, two sources — do not mix membership logic.
+**Separate from the PO list:** `/po` **รายการ PO** reads `POMAS`/`PODET`; `/po` ICLOW tabs (**รอสั่งซื้อ** / **ค้างรับ** / **รับบางส่วน** / **รับแล้ว**) read `ICLOW` only. Same page, two sources — do not mix membership logic.
 
 It is **not** driven by flags on `POMAS` / `PODET`, and **not** by `PODET.QTY − PIDET.QTY`.
 
@@ -131,31 +131,36 @@ Exclude from all buckets:
 - `coalesce(CANCELED,'N') = 'Y'`
 - `ORDERED = 'X'` (**TBD** — hidden until confirmed)
 
+**Ordered grain = `DOCNO + BCODE`** (sum ICLOW `QTY`).  
+**HQ received qty** = sum `PIDET.QTY` joined on distinct `ICLOW.RCVDNO = PIDET.BILLNO` + same `BCODE`.  
+Do **not** use `PIMAS.PO` (unreliable).  
+`RECEIVED='Y'` alone is not “fully received” — it means complete **or** partial after the PIDET qty check.
+
 | Status key | Thai (UI) | Grain | Predicate |
 |------------|-----------|-------|-----------|
-| `to_be_ordered` | รอสั่ง | line | `ORDERED=N`. `DOCNO` null in practice. |
-| `pending_receive` | ค้างรับ | line | Canonical ค้างรับ (§2) **and** no sibling on same `DOCNO` has `RECEIVED='Y'`. Whole PO still waiting. |
-| `partially_received` | รับบางส่วน | **DOCNO** (ICLOW group) | Same ICLOW `DOCNO` has both `RECEIVED='Y'` and `RECEIVED='N'` lines. |
-| `complete` | รับแล้ว | line | `ORDERED='Y' AND RECEIVED='Y'`. |
+| `to_be_ordered` | รอสั่งซื้อ | line | `ORDERED=N`. `DOCNO` null in practice. |
+| `pending_receive` | ค้างรับ | bcode | `ORDERED=Y` and **no** ICLOW row for that DOCNO+BCODE has `RECEIVED='Y'`. |
+| `partially_received` | รับบางส่วน | bcode | Any `RECEIVED='Y'` on that DOCNO+BCODE, and PIDET qty via `RCVDNO` **&lt;** ordered qty (includes Y with no matching PIDET). |
+| `complete` | รับแล้ว | bcode | Any `RECEIVED='Y'` and PIDET qty via `RCVDNO` **≥** ordered qty. |
+
+SYP has no PIDET: `received_qty` = sum ICLOW `QTY` where `RECEIVED='Y'` on that DOCNO+BCODE; same complete/partial/pending split.
 
 ### 6.2 Partial PO detail (`fn_po_pending_receive_detail`)
 
-Click a partial PO:
+Click a partial DOCNO:
 
 | Section | Source |
 |---------|--------|
-| **Missing** | ICLOW on that `DOCNO` with `RECEIVED='N'` |
-| **Received (HQ)** | `RCVDNO` → `PIMAS.BILLNO` → `PIDET` lines; if `RCVDNO` not in PIMAS, show the ICLOW received row (`source=iclow`) |
+| **Missing** | Per BCODE: `ordered_qty − received_qty` where still positive (HQ: PIDET via `RCVDNO`) |
+| **Received (HQ)** | Distinct `RCVDNO` → `PIDET` lines on BILLNO+BCODE; orphan ICLOW Y rows if no PIDET match (`source=iclow`) |
 | **Received (SYP)** | ICLOW `RECEIVED='Y'` only (no SYP PIDET) |
-
-If every ICLOW line on the PO is `RECEIVED='Y'` → that PO is **complete**, not partial.
 
 ### 6.3 Notes
 
-- Classic Excel ค้างรับ (all `RECEIVED=N`) ≈ lines in `pending_receive` **plus** missing lines inside partial PO detail.
-- Do **not** use `PODET.QTY − PIDET.QTY` for membership.
+- Do **not** use mixed-DOCNO sibling logic for รับบางส่วน.
+- Do **not** use `PIMAS.PO` or `PODET.QTY − PIDET.QTY` for membership.
 - Default UI filter: **`pending_receive`**.
-- `complete` keeps a date / months window on `DOCDATE` (default 12).
+- `complete` / `partially_received` / `pending_receive` keep a date / months window on `DOCDATE` (default 12).
 - `to_be_ordered` skips the months cutoff.
 
 ### 6.4 Observed HQ counts (ingested snapshot 2026-08-01)
@@ -163,9 +168,9 @@ If every ICLOW line on the PO is `RECEIVED='Y'` → that PO is **complete**, not
 | Bucket | ≈ |
 |--------|--:|
 | `to_be_ordered` (lines) | 274 |
-| `pending_receive` (lines) | 415 |
-| `partially_received` (POs) | 127 |
-| `complete` (lines) | 8089 |
+| `pending_receive` (bcode) | (no RECEIVED=Y) |
+| `partially_received` (bcode) | RECEIVED=Y and PIDET via RCVDNO incomplete |
+| `complete` (bcode) | RECEIVED=Y and PIDET via RCVDNO covers ordered qty |
 | `ORDERED='X'` (hidden) | 60 |
 
 ### 6.5 API / RPC
@@ -196,6 +201,8 @@ If every ICLOW line on the PO is `RECEIVED='Y'` → that PO is **complete**, not
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-08-01 | BCODE grain: RECEIVED=Y → complete/partial via RCVDNO→PIDET qty; drop mixed DOCNO + PIMAS.PO | Agent |
+| 2026-08-01 | `partially_received` = ICLOW line rows on mixed DOCNO with receive_state + PIMAS BILLNO | Agent |
 | 2026-08-01 | Document PARTS9 ค้างรับ = `ICLOW` (`ORDERED=Y`, `RECEIVED=N`, `CANCELED=N`); match Excel 616 rows | Owner |
 | 2026-08-01 | Confirm ingest tables; define `/po` four-status design; reject PODET−PIDET for membership | Agent |
 | 2026-08-01 | รับบางส่วน = ICLOW DOCNO group with mixed receive; detail via `RCVDNO→PIDET`; no POMAS join | Agent |

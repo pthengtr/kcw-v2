@@ -92,6 +92,7 @@ Poll with `select ... from ops.job_queue where id = :id` until `done` / `failed`
 | `sync_product_images` | HQ-PC + SYP-PC | site + bucket/folder |
 | `sync_online_sales` | HQ-PC | site HQ |
 | `sync_pomas_podet` | HQ-PC + SYP-PC | `{ "task","site" }` |
+| `sync_iclow` | HQ-PC + SYP-PC (**2 jobs**, shared `batch_id`) | `{ "task":"sync_iclow", "site":"HQ"\|"SYP", "batch_id" }` |
 | `bank_statement_import` | `null` (either) | `{ "task":"bank_statement_import" }` |
 | `syp_raw` | SYP-PC | `{ "task","site":"SYP" }` |
 | `hq_raw` / `hq_full` | HQ-PC | `{ "task","site":"HQ" }` |
@@ -134,6 +135,15 @@ New features almost never need new queue tables — only new `job_type` values a
 - UI **Inventory Sync** → `POST /api/po/inventory-sync`, poll `GET /api/po/inventory-sync/:jobId` for each job; meta includes `inventory.hqLastUpdatedAt` + `inventory.inFlightJobs`.
 - SYP PO line detail shows HQ on-hand from `curated_kcw.inventory_qty_latest` (`branch='HQ'`) next to ICMAS location — see [bi/sql/po_syp_prepare_line.sql](./bi/sql/po_syp_prepare_line.sql).
 - Service-role RPCs: `fn_inventory_find_inflight_sync()`, `fn_inventory_enqueue_sync(p_requested_by)`, `fn_inventory_last_updated_at` — see [bi/sql/fn_inventory_sync_ops.sql](./bi/sql/fn_inventory_sync_ops.sql).
+
+### ICLOW sync from `/po` (kcw-v2) — รอสั่งซื้อ / ค้างรับ
+
+- Job: `sync_iclow` — **one button** enqueues **two rows** (HQ-PC + SYP-PC) with shared `batch_id` (same as LINE).
+- Payload: `{ "task":"sync_iclow", "site":"HQ"|"SYP", "batch_id":"<uuid>" }`.
+- Before insert: if any recent (`< 30 min`) `sync_iclow` is `pending`/`running`, return **already running**.
+- Gate: at least one PC online (~30s); still enqueue both site jobs.
+- UI **อัพเดตรอสั่งซื้อ/ค้างรับ** → `POST /api/po/iclow-sync`, poll `GET /api/po/iclow-sync/:jobId`; meta includes `iclow.hqLastIngestedAt` / `sypLastIngestedAt` + `iclow.inFlightJobs`.
+- Service-role RPCs: `fn_iclow_find_inflight_sync()`, `fn_iclow_enqueue_sync(p_requested_by)`, `fn_iclow_last_ingested_at` — see [bi/sql/fn_iclow_sync_ops.sql](./bi/sql/fn_iclow_sync_ops.sql).
 
 ### Bank statement match — จับคู่ยอดเข้า (full account numbers)
 

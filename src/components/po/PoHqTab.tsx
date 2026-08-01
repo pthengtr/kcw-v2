@@ -10,32 +10,32 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
-import PoPendingReceiveTab from "@/components/po/PoPendingReceiveTab";
+import PoPendingReceiveTab, {
+  PO_ICLOW_STATUS_TABS,
+} from "@/components/po/PoPendingReceiveTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   billedLabel,
   formatPoAmount,
   formatPoDate,
 } from "@/lib/po/format";
-import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
+import type {
+  PoHeaderRow,
+  PoLineRow,
+  PoPendingReceiveStatus,
+} from "@/lib/po/po-queries";
+
+type PoHqView = "list" | PoPendingReceiveStatus;
 
 export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
-  const [view, setView] = useState<"list" | "pending">("list");
+  const [view, setView] = useState<PoHqView>("list");
   const [rows, setRows] = useState<PoHeaderRow[]>([]);
   const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [status, setStatus] = useState<"open" | "billed" | "all">("open");
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
@@ -49,7 +49,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
 
   useEffect(() => {
     setOffset(0);
-  }, [status, q]);
+  }, [q]);
 
   useEffect(() => {
     if (view !== "list") return;
@@ -59,7 +59,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
       setError(null);
       try {
         const params = new URLSearchParams();
-        params.set("status", status);
+        params.set("status", "all");
         if (q.trim()) params.set("q", q.trim());
         params.set("limit", String(limit));
         params.set("offset", String(offset));
@@ -89,7 +89,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
     }
     void fetchRows();
     return () => ac.abort();
-  }, [view, status, q, limit, offset, refreshToken]);
+  }, [view, q, limit, offset, refreshToken]);
 
   async function openDetail(row: PoHeaderRow) {
     setSelected(row);
@@ -213,25 +213,16 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
       >
         <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
           <TabsTrigger value="list">รายการ PO</TabsTrigger>
-          <TabsTrigger value="pending">รอรับของ (ICLOW)</TabsTrigger>
+          {PO_ICLOW_STATUS_TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="list" className="mt-3">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-              <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as typeof status)}
-              >
-                <SelectTrigger className="w-full sm:w-[160px]">
-                  <SelectValue placeholder="สถานะ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">เปิด</SelectItem>
-                  <SelectItem value="billed">รับแล้ว</SelectItem>
-                  <SelectItem value="all">ทั้งหมด</SelectItem>
-                </SelectContent>
-              </Select>
               <Input
                 className="w-full sm:max-w-xs"
                 placeholder="ค้นหา DOCNO / ผู้ขาย"
@@ -333,9 +324,15 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
           </div>
         </TabsContent>
 
-        <TabsContent value="pending" className="mt-3">
-          <PoPendingReceiveTab site="HQ" refreshToken={refreshToken} />
-        </TabsContent>
+        {PO_ICLOW_STATUS_TABS.map((tab) => (
+          <TabsContent key={tab.value} value={tab.value} className="mt-3">
+            <PoPendingReceiveTab
+              site="HQ"
+              status={tab.value}
+              refreshToken={refreshToken}
+            />
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   );

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ICLOW_SYNC_JOB_TYPE,
+  ICLOW_SYNC_SITES,
   INVENTORY_SYNC_JOB_TYPE,
   INVENTORY_SYNC_SITES,
   isWorkerOnline,
@@ -13,7 +15,10 @@ import {
   formatPoDate,
   formatPoQty,
 } from "@/lib/po/format";
-import { PO_PENDING_RECEIVE_STATUSES } from "@/lib/po/po-queries";
+import {
+  PO_ICLOW_STATUS_TABS,
+  PO_PENDING_RECEIVE_STATUSES,
+} from "@/lib/po/po-queries";
 import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { canAccessPoStatus } from "@/lib/auth/client-permissions";
 
@@ -34,6 +39,11 @@ describe("PO worker helpers", () => {
     expect(INVENTORY_SYNC_SITES).toEqual(["HQ", "SYP"]);
     expect(workerNameForSite("HQ")).toBe("HQ-PC");
     expect(workerNameForSite("SYP")).toBe("SYP-PC");
+  });
+
+  it("maps ICLOW sync to both site workers", () => {
+    expect(ICLOW_SYNC_JOB_TYPE).toBe("sync_iclow");
+    expect(ICLOW_SYNC_SITES).toEqual(["HQ", "SYP"]);
   });
 });
 
@@ -69,6 +79,18 @@ describe("PO pending receive statuses", () => {
       "pending_receive",
       "partially_received",
       "complete",
+    ]);
+  });
+
+  it("exposes four ICLOW status tab labels", () => {
+    expect(PO_ICLOW_STATUS_TABS.map((t) => t.label)).toEqual([
+      "รอสั่งซื้อ",
+      "ค้างรับ",
+      "รับบางส่วน",
+      "รับแล้ว",
+    ]);
+    expect(PO_ICLOW_STATUS_TABS.map((t) => t.value)).toEqual([
+      ...PO_PENDING_RECEIVE_STATUSES,
     ]);
   });
 });

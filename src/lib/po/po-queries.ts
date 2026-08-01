@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
+  findInFlightIclowSync,
   findInFlightInventorySync,
   findInFlightPoSync,
+  fetchIclowLastIngestedAt,
   fetchInventoryLastUpdatedAt,
   getWorkerHeartbeat,
   isWorkerOnline,
@@ -150,10 +152,14 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     })
   );
 
-  const [hqInventoryUpdatedAt, inventoryInFlight] = await Promise.all([
-    fetchInventoryLastUpdatedAt(supabase, "HQ"),
-    findInFlightInventorySync(supabase),
-  ]);
+  const [hqInventoryUpdatedAt, inventoryInFlight, hqIclowAt, sypIclowAt, iclowInFlight] =
+    await Promise.all([
+      fetchInventoryLastUpdatedAt(supabase, "HQ"),
+      findInFlightInventorySync(supabase),
+      fetchIclowLastIngestedAt(supabase, "HQ"),
+      fetchIclowLastIngestedAt(supabase, "SYP"),
+      findInFlightIclowSync(supabase),
+    ]);
 
   return {
     sites: Object.fromEntries(siteEntries) as Record<
@@ -170,6 +176,11 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     inventory: {
       hqLastUpdatedAt: hqInventoryUpdatedAt,
       inFlightJobs: inventoryInFlight,
+    },
+    iclow: {
+      hqLastIngestedAt: hqIclowAt,
+      sypLastIngestedAt: sypIclowAt,
+      inFlightJobs: iclowInFlight,
     },
   };
 }
@@ -253,7 +264,17 @@ export const PO_PENDING_RECEIVE_STATUSES = [
 export type PoPendingReceiveStatus =
   (typeof PO_PENDING_RECEIVE_STATUSES)[number];
 
-export type PoPendingReceiveGrain = "line" | "docno";
+export const PO_ICLOW_STATUS_TABS: {
+  value: PoPendingReceiveStatus;
+  label: string;
+}[] = [
+  { value: "to_be_ordered", label: "รอสั่งซื้อ" },
+  { value: "pending_receive", label: "ค้างรับ" },
+  { value: "partially_received", label: "รับบางส่วน" },
+  { value: "complete", label: "รับแล้ว" },
+];
+
+export type PoPendingReceiveGrain = "line" | "docno" | "bcode";
 
 export type PoPendingReceiveRow = {
   id: string;
@@ -269,10 +290,12 @@ export type PoPendingReceiveRow = {
   received: string | null;
   rcvddate: string | null;
   rcvdno: string | null;
+  /** ICLOW.RCVDNO → PIMAS/PIDET bill ref (HQ) or RCVDNO (SYP) */
+  billno?: string | null;
+  billdate?: string | null;
   status: PoPendingReceiveStatus;
   grain: PoPendingReceiveGrain;
-  missing_count?: number;
-  received_count?: number;
+  ordered_qty?: number;
   missing_qty?: number;
   received_qty?: number;
 };
@@ -328,14 +351,14 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     ? (statusRaw as PoPendingReceiveStatus)
     : "pending_receive";
   const grain: PoPendingReceiveGrain =
-    row.grain === "docno" ||
-    row.grain === "po" ||
-    status === "partially_received"
+    row.grain === "docno" || row.grain === "po"
       ? "docno"
-      : "line";
+      : row.grain === "bcode"
+        ? "bcode"
+        : "line";
 
   return {
-    id: String(row.id ?? row.docno ?? ""),
+    id: String(row.id ?? `${row.docno ?? ""}|${row.bcode ?? ""}`),
     docno: (row.docno as string | null) ?? null,
     docdate: (row.docdate as string | null) ?? null,
     vendor: (row.vendor as string | null) ?? null,
@@ -348,12 +371,12 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     received: (row.received as string | null) ?? null,
     rcvddate: (row.rcvddate as string | null) ?? null,
     rcvdno: (row.rcvdno as string | null) ?? null,
+    billno: (row.billno as string | null) ?? null,
+    billdate: (row.billdate as string | null) ?? null,
     status,
     grain,
-    missing_count:
-      row.missing_count === undefined ? undefined : num(row.missing_count),
-    received_count:
-      row.received_count === undefined ? undefined : num(row.received_count),
+    ordered_qty:
+      row.ordered_qty === undefined ? undefined : num(row.ordered_qty),
     missing_qty:
       row.missing_qty === undefined ? undefined : num(row.missing_qty),
     received_qty:
@@ -418,11 +441,11 @@ export async function listPoPendingReceive(params: {
       ? null
       : Number(payload.count);
   const grain: PoPendingReceiveGrain =
-    payload?.grain === "docno" ||
-    payload?.grain === "po" ||
-    status === "partially_received"
+    payload?.grain === "docno" || payload?.grain === "po"
       ? "docno"
-      : "line";
+      : payload?.grain === "bcode"
+        ? "bcode"
+        : "line";
 
   return {
     rows,
