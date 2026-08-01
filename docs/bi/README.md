@@ -21,7 +21,6 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_inventory_sync_ops.sql](./sql/fn_inventory_sync_ops.sql) | Enqueue/poll `sync_inventory` + last HQ inventory `updated_at` |
 | [sql/fn_po_sync_ops.sql](./sql/fn_po_sync_ops.sql) | Service-role RPCs for PO sync via `ops.job_queue` |
 | [sql/fn_po_list.sql](./sql/fn_po_list.sql) | PO list + last-ingested RPCs / open-PO indexes |
-| [sql/fn_po_pending_receive.sql](./sql/fn_po_pending_receive.sql) | **Interim** pending UI RPC (PODET−PIDET) — replace with `ICLOW` after ingest |
 | [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictionary.md) | Stock-more + dead-stock aging rules |
 | [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
 | [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products` |
@@ -33,7 +32,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 
 ## App entry
 
-- UI: `/po` — HQ/SYP purchase-order status + pending-receive trial (interim PODET−PIDET; **v2 = `ICLOW`** — see [ICLOW dictionary](./kcw-iclow-pending-receive-data-dictionary.md))
+- UI: `/po` — HQ/SYP purchase-order status; pending receive (ค้างรับ) = `ICLOW` — see [ICLOW dictionary](./kcw-iclow-pending-receive-data-dictionary.md)
 - UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/income`
 - API: `GET /api/bi/sales/overview?from=&to=&branch=`
 - API: `GET /api/bi/sales/compare?mode=years|months&years=&periods=&branch=`

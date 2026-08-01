@@ -10,11 +10,11 @@ Last reviewed: 2026-08-01
 
 ---
 
-## 1. Verdict (Confirmed)
+## 1. Source (Confirmed)
 
-Pending receive is **not** driven by flags on `POMAS` / `PODET`.
+Pending receive comes from **`dbo.ICLOW`** (PARTS9 / KSS HQ).
 
-It comes from **`dbo.ICLOW`** (PARTS9 / KSS HQ).
+It is **not** driven by flags on `POMAS` / `PODET`.
 
 Validated against operator Excel: the filter below returns **616 rows** with matching dates, BCODEs, and qtys.
 
@@ -53,16 +53,13 @@ WHERE "ORDERED" = 'Y'
 
 ---
 
-## 3. What it is *not*
-
-Do **not** use these as receive / pending indicators for this report:
+## 3. Do not use as receive indicators
 
 | Field | Why |
 |-------|-----|
 | `PODET.DONE` / `POMAS.DONE` | Always `'N'` in this DB — unused for receive |
 | `PODET.STATUS` | Product status (≈ `ICMAS.STATUS`), not receive state |
-| `POMAS.BILLED` / `BILLNO` | Header “billed at least once”; partial bills still leave other lines pending in `ICLOW` |
-| Computed `PODET.QTY − Σ PIDET.QTY` by BCODE | Heuristic only; **not** what PARTS9 uses for ค้างรับ |
+| `POMAS.BILLED` / `BILLNO` | Header “billed at least once”; partial bills can still leave other lines pending in `ICLOW` |
 
 `BILLED = 'Y'` can coexist with remaining `ICLOW` pending rows on the same PO.
 
@@ -108,23 +105,12 @@ Join to `PODET` is optional for display enrichment; **pending membership is defi
 | SYP `ICLOW` | TBD (mirror if SYP PARTS9 has the same table) |
 | Ingest into `raw_kcw` | **In progress** (owner creating table + sync) |
 | Expected raw table name | `raw_kcw.raw_hq_iclow_*` (name TBD at ingest) |
-| App UI `/po` → รอรับของ (ทดลองใช้) | Currently uses interim `fn_po_pending_receive` (PODET−PIDET / open headers) — **revise after ICLOW ingest** |
-| Correct v2 list | Filter `ICLOW` with §2 predicate; sort/filters on `DOCDATE`, `DOCNO`, `VENDOR`, `BCODE` |
+| App list | Filter ingested `ICLOW` with §2 predicate; sort/filters on `DOCDATE`, `DOCNO`, `VENDOR`, `BCODE` |
 
 ---
 
-## 7. App revision checklist (after ingest)
-
-1. Confirm raw table name + columns in Supabase
-2. Replace / rewrite `fn_po_pending_receive` to read `ICLOW` pending filter (§2)
-3. Point `/api/po/pending-receive` + UI tab at the new RPC
-4. Keep per-branch UX (HQ / SYP) if SYP `ICLOW` exists; otherwise HQ-only for this list
-5. Drop reliance on PIDET qty reconciliation for this screen
-
----
-
-## 8. Changelog
+## 7. Changelog
 
 | Date | Change | By |
 |------|--------|----|
-| 2026-08-01 | Document PARTS9 ค้างรับ = `ICLOW` (`ORDERED=Y`, `RECEIVED=N`, `CANCELED=N`); match Excel 616 rows; mark PODET−PIDET trial as interim | Owner |
+| 2026-08-01 | Document PARTS9 ค้างรับ = `ICLOW` (`ORDERED=Y`, `RECEIVED=N`, `CANCELED=N`); match Excel 616 rows | Owner |
