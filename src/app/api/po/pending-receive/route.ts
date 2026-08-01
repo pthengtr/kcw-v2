@@ -9,6 +9,8 @@ import {
 } from "@/lib/po/po-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const maxDuration = 60;
+
 const QuerySchema = z.object({
   site: z.enum(["HQ", "SYP"]),
   status: z.enum(PO_PENDING_RECEIVE_STATUSES).default("pending_receive"),

@@ -1,3 +1,26 @@
+-- Perf indexes + optimized pending-receive RPCs
+-- Resolve RCVDNO→BILLNO once; date-filter ICLOW early; skip PIDET for pending_receive.
+
+create index if not exists raw_hq_pimas_billno_prefix12_idx
+  on raw_kcw.raw_hq_pimas_purchase_bills (left("BILLNO", 12))
+  where coalesce("CANCELED", '') <> 'Y'
+    and char_length(btrim("BILLNO")) > 12;
+
+create index if not exists raw_hq_iclow_ordered_y_docdate_idx
+  on raw_kcw.raw_hq_iclow_stock_orders ("DOCDATE")
+  where coalesce("CANCELED", 'N') <> 'Y'
+    and "ORDERED" = 'Y';
+
+create index if not exists raw_syp_iclow_ordered_y_docdate_idx
+  on raw_kcw.raw_syp_iclow_stock_orders ("DOCDATE")
+  where coalesce("CANCELED", 'N') <> 'Y'
+    and "ORDERED" = 'Y';
+
+create index if not exists raw_hq_pidet_billno_bcode_qty_idx
+  on raw_kcw.raw_hq_pidet_purchase_lines ("BILLNO", "BCODE")
+  where coalesce("CANCELED", '') <> 'Y'
+    and coalesce("BILLTYPE", '') in ('1', '2', '3');
+
 -- ICLOW-backed pending-receive list + partial PO detail for /po.
 -- Source of truth: docs/bi/kcw-iclow-pending-receive-data-dictionary.md §6
 --
@@ -42,10 +65,6 @@ declare
   v_cutoff text := to_char((current_date - make_interval(months => v_months)), 'YYYY-MM-DD');
   v_result jsonb;
 begin
-  -- Avoid temp-file spill on large DOCNO+BCODE aggregates / joins.
-  perform set_config('work_mem', '64MB', true);
-  perform set_config('plan_cache_mode', 'force_custom_plan', true);
-
   if v_site not in ('HQ', 'SYP') then
     raise exception 'invalid site: %', p_site;
   end if;
@@ -169,11 +188,11 @@ begin
   -- ค้างรับ / รับบางส่วน / รับแล้ว: DOCNO+BCODE grain
   elsif v_site = 'HQ' and v_status = 'pending_receive' then
     -- Light path: no PIDET (pending = no RECEIVED=Y on the BCODE)
-    with ic as materialized (
+    with ic as (
       select
         i."ID" as id,
         nullif(btrim(coalesce(i."DOCNO", '')), '') as docno,
-        i."DOCDATE" as docdate,
+        left(i."DOCDATE"::text, 10) as docdate,
         nullif(btrim(coalesce(i."VENDOR", '')), '') as vendor,
         nullif(btrim(coalesce(i."BCODE", '')), '') as bcode,
         nullif(btrim(coalesce(i."DESCR", '')), '') as descr,
@@ -188,10 +207,10 @@ begin
         and nullif(btrim(coalesce(i."BCODE", '')), '') is not null
         and (
           case
-            when v_from is not null then coalesce(i."DOCDATE", '') >= v_from
-            else coalesce(i."DOCDATE", '') >= v_cutoff
+            when v_from is not null then left(i."DOCDATE"::text, 10) >= v_from
+            else left(i."DOCDATE"::text, 10) >= v_cutoff
           end
-          and (v_to is null or coalesce(i."DOCDATE", '') <= v_to)
+          and (v_to is null or left(i."DOCDATE"::text, 10) <= v_to)
         )
         and (v_vendor is null or nullif(btrim(coalesce(i."VENDOR", '')), '') = v_vendor)
     ),
@@ -205,7 +224,8 @@ begin
         max(i.descr) as descr,
         sum(i.qty) as ordered_qty,
         max(i.ui) as ui,
-        max(i.rcvdno) as rcvdnos
+        string_agg(distinct i.rcvdno, ', ' order by i.rcvdno)
+          filter (where i.rcvdno is not null) as rcvdnos
       from ic i
       group by i.docno, i.bcode
       having bool_or(i.received = 'Y') = false
@@ -235,7 +255,7 @@ begin
       from aggregated a
       left join raw_kcw.raw_hq_apmas_payable ap on ap."ACCTNO" = a.vendor
     ),
-    filtered as materialized (
+    filtered as (
       select *
       from classified c
       where (
@@ -264,11 +284,11 @@ begin
 
   elsif v_site = 'HQ' then
     -- complete / partially_received: resolve RCVDNO→BILLNO once, then PIDET
-    with ic as materialized (
+    with ic as (
       select
         i."ID" as id,
         nullif(btrim(coalesce(i."DOCNO", '')), '') as docno,
-        i."DOCDATE" as docdate,
+        left(i."DOCDATE"::text, 10) as docdate,
         nullif(btrim(coalesce(i."VENDOR", '')), '') as vendor,
         nullif(btrim(coalesce(i."BCODE", '')), '') as bcode,
         nullif(btrim(coalesce(i."DESCR", '')), '') as descr,
@@ -284,14 +304,14 @@ begin
         and nullif(btrim(coalesce(i."BCODE", '')), '') is not null
         and (
           case
-            when v_from is not null then coalesce(i."DOCDATE", '') >= v_from
-            else coalesce(i."DOCDATE", '') >= v_cutoff
+            when v_from is not null then left(i."DOCDATE"::text, 10) >= v_from
+            else left(i."DOCDATE"::text, 10) >= v_cutoff
           end
-          and (v_to is null or coalesce(i."DOCDATE", '') <= v_to)
+          and (v_to is null or left(i."DOCDATE"::text, 10) <= v_to)
         )
         and (v_vendor is null or nullif(btrim(coalesce(i."VENDOR", '')), '') = v_vendor)
     ),
-    ordered as materialized (
+    ordered as (
       select
         min(i.id) as id,
         i.docno,
@@ -303,47 +323,49 @@ begin
         max(i.ui) as ui,
         bool_or(i.received = 'Y') as any_received,
         max(i.rcvddate) filter (where i.received = 'Y') as rcvddate,
-        max(i.rcvdno) as rcvdnos
+        string_agg(distinct i.rcvdno, ', ' order by i.rcvdno)
+          filter (where i.rcvdno is not null) as rcvdnos
       from ic i
       group by i.docno, i.bcode
       having bool_or(i.received = 'Y')
     ),
-    rcvdnos as materialized (
+    rcvdnos as (
       select distinct i.rcvdno
       from ic i
       where i.rcvdno is not null
         and i.received = 'Y'
     ),
-    exact_bills as materialized (
+    exact_bills as (
       select distinct r.rcvdno, p."BILLNO" as billno
       from rcvdnos r
       join raw_kcw.raw_hq_pimas_purchase_bills p
         on p."BILLNO" = r.rcvdno
        and coalesce(p."CANCELED", '') <> 'Y'
     ),
-    prefix_bills as materialized (
+    prefix_bills as (
       select distinct r.rcvdno, p."BILLNO" as billno
       from rcvdnos r
-      left join exact_bills e on e.rcvdno = r.rcvdno
       join raw_kcw.raw_hq_pimas_purchase_bills p
         on char_length(r.rcvdno) = 12
        and left(p."BILLNO", 12) = r.rcvdno
        and char_length(btrim(p."BILLNO")) > 12
        and coalesce(p."CANCELED", '') <> 'Y'
-      where e.rcvdno is null
+      where not exists (
+        select 1 from exact_bills e where e.rcvdno = r.rcvdno
+      )
     ),
-    resolved as materialized (
+    resolved as (
       select rcvdno, billno from exact_bills
       union all
       select rcvdno, billno from prefix_bills
     ),
-    rcvd_links as materialized (
+    rcvd_links as (
       select distinct i.docno, i.bcode, i.rcvdno
       from ic i
       where i.rcvdno is not null
         and i.received = 'Y'
     ),
-    received as materialized (
+    received as (
       select
         l.docno,
         l.bcode,
@@ -352,21 +374,18 @@ begin
       join resolved r on r.rcvdno = l.rcvdno
       join raw_kcw.raw_hq_pidet_purchase_lines d
         on d."BILLNO" = r.billno
-       and d."BCODE" = l.bcode
+       and nullif(btrim(coalesce(d."BCODE", '')), '') = l.bcode
        and coalesce(d."CANCELED", '') <> 'Y'
        and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
       group by l.docno, l.bcode
     ),
-    resolved_rcvdnos as materialized (
-      select distinct rcvdno from resolved
-    ),
-    pimas_link as materialized (
+    pimas_link as (
       select
         l.docno,
         l.bcode,
         bool_or(res.rcvdno is null) as pimas_link_missing
       from rcvd_links l
-      left join resolved_rcvdnos res
+      left join (select distinct rcvdno from resolved) res
         on res.rcvdno = l.rcvdno
       group by l.docno, l.bcode
     ),
@@ -403,7 +422,7 @@ begin
         on pl.docno = o.docno and pl.bcode = o.bcode
       left join raw_kcw.raw_hq_apmas_payable ap on ap."ACCTNO" = o.vendor
     ),
-    filtered as materialized (
+    filtered as (
       select *
       from classified c
       where c.status = v_status
@@ -452,10 +471,10 @@ begin
         and nullif(btrim(coalesce(i."BCODE", '')), '') is not null
         and (
           case
-            when v_from is not null then coalesce(i."DOCDATE", '') >= v_from
-            else coalesce(i."DOCDATE", '') >= v_cutoff
+            when v_from is not null then left(i."DOCDATE"::text, 10) >= v_from
+            else left(i."DOCDATE"::text, 10) >= v_cutoff
           end
-          and (v_to is null or coalesce(i."DOCDATE", '') <= v_to)
+          and (v_to is null or left(i."DOCDATE"::text, 10) <= v_to)
         )
         and (v_vendor is null or nullif(btrim(coalesce(i."VENDOR", '')), '') = v_vendor)
     ),
@@ -469,7 +488,8 @@ begin
         max(i.descr) as descr,
         sum(i.qty) as ordered_qty,
         max(i.ui) as ui,
-        max(i.rcvdno) as rcvdnos
+        string_agg(distinct i.rcvdno, ', ' order by i.rcvdno)
+          filter (where i.rcvdno is not null) as rcvdnos
       from ic i
       group by i.docno, i.bcode
       having bool_or(i.received = 'Y') = false
@@ -499,7 +519,7 @@ begin
       from aggregated a
       left join raw_kcw.raw_hq_apmas_payable ap on ap."ACCTNO" = a.vendor
     ),
-    filtered as materialized (
+    filtered as (
       select *
       from classified c
       where (
@@ -548,10 +568,10 @@ begin
         and nullif(btrim(coalesce(i."BCODE", '')), '') is not null
         and (
           case
-            when v_from is not null then coalesce(i."DOCDATE", '') >= v_from
-            else coalesce(i."DOCDATE", '') >= v_cutoff
+            when v_from is not null then left(i."DOCDATE"::text, 10) >= v_from
+            else left(i."DOCDATE"::text, 10) >= v_cutoff
           end
-          and (v_to is null or coalesce(i."DOCDATE", '') <= v_to)
+          and (v_to is null or left(i."DOCDATE"::text, 10) <= v_to)
         )
         and (v_vendor is null or nullif(btrim(coalesce(i."VENDOR", '')), '') = v_vendor)
     ),
@@ -567,7 +587,8 @@ begin
         coalesce(sum(i.qty) filter (where i.received = 'Y'), 0) as received_qty,
         max(i.ui) as ui,
         max(i.rcvddate) filter (where i.received = 'Y') as rcvddate,
-        max(i.rcvdno) as rcvdnos
+        string_agg(distinct i.rcvdno, ', ' order by i.rcvdno)
+          filter (where i.rcvdno is not null) as rcvdnos
       from ic i
       group by i.docno, i.bcode
       having bool_or(i.received = 'Y')
@@ -600,7 +621,7 @@ begin
       from aggregated a
       left join raw_kcw.raw_hq_apmas_payable ap on ap."ACCTNO" = a.vendor
     ),
-    filtered as materialized (
+    filtered as (
       select *
       from classified c
       where c.status = v_status
@@ -700,13 +721,14 @@ begin
     prefix_bills as (
       select distinct r.rcvdno, p."BILLNO" as billno
       from rcvdnos r
-      left join exact_bills e on e.rcvdno = r.rcvdno
       join raw_kcw.raw_hq_pimas_purchase_bills p
         on char_length(r.rcvdno) = 12
        and left(p."BILLNO", 12) = r.rcvdno
        and char_length(btrim(p."BILLNO")) > 12
        and coalesce(p."CANCELED", '') <> 'Y'
-      where e.rcvdno is null
+      where not exists (
+        select 1 from exact_bills e where e.rcvdno = r.rcvdno
+      )
     ),
     resolved as (
       select rcvdno, billno from exact_bills
@@ -726,7 +748,7 @@ begin
       join resolved r on r.rcvdno = l.rcvdno
       join raw_kcw.raw_hq_pidet_purchase_lines d
         on d."BILLNO" = r.billno
-       and d."BCODE" = l.bcode
+       and nullif(btrim(coalesce(d."BCODE", '')), '') = l.bcode
        and coalesce(d."CANCELED", '') <> 'Y'
        and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
       group by l.bcode
@@ -764,7 +786,7 @@ begin
       join resolved r on r.rcvdno = l.rcvdno
       join raw_kcw.raw_hq_pidet_purchase_lines d
         on d."BILLNO" = r.billno
-       and d."BCODE" = l.bcode
+       and nullif(btrim(coalesce(d."BCODE", '')), '') = l.bcode
        and coalesce(d."CANCELED", '') <> 'Y'
        and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
     ),
@@ -789,7 +811,7 @@ begin
           from resolved r
           join raw_kcw.raw_hq_pidet_purchase_lines d
             on d."BILLNO" = r.billno
-           and d."BCODE" = i.bcode
+           and nullif(btrim(coalesce(d."BCODE", '')), '') = i.bcode
            and coalesce(d."CANCELED", '') <> 'Y'
            and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
           where r.rcvdno = i.rcvdno

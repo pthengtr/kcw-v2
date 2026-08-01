@@ -169,11 +169,11 @@ begin
   -- ค้างรับ / รับบางส่วน / รับแล้ว: DOCNO+BCODE grain
   elsif v_site = 'HQ' and v_status = 'pending_receive' then
     -- Light path: no PIDET (pending = no RECEIVED=Y on the BCODE)
-    with ic as materialized (
+    with ic as (
       select
         i."ID" as id,
         nullif(btrim(coalesce(i."DOCNO", '')), '') as docno,
-        i."DOCDATE" as docdate,
+        left(i."DOCDATE"::text, 10) as docdate,
         nullif(btrim(coalesce(i."VENDOR", '')), '') as vendor,
         nullif(btrim(coalesce(i."BCODE", '')), '') as bcode,
         nullif(btrim(coalesce(i."DESCR", '')), '') as descr,
@@ -264,11 +264,11 @@ begin
 
   elsif v_site = 'HQ' then
     -- complete / partially_received: resolve RCVDNO→BILLNO once, then PIDET
-    with ic as materialized (
+    with ic as (
       select
         i."ID" as id,
         nullif(btrim(coalesce(i."DOCNO", '')), '') as docno,
-        i."DOCDATE" as docdate,
+        left(i."DOCDATE"::text, 10) as docdate,
         nullif(btrim(coalesce(i."VENDOR", '')), '') as vendor,
         nullif(btrim(coalesce(i."BCODE", '')), '') as bcode,
         nullif(btrim(coalesce(i."DESCR", '')), '') as descr,
@@ -291,7 +291,7 @@ begin
         )
         and (v_vendor is null or nullif(btrim(coalesce(i."VENDOR", '')), '') = v_vendor)
     ),
-    ordered as materialized (
+    ordered as (
       select
         min(i.id) as id,
         i.docno,
@@ -308,20 +308,20 @@ begin
       group by i.docno, i.bcode
       having bool_or(i.received = 'Y')
     ),
-    rcvdnos as materialized (
+    rcvdnos as (
       select distinct i.rcvdno
       from ic i
       where i.rcvdno is not null
         and i.received = 'Y'
     ),
-    exact_bills as materialized (
+    exact_bills as (
       select distinct r.rcvdno, p."BILLNO" as billno
       from rcvdnos r
       join raw_kcw.raw_hq_pimas_purchase_bills p
         on p."BILLNO" = r.rcvdno
        and coalesce(p."CANCELED", '') <> 'Y'
     ),
-    prefix_bills as materialized (
+    prefix_bills as (
       select distinct r.rcvdno, p."BILLNO" as billno
       from rcvdnos r
       left join exact_bills e on e.rcvdno = r.rcvdno
@@ -332,18 +332,18 @@ begin
        and coalesce(p."CANCELED", '') <> 'Y'
       where e.rcvdno is null
     ),
-    resolved as materialized (
+    resolved as (
       select rcvdno, billno from exact_bills
       union all
       select rcvdno, billno from prefix_bills
     ),
-    rcvd_links as materialized (
+    rcvd_links as (
       select distinct i.docno, i.bcode, i.rcvdno
       from ic i
       where i.rcvdno is not null
         and i.received = 'Y'
     ),
-    received as materialized (
+    received as (
       select
         l.docno,
         l.bcode,
@@ -357,16 +357,13 @@ begin
        and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
       group by l.docno, l.bcode
     ),
-    resolved_rcvdnos as materialized (
-      select distinct rcvdno from resolved
-    ),
-    pimas_link as materialized (
+    pimas_link as (
       select
         l.docno,
         l.bcode,
         bool_or(res.rcvdno is null) as pimas_link_missing
       from rcvd_links l
-      left join resolved_rcvdnos res
+      left join (select distinct rcvdno from resolved) res
         on res.rcvdno = l.rcvdno
       group by l.docno, l.bcode
     ),
