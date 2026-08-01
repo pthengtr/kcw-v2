@@ -59,35 +59,99 @@ type QueryResult = {
 };
 
 type StatementAccountQuery = {
+  eq: (column: string, value: string) => StatementAccountQuery;
   gte: (column: string, value: string) => StatementAccountQuery;
   lte: (column: string, value: string) => StatementAccountQuery;
-  order: (
+  not: (
     column: string,
-    options: { ascending: boolean }
+    operator: string,
+    value: null
   ) => StatementAccountQuery;
-  range: (from: number, to: number) => PromiseLike<QueryResult>;
+  limit: (count: number) => PromiseLike<QueryResult>;
 };
 
-type StatementLinesAccountsClient = {
-  schema: (schema: string) => {
-    from: (table: string) => {
-      select: (columns: string) => unknown;
-    };
-  };
+/** Loose client shape — real Supabase admin client and vitest mocks both work. */
+export type StatementLinesAccountsClient = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  schema: (schema: string) => any;
 };
+
+/** Sample size for bank_name majority within one account+month probe. */
+const ACCOUNT_PROBE_SAMPLE = 20;
 
 /**
- * List distinct accounts that have statement lines in `[from, to]`.
- * Still pages in case a single month exceeds the PostgREST max-rows cap.
+ * Candidate account numbers come from import files (small table), not from
+ * scanning every statement line.
+ */
+export async function listCandidateAccountNos(
+  supabase: StatementLinesAccountsClient
+): Promise<string[]> {
+  const query = supabase
+    .schema("bank")
+    .from("statement_import_files")
+    .select("account_no") as StatementAccountQuery;
+
+  const { data, error } = await query
+    .not("account_no", "is", null)
+    .limit(1000);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const seen = new Set<string>();
+  for (const row of data ?? []) {
+    const accountNo = row.account_no?.trim();
+    if (accountNo) seen.add(accountNo);
+  }
+  return [...seen].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Probe one account inside a month window (uses account_no + txn_date index).
+ * Returns null when that account has no lines in range.
+ */
+export async function probeStatementAccountInRange(
+  supabase: StatementLinesAccountsClient,
+  accountNo: string,
+  range: StatementAccountDateRange,
+  sampleSize = ACCOUNT_PROBE_SAMPLE
+): Promise<BankAccountOption | null> {
+  const trimmed = accountNo.trim();
+  if (!trimmed) return null;
+
+  const query = supabase
+    .schema("bank")
+    .from("statement_lines")
+    .select("account_no, bank_name") as StatementAccountQuery;
+
+  const { data, error } = await query
+    .eq("account_no", trimmed)
+    .gte("txn_date", range.from)
+    .lte("txn_date", range.to)
+    .limit(sampleSize);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const collapsed = collapseStatementAccounts(data ?? []);
+  return collapsed[0] ?? null;
+}
+
+/**
+ * List accounts that have statement lines in `[from, to]`.
+ * Never scans "month + all accounts" as one query — candidates come from
+ * import files, then each account is probed with month + account_no.
  */
 export async function listStatementAccounts(
   supabase: StatementLinesAccountsClient,
   range: StatementAccountDateRange,
-  pageSize = 1000
-): Promise<BankAccountOption[]> {
-  if (pageSize < 1) {
-    throw new Error("pageSize must be >= 1");
+  options?: {
+    candidateAccountNos?: readonly string[];
+    sampleSize?: number;
   }
+): Promise<BankAccountOption[]> {
   if (!range.from || !range.to) {
     throw new Error("`from` and `to` are required");
   }
@@ -95,31 +159,22 @@ export async function listStatementAccounts(
     throw new Error("`from` must be on or before `to`");
   }
 
-  const collected: AccountBankRow[] = [];
-  let offset = 0;
+  const candidates =
+    options?.candidateAccountNos?.map((a) => a.trim()).filter(Boolean) ??
+    (await listCandidateAccountNos(supabase));
 
-  for (;;) {
-    const query = supabase
-      .schema("bank")
-      .from("statement_lines")
-      .select("account_no, bank_name") as StatementAccountQuery;
+  const found = await Promise.all(
+    candidates.map((accountNo) =>
+      probeStatementAccountInRange(
+        supabase,
+        accountNo,
+        range,
+        options?.sampleSize
+      )
+    )
+  );
 
-    const { data, error } = await query
-      .gte("txn_date", range.from)
-      .lte("txn_date", range.to)
-      .order("account_no", { ascending: true })
-      .order("id", { ascending: true })
-      .range(offset, offset + pageSize - 1);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    const rows = data ?? [];
-    collected.push(...rows);
-    if (rows.length < pageSize) break;
-    offset += pageSize;
-  }
-
-  return collapseStatementAccounts(collected);
+  return found
+    .filter((a): a is BankAccountOption => a != null)
+    .sort((a, b) => a.account_no.localeCompare(b.account_no));
 }

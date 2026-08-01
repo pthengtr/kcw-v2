@@ -6,15 +6,16 @@ import { requirePermission } from "@/lib/auth/requirePermission";
 import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 
 const QuerySchema = z.object({
-  account_no: z.string().trim().optional(),
+  account_no: z.string().trim().min(1),
   bank_name: z.string().trim().optional(),
   direction: z.string().trim().optional(),
   match_status: z.string().trim().optional(),
-  from: z.string().trim().optional(), // ISO date
-  to: z.string().trim().optional(), // ISO date
+  from: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
+  to: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
   amount_min: z.coerce.number().optional(),
   amount_max: z.coerce.number().optional(),
-  limit: z.coerce.number().int().min(1).max(200).default(50),
+  // Higher cap is safe because account_no + month is always required.
+  limit: z.coerce.number().int().min(1).max(5000).default(50),
   offset: z.coerce.number().int().min(0).max(1_000_000).default(0),
 });
 
@@ -49,6 +50,13 @@ export async function GET(req: Request) {
     offset,
   } = parsed.data;
 
+  if (from > to) {
+    return NextResponse.json(
+      { error: "`from` must be on or before `to`" },
+      { status: 400 }
+    );
+  }
+
   const supabase = createAdminClient();
 
   let query = supabase
@@ -80,16 +88,16 @@ export async function GET(req: Request) {
       ].join(","),
       { count: "exact" }
     )
+    .eq("account_no", account_no)
+    .gte("txn_date", from)
+    .lte("txn_date", to)
     .order("txn_date", { ascending: false })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (account_no) query = query.eq("account_no", account_no);
   if (bank_name) query = query.ilike("bank_name", `%${bank_name}%`);
   if (direction) query = query.eq("direction", direction);
   if (match_status) query = query.eq("match_status", match_status);
-  if (from) query = query.gte("txn_date", from);
-  if (to) query = query.lte("txn_date", to);
   if (typeof amount_min === "number") query = query.gte("amount", amount_min);
   if (typeof amount_max === "number") query = query.lte("amount", amount_max);
 
@@ -105,8 +113,10 @@ export async function GET(req: Request) {
   return NextResponse.json({
     rows: data ?? [],
     count: count ?? null,
+    account_no,
+    from,
+    to,
     limit,
     offset,
   });
 }
-

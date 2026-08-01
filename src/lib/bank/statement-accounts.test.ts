@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   collapseStatementAccounts,
+  listCandidateAccountNos,
   listStatementAccounts,
+  probeStatementAccountInRange,
   type StatementAccountDateRange,
 } from "@/lib/bank/statement-accounts";
 
@@ -33,21 +35,39 @@ describe("collapseStatementAccounts", () => {
   });
 });
 
-function mockAccountsClient(rangeFn: ReturnType<typeof vi.fn>) {
-  const query = {
+function mockTableClient(handlers: {
+  importFiles?: ReturnType<typeof vi.fn>;
+  statementLines?: ReturnType<typeof vi.fn>;
+}) {
+  const from = vi.fn((table: string) => {
+    if (table === "statement_import_files") {
+      return { select: handlers.importFiles ?? vi.fn() };
+    }
+    if (table === "statement_lines") {
+      return { select: handlers.statementLines ?? vi.fn() };
+    }
+    throw new Error(`unexpected table ${table}`);
+  });
+  return { schema: vi.fn(() => ({ from })), from };
+}
+
+function mockChain(result: {
+  data: Array<{ account_no: string | null; bank_name?: string | null }> | null;
+  error: { message: string } | null;
+}) {
+  const chain = {
+    eq: vi.fn(),
     gte: vi.fn(),
     lte: vi.fn(),
-    order: vi.fn(),
-    range: rangeFn,
+    not: vi.fn(),
+    limit: vi.fn().mockResolvedValue(result),
   };
-  query.gte.mockImplementation(() => query);
-  query.lte.mockImplementation(() => query);
-  query.order.mockImplementation(() => query);
-
-  const select = vi.fn(() => query);
-  const from = vi.fn(() => ({ select }));
-  const schema = vi.fn(() => ({ from }));
-  return { schema, query, range: rangeFn };
+  chain.eq.mockImplementation(() => chain);
+  chain.gte.mockImplementation(() => chain);
+  chain.lte.mockImplementation(() => chain);
+  chain.not.mockImplementation(() => chain);
+  const select = vi.fn(() => chain);
+  return { select, chain };
 }
 
 const july: StatementAccountDateRange = {
@@ -55,73 +75,116 @@ const july: StatementAccountDateRange = {
   to: "2026-07-31",
 };
 
-describe("listStatementAccounts", () => {
-  it("filters by month range before paging", async () => {
-    const rows = [
-      { account_no: "064-8-91723-6", bank_name: "KBANK" },
-      { account_no: "248-6-00618-4", bank_name: "KTB" },
-    ];
-    const rangeFn = vi.fn().mockResolvedValue({ data: rows, error: null });
-    const client = mockAccountsClient(rangeFn);
+describe("listCandidateAccountNos", () => {
+  it("reads distinct account numbers from import files", async () => {
+    const { select, chain } = mockChain({
+      data: [
+        { account_no: "248-6-00618-4" },
+        { account_no: "064-8-91723-6" },
+        { account_no: "248-6-00618-4" },
+        { account_no: null },
+      ],
+      error: null,
+    });
+    const client = mockTableClient({ importFiles: select });
 
-    const accounts = await listStatementAccounts(client, july, 1000);
-
-    expect(client.query.gte).toHaveBeenCalledWith("txn_date", "2026-07-01");
-    expect(client.query.lte).toHaveBeenCalledWith("txn_date", "2026-07-31");
-    expect(rangeFn).toHaveBeenCalledTimes(1);
-    expect(rangeFn).toHaveBeenCalledWith(0, 999);
-    expect(accounts).toEqual([
-      { account_no: "064-8-91723-6", bank_name: "KBANK" },
-      { account_no: "248-6-00618-4", bank_name: "KTB" },
+    await expect(listCandidateAccountNos(client)).resolves.toEqual([
+      "064-8-91723-6",
+      "248-6-00618-4",
     ]);
+    expect(client.from).toHaveBeenCalledWith("statement_import_files");
+    expect(chain.not).toHaveBeenCalledWith("account_no", "is", null);
+  });
+});
+
+describe("probeStatementAccountInRange", () => {
+  it("probes one account with month + account filters", async () => {
+    const { select, chain } = mockChain({
+      data: [
+        { account_no: "248-6-00618-4", bank_name: "KBANK" },
+        { account_no: "248-6-00618-4", bank_name: "KTB" },
+        { account_no: "248-6-00618-4", bank_name: "KTB" },
+      ],
+      error: null,
+    });
+    const client = mockTableClient({ statementLines: select });
+
+    await expect(
+      probeStatementAccountInRange(client, "248-6-00618-4", july)
+    ).resolves.toEqual({
+      account_no: "248-6-00618-4",
+      bank_name: "KTB",
+    });
+
+    expect(client.from).toHaveBeenCalledWith("statement_lines");
+    expect(chain.eq).toHaveBeenCalledWith("account_no", "248-6-00618-4");
+    expect(chain.gte).toHaveBeenCalledWith("txn_date", "2026-07-01");
+    expect(chain.lte).toHaveBeenCalledWith("txn_date", "2026-07-31");
+    expect(chain.limit).toHaveBeenCalledWith(20);
   });
 
-  it("pages past the default 1000-row cap so later accounts appear", async () => {
-    const page1 = Array.from({ length: 1000 }, (_, i) => ({
-      account_no: i < 999 ? "064-8-91723-6" : "248-0-42113-9",
-      bank_name: i < 999 ? "KBANK" : "KTB",
-    }));
-    const page2 = [
-      { account_no: "248-0-42113-9", bank_name: "KTB" },
-      { account_no: "248-6-00618-4", bank_name: "KTB" },
-      { account_no: "248-6-00618-4", bank_name: "KBANK" },
-    ];
+  it("returns null when the account has no rows in range", async () => {
+    const { select } = mockChain({ data: [], error: null });
+    const client = mockTableClient({ statementLines: select });
 
-    const rangeFn = vi
-      .fn()
-      .mockResolvedValueOnce({ data: page1, error: null })
-      .mockResolvedValueOnce({ data: page2, error: null });
-    const client = mockAccountsClient(rangeFn);
+    await expect(
+      probeStatementAccountInRange(client, "248-6-00618-4", july)
+    ).resolves.toBeNull();
+  });
+});
 
-    const accounts = await listStatementAccounts(client, july, 1000);
+describe("listStatementAccounts", () => {
+  it("probes each candidate with month + account, never full-month scan", async () => {
+    const statementSelect = vi.fn((columns: string) => {
+      expect(columns).toBe("account_no, bank_name");
+      const chain = {
+        eq: vi.fn(),
+        gte: vi.fn(),
+        lte: vi.fn(),
+        limit: vi.fn(),
+      };
+      chain.eq.mockImplementation((col: string, value: string) => {
+        expect(col).toBe("account_no");
+        chain.limit.mockResolvedValue({
+          data:
+            value === "248-6-00618-4"
+              ? [{ account_no: value, bank_name: "KTB" }]
+              : value === "064-8-91723-6"
+                ? [{ account_no: value, bank_name: "KBANK" }]
+                : [],
+          error: null,
+        });
+        return chain;
+      });
+      chain.gte.mockImplementation(() => chain);
+      chain.lte.mockImplementation(() => chain);
+      return chain;
+    });
 
-    expect(rangeFn).toHaveBeenCalledTimes(2);
-    expect(rangeFn).toHaveBeenNthCalledWith(1, 0, 999);
-    expect(rangeFn).toHaveBeenNthCalledWith(2, 1000, 1999);
+    const client = mockTableClient({ statementLines: statementSelect });
+
+    const accounts = await listStatementAccounts(client, july, {
+      candidateAccountNos: [
+        "064-8-91723-6",
+        "999-9-99999-9",
+        "248-6-00618-4",
+      ],
+    });
+
+    expect(statementSelect).toHaveBeenCalledTimes(3);
     expect(accounts).toEqual([
       { account_no: "064-8-91723-6", bank_name: "KBANK" },
-      { account_no: "248-0-42113-9", bank_name: "KTB" },
       { account_no: "248-6-00618-4", bank_name: "KTB" },
     ]);
   });
 
   it("rejects inverted date ranges", async () => {
-    const client = mockAccountsClient(vi.fn());
+    const client = mockTableClient({});
     await expect(
       listStatementAccounts(client, {
         from: "2026-07-31",
         to: "2026-07-01",
       })
     ).rejects.toThrow("`from` must be on or before `to`");
-  });
-
-  it("surfaces query errors", async () => {
-    const rangeFn = vi.fn().mockResolvedValue({
-      data: null,
-      error: { message: "boom" },
-    });
-    const client = mockAccountsClient(rangeFn);
-
-    await expect(listStatementAccounts(client, july)).rejects.toThrow("boom");
   });
 });
