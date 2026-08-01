@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ICLOW_SYNC_JOB_TYPE,
+  ICLOW_SYNC_SITES,
   INVENTORY_SYNC_JOB_TYPE,
   INVENTORY_SYNC_SITES,
   isWorkerOnline,
@@ -37,6 +39,11 @@ describe("PO worker helpers", () => {
     expect(INVENTORY_SYNC_SITES).toEqual(["HQ", "SYP"]);
     expect(workerNameForSite("HQ")).toBe("HQ-PC");
     expect(workerNameForSite("SYP")).toBe("SYP-PC");
+  });
+
+  it("maps ICLOW sync to both site workers", () => {
+    expect(ICLOW_SYNC_JOB_TYPE).toBe("sync_iclow");
+    expect(ICLOW_SYNC_SITES).toEqual(["HQ", "SYP"]);
   });
 });
 

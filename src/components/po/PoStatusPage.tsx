@@ -32,6 +32,12 @@ type InventoryMeta = {
   inFlightJobs: JobQueueRow[];
 };
 
+type IclowMeta = {
+  hqLastIngestedAt: string | null;
+  sypLastIngestedAt: string | null;
+  inFlightJobs: JobQueueRow[];
+};
+
 export default function PoStatusPage() {
   const [tab, setTab] = useState<"hq" | "syp">("syp");
   const [refreshToken, setRefreshToken] = useState(0);
@@ -39,12 +45,15 @@ export default function PoStatusPage() {
   const [inventoryMeta, setInventoryMeta] = useState<InventoryMeta | null>(
     null
   );
+  const [iclowMeta, setIclowMeta] = useState<IclowMeta | null>(null);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [syncingSite, setSyncingSite] = useState<PoSyncSite | null>(null);
   const [inventorySyncing, setInventorySyncing] = useState(false);
+  const [iclowSyncing, setIclowSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inventoryPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const iclowPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(() => setRefreshToken((x) => x + 1), []);
 
@@ -59,9 +68,11 @@ export default function PoStatusPage() {
       const data = (await res.json()) as {
         meta: PoMeta;
         inventory: InventoryMeta;
+        iclow?: IclowMeta;
       };
       setMeta(data.meta);
       setInventoryMeta(data.inventory);
+      setIclowMeta(data.iclow ?? null);
     } catch (e) {
       if (String(e).includes("AbortError")) return;
       setMetaError(e instanceof Error ? e.message : String(e));
@@ -78,6 +89,7 @@ export default function PoStatusPage() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
       if (inventoryPollRef.current) clearInterval(inventoryPollRef.current);
+      if (iclowPollRef.current) clearInterval(iclowPollRef.current);
     };
   }, []);
 
@@ -95,6 +107,14 @@ export default function PoStatusPage() {
       inventoryPollRef.current = null;
     }
     setInventorySyncing(false);
+  }, []);
+
+  const stopIclowPolling = useCallback(() => {
+    if (iclowPollRef.current) {
+      clearInterval(iclowPollRef.current);
+      iclowPollRef.current = null;
+    }
+    setIclowSyncing(false);
   }, []);
 
   const startPolling = useCallback(
@@ -213,6 +233,76 @@ export default function PoStatusPage() {
     }
   }, [inventoryMeta, inventorySyncing, startInventoryPolling]);
 
+  const startIclowPolling = useCallback(
+    (jobs: JobQueueRow[]) => {
+      stopIclowPolling();
+      const jobIds = jobs.map((j) => j.id);
+      if (jobIds.length === 0) return;
+
+      setIclowSyncing(true);
+      setSyncMessage(
+        `กำลัง sync ICLOW HQ+SYP (job ${jobIds.map((id) => `#${id}`).join(", ")})…`
+      );
+
+      const pending = new Map(jobIds.map((id) => [id, "pending" as string]));
+
+      iclowPollRef.current = setInterval(async () => {
+        try {
+          await Promise.all(
+            jobIds.map(async (jobId) => {
+              if (
+                pending.get(jobId) === "done" ||
+                pending.get(jobId) === "failed"
+              ) {
+                return;
+              }
+              const res = await fetch(`/api/po/iclow-sync/${jobId}`, {
+                cache: "no-store",
+              });
+              if (!res.ok) return;
+              const data = (await res.json()) as { job: JobQueueRow };
+              pending.set(jobId, data.job.status);
+              if (data.job.status === "failed") {
+                pending.set(
+                  jobId,
+                  `failed:${data.job.error_message || "failed"}`
+                );
+              }
+            })
+          );
+
+          const values = [...pending.values()];
+          const allTerminal = values.every(
+            (s) => s === "done" || s.startsWith("failed")
+          );
+          if (!allTerminal) return;
+
+          stopIclowPolling();
+          const failed = values.filter((s) => s.startsWith("failed"));
+          if (failed.length === 0) {
+            setSyncMessage("Sync ICLOW สำเร็จ");
+          } else {
+            const msgs = failed
+              .map((s) => s.replace(/^failed:?/, "") || "ล้มเหลว")
+              .join("; ");
+            setSyncMessage(`Sync ICLOW ล้มเหลว: ${msgs}`);
+          }
+          refresh();
+        } catch {
+          // keep polling
+        }
+      }, 2000);
+    },
+    [refresh, stopIclowPolling]
+  );
+
+  useEffect(() => {
+    if (!iclowMeta || iclowSyncing) return;
+    if (iclowMeta.inFlightJobs.length > 0) {
+      startIclowPolling(iclowMeta.inFlightJobs);
+    }
+  }, [iclowMeta, iclowSyncing, startIclowPolling]);
+
   async function handleSync(site: PoSyncSite) {
     setSyncMessage(null);
     setSyncingSite(site);
@@ -283,10 +373,49 @@ export default function PoStatusPage() {
     }
   }
 
+  async function handleIclowSync() {
+    setSyncMessage(null);
+    setIclowSyncing(true);
+    try {
+      const res = await fetch("/api/po/iclow-sync", { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+
+      if (res.status === 409 && Array.isArray(body?.jobs) && body.jobs.length) {
+        setSyncMessage("มี sync ICLOW กำลังรันอยู่แล้ว");
+        startIclowPolling(body.jobs as JobQueueRow[]);
+        return;
+      }
+
+      if (res.status === 503) {
+        setIclowSyncing(false);
+        setSyncMessage(body?.error ?? "Worker offline");
+        return;
+      }
+
+      if (!res.ok) {
+        setIclowSyncing(false);
+        setSyncMessage(body?.error ?? `ICLOW sync failed (${res.status})`);
+        return;
+      }
+
+      const jobs = (body?.jobs ?? []) as JobQueueRow[];
+      startIclowPolling(jobs);
+    } catch (e) {
+      setIclowSyncing(false);
+      setSyncMessage(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   const activeSite: PoSyncSite = tab === "hq" ? "HQ" : "SYP";
   const siteMeta = meta?.[activeSite] ?? null;
   const inventoryInFlight =
     inventorySyncing || (inventoryMeta?.inFlightJobs.length ?? 0) > 0;
+  const iclowInFlight =
+    iclowSyncing || (iclowMeta?.inFlightJobs.length ?? 0) > 0;
+  const iclowLastAt =
+    activeSite === "HQ"
+      ? iclowMeta?.hqLastIngestedAt
+      : iclowMeta?.sypLastIngestedAt;
 
   const headerHint = useMemo(() => {
     if (!siteMeta) return null;
@@ -296,6 +425,7 @@ export default function PoStatusPage() {
         <span>
           สต็อก HQ: {formatPoTs(inventoryMeta?.hqLastUpdatedAt ?? null)}
         </span>
+        <span>ICLOW {activeSite}: {formatPoTs(iclowLastAt ?? null)}</span>
         <Badge variant={siteMeta.workerOnline ? "secondary" : "outline"}>
           {siteMeta.workerName}{" "}
           {siteMeta.workerOnline ? "online" : "offline"}
@@ -306,6 +436,9 @@ export default function PoStatusPage() {
         {inventoryInFlight ? (
           <Badge variant="outline">กำลัง sync สต็อก…</Badge>
         ) : null}
+        {iclowInFlight ? (
+          <Badge variant="outline">กำลัง sync ICLOW…</Badge>
+        ) : null}
       </div>
     );
   }, [
@@ -314,6 +447,8 @@ export default function PoStatusPage() {
     activeSite,
     inventoryMeta?.hqLastUpdatedAt,
     inventoryInFlight,
+    iclowLastAt,
+    iclowInFlight,
   ]);
 
   return (
@@ -340,6 +475,14 @@ export default function PoStatusPage() {
             {headerHint}
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleIclowSync()}
+              disabled={iclowInFlight}
+            >
+              อัพเดตรอสั่งซื้อ/ค้างรับ
+            </Button>
             <Button
               variant="outline"
               size="sm"

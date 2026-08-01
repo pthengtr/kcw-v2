@@ -298,8 +298,8 @@ export default function PoPendingReceiveTab({
       <p className="text-sm text-muted-foreground">
         {isPartial
           ? site === "HQ"
-            ? "แยกจากรายการ PO (POMAS) — รายการ ICLOW ที่ยังค้างบน DOCNO ที่รับบางส่วนแล้ว; คลิกดูค้าง vs รับแล้ว (RCVDNO → PIDET)"
-            : "แยกจากรายการ PO (POMAS) — รายการ ICLOW ที่ยังค้างบน DOCNO ที่รับบางส่วนแล้ว; คลิกดูค้าง vs รับแล้วจาก ICLOW"
+            ? "แยกจากรายการ PO (POMAS) — ทุกรายการ ICLOW บน DOCNO ที่รับบางส่วน (ทั้งค้างและรับแล้ว); คลิกดูสรุปค้าง vs รับแล้ว (RCVDNO → PIDET)"
+            : "แยกจากรายการ PO (POMAS) — ทุกรายการ ICLOW บน DOCNO ที่รับบางส่วน (ทั้งค้างและรับแล้ว); คลิกดูสรุปจาก ICLOW"
           : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">

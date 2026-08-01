@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
+  findInFlightIclowSync,
   findInFlightInventorySync,
   findInFlightPoSync,
+  fetchIclowLastIngestedAt,
   fetchInventoryLastUpdatedAt,
   getWorkerHeartbeat,
   isWorkerOnline,
@@ -150,10 +152,14 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     })
   );
 
-  const [hqInventoryUpdatedAt, inventoryInFlight] = await Promise.all([
-    fetchInventoryLastUpdatedAt(supabase, "HQ"),
-    findInFlightInventorySync(supabase),
-  ]);
+  const [hqInventoryUpdatedAt, inventoryInFlight, hqIclowAt, sypIclowAt, iclowInFlight] =
+    await Promise.all([
+      fetchInventoryLastUpdatedAt(supabase, "HQ"),
+      findInFlightInventorySync(supabase),
+      fetchIclowLastIngestedAt(supabase, "HQ"),
+      fetchIclowLastIngestedAt(supabase, "SYP"),
+      findInFlightIclowSync(supabase),
+    ]);
 
   return {
     sites: Object.fromEntries(siteEntries) as Record<
@@ -170,6 +176,11 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     inventory: {
       hqLastUpdatedAt: hqInventoryUpdatedAt,
       inFlightJobs: inventoryInFlight,
+    },
+    iclow: {
+      hqLastIngestedAt: hqIclowAt,
+      sypLastIngestedAt: sypIclowAt,
+      inFlightJobs: iclowInFlight,
     },
   };
 }

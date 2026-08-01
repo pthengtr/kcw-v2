@@ -135,8 +135,8 @@ Exclude from all buckets:
 |------------|-----------|-------|-----------|
 | `to_be_ordered` | รอสั่งซื้อ | line | `ORDERED=N`. `DOCNO` null in practice. |
 | `pending_receive` | ค้างรับ | line | Canonical ค้างรับ (§2) **and** no sibling on same `DOCNO` has `RECEIVED='Y'`. Whole PO still waiting. |
-| `partially_received` | รับบางส่วน | line | `ORDERED='Y' AND RECEIVED='N'` **and** a sibling on same `DOCNO` has `RECEIVED='Y'`. Still-pending lines on a mixed PO. |
-| `complete` | รับแล้ว | line | `ORDERED='Y' AND RECEIVED='Y'`. |
+| `partially_received` | รับบางส่วน | line | Same `DOCNO` has both `RECEIVED='Y'` and `RECEIVED='N'` siblings — list **all** ICLOW lines on that DOCNO (pending + received). |
+| `complete` | รับแล้ว | line | `ORDERED='Y' AND RECEIVED='Y'` on a DOCNO with **no** pending sibling. |
 
 ### 6.2 Partial PO detail (`fn_po_pending_receive_detail`)
 
