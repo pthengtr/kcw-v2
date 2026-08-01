@@ -458,6 +458,126 @@ export async function listPoPendingReceive(params: {
   };
 }
 
+export type PiHeader = {
+  billno: string;
+  billdate: string | null;
+  acctno: string | null;
+  acctname: string | null;
+  po: string | null;
+  aftertax: string | null;
+  canceled: string | null;
+  remarks: string | null;
+  /** ICLOW RCVDNO when bill was resolved via left(BILLNO,12) */
+  matched_rcvdno: string | null;
+};
+
+export type PiLineRow = {
+  billno: string;
+  bcode: string | null;
+  detail: string | null;
+  qty: string | null;
+  ui: string | null;
+  price: string | null;
+  amount: string | null;
+};
+
+/** Resolve ICLOW RCVDNO / PIMAS BILLNO and load PIDET lines (HQ purchase invoice). */
+export async function fetchPiDetail(params: {
+  supabase: SupabaseClient;
+  billnoOrRcvdno: string;
+}): Promise<{ header: PiHeader; lines: PiLineRow[] } | null> {
+  const key = params.billnoOrRcvdno.trim();
+  if (!key) return null;
+
+  const db = raw(params.supabase);
+
+  let bill: Record<string, unknown> | null = null;
+  let matchedRcvdno: string | null = null;
+
+  const exact = await db
+    .from("raw_hq_pimas_purchase_bills")
+    .select('"BILLNO","BILLDATE","ACCTNO","PO","AFTERTAX","CANCELED","REMARKS"')
+    .eq("BILLNO", key)
+    .maybeSingle();
+  if (exact.error) throw exact.error;
+  bill = (exact.data as Record<string, unknown> | null) ?? null;
+
+  if (!bill && key.length === 12) {
+    const prefix = await db
+      .from("raw_hq_pimas_purchase_bills")
+      .select('"BILLNO","BILLDATE","ACCTNO","PO","AFTERTAX","CANCELED","REMARKS"')
+      .like("BILLNO", `${key}%`)
+      .neq("CANCELED", "Y")
+      .limit(20);
+    if (prefix.error) throw prefix.error;
+    const candidates = ((prefix.data as Record<string, unknown>[] | null) ?? [])
+      .filter((row) => {
+        const billno = String(row.BILLNO ?? "").trim();
+        return billno.length > 12 && billno.slice(0, 12) === key;
+      })
+      .sort((a, b) =>
+        String(a.BILLNO ?? "").localeCompare(String(b.BILLNO ?? ""))
+      );
+    if (candidates.length > 0) {
+      bill = candidates[0] ?? null;
+      matchedRcvdno = key;
+    }
+  }
+
+  if (!bill) return null;
+
+  const billno = String(bill.BILLNO ?? key).trim();
+  const acctno = (bill.ACCTNO as string | null) ?? null;
+  let acctname: string | null = null;
+  if (acctno) {
+    const ap = await db
+      .from("raw_hq_apmas_payable")
+      .select('"ACCTNAME"')
+      .eq("ACCTNO", acctno)
+      .maybeSingle();
+    if (ap.error) throw ap.error;
+    acctname =
+      ((ap.data as Record<string, unknown> | null)?.ACCTNAME as string | null) ??
+      null;
+  }
+
+  const linesRes = await db
+    .from("raw_hq_pidet_purchase_lines")
+    .select('"BILLNO","BCODE","DETAIL","QTY","UI","PRICE","AMOUNT","BILLTYPE","CANCELED"')
+    .eq("BILLNO", billno)
+    .in("BILLTYPE", ["1", "2", "3"])
+    .limit(500);
+  if (linesRes.error) throw linesRes.error;
+
+  const lines = ((linesRes.data as Record<string, unknown>[] | null) ?? [])
+    .filter((row) => String(row.CANCELED ?? "") !== "Y")
+    .map((row) => ({
+      billno: String(row.BILLNO ?? billno),
+      bcode: (row.BCODE as string | null) ?? null,
+      detail: (row.DETAIL as string | null) ?? null,
+      qty: row.QTY == null ? null : String(row.QTY),
+      ui: (row.UI as string | null) ?? null,
+      price: row.PRICE == null ? null : String(row.PRICE),
+      amount: row.AMOUNT == null ? null : String(row.AMOUNT),
+    }));
+
+  return {
+    header: {
+      billno,
+      billdate:
+        bill.BILLDATE == null ? null : String(bill.BILLDATE).slice(0, 10),
+      acctno,
+      acctname: acctname ? String(acctname) : null,
+      po: (bill.PO as string | null) ?? null,
+      aftertax: bill.AFTERTAX == null ? null : String(bill.AFTERTAX),
+      canceled: (bill.CANCELED as string | null) ?? null,
+      remarks: (bill.REMARKS as string | null) ?? null,
+      matched_rcvdno: matchedRcvdno,
+    },
+    lines,
+  };
+}
+
 export async function fetchPoPendingReceiveDetail(params: {
   supabase: SupabaseClient;
   site: PoSyncSite;
