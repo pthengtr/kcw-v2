@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
+import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
 import PoPendingReceiveTab, {
   PO_ICLOW_STATUS_TABS,
 } from "@/components/po/PoPendingReceiveTab";
@@ -22,6 +23,7 @@ import {
   formatPoAmount,
   formatPoDate,
   formatPoTs,
+  last30DaysPoDateRange,
 } from "@/lib/po/format";
 import type {
   PoHeaderRow,
@@ -50,6 +52,9 @@ export default function PoSypTab({
     "all" | "prepared" | "not_prepared"
   >("all");
   const [q, setQ] = useState("");
+  const [from, setFrom] = useState(() => last30DaysPoDateRange().from);
+  const [to, setTo] = useState(() => last30DaysPoDateRange().to);
+  const [lookbackId, setLookbackId] = useState("30d");
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
 
@@ -63,7 +68,7 @@ export default function PoSypTab({
 
   useEffect(() => {
     setOffset(0);
-  }, [prepare, q]);
+  }, [prepare, q, from, to]);
 
   useEffect(() => {
     if (view !== "list") return;
@@ -76,6 +81,9 @@ export default function PoSypTab({
         params.set("status", "all");
         params.set("prepare", prepare);
         if (q.trim()) params.set("q", q.trim());
+        const range = last30DaysPoDateRange();
+        params.set("from", from.trim() || range.from);
+        params.set("to", to.trim() || range.to);
         params.set("limit", String(limit));
         params.set("offset", String(offset));
 
@@ -91,20 +99,21 @@ export default function PoSypTab({
           rows: PoHeaderRow[];
           count: number | null;
         };
+        if (ac.signal.aborted) return;
         setRows(data.rows ?? []);
         setCount(data.count ?? null);
       } catch (e) {
-        if (String(e).includes("AbortError")) return;
+        if (ac.signal.aborted || String(e).includes("AbortError")) return;
         setError(e instanceof Error ? e.message : String(e));
         setRows([]);
         setCount(null);
       } finally {
-        setLoading(false);
+        if (!ac.signal.aborted) setLoading(false);
       }
     }
     void fetchRows();
     return () => ac.abort();
-  }, [view, prepare, q, limit, offset, refreshToken]);
+  }, [view, prepare, q, from, to, limit, offset, refreshToken]);
 
   async function setPrepared(row: PoHeaderRow, prepared: boolean, note?: string) {
     setSavingDocno(row.docno);
@@ -390,6 +399,18 @@ export default function PoSypTab({
                 placeholder="ค้นหา DOCNO"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
+              />
+              <PoDateLookbackControls
+                from={from}
+                to={to}
+                lookbackId={lookbackId}
+                onFromChange={setFrom}
+                onToChange={setTo}
+                onLookbackIdChange={setLookbackId}
+                onRangeChange={(range) => {
+                  setFrom(range.from);
+                  setTo(range.to);
+                }}
               />
             </div>
 

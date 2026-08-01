@@ -190,6 +190,9 @@ export async function listPoHeaders(params: {
   site: PoSyncSite;
   status?: PoStatusFilter;
   q?: string;
+  from?: string;
+  to?: string;
+  months?: number;
   limit: number;
   offset: number;
   prepareFilter?: PoPrepareFilter;
@@ -199,6 +202,9 @@ export async function listPoHeaders(params: {
     site,
     status = "open",
     q,
+    from,
+    to,
+    months = 1,
     limit,
     offset,
     prepareFilter = "all",
@@ -209,6 +215,9 @@ export async function listPoHeaders(params: {
     p_status: status,
     p_prepare: site === "SYP" ? prepareFilter : "all",
     p_q: q?.trim() || null,
+    p_from: from?.trim() || null,
+    p_to: to?.trim() || null,
+    p_months: months,
     p_limit: limit,
     p_offset: offset,
   });

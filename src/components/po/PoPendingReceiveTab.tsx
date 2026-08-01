@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,16 +11,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SSRDatePicker } from "@/components/common/SSRDatePicker";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
+import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
 import {
   formatPoAmount,
   formatPoDate,
   formatPoQty,
   last30DaysPoDateRange,
-  PO_DATE_LOOKBACK_PRESETS,
-  poDateRangeLookingBack,
 } from "@/lib/po/format";
 import {
   PO_ICLOW_STATUS_TABS,
@@ -163,27 +160,13 @@ export default function PoPendingReceiveTab({
   }, [q, from, to, site, status]);
 
   useEffect(() => {
-    if (!showDates) {
-      setFrom("");
-      setTo("");
-      setLookbackId("30d");
-      return;
-    }
-    // Entering dated tabs: default to last 30 days (avoids 12‑month timeouts).
+    // รอสั่งซื้อ has no DOCDATE filter (often null). Other ICLOW tabs default to 30d.
+    if (!showDates) return;
     const range = last30DaysPoDateRange();
     setFrom(range.from);
     setTo(range.to);
     setLookbackId("30d");
   }, [showDates]);
-
-  function applyLookback(id: string) {
-    const item = PO_DATE_LOOKBACK_PRESETS.find((p) => p.id === id);
-    if (!item) return;
-    const range = poDateRangeLookingBack(item.preset);
-    setLookbackId(id);
-    setFrom(range.from);
-    setTo(range.to);
-  }
 
   useEffect(() => {
     const ac = new AbortController();
@@ -215,15 +198,16 @@ export default function PoPendingReceiveTab({
           rows: PoPendingReceiveRow[];
           count: number | null;
         };
+        if (ac.signal.aborted) return;
         setRows(data.rows ?? []);
         setCount(data.count ?? null);
       } catch (e) {
-        if (String(e).includes("AbortError")) return;
+        if (ac.signal.aborted || String(e).includes("AbortError")) return;
         setError(e instanceof Error ? e.message : String(e));
         setRows([]);
         setCount(null);
       } finally {
-        setLoading(false);
+        if (!ac.signal.aborted) setLoading(false);
       }
     }
     void fetchRows();
@@ -544,43 +528,18 @@ export default function PoPendingReceiveTab({
           onChange={(e) => setQ(e.target.value)}
         />
         {showDates ? (
-          <>
-            <SSRDatePicker
-              name="from-date"
-              placeholder="จากวันที่"
-              value={from || undefined}
-              onChange={(val) => {
-                setLookbackId("");
-                setFrom(val ?? "");
-              }}
-              className="sm:w-[180px]"
-              clearable
-            />
-            <SSRDatePicker
-              name="to-date"
-              placeholder="ถึงวันที่"
-              value={to || undefined}
-              onChange={(val) => {
-                setLookbackId("");
-                setTo(val ?? "");
-              }}
-              className="sm:w-[180px]"
-              clearable
-            />
-            <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto">
-              {PO_DATE_LOOKBACK_PRESETS.map((item) => (
-                <Button
-                  key={item.id}
-                  type="button"
-                  size="sm"
-                  variant={lookbackId === item.id ? "default" : "outline"}
-                  onClick={() => applyLookback(item.id)}
-                >
-                  {item.label}
-                </Button>
-              ))}
-            </div>
-          </>
+          <PoDateLookbackControls
+            from={from}
+            to={to}
+            lookbackId={lookbackId}
+            onFromChange={setFrom}
+            onToChange={setTo}
+            onLookbackIdChange={setLookbackId}
+            onRangeChange={(range) => {
+              setFrom(range.from);
+              setTo(range.to);
+            }}
+          />
         ) : null}
       </div>
 
