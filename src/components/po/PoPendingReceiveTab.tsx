@@ -58,10 +58,10 @@ function formatRcvdnoWithPimasNote(
   const showNote =
     value !== "—" && opts?.site === "HQ" && Boolean(opts.pimasLinkMissing);
   return (
-    <span className="inline-flex max-w-[14rem] flex-col gap-0.5">
-      <span className="break-all font-mono">{value}</span>
+    <span className="inline-flex max-w-[14rem] flex-col justify-center gap-0.5 align-middle">
+      <span className="break-all font-mono leading-snug">{value}</span>
       {showNote ? (
-        <span className="whitespace-normal font-sans text-xs text-muted-foreground">
+        <span className="whitespace-normal font-sans text-xs leading-snug text-muted-foreground">
           (ไม่พบลิงก์ PIMAS)
         </span>
       ) : null}
@@ -207,31 +207,31 @@ export default function PoPendingReceiveTab({
         ),
     };
 
-    const baseCols: Column<PoPendingReceiveRow>[] = [
-      {
-        key: "status",
-        header: "สถานะ",
-        className: "whitespace-nowrap",
-        render: (r) => (
-          <Badge variant={statusBadgeVariant(r.status)}>
-            {statusLabel(r.status)}
-          </Badge>
-        ),
-      },
-      {
-        key: "docno",
-        header: "DOCNO",
-        className: "whitespace-nowrap",
-        render: (r) => (
-          <span className="font-medium">{r.docno ?? "—"}</span>
-        ),
-      },
-      {
-        key: "docdate",
-        header: "วันที่",
-        className: "whitespace-nowrap",
-        render: (r) => formatPoDate(r.docdate),
-      },
+    const statusCol: Column<PoPendingReceiveRow> = {
+      key: "status",
+      header: "สถานะ",
+      className: "whitespace-nowrap",
+      render: (r) => (
+        <Badge variant={statusBadgeVariant(r.status)}>
+          {statusLabel(r.status)}
+        </Badge>
+      ),
+    };
+    const docnoCol: Column<PoPendingReceiveRow> = {
+      key: "docno",
+      header: "DOCNO",
+      className: "whitespace-nowrap",
+      render: (r) => (
+        <span className="font-medium">{r.docno ?? "—"}</span>
+      ),
+    };
+    const docdateCol: Column<PoPendingReceiveRow> = {
+      key: "docdate",
+      header: "วันที่",
+      className: "whitespace-nowrap",
+      render: (r) => formatPoDate(r.docdate),
+    };
+    const midCols: Column<PoPendingReceiveRow>[] = [
       vendorCol,
       {
         key: "acctname",
@@ -261,7 +261,19 @@ export default function PoPendingReceiveTab({
 
     if (isBcodeQty) {
       return [
-        ...baseCols,
+        {
+          key: "billno",
+          header: "RCVDNO",
+          className: "min-w-[8rem] align-middle",
+          render: (r) =>
+            formatRcvdnoWithPimasNote(r.billno ?? r.rcvdno, {
+              site,
+              pimasLinkMissing: r.pimas_link_missing,
+            }),
+        },
+        statusCol,
+        docdateCol,
+        ...midCols,
         {
           key: "ordered_qty",
           header: "สั่ง",
@@ -289,21 +301,15 @@ export default function PoPendingReceiveTab({
                 Math.max((r.ordered_qty ?? r.qty) - (r.received_qty ?? 0), 0)
             ),
         },
-        {
-          key: "billno",
-          header: "RCVDNO",
-          className: "min-w-[8rem] align-top",
-          render: (r) =>
-            formatRcvdnoWithPimasNote(r.billno ?? r.rcvdno, {
-              site,
-              pimasLinkMissing: r.pimas_link_missing,
-            }),
-        },
+        docnoCol,
       ];
     }
 
     return [
-      ...baseCols,
+      statusCol,
+      docnoCol,
+      docdateCol,
+      ...midCols,
       {
         key: "qty",
         header: "จำนวน",
