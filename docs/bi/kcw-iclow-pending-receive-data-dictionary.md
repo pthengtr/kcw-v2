@@ -14,7 +14,7 @@ Last reviewed: 2026-08-01
 
 Pending receive comes from **`dbo.ICLOW`** (PARTS9 / KSS HQ).
 
-**Separate from the PO list:** `/po` **รายการ PO** reads `POMAS`/`PODET`; **/po รอรับของ** reads `ICLOW` only. Same page, two sources — do not mix membership logic.
+**Separate from the PO list:** `/po` **รายการ PO** reads `POMAS`/`PODET`; `/po` ICLOW tabs (**รอสั่งซื้อ** / **ค้างรับ** / **รับบางส่วน** / **รับแล้ว**) read `ICLOW` only. Same page, two sources — do not mix membership logic.
 
 It is **not** driven by flags on `POMAS` / `PODET`, and **not** by `PODET.QTY − PIDET.QTY`.
 
