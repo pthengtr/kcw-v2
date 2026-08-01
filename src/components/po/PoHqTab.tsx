@@ -10,13 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
 import PoPendingReceiveTab, {
@@ -43,7 +36,6 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [status, setStatus] = useState<"open" | "billed" | "all">("open");
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
@@ -57,7 +49,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
 
   useEffect(() => {
     setOffset(0);
-  }, [status, q]);
+  }, [q]);
 
   useEffect(() => {
     if (view !== "list") return;
@@ -67,7 +59,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
       setError(null);
       try {
         const params = new URLSearchParams();
-        params.set("status", status);
+        params.set("status", "all");
         if (q.trim()) params.set("q", q.trim());
         params.set("limit", String(limit));
         params.set("offset", String(offset));
@@ -97,7 +89,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
     }
     void fetchRows();
     return () => ac.abort();
-  }, [view, status, q, limit, offset, refreshToken]);
+  }, [view, q, limit, offset, refreshToken]);
 
   async function openDetail(row: PoHeaderRow) {
     setSelected(row);
@@ -231,19 +223,6 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
         <TabsContent value="list" className="mt-3">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-              <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as typeof status)}
-              >
-                <SelectTrigger className="w-full sm:w-[160px]">
-                  <SelectValue placeholder="สถานะ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">เปิด</SelectItem>
-                  <SelectItem value="billed">รับแล้ว</SelectItem>
-                  <SelectItem value="all">ทั้งหมด</SelectItem>
-                </SelectContent>
-              </Select>
               <Input
                 className="w-full sm:max-w-xs"
                 placeholder="ค้นหา DOCNO / ผู้ขาย"

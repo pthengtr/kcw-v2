@@ -46,10 +46,9 @@ export default function PoSypTab({
   const [savingDocno, setSavingDocno] = useState<string | null>(null);
   const [savingLine, setSavingLine] = useState<string | null>(null);
 
-  const [status, setStatus] = useState<"open" | "billed" | "all">("open");
   const [prepare, setPrepare] = useState<
     "all" | "prepared" | "not_prepared"
-  >("not_prepared");
+  >("all");
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
@@ -64,7 +63,7 @@ export default function PoSypTab({
 
   useEffect(() => {
     setOffset(0);
-  }, [status, prepare, q]);
+  }, [prepare, q]);
 
   useEffect(() => {
     if (view !== "list") return;
@@ -74,7 +73,7 @@ export default function PoSypTab({
       setError(null);
       try {
         const params = new URLSearchParams();
-        params.set("status", status);
+        params.set("status", "all");
         params.set("prepare", prepare);
         if (q.trim()) params.set("q", q.trim());
         params.set("limit", String(limit));
@@ -105,7 +104,7 @@ export default function PoSypTab({
     }
     void fetchRows();
     return () => ac.abort();
-  }, [view, status, prepare, q, limit, offset, refreshToken]);
+  }, [view, prepare, q, limit, offset, refreshToken]);
 
   async function setPrepared(row: PoHeaderRow, prepared: boolean, note?: string) {
     setSavingDocno(row.docno);
@@ -374,29 +373,16 @@ export default function PoSypTab({
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as typeof status)}
-              >
-                <SelectTrigger className="w-full sm:w-[140px]">
-                  <SelectValue placeholder="สถานะ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">เปิด</SelectItem>
-                  <SelectItem value="billed">รับแล้ว</SelectItem>
-                  <SelectItem value="all">ทั้งหมด</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
                 value={prepare}
                 onValueChange={(v) => setPrepare(v as typeof prepare)}
               >
                 <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="เตรียม" />
+                  <SelectValue placeholder="สถานะเตรียม" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">ทั้งหมด</SelectItem>
                   <SelectItem value="not_prepared">ยังไม่เตรียม</SelectItem>
                   <SelectItem value="prepared">เตรียมแล้ว</SelectItem>
-                  <SelectItem value="all">เตรียมทั้งหมด</SelectItem>
                 </SelectContent>
               </Select>
               <Input
