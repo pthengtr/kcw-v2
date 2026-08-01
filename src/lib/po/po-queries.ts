@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   findInFlightIclowSync,
   findInFlightInventorySync,
+  findInFlightPoRelatedSync,
   findInFlightPoSync,
   fetchIclowLastIngestedAt,
   fetchInventoryLastUpdatedAt,
@@ -152,14 +153,21 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     })
   );
 
-  const [hqInventoryUpdatedAt, inventoryInFlight, hqIclowAt, sypIclowAt, iclowInFlight] =
-    await Promise.all([
-      fetchInventoryLastUpdatedAt(supabase, "HQ"),
-      findInFlightInventorySync(supabase),
-      fetchIclowLastIngestedAt(supabase, "HQ"),
-      fetchIclowLastIngestedAt(supabase, "SYP"),
-      findInFlightIclowSync(supabase),
-    ]);
+  const [
+    hqInventoryUpdatedAt,
+    inventoryInFlight,
+    hqIclowAt,
+    sypIclowAt,
+    iclowInFlight,
+    poRelatedInFlight,
+  ] = await Promise.all([
+    fetchInventoryLastUpdatedAt(supabase, "HQ"),
+    findInFlightInventorySync(supabase),
+    fetchIclowLastIngestedAt(supabase, "HQ"),
+    fetchIclowLastIngestedAt(supabase, "SYP"),
+    findInFlightIclowSync(supabase),
+    findInFlightPoRelatedSync(supabase),
+  ]);
 
   return {
     sites: Object.fromEntries(siteEntries) as Record<
@@ -181,6 +189,9 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
       hqLastIngestedAt: hqIclowAt,
       sypLastIngestedAt: sypIclowAt,
       inFlightJobs: iclowInFlight,
+    },
+    poRelated: {
+      inFlightJobs: poRelatedInFlight,
     },
   };
 }
