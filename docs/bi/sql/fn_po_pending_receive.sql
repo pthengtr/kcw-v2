@@ -54,13 +54,25 @@ begin
   end if;
 
   if v_site = 'HQ' then
-    with received_docs as (
-      select distinct nullif(btrim(coalesce(s."DOCNO", '')), '') as docno
-      from raw_kcw.raw_hq_iclow_stock_orders s
-      where s."ORDERED" = 'Y'
-        and s."RECEIVED" = 'Y'
-        and coalesce(s."CANCELED", 'N') <> 'Y'
-        and nullif(btrim(coalesce(s."DOCNO", '')), '') is not null
+    -- Partial signal: DOCNO → PIMAS.PO → PIDET (any BILLTYPE 1/2/3 receive).
+    with partial_docs as (
+      select distinct
+        case
+          when btrim(i."PO") ~* '^po' then btrim(i."PO")
+          else 'PO' || btrim(i."PO")
+        end as docno
+      from raw_kcw.raw_hq_pimas_purchase_bills i
+      where coalesce(i."CANCELED", '') <> 'Y'
+        and nullif(btrim(coalesce(i."PO", '')), '') is not null
+        and position('/' in coalesce(i."PO", '')) = 0
+        and exists (
+          select 1
+          from raw_kcw.raw_hq_pidet_purchase_lines d
+          where d."BILLNO" = i."BILLNO"
+            and d."BILLDATE" = i."BILLDATE"
+            and coalesce(d."CANCELED", '') <> 'Y'
+            and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
+        )
     ),
     base as (
       select
@@ -80,10 +92,10 @@ begin
         coalesce(i."RECEIVED", 'N') as received,
         left(i."RCVDDATE"::text, 10) as rcvddate,
         nullif(btrim(coalesce(i."RCVDNO", '')), '') as rcvdno,
-        (rd.docno is not null) as has_received_sibling
+        (pd.docno is not null) as has_partial_receive
       from raw_kcw.raw_hq_iclow_stock_orders i
-      left join received_docs rd
-        on rd.docno = nullif(btrim(coalesce(i."DOCNO", '')), '')
+      left join partial_docs pd
+        on pd.docno = nullif(btrim(coalesce(i."DOCNO", '')), '')
       left join lateral (
         select h0."ACCTNAME"
         from raw_kcw.raw_hq_pomas_purchase_orders h0
@@ -104,7 +116,7 @@ begin
           when b.ordered = 'Y' and b.received = 'Y' then 'complete'
           when b.ordered = 'Y'
             and b.received = 'N'
-            and b.has_received_sibling then 'partially_received'
+            and b.has_partial_receive then 'partially_received'
           when b.ordered = 'Y' and b.received = 'N' then 'pending_receive'
           else null
         end as status
@@ -173,7 +185,8 @@ begin
       ), '[]'::jsonb)
     ) into v_result;
   else
-    with received_docs as (
+    -- SYP: no local PIDET (purchases are HQ-only). Partial ≈ sibling ICLOW RECEIVED=Y.
+    with partial_docs as (
       select distinct nullif(btrim(coalesce(s."DOCNO", '')), '') as docno
       from raw_kcw.raw_syp_iclow_stock_orders s
       where s."ORDERED" = 'Y'
@@ -199,10 +212,10 @@ begin
         coalesce(i."RECEIVED", 'N') as received,
         left(i."RCVDDATE"::text, 10) as rcvddate,
         nullif(btrim(coalesce(i."RCVDNO", '')), '') as rcvdno,
-        (rd.docno is not null) as has_received_sibling
+        (pd.docno is not null) as has_partial_receive
       from raw_kcw.raw_syp_iclow_stock_orders i
-      left join received_docs rd
-        on rd.docno = nullif(btrim(coalesce(i."DOCNO", '')), '')
+      left join partial_docs pd
+        on pd.docno = nullif(btrim(coalesce(i."DOCNO", '')), '')
       left join lateral (
         select h0."ACCTNAME"
         from raw_kcw.raw_syp_pomas_purchase_orders h0
@@ -223,7 +236,7 @@ begin
           when b.ordered = 'Y' and b.received = 'Y' then 'complete'
           when b.ordered = 'Y'
             and b.received = 'N'
-            and b.has_received_sibling then 'partially_received'
+            and b.has_partial_receive then 'partially_received'
           when b.ordered = 'Y' and b.received = 'N' then 'pending_receive'
           else null
         end as status

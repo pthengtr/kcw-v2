@@ -263,8 +263,9 @@ export default function PoPendingReceiveTab({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        รายการจาก ICLOW (PARTS9) — แยกสถานะ รอสั่ง / ค้างรับ / รับบางส่วน /
-        รับแล้ว ตามธง ORDERED·RECEIVED
+        รายการจาก ICLOW (PARTS9) — ค้างรับตาม ORDERED·RECEIVED; รับบางส่วน =
+        ยังค้างบน ICLOW แต่ PO มีใบรับใน PIDET แล้ว
+        {site === "SYP" ? " (SYP ใช้บรรทัดรับแล้วใน ICLOW แทน PIDET)" : ""}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Select

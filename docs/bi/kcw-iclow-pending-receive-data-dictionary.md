@@ -102,13 +102,22 @@ ICLOW  →  APMAS   on  VENDOR = ACCTNO
 ICLOW  →  product on  BCODE  (ICMAS)
 ```
 
-Join to `PODET` is optional for display enrichment; **membership & status are defined on `ICLOW` alone** (plus sibling rows on the same `DOCNO` for “partially received”).
+Join to `PODET` is optional for display enrichment.
+
+- **ค้างรับ membership** = `ICLOW` alone (§2).
+- **รับบางส่วน** = still pending on `ICLOW`, but the PO already has receive invoice lines via **`DOCNO → PIMAS.PO → PIDET`** (HQ).
+
+```text
+ICLOW.DOCNO  →  PIMAS.PO   (normalize: ensure PO… prefix)
+PIMAS        →  PIDET      on BILLNO + BILLDATE
+               where BILLTYPE in ('1','2','3') and not canceled
+```
 
 ---
 
 ## 6. App status model (`/po` pending tab) — Confirmed design
 
-The PO page **รอรับของ** tab is an **ICLOW line list** (not PODET−PIDET). Operators filter by one of four statuses.
+The PO page **รอรับของ** tab is an **ICLOW line list**. Operators filter by one of four statuses.
 
 ### 6.1 Line status rules
 
@@ -120,14 +129,16 @@ Exclude from all four buckets:
 | Status key | Thai (UI) | Predicate |
 |------------|-----------|-----------|
 | `to_be_ordered` | รอสั่ง | `coalesce(ORDERED,'N') = 'N'` and not canceled. `DOCNO` is null in practice — draft lines waiting to become a PO. |
-| `pending_receive` | ค้างรับ | Canonical ค้างรับ (§2) **and** no sibling on same `DOCNO` has `RECEIVED='Y'`. Whole PO still waiting. |
-| `partially_received` | รับบางส่วน | Canonical ค้างรับ (§2) **and** ≥1 sibling on same `DOCNO` has `ORDERED='Y' AND RECEIVED='Y'`. This line still pending; PO already received something. |
+| `pending_receive` | ค้างรับ | Canonical ค้างรับ (§2) **and** the PO has **no** PIDET receive yet (`PIMAS.PO = DOCNO` → PIDET `BILLTYPE` 1/2/3). |
+| `partially_received` | รับบางส่วน | Canonical ค้างรับ (§2) **and** ≥1 PIDET receive line exists for that `DOCNO` via `PIMAS`. This ICLOW line is still pending; the PO was already partly invoiced/received. |
 | `complete` | รับแล้ว | `ORDERED='Y' AND RECEIVED='Y'` and not canceled. |
 
 Notes:
 
-- Classic PARTS9 ค้างรับ Excel ≈ `pending_receive` ∪ `partially_received`.
-- Default UI filter: **`pending_receive`** (operators’ main work queue). Offer the other three in the same status select.
+- Classic PARTS9 ค้างรับ Excel ≈ `pending_receive` ∪ `partially_received` (both still `RECEIVED=N` on `ICLOW`).
+- Do **not** use `PODET.QTY − PIDET.QTY` for membership; PIDET is only the **partial** signal on an otherwise-pending ICLOW row.
+- **SYP:** purchase invoices are HQ-only — no SYP `PIDET`. For SYP, “รับบางส่วน” falls back to another `ICLOW` row on the same `DOCNO` with `RECEIVED='Y'` (transfer receive), until a better SYP receive source is confirmed.
+- Default UI filter: **`pending_receive`**.
 - `complete` can be large (~8k HQ); keep date / months window (default 12 months on `DOCDATE`).
 - `to_be_ordered` has no `DOCDATE` — do not apply the months cutoff; sort by `VENDOR`, `BCODE`.
 
@@ -136,12 +147,12 @@ Notes:
 | Bucket | ≈ rows |
 |--------|-------:|
 | `to_be_ordered` | 274 |
-| `pending_receive` | ~415 (603 pending − ~188 with received sibling) |
-| `partially_received` | ~188 |
+| `pending_receive` | ~454 (603 pending − ~149 with PIDET on PO) |
+| `partially_received` | ~149 |
 | `complete` | 8089 |
 | `ORDERED='X'` (hidden) | 60 |
 
-SYP has the same flag shape (smaller volumes).
+SYP has the same ICLOW flag shape (smaller volumes; partial via ICLOW sibling — see note above).
 
 ### 6.3 API / RPC
 
@@ -174,4 +185,5 @@ Optional later: status **counts** for badges (`fn_po_pending_receive_counts`) �
 | Date | Change | By |
 |------|--------|-----|
 | 2026-08-01 | Document PARTS9 ค้างรับ = `ICLOW` (`ORDERED=Y`, `RECEIVED=N`, `CANCELED=N`); match Excel 616 rows | Owner |
-| 2026-08-01 | Confirm ingest tables; define `/po` four-status design; reject PODET−PIDET | Agent |
+| 2026-08-01 | Confirm ingest tables; define `/po` four-status design; reject PODET−PIDET for membership | Agent |
+| 2026-08-01 | รับบางส่วน = pending ICLOW + PIDET exists on `DOCNO` via `PIMAS.PO` | Agent |
