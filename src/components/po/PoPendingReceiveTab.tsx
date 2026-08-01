@@ -261,17 +261,8 @@ export default function PoPendingReceiveTab({
 
     if (isBcodeQty) {
       return [
-        {
-          key: "billno",
-          header: "RCVDNO",
-          className: "min-w-[8rem] align-middle",
-          render: (r) =>
-            formatRcvdnoWithPimasNote(r.billno ?? r.rcvdno, {
-              site,
-              pimasLinkMissing: r.pimas_link_missing,
-            }),
-        },
         statusCol,
+        docnoCol,
         docdateCol,
         ...midCols,
         {
@@ -301,7 +292,16 @@ export default function PoPendingReceiveTab({
                 Math.max((r.ordered_qty ?? r.qty) - (r.received_qty ?? 0), 0)
             ),
         },
-        docnoCol,
+        {
+          key: "billno",
+          header: "RCVDNO",
+          className: "min-w-[8rem] align-middle",
+          render: (r) =>
+            formatRcvdnoWithPimasNote(r.billno ?? r.rcvdno, {
+              site,
+              pimasLinkMissing: r.pimas_link_missing,
+            }),
+        },
       ];
     }
 
@@ -551,7 +551,7 @@ export default function PoPendingReceiveTab({
                                 {line.source}
                               </Badge>
                             </td>
-                            <td className="p-2 align-top">
+                            <td className="p-2 align-middle">
                               {formatRcvdnoWithPimasNote(line.billno, {
                                 site,
                                 pimasLinkMissing: line.pimas_link_missing,
