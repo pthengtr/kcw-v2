@@ -105,66 +105,77 @@ ICLOW  →  product on  BCODE  (ICMAS)
 Join to `PODET` is optional for display enrichment.
 
 - **ค้างรับ membership** = `ICLOW` alone (§2).
-- **รับบางส่วน** = still pending on `ICLOW`, but the PO already has receive invoice lines via **`DOCNO → PIMAS.PO → PIDET`** (HQ).
+- **`DOCNO` = PO** (`POMAS.DOCNO`). Pending rows have no `RCVDNO`.
+- **Received link to PI** (when `RECEIVED='Y'`):
 
 ```text
-ICLOW.DOCNO  →  PIMAS.PO   (normalize: ensure PO… prefix)
-PIMAS        →  PIDET      on BILLNO + BILLDATE
-               where BILLTYPE in ('1','2','3') and not canceled
+ICLOW.RCVDNO   = PIMAS.BILLNO
+ICLOW.RCVDDATE = PIMAS.BILLDATE   (optional)
+PIMAS          → PIDET on BILLNO + BILLDATE
+                 (BILLTYPE in 1/2/3, not canceled)
 ```
+
+Do **not** use `PIMAS.PO` — often blank/noisy.
 
 ---
 
 ## 6. App status model (`/po` pending tab) — Confirmed design
 
-The PO page **รอรับของ** tab is an **ICLOW line list**. Operators filter by one of four statuses.
+Operators filter by one of four statuses.
 
-### 6.1 Line status rules
+### 6.1 Status rules
 
-Exclude from all four buckets:
+Exclude from all buckets:
 
 - `coalesce(CANCELED,'N') = 'Y'`
-- `ORDERED = 'X'` (**TBD** meaning — often looks voided / supplier-unavailable; hide until confirmed)
+- `ORDERED = 'X'` (**TBD** — hidden until confirmed)
 
-| Status key | Thai (UI) | Predicate |
-|------------|-----------|-----------|
-| `to_be_ordered` | รอสั่ง | `coalesce(ORDERED,'N') = 'N'` and not canceled. `DOCNO` is null in practice — draft lines waiting to become a PO. |
-| `pending_receive` | ค้างรับ | Canonical ค้างรับ (§2) **and** the PO has **no** PIDET receive yet (`PIMAS.PO = DOCNO` → PIDET `BILLTYPE` 1/2/3). |
-| `partially_received` | รับบางส่วน | Canonical ค้างรับ (§2) **and** ≥1 PIDET receive line exists for that `DOCNO` via `PIMAS`. This ICLOW line is still pending; the PO was already partly invoiced/received. |
-| `complete` | รับแล้ว | `ORDERED='Y' AND RECEIVED='Y'` and not canceled. |
+| Status key | Thai (UI) | Grain | Predicate |
+|------------|-----------|-------|-----------|
+| `to_be_ordered` | รอสั่ง | line | `ORDERED=N`. `DOCNO` null in practice. |
+| `pending_receive` | ค้างรับ | line | Canonical ค้างรับ (§2) **and** no sibling on same `DOCNO` has `RECEIVED='Y'`. Whole PO still waiting. |
+| `partially_received` | รับบางส่วน | **PO** | Same `DOCNO` has both `RECEIVED='Y'` and `RECEIVED='N'` ICLOW lines. |
+| `complete` | รับแล้ว | line | `ORDERED='Y' AND RECEIVED='Y'`. |
 
-Notes:
+### 6.2 Partial PO detail (`fn_po_pending_receive_detail`)
 
-- Classic PARTS9 ค้างรับ Excel ≈ `pending_receive` ∪ `partially_received` (both still `RECEIVED=N` on `ICLOW`).
-- Do **not** use `PODET.QTY − PIDET.QTY` for membership; PIDET is only the **partial** signal on an otherwise-pending ICLOW row.
-- **SYP:** purchase invoices are HQ-only — no SYP `PIDET`. For SYP, “รับบางส่วน” falls back to another `ICLOW` row on the same `DOCNO` with `RECEIVED='Y'` (transfer receive), until a better SYP receive source is confirmed.
+Click a partial PO:
+
+| Section | Source |
+|---------|--------|
+| **Missing** | ICLOW on that `DOCNO` with `RECEIVED='N'` |
+| **Received (HQ)** | `RCVDNO` → `PIMAS.BILLNO` → `PIDET` lines; if `RCVDNO` not in PIMAS, show the ICLOW received row (`source=iclow`) |
+| **Received (SYP)** | ICLOW `RECEIVED='Y'` only (no SYP PIDET) |
+
+If every ICLOW line on the PO is `RECEIVED='Y'` → that PO is **complete**, not partial.
+
+### 6.3 Notes
+
+- Classic Excel ค้างรับ (all `RECEIVED=N`) ≈ lines in `pending_receive` **plus** missing lines inside partial PO detail.
+- Do **not** use `PODET.QTY − PIDET.QTY` for membership.
 - Default UI filter: **`pending_receive`**.
-- `complete` can be large (~8k HQ); keep date / months window (default 12 months on `DOCDATE`).
-- `to_be_ordered` has no `DOCDATE` — do not apply the months cutoff; sort by `VENDOR`, `BCODE`.
+- `complete` keeps a date / months window on `DOCDATE` (default 12).
+- `to_be_ordered` skips the months cutoff.
 
-### 6.2 Observed HQ counts (ingested snapshot 2026-08-01)
+### 6.4 Observed HQ counts (ingested snapshot 2026-08-01)
 
-| Bucket | ≈ rows |
-|--------|-------:|
-| `to_be_ordered` | 274 |
-| `pending_receive` | ~454 (603 pending − ~149 with PIDET on PO) |
-| `partially_received` | ~149 |
-| `complete` | 8089 |
+| Bucket | ≈ |
+|--------|--:|
+| `to_be_ordered` (lines) | 274 |
+| `pending_receive` (lines) | 415 |
+| `partially_received` (POs) | 127 |
+| `complete` (lines) | 8089 |
 | `ORDERED='X'` (hidden) | 60 |
 
-SYP has the same ICLOW flag shape (smaller volumes; partial via ICLOW sibling — see note above).
-
-### 6.3 API / RPC
+### 6.5 API / RPC
 
 | Piece | Contract |
 |-------|----------|
-| RPC | `public.fn_po_pending_receive` (service-role) |
-| Source | `raw_kcw.raw_{hq\|syp}_iclow_stock_orders` |
-| Params | `p_site`, `p_status` (`to_be_ordered` \| `pending_receive` \| `partially_received` \| `complete`), `p_q`, `p_vendor`, `p_from`, `p_to`, `p_months`, `p_limit`, `p_offset` |
-| Row fields | `id`, `docno`, `docdate`, `vendor`, `acctname`, `bcode`, `descr`, `qty`, `ui`, `ordered`, `received`, `rcvddate`, `rcvdno`, `status` |
-| SQL source file | [`sql/fn_po_pending_receive.sql`](./sql/fn_po_pending_receive.sql) |
-
-Optional later: status **counts** for badges (`fn_po_pending_receive_counts`) — not required for v1.
+| List RPC | `public.fn_po_pending_receive` |
+| Detail RPC | `public.fn_po_pending_receive_detail(p_site, p_docno)` |
+| List API | `GET /api/po/pending-receive?site=&status=` |
+| Detail API | `GET /api/po/pending-receive/[docno]?site=` |
+| SQL | [`sql/fn_po_pending_receive.sql`](./sql/fn_po_pending_receive.sql) |
 
 ---
 
@@ -186,4 +197,4 @@ Optional later: status **counts** for badges (`fn_po_pending_receive_counts`) �
 |------|--------|-----|
 | 2026-08-01 | Document PARTS9 ค้างรับ = `ICLOW` (`ORDERED=Y`, `RECEIVED=N`, `CANCELED=N`); match Excel 616 rows | Owner |
 | 2026-08-01 | Confirm ingest tables; define `/po` four-status design; reject PODET−PIDET for membership | Agent |
-| 2026-08-01 | รับบางส่วน = pending ICLOW + PIDET exists on `DOCNO` via `PIMAS.PO` | Agent |
+| 2026-08-01 | รับบางส่วน = PO with mixed ICLOW receive; detail via `RCVDNO→PIDET`; missing = pending ICLOW | Agent |

@@ -55,7 +55,7 @@ export async function GET(req: Request) {
 
   try {
     const supabase = createAdminClient();
-    const { rows, count } = await listPoPendingReceive({
+    const { rows, count, grain } = await listPoPendingReceive({
       supabase,
       site: parsed.data.site,
       status: parsed.data.status,
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
       limit: parsed.data.limit,
       offset: parsed.data.offset,
     });
-    return NextResponse.json({ rows, count });
+    return NextResponse.json({ rows, count, grain });
   } catch (error) {
     console.error("po pending-receive list", error);
     return NextResponse.json(
