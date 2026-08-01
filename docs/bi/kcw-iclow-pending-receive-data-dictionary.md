@@ -14,9 +14,18 @@ Last reviewed: 2026-08-01
 
 Pending receive comes from **`dbo.ICLOW`** (PARTS9 / KSS HQ).
 
-It is **not** driven by flags on `POMAS` / `PODET`.
+**Separate from the PO list:** `/po` **รายการ PO** reads `POMAS`/`PODET`; **/po รอรับของ** reads `ICLOW` only. Same page, two sources — do not mix membership logic.
 
-Validated against operator Excel: the filter below returns **616 rows** with matching dates, BCODEs, and qtys.
+It is **not** driven by flags on `POMAS` / `PODET`, and **not** by `PODET.QTY − PIDET.QTY`.
+
+Validated against operator Excel: the filter below returns **616 rows** with matching dates, BCODEs, and qtys (ingested HQ snapshot ≈ **603** — sync lag).
+
+Ingested tables:
+
+| Site | Table |
+|------|--------|
+| HQ | `raw_kcw.raw_hq_iclow_stock_orders` |
+| SYP | `raw_kcw.raw_syp_iclow_stock_orders` |
 
 ---
 
@@ -43,7 +52,7 @@ WHERE ORDERED = 'Y'
   AND ISNULL(CANCELED, 'N') = 'N';
 ```
 
-Postgres / Supabase equivalent once ingested:
+Postgres / Supabase equivalent:
 
 ```sql
 WHERE "ORDERED" = 'Y'
@@ -60,6 +69,7 @@ WHERE "ORDERED" = 'Y'
 | `PODET.DONE` / `POMAS.DONE` | Always `'N'` in this DB — unused for receive |
 | `PODET.STATUS` | Product status (≈ `ICMAS.STATUS`), not receive state |
 | `POMAS.BILLED` / `BILLNO` | Header “billed at least once”; partial bills can still leave other lines pending in `ICLOW` |
+| `PODET.QTY − PIDET.QTY` | **Wrong** for ค้างรับ — does not match PARTS9 / operator list |
 
 `BILLED = 'Y'` can coexist with remaining `ICLOW` pending rows on the same PO.
 
@@ -71,14 +81,14 @@ Same grain as the legacy report. Observed / used fields include:
 
 | Group | Columns | Notes |
 |-------|---------|-------|
-| PO link | `DOCNO`, `DOCDATE` | PO identity (same family as `POMAS`) |
-| Vendor | `VENDOR` | Supplier ref on the pending row |
-| Product | `BCODE` | Match / display key |
-| Qty | `QTY` | Ordered / pending qty on the row |
+| Identity | `ID` | PARTS9 row id (stable key for app list) |
+| PO link | `DOCNO`, `DOCDATE` | PO identity when ordered; **null** while still “to be ordered” |
+| Vendor | `VENDOR` | Supplier code; join **APMAS** for name (not POMAS) |
+| Product | `BCODE`, `DESCR`, `MCODE`, `PCODE` | Match / display |
+| Qty | `QTY`, `UI`, `MTP` | Qty on the ICLOW row |
 | Order flags | `ORDERED`, `RECEIVED`, `CANCELED` | Receive lifecycle |
 | Receive fill | `RCVDDATE`, `RCVDNO` | Set when `RECEIVED = 'Y'` |
-
-Full PARTS9 column list / types: expand after Supabase ingest (TBD).
+| Other | `DONE` | Rare (`X` on a few draft rows) — not used for UI status |
 
 ---
 
@@ -86,31 +96,106 @@ Full PARTS9 column list / types: expand after Supabase ingest (TBD).
 
 | Object | Grain |
 |--------|-------|
-| `ICLOW` pending row | 1 row ≈ 1 ordered / not-yet-received line tracked by PARTS9 |
+| `ICLOW` row | 1 row ≈ 1 stock-order / receive-tracking line in PARTS9 |
 
 ```text
-ICLOW  →  POMAS   on  DOCNO (+ DOCDATE when needed)
-ICLOW  →  product on  BCODE  (ICMAS)
+ICLOW  →  APMAS   on  VENDOR = ACCTNO   (vendor name only)
+ICLOW  →  product on  BCODE  (ICMAS)     (optional display)
 ```
 
-Join to `PODET` is optional for display enrichment; **pending membership is defined on `ICLOW` alone**.
+Do **not** join `POMAS`/`PODET` for pending-receive membership or list status.
+
+- **ค้างรับ membership** = `ICLOW` alone (§2).
+- **`DOCNO` on ICLOW** is the PO number string (same format as `POMAS.DOCNO`) but the pending-receive feature does not read POMAS. Pending rows have no `RCVDNO`.
+- **Received link to PI** (when `RECEIVED='Y'`):
+
+```text
+ICLOW.RCVDNO   = PIMAS.BILLNO
+ICLOW.RCVDDATE = PIMAS.BILLDATE   (optional)
+PIMAS          → PIDET on BILLNO + BILLDATE
+                 (BILLTYPE in 1/2/3, not canceled)
+```
+
+Do **not** use `PIMAS.PO` — often blank/noisy.
 
 ---
 
-## 6. Supabase / app status
+## 6. App status model (`/po` pending tab) — Confirmed design
+
+Operators filter by one of four statuses.
+
+### 6.1 Status rules
+
+Exclude from all buckets:
+
+- `coalesce(CANCELED,'N') = 'Y'`
+- `ORDERED = 'X'` (**TBD** — hidden until confirmed)
+
+| Status key | Thai (UI) | Grain | Predicate |
+|------------|-----------|-------|-----------|
+| `to_be_ordered` | รอสั่ง | line | `ORDERED=N`. `DOCNO` null in practice. |
+| `pending_receive` | ค้างรับ | line | Canonical ค้างรับ (§2) **and** no sibling on same `DOCNO` has `RECEIVED='Y'`. Whole PO still waiting. |
+| `partially_received` | รับบางส่วน | **DOCNO** (ICLOW group) | Same ICLOW `DOCNO` has both `RECEIVED='Y'` and `RECEIVED='N'` lines. |
+| `complete` | รับแล้ว | line | `ORDERED='Y' AND RECEIVED='Y'`. |
+
+### 6.2 Partial PO detail (`fn_po_pending_receive_detail`)
+
+Click a partial PO:
+
+| Section | Source |
+|---------|--------|
+| **Missing** | ICLOW on that `DOCNO` with `RECEIVED='N'` |
+| **Received (HQ)** | `RCVDNO` → `PIMAS.BILLNO` → `PIDET` lines; if `RCVDNO` not in PIMAS, show the ICLOW received row (`source=iclow`) |
+| **Received (SYP)** | ICLOW `RECEIVED='Y'` only (no SYP PIDET) |
+
+If every ICLOW line on the PO is `RECEIVED='Y'` → that PO is **complete**, not partial.
+
+### 6.3 Notes
+
+- Classic Excel ค้างรับ (all `RECEIVED=N`) ≈ lines in `pending_receive` **plus** missing lines inside partial PO detail.
+- Do **not** use `PODET.QTY − PIDET.QTY` for membership.
+- Default UI filter: **`pending_receive`**.
+- `complete` keeps a date / months window on `DOCDATE` (default 12).
+- `to_be_ordered` skips the months cutoff.
+
+### 6.4 Observed HQ counts (ingested snapshot 2026-08-01)
+
+| Bucket | ≈ |
+|--------|--:|
+| `to_be_ordered` (lines) | 274 |
+| `pending_receive` (lines) | 415 |
+| `partially_received` (POs) | 127 |
+| `complete` (lines) | 8089 |
+| `ORDERED='X'` (hidden) | 60 |
+
+### 6.5 API / RPC
+
+| Piece | Contract |
+|-------|----------|
+| List RPC | `public.fn_po_pending_receive` |
+| Detail RPC | `public.fn_po_pending_receive_detail(p_site, p_docno)` |
+| List API | `GET /api/po/pending-receive?site=&status=` |
+| Detail API | `GET /api/po/pending-receive/[docno]?site=` |
+| SQL | [`sql/fn_po_pending_receive.sql`](./sql/fn_po_pending_receive.sql) |
+
+---
+
+## 7. Supabase / app status
 
 | Topic | Status |
 |-------|--------|
 | Source | PARTS9 `dbo.ICLOW` (HQ / KSS) — Confirmed |
-| SYP `ICLOW` | TBD (mirror if SYP PARTS9 has the same table) |
-| Ingest into `raw_kcw` | **In progress** (owner creating table + sync) |
-| Expected raw table name | `raw_kcw.raw_hq_iclow_*` (name TBD at ingest) |
-| App list | Filter ingested `ICLOW` with §2 predicate; sort/filters on `DOCDATE`, `DOCNO`, `VENDOR`, `BCODE` |
+| SYP `ICLOW` | Confirmed ingested (`raw_syp_iclow_stock_orders`) |
+| Ingest into `raw_kcw` | Confirmed — `raw_{hq\|syp}_iclow_stock_orders` |
+| App list | Wire `/po` pending tab to ICLOW + §6 statuses |
+| `ORDERED='X'` meaning | TBD |
 
 ---
 
-## 7. Changelog
+## 8. Changelog
 
 | Date | Change | By |
-|------|--------|----|
+|------|--------|-----|
 | 2026-08-01 | Document PARTS9 ค้างรับ = `ICLOW` (`ORDERED=Y`, `RECEIVED=N`, `CANCELED=N`); match Excel 616 rows | Owner |
+| 2026-08-01 | Confirm ingest tables; define `/po` four-status design; reject PODET−PIDET for membership | Agent |
+| 2026-08-01 | รับบางส่วน = ICLOW DOCNO group with mixed receive; detail via `RCVDNO→PIDET`; no POMAS join | Agent |

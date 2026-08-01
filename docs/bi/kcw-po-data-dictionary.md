@@ -181,7 +181,8 @@ Do **not** confuse sales-bill column `"PO"` (CN original bill / TAD txn id — s
 - [ ] Whether open-PO qty should use `QTY*MTP` like sales/PIDET
 - [ ] Curated open-PO fact (optional; v1 reads raw)
 - [x] Line ค้างรับ source = `ICLOW` — Confirmed 2026-08-01
-- [ ] Ingest `ICLOW` → `raw_kcw` + wire `/po` pending-receive UI
+- [x] Ingest `ICLOW` → `raw_kcw.raw_{hq|syp}_iclow_stock_orders` — Confirmed
+- [x] Wire `/po` pending-receive UI to ICLOW four-status list (`fn_po_pending_receive`)
 
 ---
 
@@ -192,3 +193,4 @@ Do **not** confuse sales-bill column `"PO"` (CN original bill / TAD txn id — s
 | 2026-07-28 | Start PO dictionary from PARTS9 `POMAS`/`PODET` inspection | Owner |
 | 2026-07-28 | Mark `raw_kcw` ingest Confirmed (`sync_pomas_podet`); SYP = HQ→SYP transfer; note `po_syp_prepare` | Owner |
 | 2026-08-01 | Pending receive (ค้างรับ) = `ICLOW`; link [ICLOW dictionary](./kcw-iclow-pending-receive-data-dictionary.md) | Owner |
+| 2026-08-01 | Confirm ICLOW ingest tables; `/po` pending tab uses four ICLOW statuses | Agent |

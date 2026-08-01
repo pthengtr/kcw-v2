@@ -3,13 +3,17 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
-import { listPoPendingReceive } from "@/lib/po/po-queries";
+import {
+  PO_PENDING_RECEIVE_STATUSES,
+  listPoPendingReceive,
+} from "@/lib/po/po-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const QuerySchema = z.object({
   site: z.enum(["HQ", "SYP"]),
+  status: z.enum(PO_PENDING_RECEIVE_STATUSES).default("pending_receive"),
   q: z.string().optional(),
-  acctno: z.string().optional(),
+  vendor: z.string().optional(),
   from: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -35,8 +39,9 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const parsed = QuerySchema.safeParse({
     site: url.searchParams.get("site") ?? undefined,
+    status: url.searchParams.get("status") ?? undefined,
     q: url.searchParams.get("q") || undefined,
-    acctno: url.searchParams.get("acctno") || undefined,
+    vendor: url.searchParams.get("vendor") || undefined,
     from: url.searchParams.get("from") || undefined,
     to: url.searchParams.get("to") || undefined,
     months: url.searchParams.get("months") ?? undefined,
@@ -50,18 +55,19 @@ export async function GET(req: Request) {
 
   try {
     const supabase = createAdminClient();
-    const { rows, count } = await listPoPendingReceive({
+    const { rows, count, grain } = await listPoPendingReceive({
       supabase,
       site: parsed.data.site,
+      status: parsed.data.status,
       q: parsed.data.q,
-      acctno: parsed.data.acctno,
+      vendor: parsed.data.vendor,
       from: parsed.data.from,
       to: parsed.data.to,
       months: parsed.data.months,
       limit: parsed.data.limit,
       offset: parsed.data.offset,
     });
-    return NextResponse.json({ rows, count });
+    return NextResponse.json({ rows, count, grain });
   } catch (error) {
     console.error("po pending-receive list", error);
     return NextResponse.json(

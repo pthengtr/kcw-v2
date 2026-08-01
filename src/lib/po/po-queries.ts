@@ -243,60 +243,146 @@ export async function fetchPoLines(params: {
   return ((data ?? []) as Record<string, unknown>[]).map(mapLine);
 }
 
+export const PO_PENDING_RECEIVE_STATUSES = [
+  "to_be_ordered",
+  "pending_receive",
+  "partially_received",
+  "complete",
+] as const;
+
+export type PoPendingReceiveStatus =
+  (typeof PO_PENDING_RECEIVE_STATUSES)[number];
+
+export type PoPendingReceiveGrain = "line" | "docno";
+
 export type PoPendingReceiveRow = {
-  docno: string;
+  id: string;
+  docno: string | null;
   docdate: string | null;
-  acctno: string | null;
+  vendor: string | null;
   acctname: string | null;
-  billed: string | null;
-  billno: string | null;
-  line: string | null;
   bcode: string | null;
-  detail: string | null;
+  descr: string | null;
+  qty: number;
   ui: string | null;
-  po_qty: number;
-  recv_qty: number;
-  remaining: number;
+  ordered: string | null;
+  received: string | null;
+  rcvddate: string | null;
+  rcvdno: string | null;
+  status: PoPendingReceiveStatus;
+  grain: PoPendingReceiveGrain;
+  missing_count?: number;
+  received_count?: number;
+  missing_qty?: number;
+  received_qty?: number;
 };
 
+export type PoPendingReceiveDetailLine = {
+  id?: string | null;
+  docno?: string | null;
+  docdate?: string | null;
+  vendor?: string | null;
+  bcode: string | null;
+  descr: string | null;
+  qty: number;
+  ui: string | null;
+  ordered?: string | null;
+  received?: string | null;
+  rcvddate?: string | null;
+  rcvdno?: string | null;
+};
+
+export type PoPendingReceiveDetailReceived = {
+  source: "pidet" | "iclow" | string;
+  billno: string | null;
+  billdate: string | null;
+  bcode: string | null;
+  descr: string | null;
+  qty: number;
+  ui: string | null;
+  iclow_id: string | null;
+};
+
+export type PoPendingReceiveDetail = {
+  docno: string;
+  docdate: string | null;
+  vendor: string | null;
+  acctname: string | null;
+  missing_count: number;
+  received_iclow_count: number;
+  received_display_count: number;
+  missing: PoPendingReceiveDetailLine[];
+  received: PoPendingReceiveDetailReceived[];
+};
+
+function num(v: unknown) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow {
-  const num = (v: unknown) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
+  const statusRaw = String(row.status ?? "pending_receive");
+  const status = (
+    PO_PENDING_RECEIVE_STATUSES as readonly string[]
+  ).includes(statusRaw)
+    ? (statusRaw as PoPendingReceiveStatus)
+    : "pending_receive";
+  const grain: PoPendingReceiveGrain =
+    row.grain === "docno" ||
+    row.grain === "po" ||
+    status === "partially_received"
+      ? "docno"
+      : "line";
+
   return {
-    docno: String(row.docno ?? ""),
+    id: String(row.id ?? row.docno ?? ""),
+    docno: (row.docno as string | null) ?? null,
     docdate: (row.docdate as string | null) ?? null,
-    acctno: (row.acctno as string | null) ?? null,
+    vendor: (row.vendor as string | null) ?? null,
     acctname: (row.acctname as string | null) ?? null,
-    billed: (row.billed as string | null) ?? null,
-    billno: (row.billno as string | null) ?? null,
-    line: ((row.line as string | null) ?? null),
     bcode: (row.bcode as string | null) ?? null,
-    detail: (row.detail as string | null) ?? null,
+    descr: (row.descr as string | null) ?? null,
+    qty: num(row.qty),
     ui: (row.ui as string | null) ?? null,
-    po_qty: num(row.po_qty),
-    recv_qty: num(row.recv_qty),
-    remaining: num(row.remaining),
+    ordered: (row.ordered as string | null) ?? null,
+    received: (row.received as string | null) ?? null,
+    rcvddate: (row.rcvddate as string | null) ?? null,
+    rcvdno: (row.rcvdno as string | null) ?? null,
+    status,
+    grain,
+    missing_count:
+      row.missing_count === undefined ? undefined : num(row.missing_count),
+    received_count:
+      row.received_count === undefined ? undefined : num(row.received_count),
+    missing_qty:
+      row.missing_qty === undefined ? undefined : num(row.missing_qty),
+    received_qty:
+      row.received_qty === undefined ? undefined : num(row.received_qty),
   };
 }
 
 export async function listPoPendingReceive(params: {
   supabase: SupabaseClient;
   site: PoSyncSite;
+  status?: PoPendingReceiveStatus;
   q?: string;
-  acctno?: string;
+  vendor?: string;
   from?: string;
   to?: string;
   months?: number;
   limit: number;
   offset: number;
-}): Promise<{ rows: PoPendingReceiveRow[]; count: number | null }> {
+}): Promise<{
+  rows: PoPendingReceiveRow[];
+  count: number | null;
+  grain: PoPendingReceiveGrain;
+}> {
   const {
     supabase,
     site,
+    status = "pending_receive",
     q,
-    acctno,
+    vendor,
     from,
     to,
     months = 12,
@@ -306,8 +392,9 @@ export async function listPoPendingReceive(params: {
 
   const { data, error } = await supabase.rpc("fn_po_pending_receive", {
     p_site: site,
+    p_status: status,
     p_q: q?.trim() || null,
-    p_acctno: acctno?.trim() || null,
+    p_vendor: vendor?.trim() || null,
     p_from: from?.trim() || null,
     p_to: to?.trim() || null,
     p_months: months,
@@ -318,7 +405,11 @@ export async function listPoPendingReceive(params: {
   if (error) throw error;
 
   const payload = data as
-    | { rows?: Record<string, unknown>[]; count?: number | null }
+    | {
+        rows?: Record<string, unknown>[];
+        count?: number | null;
+        grain?: string;
+      }
     | null;
 
   const rows = (payload?.rows ?? []).map(mapPendingReceiveRow);
@@ -326,8 +417,70 @@ export async function listPoPendingReceive(params: {
     payload?.count === null || payload?.count === undefined
       ? null
       : Number(payload.count);
+  const grain: PoPendingReceiveGrain =
+    payload?.grain === "docno" ||
+    payload?.grain === "po" ||
+    status === "partially_received"
+      ? "docno"
+      : "line";
 
-  return { rows, count: Number.isFinite(count) ? count : null };
+  return {
+    rows,
+    count: Number.isFinite(count) ? count : null,
+    grain,
+  };
+}
+
+export async function fetchPoPendingReceiveDetail(params: {
+  supabase: SupabaseClient;
+  site: PoSyncSite;
+  docno: string;
+}): Promise<PoPendingReceiveDetail> {
+  const { supabase, site, docno } = params;
+  const { data, error } = await supabase.rpc("fn_po_pending_receive_detail", {
+    p_site: site,
+    p_docno: docno,
+  });
+  if (error) throw error;
+
+  const payload = (data ?? {}) as Record<string, unknown>;
+  const missingRaw = (payload.missing as Record<string, unknown>[] | null) ?? [];
+  const receivedRaw =
+    (payload.received as Record<string, unknown>[] | null) ?? [];
+
+  return {
+    docno: String(payload.docno ?? docno),
+    docdate: (payload.docdate as string | null) ?? null,
+    vendor: (payload.vendor as string | null) ?? null,
+    acctname: (payload.acctname as string | null) ?? null,
+    missing_count: num(payload.missing_count),
+    received_iclow_count: num(payload.received_iclow_count),
+    received_display_count: num(payload.received_display_count),
+    missing: missingRaw.map((r) => ({
+      id: (r.id as string | null) ?? null,
+      docno: (r.docno as string | null) ?? null,
+      docdate: (r.docdate as string | null) ?? null,
+      vendor: (r.vendor as string | null) ?? null,
+      bcode: (r.bcode as string | null) ?? null,
+      descr: (r.descr as string | null) ?? null,
+      qty: num(r.qty),
+      ui: (r.ui as string | null) ?? null,
+      ordered: (r.ordered as string | null) ?? null,
+      received: (r.received as string | null) ?? null,
+      rcvddate: (r.rcvddate as string | null) ?? null,
+      rcvdno: (r.rcvdno as string | null) ?? null,
+    })),
+    received: receivedRaw.map((r) => ({
+      source: String(r.source ?? "iclow"),
+      billno: (r.billno as string | null) ?? null,
+      billdate: (r.billdate as string | null) ?? null,
+      bcode: (r.bcode as string | null) ?? null,
+      descr: (r.descr as string | null) ?? null,
+      qty: num(r.qty),
+      ui: (r.ui as string | null) ?? null,
+      iclow_id: (r.iclow_id as string | null) ?? null,
+    })),
+  };
 }
 
 async function syncHeaderPreparedFromLines(params: {
