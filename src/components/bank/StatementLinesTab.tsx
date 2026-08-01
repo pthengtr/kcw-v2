@@ -358,36 +358,55 @@ export default function StatementLinesTab({
   const canMatch =
     canFetch && isBankMatchAccount(accountNo) && !matchRunning;
 
-  const loadAccounts = useCallback(async (signal?: AbortSignal) => {
-    setAccountsLoading(true);
-    setAccountsError(null);
-    try {
-      const res = await fetch("/api/bank/statement-lines/accounts", {
-        cache: "no-store",
-        signal,
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error ?? `Request failed (${res.status})`);
+  const loadAccounts = useCallback(
+    async (signal?: AbortSignal) => {
+      const range = monthToRange(month);
+      if (!range) {
+        setAccounts([]);
+        setAccountNo("");
+        setAccountsLoading(false);
+        setAccountsError(null);
+        return;
       }
-      const data = (await res.json()) as { accounts: BankAccountOption[] };
-      const list = data.accounts ?? [];
-      setAccounts(list);
-      setAccountNo((prev) => {
-        if (prev && list.some((a) => a.account_no === prev)) return prev;
-        const preferred = list.find(
-          (a) => a.account_no === BANK_MATCH_ACCOUNT_NO
+
+      setAccountsLoading(true);
+      setAccountsError(null);
+      try {
+        const params = new URLSearchParams({
+          from: range.from,
+          to: range.to,
+        });
+        const res = await fetch(
+          `/api/bank/statement-lines/accounts?${params.toString()}`,
+          {
+            cache: "no-store",
+            signal,
+          }
         );
-        return preferred?.account_no ?? list[0]?.account_no ?? "";
-      });
-    } catch (e) {
-      if (String(e).includes("AbortError")) return;
-      setAccountsError(e instanceof Error ? e.message : String(e));
-      setAccounts([]);
-    } finally {
-      setAccountsLoading(false);
-    }
-  }, []);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.error ?? `Request failed (${res.status})`);
+        }
+        const data = (await res.json()) as { accounts: BankAccountOption[] };
+        const list = data.accounts ?? [];
+        setAccounts(list);
+        setAccountNo((prev) => {
+          if (prev && list.some((a) => a.account_no === prev)) return prev;
+          const preferred = list.find(
+            (a) => a.account_no === BANK_MATCH_ACCOUNT_NO
+          );
+          return preferred?.account_no ?? list[0]?.account_no ?? "";
+        });
+      } catch (e) {
+        if (String(e).includes("AbortError")) return;
+        setAccountsError(e instanceof Error ? e.message : String(e));
+        setAccounts([]);
+      } finally {
+        setAccountsLoading(false);
+      }
+    },
+    [month]
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1209,7 +1228,8 @@ export default function StatementLinesTab({
       )}
       {!accountsLoading && accounts.length === 0 && !accountsError && (
         <div className="text-sm text-muted-foreground">
-          ยังไม่มีบัญชีใน statement_lines
+          ยังไม่มีบัญชีใน statement_lines สำหรับ{" "}
+          {month ? formatMonthLabel(month) : "เดือนที่เลือก"}
         </div>
       )}
       {error && <div className="text-sm text-red-600">{error}</div>}
