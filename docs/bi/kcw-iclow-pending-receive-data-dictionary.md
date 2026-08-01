@@ -163,7 +163,7 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 - Do **not** use mixed-DOCNO sibling logic for รับบางส่วน.
 - Do **not** use `PIMAS.PO` or `PODET.QTY − PIDET.QTY` for membership.
 - Default UI filter: **`pending_receive`**.
-- `complete` / `partially_received` / `pending_receive` keep a date window on `DOCDATE` (UI default: **last 30 days**).
+- `complete` / `partially_received` / `pending_receive` keep a date window on `DOCDATE` (UI default: **last 30 days**; quick presets: 60d / 3m / 6m / 1y).
 - `to_be_ordered` skips the date cutoff.
 
 ### 6.4 Observed HQ counts (ingested snapshot 2026-08-01)

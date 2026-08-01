@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,8 @@ import {
   formatPoDate,
   formatPoQty,
   last30DaysPoDateRange,
+  PO_DATE_LOOKBACK_PRESETS,
+  poDateRangeLookingBack,
 } from "@/lib/po/format";
 import {
   PO_ICLOW_STATUS_TABS,
@@ -132,6 +135,7 @@ export default function PoPendingReceiveTab({
   const [q, setQ] = useState("");
   const [from, setFrom] = useState(() => last30DaysPoDateRange().from);
   const [to, setTo] = useState(() => last30DaysPoDateRange().to);
+  const [lookbackId, setLookbackId] = useState("30d");
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -162,13 +166,24 @@ export default function PoPendingReceiveTab({
     if (!showDates) {
       setFrom("");
       setTo("");
+      setLookbackId("30d");
       return;
     }
     // Entering dated tabs: default to last 30 days (avoids 12‑month timeouts).
     const range = last30DaysPoDateRange();
     setFrom(range.from);
     setTo(range.to);
+    setLookbackId("30d");
   }, [showDates]);
+
+  function applyLookback(id: string) {
+    const item = PO_DATE_LOOKBACK_PRESETS.find((p) => p.id === id);
+    if (!item) return;
+    const range = poDateRangeLookingBack(item.preset);
+    setLookbackId(id);
+    setFrom(range.from);
+    setTo(range.to);
+  }
 
   useEffect(() => {
     const ac = new AbortController();
@@ -534,7 +549,10 @@ export default function PoPendingReceiveTab({
               name="from-date"
               placeholder="จากวันที่"
               value={from || undefined}
-              onChange={(val) => setFrom(val ?? "")}
+              onChange={(val) => {
+                setLookbackId("");
+                setFrom(val ?? "");
+              }}
               className="sm:w-[180px]"
               clearable
             />
@@ -542,10 +560,26 @@ export default function PoPendingReceiveTab({
               name="to-date"
               placeholder="ถึงวันที่"
               value={to || undefined}
-              onChange={(val) => setTo(val ?? "")}
+              onChange={(val) => {
+                setLookbackId("");
+                setTo(val ?? "");
+              }}
               className="sm:w-[180px]"
               clearable
             />
+            <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto">
+              {PO_DATE_LOOKBACK_PRESETS.map((item) => (
+                <Button
+                  key={item.id}
+                  type="button"
+                  size="sm"
+                  variant={lookbackId === item.id ? "default" : "outline"}
+                  onClick={() => applyLookback(item.id)}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
           </>
         ) : null}
       </div>
