@@ -241,8 +241,8 @@ export default function PoSypTab({
         listContent={
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
-              POMAS/PODET — SYP สั่งจาก HQ. สถานะเตรียมโอนอ่านจากบิล TF/TFV
-              ที่ HQ (SIMas REMARKS ต้องมีเลข PO)
+              สาขาสั่งจาก HQ — สถานะจัดของอัปเดตจากบิลโอนที่ HQ เปิด
+              ให้ใส่เลข PO ในช่องหมายเหตุทุกครั้ง
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Select
