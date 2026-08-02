@@ -75,8 +75,8 @@ describe("PO format helpers", () => {
     expect(prepareStatusLabel("prepared")).toBe("เตรียมแล้ว");
     expect(prepareStatusLabel("partially_prepared")).toBe("เตรียมบางส่วน");
     expect(prepareStatusLabel("not_prepared")).toBe("ยังไม่เตรียม");
-    expect(prepareStatusBadgeClassName("prepared")).toContain("emerald");
-    expect(prepareStatusBadgeClassName("partially_prepared")).toContain("amber");
+    expect(prepareStatusBadgeClassName("prepared")).toContain("emerald-100");
+    expect(prepareStatusBadgeClassName("partially_prepared")).toContain("amber-100");
     expect(prepareStatusBadgeClassName("not_prepared")).toContain("slate");
   });
 });

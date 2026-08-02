@@ -62,9 +62,9 @@ export function prepareStatusBadgeClassName(
 ): string {
   switch (status) {
     case "prepared":
-      return "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-600 dark:border-emerald-500 dark:bg-emerald-600";
+      return "border-emerald-600 bg-emerald-100 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-500 dark:bg-emerald-950 dark:text-emerald-100";
     case "partially_prepared":
-      return "border-amber-500 bg-amber-500 text-white hover:bg-amber-500 dark:border-amber-500 dark:bg-amber-600";
+      return "border-amber-500 bg-amber-100 text-amber-950 hover:bg-amber-100 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-100";
     default:
       return "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200";
   }
