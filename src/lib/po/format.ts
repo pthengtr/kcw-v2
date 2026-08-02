@@ -41,6 +41,21 @@ export function billedLabel(billed: string | null | undefined) {
   return billed ?? "—";
 }
 
+export type PoPrepareStatus = "not_prepared" | "partially_prepared" | "prepared";
+
+export function prepareStatusLabel(status: PoPrepareStatus | string | null | undefined) {
+  switch (status) {
+    case "prepared":
+      return "เตรียมแล้ว";
+    case "partially_prepared":
+      return "เตรียมบางส่วน";
+    case "not_prepared":
+      return "ยังไม่เตรียม";
+    default:
+      return "ยังไม่เตรียม";
+  }
+}
+
 function isoDateLocal(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");

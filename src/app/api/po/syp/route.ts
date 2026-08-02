@@ -10,7 +10,9 @@ export const maxDuration = 60;
 
 const QuerySchema = z.object({
   status: z.enum(["open", "billed", "all"]).default("open"),
-  prepare: z.enum(["all", "prepared", "not_prepared"]).default("all"),
+  prepare: z
+    .enum(["all", "prepared", "partially_prepared", "not_prepared"])
+    .default("all"),
   q: z.string().optional(),
   from: z
     .string()

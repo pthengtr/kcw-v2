@@ -3,10 +3,8 @@
 import { useMemo, useState } from "react";
 import { Printer } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +17,8 @@ import {
   formatPoAmount,
   formatPoDate,
   formatPoQty,
-  formatPoTs,
+  prepareStatusLabel,
+  type PoPrepareStatus,
 } from "@/lib/po/format";
 import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
 
@@ -33,37 +32,38 @@ function formatHqLocation(
   return loc1 ?? loc2 ?? "—";
 }
 
+function linePrepareBadgeVariant(
+  status: PoPrepareStatus | string | null | undefined
+): "default" | "secondary" | "outline" {
+  switch (status) {
+    case "prepared":
+      return "secondary";
+    case "partially_prepared":
+      return "outline";
+    default:
+      return "default";
+  }
+}
+
 export default function PoSypDetailDialog({
   open,
   onOpenChange,
   selected,
   lines,
   linesLoading,
-  savingDocno,
-  savingLine,
-  noteDraft,
-  onNoteDraftChange,
-  onToggleHeaderPrepared,
-  onSaveNote,
-  onToggleLinePrepared,
+  tfBillnos,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selected: PoHeaderRow | null;
   lines: PoLineRow[];
   linesLoading: boolean;
-  savingDocno: string | null;
-  savingLine: string | null;
-  noteDraft: string;
-  onNoteDraftChange: (value: string) => void;
-  onToggleHeaderPrepared: (prepared: boolean) => void;
-  onSaveNote: () => void;
-  onToggleLinePrepared: (line: PoLineRow, prepared: boolean) => void;
+  tfBillnos?: string | null;
 }) {
   const [printBusy, setPrintBusy] = useState(false);
 
   const preparedCount = useMemo(
-    () => lines.filter((l) => l.prepared).length,
+    () => lines.filter((l) => l.prepare_line_status === "prepared").length,
     [lines]
   );
 
@@ -94,9 +94,29 @@ export default function PoSypDetailDialog({
                   {billedLabel(selected.billed)} · ยอด:{" "}
                   {formatPoAmount(selected.aftertax)}
                 </div>
-                <div className="text-muted-foreground">
-                  เตรียมรายบรรทัด: {preparedCount}/{lines.length}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-muted-foreground">เตรียมโอน:</span>
+                  <Badge
+                    variant={linePrepareBadgeVariant(selected.prepare_status)}
+                  >
+                    {prepareStatusLabel(selected.prepare_status)}
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    รายบรรทัดครบ: {preparedCount}/{lines.length}
+                  </span>
                 </div>
+                {tfBillnos ? (
+                  <div className="text-muted-foreground">
+                    TF/TFV:{" "}
+                    <span className="font-mono text-foreground break-all">
+                      {tfBillnos}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    ยังไม่พบบิล TF/TFV ที่ REMARKS อ้างเลข PO นี้
+                  </div>
+                )}
               </div>
               <Button
                 type="button"
@@ -110,44 +130,9 @@ export default function PoSypDetailDialog({
                 พิมพ์ตาราง
               </Button>
             </div>
-
-            <div className="flex flex-wrap items-center gap-3 print:hidden">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={Boolean(selected.prepared)}
-                  disabled={savingDocno === selected.docno}
-                  onCheckedChange={(checked) =>
-                    onToggleHeaderPrepared(checked)
-                  }
-                />
-                <span>เตรียมทั้งใบ</span>
-              </div>
-              {selected.prepared_at ? (
-                <span className="text-muted-foreground">
-                  {formatPoTs(selected.prepared_at)}
-                </span>
-              ) : null}
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center print:hidden">
-              <Input
-                placeholder="หมายเหตุ (ถ้ามี)"
-                value={noteDraft}
-                onChange={(e) => onNoteDraftChange(e.target.value)}
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={savingDocno === selected.docno}
-                onClick={onSaveNote}
-              >
-                บันทึกหมายเหตุ
-              </Button>
-            </div>
           </div>
         ) : null}
 
-        {/* Plain overflow div (not ScrollArea): Radix viewport h-full causes blank print pages */}
         <div className="max-h-[55vh] overflow-auto rounded-md border print:max-h-none print:overflow-visible print:border-0">
           {linesLoading ? (
             <TableLoadingState label="กำลังโหลดรายการ…" />
@@ -155,13 +140,13 @@ export default function PoSypDetailDialog({
             <table className="w-full min-w-[60rem] border-collapse text-sm print:min-w-0">
               <thead>
                 <tr className="border-b bg-muted/40 text-left">
-                  <th className="w-14 p-2 text-center">เตรียม</th>
+                  <th className="p-2">เตรียม</th>
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
                   <th className="p-2">ที่เก็บ HQ</th>
                   <th className="p-2">สต็อก HQ</th>
-                  <th className="p-2">อัปเดตสต็อก</th>
-                  <th className="p-2">จำนวน</th>
+                  <th className="p-2">TF qty</th>
+                  <th className="p-2">สั่ง</th>
                 </tr>
               </thead>
               <tbody>
@@ -174,23 +159,17 @@ export default function PoSypDetailDialog({
                 ) : (
                   lines.map((line, i) => {
                     const lineKey = line.line ?? String(i);
-                    const busy =
-                      savingLine === `${selected?.docno}:${lineKey}`;
                     return (
                       <tr key={`${lineKey}-${i}`} className="border-b">
-                        <td className="p-2 text-center align-middle">
-                          {/* Screen: interactive checkbox */}
-                          <span className="inline-flex print:hidden">
-                            <Checkbox
-                              checked={Boolean(line.prepared)}
-                              disabled={busy || !line.line}
-                              onCheckedChange={(value) =>
-                                onToggleLinePrepared(line, value === true)
-                              }
-                              aria-label={`เตรียมบรรทัด ${line.line ?? ""}`}
-                            />
-                          </span>
-                          {/* Print: empty box for handwritten check */}
+                        <td className="p-2 align-middle">
+                          <Badge
+                            variant={linePrepareBadgeVariant(
+                              line.prepare_line_status
+                            )}
+                            className="print:hidden"
+                          >
+                            {prepareStatusLabel(line.prepare_line_status)}
+                          </Badge>
                           <span
                             aria-hidden
                             className="mx-auto hidden h-4 w-4 border border-black print:inline-block"
@@ -199,13 +178,16 @@ export default function PoSypDetailDialog({
                         <td className="p-2">{line.bcode ?? "—"}</td>
                         <td className="p-2">{line.detail ?? "—"}</td>
                         <td className="p-2 font-medium">
-                          {formatHqLocation(line.hq_location1, line.hq_location2)}
+                          {formatHqLocation(
+                            line.hq_location1,
+                            line.hq_location2
+                          )}
                         </td>
                         <td className="p-2 font-medium tabular-nums">
                           {formatPoQty(line.hq_qty)}
                         </td>
-                        <td className="p-2 text-muted-foreground whitespace-nowrap">
-                          {formatPoTs(line.hq_qty_updated_at)}
+                        <td className="p-2 tabular-nums">
+                          {formatPoQty(line.tf_qty)}
                         </td>
                         <td className="p-2">
                           {line.qty ?? "—"} {line.ui ?? ""}
@@ -227,8 +209,6 @@ export default function PoSypDetailDialog({
               overflow: visible !important;
               background: white !important;
             }
-            /* DialogPortal uses asChild → Content is a direct body child (no portal wrapper).
-               Hide every other body child so page chrome cannot create blank pages. */
             body > *:not([data-po-print-root]) {
               display: none !important;
             }

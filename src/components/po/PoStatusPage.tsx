@@ -38,6 +38,10 @@ type IclowMeta = {
   inFlightJobs: JobQueueRow[];
 };
 
+type SimasMeta = {
+  hqLastIngestedAt: string | null;
+};
+
 type PoRelatedMeta = {
   inFlightJobs: JobQueueRow[];
 };
@@ -50,6 +54,7 @@ export default function PoStatusPage() {
     null
   );
   const [iclowMeta, setIclowMeta] = useState<IclowMeta | null>(null);
+  const [simasMeta, setSimasMeta] = useState<SimasMeta | null>(null);
   const [poRelatedMeta, setPoRelatedMeta] = useState<PoRelatedMeta | null>(
     null
   );
@@ -72,11 +77,13 @@ export default function PoStatusPage() {
         meta: PoMeta;
         inventory: InventoryMeta;
         iclow?: IclowMeta;
+        simas?: SimasMeta;
         poRelated?: PoRelatedMeta;
       };
       setMeta(data.meta);
       setInventoryMeta(data.inventory);
       setIclowMeta(data.iclow ?? null);
+      setSimasMeta(data.simas ?? null);
       setPoRelatedMeta(data.poRelated ?? null);
     } catch (e) {
       if (String(e).includes("AbortError")) return;
@@ -227,6 +234,9 @@ export default function PoStatusPage() {
           <span>
             สต็อก HQ: {formatPoTs(inventoryMeta?.hqLastUpdatedAt ?? null)}
           </span>
+          <span>
+            SIMas HQ: {formatPoTs(simasMeta?.hqLastIngestedAt ?? null)}
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={meta.HQ?.workerOnline ? "secondary" : "outline"}>
@@ -241,7 +251,13 @@ export default function PoStatusPage() {
         </div>
       </div>
     );
-  }, [meta, iclowMeta, inventoryMeta?.hqLastUpdatedAt, relatedInFlight]);
+  }, [
+    meta,
+    iclowMeta,
+    inventoryMeta?.hqLastUpdatedAt,
+    simasMeta?.hqLastIngestedAt,
+    relatedInFlight,
+  ]);
 
   return (
     <PermissionGate
@@ -298,7 +314,7 @@ export default function PoStatusPage() {
           </TabsList>
 
           <TabsContent value="syp" className="mt-4">
-            <PoSypTab refreshToken={refreshToken} onChanged={refresh} />
+            <PoSypTab refreshToken={refreshToken} />
           </TabsContent>
           <TabsContent value="hq" className="mt-4">
             <PoHqTab refreshToken={refreshToken} />

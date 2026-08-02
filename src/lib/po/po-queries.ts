@@ -15,7 +15,12 @@ import {
 } from "./worker-jobs";
 
 export type PoStatusFilter = "open" | "billed" | "all";
-export type PoPrepareFilter = "all" | "prepared" | "not_prepared";
+export type PoPrepareStatus = "not_prepared" | "partially_prepared" | "prepared";
+export type PoPrepareFilter =
+  | "all"
+  | "prepared"
+  | "partially_prepared"
+  | "not_prepared";
 
 export type PoHeaderRow = {
   docno: string;
@@ -31,10 +36,10 @@ export type PoHeaderRow = {
   billdate: string | null;
   remarks: string | null;
   ingested_at: string | null;
+  /** Derived from HQ TF/TFV bills (SIMas REMARKS → PO docno). */
   prepared?: boolean;
-  prepared_at?: string | null;
-  prepared_by?: string | null;
-  note?: string | null;
+  prepare_status?: PoPrepareStatus;
+  tf_billnos?: string | null;
 };
 
 export type PoLineRow = {
@@ -53,8 +58,13 @@ export type PoLineRow = {
   hq_qty?: string | null;
   hq_qty_updated_at?: string | null;
   prepared?: boolean;
-  prepared_at?: string | null;
-  prepared_by?: string | null;
+  prepare_line_status?: PoPrepareStatus;
+  tf_qty?: number | string | null;
+};
+
+export type PoLinesResult = {
+  lines: PoLineRow[];
+  tf_billnos?: string | null;
 };
 
 function raw(supabase: SupabaseClient) {
@@ -89,9 +99,24 @@ function mapLine(row: Record<string, unknown>): PoLineRow {
       (row.hq_qty_updated_at as string | null | undefined) ?? null,
     prepared:
       row.prepared === undefined ? undefined : Boolean(row.prepared),
-    prepared_at: (row.prepared_at as string | null | undefined) ?? null,
-    prepared_by: (row.prepared_by as string | null | undefined) ?? null,
+    prepare_line_status: parsePrepareStatus(row.prepare_line_status),
+    tf_qty:
+      row.tf_qty === undefined || row.tf_qty === null
+        ? null
+        : Number(row.tf_qty),
   };
+}
+
+function parsePrepareStatus(value: unknown): PoPrepareStatus | undefined {
+  const raw = String(value ?? "");
+  if (
+    raw === "not_prepared" ||
+    raw === "partially_prepared" ||
+    raw === "prepared"
+  ) {
+    return raw;
+  }
+  return undefined;
 }
 
 function mapRpcHeader(row: Record<string, unknown>): PoHeaderRow {
@@ -111,9 +136,8 @@ function mapRpcHeader(row: Record<string, unknown>): PoHeaderRow {
     ingested_at: (row.ingested_at as string | null) ?? null,
     prepared:
       row.prepared === undefined ? undefined : Boolean(row.prepared),
-    prepared_at: (row.prepared_at as string | null | undefined) ?? null,
-    prepared_by: (row.prepared_by as string | null | undefined) ?? null,
-    note: (row.note as string | null | undefined) ?? null,
+    prepare_status: parsePrepareStatus(row.prepare_status),
+    tf_billnos: (row.tf_billnos as string | null | undefined) ?? null,
   };
 }
 
@@ -124,6 +148,14 @@ export async function fetchLastIngestedAt(
   const { data, error } = await supabase.rpc("fn_po_last_ingested_at", {
     p_site: site,
   });
+  if (error) throw error;
+  return (data as string | null) ?? null;
+}
+
+export async function fetchSimasLastIngestedAt(
+  supabase: SupabaseClient
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc("fn_simas_last_ingested_at");
   if (error) throw error;
   return (data as string | null) ?? null;
 }
@@ -160,6 +192,7 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     sypIclowAt,
     iclowInFlight,
     poRelatedInFlight,
+    simasLastIngestedAt,
   ] = await Promise.all([
     fetchInventoryLastUpdatedAt(supabase, "HQ"),
     findInFlightInventorySync(supabase),
@@ -167,6 +200,7 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     fetchIclowLastIngestedAt(supabase, "SYP"),
     findInFlightIclowSync(supabase),
     findInFlightPoRelatedSync(supabase),
+    fetchSimasLastIngestedAt(supabase),
   ]);
 
   return {
@@ -189,6 +223,9 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
       hqLastIngestedAt: hqIclowAt,
       sypLastIngestedAt: sypIclowAt,
       inFlightJobs: iclowInFlight,
+    },
+    simas: {
+      hqLastIngestedAt: simasLastIngestedAt,
     },
     poRelated: {
       inFlightJobs: poRelatedInFlight,
@@ -252,7 +289,7 @@ export async function fetchPoLines(params: {
   supabase: SupabaseClient;
   site: PoSyncSite;
   docno: string;
-}): Promise<PoLineRow[]> {
+}): Promise<PoLinesResult> {
   const { supabase, site, docno } = params;
 
   if (site === "SYP") {
@@ -260,8 +297,14 @@ export async function fetchPoLines(params: {
       p_docno: docno,
     });
     if (error) throw error;
-    const payload = data as { lines?: Record<string, unknown>[] } | null;
-    return (payload?.lines ?? []).map(mapLine);
+    const payload = data as {
+      lines?: Record<string, unknown>[];
+      tf_billnos?: string | null;
+    } | null;
+    return {
+      lines: (payload?.lines ?? []).map(mapLine),
+      tf_billnos: payload?.tf_billnos ?? null,
+    };
   }
 
   const { data, error } = await raw(supabase)
@@ -271,7 +314,9 @@ export async function fetchPoLines(params: {
     .order("LINE", { ascending: true });
 
   if (error) throw error;
-  return ((data ?? []) as Record<string, unknown>[]).map(mapLine);
+  return {
+    lines: ((data ?? []) as Record<string, unknown>[]).map(mapLine),
+  };
 }
 
 export const PO_PENDING_RECEIVE_STATUSES = [
@@ -686,7 +731,7 @@ async function syncHeaderPreparedFromLines(params: {
   note?: string | null;
 }) {
   const { supabase, docno, userId, note } = params;
-  const lines = await fetchPoLines({ supabase, site: "SYP", docno });
+  const { lines } = await fetchPoLines({ supabase, site: "SYP", docno });
   const allPrepared =
     lines.length > 0 && lines.every((line) => Boolean(line.prepared));
   await upsertSypPrepare({
@@ -795,8 +840,8 @@ export async function upsertSypPrepare(params: {
   let lines: PoLineRow[] | undefined;
   if (syncLines) {
     const currentLines = await fetchPoLines({ supabase, site: "SYP", docno });
-    if (currentLines.length > 0) {
-      const linePayload = currentLines
+    if (currentLines.lines.length > 0) {
+      const linePayload = currentLines.lines
         .map((l) => l.line)
         .filter((line): line is string => Boolean(line))
         .map((line) => ({
@@ -814,7 +859,7 @@ export async function upsertSypPrepare(params: {
         if (lineError) throw lineError;
       }
     }
-    lines = await fetchPoLines({ supabase, site: "SYP", docno });
+    lines = (await fetchPoLines({ supabase, site: "SYP", docno })).lines;
   }
 
   return {

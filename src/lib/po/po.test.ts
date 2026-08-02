@@ -16,6 +16,7 @@ import {
   formatPoAmount,
   formatPoDate,
   formatPoQty,
+  prepareStatusLabel,
 } from "@/lib/po/format";
 import {
   PO_ICLOW_STATUS_TABS,
@@ -67,6 +68,12 @@ describe("PO format helpers", () => {
     expect(formatPoQty("12.5")).toBe("12.5");
     expect(formatPoQty(0)).toBe("0");
     expect(formatPoQty(null)).toBe("—");
+  });
+
+  it("labels prepare status from TF/SIMas", () => {
+    expect(prepareStatusLabel("prepared")).toBe("เตรียมแล้ว");
+    expect(prepareStatusLabel("partially_prepared")).toBe("เตรียมบางส่วน");
+    expect(prepareStatusLabel("not_prepared")).toBe("ยังไม่เตรียม");
   });
 });
 

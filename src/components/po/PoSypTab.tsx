@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -22,20 +22,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   formatPoAmount,
   formatPoDate,
-  formatPoTs,
+  prepareStatusLabel,
+  type PoPrepareStatus,
   last30DaysPoDateRange,
 } from "@/lib/po/format";
 import type {
   PoHeaderRow,
   PoLineRow,
   PoPendingReceiveStatus,
+  PoPrepareFilter,
 } from "@/lib/po/po-queries";
 
 type PoSypView = "list" | PoPendingReceiveStatus;
 
+function prepareBadgeVariant(
+  status: PoPrepareStatus | string | null | undefined
+): "default" | "secondary" | "outline" {
+  switch (status) {
+    case "prepared":
+      return "secondary";
+    case "partially_prepared":
+      return "outline";
+    default:
+      return "default";
+  }
+}
+
 export default function PoSypTab({
   refreshToken,
-  onChanged,
 }: {
   refreshToken: number;
   onChanged?: () => void;
@@ -45,12 +59,8 @@ export default function PoSypTab({
   const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [savingDocno, setSavingDocno] = useState<string | null>(null);
-  const [savingLine, setSavingLine] = useState<string | null>(null);
 
-  const [prepare, setPrepare] = useState<
-    "all" | "prepared" | "not_prepared"
-  >("all");
+  const [prepare, setPrepare] = useState<PoPrepareFilter>("all");
   const [q, setQ] = useState("");
   const [from, setFrom] = useState(() => last30DaysPoDateRange().from);
   const [to, setTo] = useState(() => last30DaysPoDateRange().to);
@@ -61,8 +71,8 @@ export default function PoSypTab({
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<PoHeaderRow | null>(null);
   const [lines, setLines] = useState<PoLineRow[]>([]);
+  const [detailTfBillnos, setDetailTfBillnos] = useState<string | null>(null);
   const [linesLoading, setLinesLoading] = useState(false);
-  const [noteDraft, setNoteDraft] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [accountRow, setAccountRow] = useState<PoHeaderRow | null>(null);
 
@@ -115,114 +125,9 @@ export default function PoSypTab({
     return () => ac.abort();
   }, [view, prepare, q, from, to, limit, offset, refreshToken]);
 
-  async function setPrepared(row: PoHeaderRow, prepared: boolean, note?: string) {
-    setSavingDocno(row.docno);
-    setError(null);
-    try {
-      const res = await fetch(
-        `/api/po/syp/${encodeURIComponent(row.docno)}/prepare`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prepared,
-            note: note ?? row.note ?? null,
-          }),
-        }
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error ?? `Request failed (${res.status})`);
-      }
-      const data = (await res.json()) as {
-        row: {
-          docno: string;
-          prepared: boolean;
-          prepared_at: string | null;
-          prepared_by: string | null;
-          note: string | null;
-          lines?: PoLineRow[];
-        };
-      };
-      setRows((prev) =>
-        prev.map((r) =>
-          r.docno === row.docno
-            ? {
-                ...r,
-                prepared: data.row.prepared,
-                prepared_at: data.row.prepared_at,
-                prepared_by: data.row.prepared_by,
-                note: data.row.note,
-              }
-            : r
-        )
-      );
-      if (selected?.docno === row.docno) {
-        setSelected((s) =>
-          s
-            ? {
-                ...s,
-                prepared: data.row.prepared,
-                prepared_at: data.row.prepared_at,
-                prepared_by: data.row.prepared_by,
-                note: data.row.note,
-              }
-            : s
-        );
-        if (data.row.lines) setLines(data.row.lines);
-      }
-      onChanged?.();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSavingDocno(null);
-    }
-  }
-
-  async function setLinePrepared(line: PoLineRow, prepared: boolean) {
-    if (!selected?.docno || !line.line) return;
-    const key = `${selected.docno}:${line.line}`;
-    setSavingLine(key);
-    setError(null);
-    try {
-      const res = await fetch(
-        `/api/po/syp/${encodeURIComponent(selected.docno)}/lines/${encodeURIComponent(line.line)}/prepare`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prepared }),
-        }
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error ?? `Request failed (${res.status})`);
-      }
-      const data = (await res.json()) as {
-        headerPrepared: boolean;
-        lines: PoLineRow[];
-      };
-      setLines(data.lines ?? []);
-      setRows((prev) =>
-        prev.map((r) =>
-          r.docno === selected.docno
-            ? { ...r, prepared: data.headerPrepared }
-            : r
-        )
-      );
-      setSelected((s) =>
-        s ? { ...s, prepared: data.headerPrepared } : s
-      );
-      onChanged?.();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSavingLine(null);
-    }
-  }
-
   async function openDetail(row: PoHeaderRow) {
     setSelected(row);
-    setNoteDraft(row.note ?? "");
+    setDetailTfBillnos(row.tf_billnos ?? null);
     setOpen(true);
     setLines([]);
     setLinesLoading(true);
@@ -234,8 +139,12 @@ export default function PoSypTab({
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error ?? `Request failed (${res.status})`);
       }
-      const data = (await res.json()) as { lines: PoLineRow[] };
+      const data = (await res.json()) as {
+        lines: PoLineRow[];
+        tf_billnos?: string | null;
+      };
       setLines(data.lines ?? []);
+      setDetailTfBillnos(data.tf_billnos ?? row.tf_billnos ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -285,31 +194,24 @@ export default function PoSypTab({
         render: (r) => formatPoAmount(r.aftertax),
       },
       {
-        key: "prepared",
-        header: "เตรียมแล้ว",
-        className: "min-w-[9rem]",
+        key: "prepare_status",
+        header: "เตรียมโอน",
+        className: "min-w-[10rem]",
         render: (r) => (
-          <div
-            className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-          >
-            <Switch
-              checked={Boolean(r.prepared)}
-              disabled={savingDocno === r.docno}
-              onCheckedChange={(checked) => void setPrepared(r, checked)}
-            />
-            {r.prepared_at ? (
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {formatPoTs(r.prepared_at)}
+          <div className="flex flex-col gap-1">
+            <Badge variant={prepareBadgeVariant(r.prepare_status)}>
+              {prepareStatusLabel(r.prepare_status)}
+            </Badge>
+            {r.tf_billnos ? (
+              <span className="font-mono text-xs text-muted-foreground break-all">
+                {r.tf_billnos}
               </span>
             ) : null}
           </div>
         ),
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [savingDocno]
+    []
   );
 
   function renderPoSypMobileCard(row: PoHeaderRow) {
@@ -341,18 +243,10 @@ export default function PoSypTab({
             </div>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <div className="text-xs text-muted-foreground">เตรียมแล้ว</div>
-            <div
-              className="flex items-center gap-2"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-            >
-              <Switch
-                checked={Boolean(row.prepared)}
-                disabled={savingDocno === row.docno}
-                onCheckedChange={(checked) => void setPrepared(row, checked)}
-              />
-            </div>
+            <div className="text-xs text-muted-foreground">เตรียมโอน</div>
+            <Badge variant={prepareBadgeVariant(row.prepare_status)}>
+              {prepareStatusLabel(row.prepare_status)}
+            </Badge>
           </div>
         </div>
       </button>
@@ -377,20 +271,24 @@ export default function PoSypTab({
         <TabsContent value="list" className="mt-3">
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
-              SYP สั่งจาก HQ — ทำเครื่องหมายเมื่อเตรียมสินค้าโอนแล้ว จากนั้นเมื่อ
-              SYP รับของและคีย์ใน PARTS9 ให้ Sync เพื่ออัปเดตสถานะ
+              SYP สั่งจาก HQ — สถานะเตรียมโอนอ่านจากบิล TF/TFV ที่ HQ (SIMas
+              REMARKS ต้องมีเลข PO) ไม่ต้องติ๊กในเว็บแล้ว เมื่อ SYP รับของใน
+              PARTS9 ให้ Sync PO เพื่ออัปเดตสถานะรับ
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Select
                 value={prepare}
-                onValueChange={(v) => setPrepare(v as typeof prepare)}
+                onValueChange={(v) => setPrepare(v as PoPrepareFilter)}
               >
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="สถานะเตรียม" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">ทั้งหมด</SelectItem>
                   <SelectItem value="not_prepared">ยังไม่เตรียม</SelectItem>
+                  <SelectItem value="partially_prepared">
+                    เตรียมบางส่วน
+                  </SelectItem>
                   <SelectItem value="prepared">เตรียมแล้ว</SelectItem>
                 </SelectContent>
               </Select>
@@ -437,25 +335,7 @@ export default function PoSypTab({
               selected={selected}
               lines={lines}
               linesLoading={linesLoading}
-              savingDocno={savingDocno}
-              savingLine={savingLine}
-              noteDraft={noteDraft}
-              onNoteDraftChange={setNoteDraft}
-              onToggleHeaderPrepared={(prepared) => {
-                if (!selected) return;
-                void setPrepared(selected, prepared, noteDraft);
-              }}
-              onSaveNote={() => {
-                if (!selected) return;
-                void setPrepared(
-                  selected,
-                  Boolean(selected.prepared),
-                  noteDraft
-                );
-              }}
-              onToggleLinePrepared={(line, prepared) => {
-                void setLinePrepared(line, prepared);
-              }}
+              tfBillnos={detailTfBillnos}
             />
 
             <PoAccountDialog
