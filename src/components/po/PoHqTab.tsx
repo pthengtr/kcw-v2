@@ -204,7 +204,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
         listContent={
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
-              POMAS/PODET — รายการใบสั่งซื้อจาก PARTS9
+              ใบสั่งซื้อที่สั่งจากซัพพลายเออร์เข้ามาที่ HQ
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Input
