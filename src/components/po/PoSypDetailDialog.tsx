@@ -81,15 +81,15 @@ export default function PoSypDetailDialog({
                   {formatPoAmount(selected.aftertax)}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-muted-foreground">เตรียมโอน:</span>
+                  <span className="text-muted-foreground">สถานะ:</span>
                   <PrepareStatusBadge status={selected.prepare_status} />
                   <span className="text-muted-foreground">
-                    รายบรรทัดครบ: {preparedCount}/{lines.length}
+                    จัดแล้ว: {preparedCount}/{lines.length} รายการ
                   </span>
                 </div>
                 {tfBillnos ? (
                   <div className="text-muted-foreground">
-                    TF/TFV:{" "}
+                    เลขที่บิลโอน:{" "}
                     <span className="font-mono text-foreground break-all">
                       {tfBillnos}
                     </span>
@@ -126,9 +126,9 @@ export default function PoSypDetailDialog({
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
                   <th className="p-2">ที่เก็บ HQ</th>
-                  <th className="p-2">สต็อก HQ</th>
-                  <th className="p-2">TF qty</th>
-                  <th className="p-2">สั่ง</th>
+                  <th className="p-2">คงเหลือ HQ</th>
+                  <th className="p-2">จำนวน TF</th>
+                  <th className="p-2">จำนวนสั่ง</th>
                 </tr>
               </thead>
               <tbody>
