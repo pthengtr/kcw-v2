@@ -1,13 +1,37 @@
+-- SYP partial-receive: count follow-up HQ TF/TFV (REMARKS → SYP DOCNO) toward received_qty.
+-- Keeps RCVDNO→SIMas path; unions REMARKS-matched TF bills so a second TF clears รับบางส่วน.
+-- Shared bill discovery with prepare (fn_po_is_tf_transfer_bill + fn_po_syp_docno_pattern).
+
+create or replace function public.fn_po_syp_tf_bills_by_docno()
+returns table (
+  docno text,
+  billno text
+)
+language sql
+stable
+security definer
+set search_path = raw_kcw, public
+as $$
+  select distinct
+    (regexp_match(s."REMARKS", public.fn_po_syp_docno_pattern(), 'i'))[1] as docno,
+    s."BILLNO" as billno
+  from raw_kcw.raw_hq_simas_sales_bills s
+  where coalesce(s."CANCELED", '') <> 'Y'
+    and public.fn_po_is_tf_transfer_bill(s."BILLNO")
+    and coalesce(s."REMARKS", '') ~* public.fn_po_syp_docno_pattern();
+$$;
+
+revoke all on function public.fn_po_syp_tf_bills_by_docno() from public, anon, authenticated;
+grant execute on function public.fn_po_syp_tf_bills_by_docno() to service_role;
+
 -- ICLOW-backed pending-receive list + partial PO detail for /po.
 -- Source of truth: docs/bi/kcw-iclow-pending-receive-data-dictionary.md §6
 --
 -- Grain for ordered statuses: DOCNO + BCODE.
--- HQ received qty: sum(PIDET.QTY) via distinct ICLOW.RCVDNO → PIDET.BILLNO + BCODE.
--- Primary join: left(btrim(BILLNO),12) = left(btrim(RCVDNO),12) (PARTS9 pad/trunc).
--- Fallback (HQ only): when BILLNO miss — same AP + PIMAS.PO contains ICLOW.DOCNO
---   + exact BCODE/qty fingerprint of that RCVDNO on the DOCNO (operator often keys a
---   delivery-note into PIMAS first, then renames BILLNO to the invoice). Marked
---   match_method='pattern' (not 1:1). Do NOT use PIMAS.PO for membership alone.
+-- HQ received qty: sum(PIDET.QTY) via distinct ICLOW.RCVDNO → PIDET.BILLNO + BCODE
+--   (do NOT use PIMAS.PO — unreliable).
+-- Legacy PARTS9 ICLOW.RCVDNO is truncated to 12 chars; PIMAS.BILLNO may be longer and/or
+-- padded with spaces. Join key: left(btrim(BILLNO),12) = left(btrim(RCVDNO),12), then PIDET.
 -- Perf: date-filter ICLOW early; skip PIDET for pending_receive; avoid correlated NOT EXISTS.
 -- SYP received qty: union of
 --   (1) ICLOW.RCVDNO → left(btrim,12) → HQ SIMas/SIDet (first TF)
@@ -332,18 +356,11 @@ begin
       where i.rcvdno is not null
         and i.received = 'Y'
     ),
-    rcvd_links as materialized (
-      select distinct i.docno, i.bcode, i.rcvdno
-      from ic i
-      where i.rcvdno is not null
-        and i.received = 'Y'
-    ),
-    -- 1:1 / left-12 BILLNO match (PARTS9 pad/trunc).
-    resolved_exact as materialized (
+    -- Normalize BILLNO/RCVDNO: btrim + left(...,12) before join (PARTS9 pad/trunc).
+    resolved as materialized (
       select distinct on (r.rcvdno)
         r.rcvdno,
-        p."BILLNO" as billno,
-        'exact'::text as match_method
+        p."BILLNO" as billno
       from rcvdnos r
       join raw_kcw.raw_hq_pimas_purchase_bills p
         on left(btrim(p."BILLNO"), 12) = left(r.rcvdno, 12)
@@ -354,135 +371,11 @@ begin
         char_length(btrim(p."BILLNO")),
         p."BILLNO"
     ),
-    -- RCVDNO+DOCNO still missing after exact → pattern candidates (same AP + PO contains DOCNO).
-    unmatched_hdr as materialized (
-      select
-        l.rcvdno,
-        l.docno,
-        max(i.vendor) as vendor,
-        max(i.rcvddate) as rcvddate
-      from (select distinct rcvdno, docno from rcvd_links) l
-      join ic i
-        on i.rcvdno = l.rcvdno
-       and i.docno = l.docno
-       and i.received = 'Y'
-      where not exists (
-        select 1 from resolved_exact e where e.rcvdno = l.rcvdno
-      )
-        and l.docno is not null
-      group by l.rcvdno, l.docno
-      having max(i.vendor) is not null
-    ),
-    ic_fp as materialized (
-      select
-        i.rcvdno,
-        i.docno,
-        i.bcode,
-        sum(i.qty) as qty
+    rcvd_links as materialized (
+      select distinct i.docno, i.bcode, i.rcvdno
       from ic i
-      join unmatched_hdr u
-        on u.rcvdno = i.rcvdno and u.docno = i.docno
-      where i.received = 'Y'
-        and i.rcvdno is not null
-        and i.bcode is not null
-      group by i.rcvdno, i.docno, i.bcode
-    ),
-    pattern_cand as materialized (
-      select
-        u.rcvdno,
-        u.docno,
-        u.vendor,
-        u.rcvddate,
-        p."BILLNO" as billno,
-        left(p."BILLDATE"::text, 10) as billdate
-      from unmatched_hdr u
-      join raw_kcw.raw_hq_pimas_purchase_bills p
-        on btrim(coalesce(p."ACCTNO", '')) = u.vendor
-       and coalesce(p."CANCELED", '') <> 'Y'
-       and (
-         btrim(coalesce(p."PO", '')) = u.docno
-         or btrim(coalesce(p."PO", '')) like u.docno || '/%'
-         or btrim(coalesce(p."PO", '')) like '%/' || u.docno
-         or btrim(coalesce(p."PO", '')) like '%/' || u.docno || '/%'
-       )
-    ),
-    pattern_score as materialized (
-      select
-        c.rcvdno,
-        c.docno,
-        c.billno,
-        c.billdate,
-        c.rcvddate,
-        (
-          select count(*)::int from ic_fp f
-          where f.rcvdno = c.rcvdno and f.docno = c.docno
-        ) as ic_n,
-        (
-          select count(*)::int
-          from ic_fp f
-          where f.rcvdno = c.rcvdno
-            and f.docno = c.docno
-            and (
-              select coalesce(sum(d."QTY"::numeric), 0)
-              from raw_kcw.raw_hq_pidet_purchase_lines d
-              where d."BILLNO" = c.billno
-                and d."BCODE" = f.bcode
-                and coalesce(d."CANCELED", '') <> 'Y'
-                and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
-            ) = f.qty
-        ) as hit_n
-      from pattern_cand c
-    ),
-    pattern_ranked as materialized (
-      select
-        s.*,
-        rank() over (
-          partition by s.rcvdno, s.docno
-          order by
-            abs(
-              nullif(s.billdate, '')::date
-              - nullif(s.rcvddate, '')::date
-            ) nulls last,
-            btrim(s.billno)
-        ) as rk
-      from pattern_score s
-      where s.ic_n > 0
-        and s.hit_n = s.ic_n
-    ),
-    -- Accept only a unique best candidate (pattern recognition, not 1:1 BILLNO).
-    resolved_pattern as materialized (
-      select
-        r.rcvdno,
-        r.docno,
-        r.billno,
-        'pattern'::text as match_method
-      from pattern_ranked r
-      where r.rk = 1
-        and not exists (
-          select 1
-          from pattern_ranked r2
-          where r2.rcvdno = r.rcvdno
-            and r2.docno = r.docno
-            and r2.rk = 1
-            and btrim(r2.billno) <> btrim(r.billno)
-        )
-    ),
-    -- Unified resolve at (rcvdno, docno): exact applies to every DOCNO for that RCVDNO.
-    resolved as materialized (
-      select
-        l.rcvdno,
-        l.docno,
-        e.billno,
-        e.match_method
-      from (select distinct rcvdno, docno from rcvd_links) l
-      join resolved_exact e on e.rcvdno = l.rcvdno
-      union all
-      select
-        p.rcvdno,
-        p.docno,
-        p.billno,
-        p.match_method
-      from resolved_pattern p
+      where i.rcvdno is not null
+        and i.received = 'Y'
     ),
     received as materialized (
       select
@@ -490,9 +383,7 @@ begin
         l.bcode,
         sum(coalesce(d."QTY"::numeric, 0)) as received_qty
       from rcvd_links l
-      join resolved r
-        on r.rcvdno = l.rcvdno
-       and r.docno = l.docno
+      join resolved r on r.rcvdno = l.rcvdno
       join raw_kcw.raw_hq_pidet_purchase_lines d
         on d."BILLNO" = r.billno
        and d."BCODE" = l.bcode
@@ -500,17 +391,17 @@ begin
        and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
       group by l.docno, l.bcode
     ),
+    resolved_rcvdnos as materialized (
+      select distinct rcvdno from resolved
+    ),
     pimas_link as materialized (
       select
         l.docno,
         l.bcode,
-        bool_or(res.billno is null) as pimas_link_missing,
-        bool_or(res.match_method = 'exact') as any_exact,
-        bool_or(res.match_method = 'pattern') as any_pattern
+        bool_or(res.rcvdno is null) as pimas_link_missing
       from rcvd_links l
-      left join resolved res
+      left join resolved_rcvdnos res
         on res.rcvdno = l.rcvdno
-       and res.docno = l.docno
       group by l.docno, l.bcode
     ),
     classified as (
@@ -535,15 +426,6 @@ begin
         o.rcvddate as billdate,
         coalesce(pl.pimas_link_missing, false) as pimas_link_missing,
         case
-          when coalesce(pl.pimas_link_missing, false) then null
-          when coalesce(pl.any_pattern, false)
-            and not coalesce(pl.any_exact, false) then 'pattern'
-          when coalesce(pl.any_pattern, false)
-            and coalesce(pl.any_exact, false) then 'mixed'
-          else 'exact'
-        end as pimas_match_method,
-        nullif(btrim(coalesce(rd.billno, '')), '') as pimas_matched_billno,
-        case
           when coalesce(r.received_qty, 0) >= o.ordered_qty and o.ordered_qty > 0
             then 'complete'
           else 'partially_received'
@@ -554,9 +436,6 @@ begin
         on r.docno = o.docno and r.bcode = o.bcode
       left join pimas_link pl
         on pl.docno = o.docno and pl.bcode = o.bcode
-      left join resolved rd
-        on rd.rcvdno = o.rcvdnos
-       and rd.docno = o.docno
       left join raw_kcw.raw_hq_apmas_payable ap on ap."ACCTNO" = o.vendor
     ),
     filtered as materialized (
@@ -573,7 +452,6 @@ begin
           or coalesce(c.mcode, '') ilike '%' || v_q || '%'
           or coalesce(c.rcvdno, '') ilike '%' || v_q || '%'
           or coalesce(c.billno, '') ilike '%' || v_q || '%'
-          or coalesce(c.pimas_matched_billno, '') ilike '%' || v_q || '%'
         )
     )
     select jsonb_build_object(
@@ -953,16 +831,11 @@ begin
       from ic
       where rcvdno is not null
     ),
-    rcvd_links as (
-      select distinct bcode, rcvdno
-      from ic
-      where rcvdno is not null and bcode is not null
-    ),
-    resolved_exact as (
+    -- Normalize BILLNO/RCVDNO: btrim + left(...,12) before join (PARTS9 pad/trunc).
+    resolved as (
       select distinct on (r.rcvdno)
         r.rcvdno,
-        p."BILLNO" as billno,
-        'exact'::text as match_method
+        p."BILLNO" as billno
       from rcvdnos r
       join raw_kcw.raw_hq_pimas_purchase_bills p
         on left(btrim(p."BILLNO"), 12) = left(r.rcvdno, 12)
@@ -973,105 +846,10 @@ begin
         char_length(btrim(p."BILLNO")),
         p."BILLNO"
     ),
-    unmatched_hdr as (
-      select
-        r.rcvdno,
-        v_docno as docno,
-        max(i.vendor) as vendor,
-        max(i.rcvddate) as rcvddate
-      from rcvdnos r
-      join ic i on i.rcvdno = r.rcvdno and i.received = 'Y'
-      where not exists (
-        select 1 from resolved_exact e where e.rcvdno = r.rcvdno
-      )
-      group by r.rcvdno
-      having max(i.vendor) is not null
-    ),
-    ic_fp as (
-      select
-        i.rcvdno,
-        i.bcode,
-        sum(i.qty) as qty
-      from ic i
-      join unmatched_hdr u on u.rcvdno = i.rcvdno
-      where i.received = 'Y'
-        and i.bcode is not null
-      group by i.rcvdno, i.bcode
-    ),
-    pattern_cand as (
-      select
-        u.rcvdno,
-        u.rcvddate,
-        p."BILLNO" as billno,
-        left(p."BILLDATE"::text, 10) as billdate
-      from unmatched_hdr u
-      join raw_kcw.raw_hq_pimas_purchase_bills p
-        on btrim(coalesce(p."ACCTNO", '')) = u.vendor
-       and coalesce(p."CANCELED", '') <> 'Y'
-       and (
-         btrim(coalesce(p."PO", '')) = u.docno
-         or btrim(coalesce(p."PO", '')) like u.docno || '/%'
-         or btrim(coalesce(p."PO", '')) like '%/' || u.docno
-         or btrim(coalesce(p."PO", '')) like '%/' || u.docno || '/%'
-       )
-    ),
-    pattern_score as (
-      select
-        c.rcvdno,
-        c.billno,
-        c.billdate,
-        c.rcvddate,
-        (select count(*)::int from ic_fp f where f.rcvdno = c.rcvdno) as ic_n,
-        (
-          select count(*)::int
-          from ic_fp f
-          where f.rcvdno = c.rcvdno
-            and (
-              select coalesce(sum(d."QTY"::numeric), 0)
-              from raw_kcw.raw_hq_pidet_purchase_lines d
-              where d."BILLNO" = c.billno
-                and d."BCODE" = f.bcode
-                and coalesce(d."CANCELED", '') <> 'Y'
-                and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
-            ) = f.qty
-        ) as hit_n
-      from pattern_cand c
-    ),
-    pattern_ranked as (
-      select
-        s.*,
-        rank() over (
-          partition by s.rcvdno
-          order by
-            abs(
-              nullif(s.billdate, '')::date
-              - nullif(s.rcvddate, '')::date
-            ) nulls last,
-            btrim(s.billno)
-        ) as rk
-      from pattern_score s
-      where s.ic_n > 0
-        and s.hit_n = s.ic_n
-    ),
-    resolved_pattern as (
-      select
-        r.rcvdno,
-        r.billno,
-        'pattern'::text as match_method
-      from pattern_ranked r
-      where r.rk = 1
-        and not exists (
-          select 1
-          from pattern_ranked r2
-          where r2.rcvdno = r.rcvdno
-            and r2.rk = 1
-            and btrim(r2.billno) <> btrim(r.billno)
-        )
-    ),
-    resolved as (
-      select rcvdno, billno, match_method from resolved_exact
-      union all
-      select rcvdno, billno, match_method from resolved_pattern
+    rcvd_links as (
+      select distinct bcode, rcvdno
+      from ic
+      where rcvdno is not null and bcode is not null
     ),
     bcode_received as (
       select
@@ -1116,8 +894,7 @@ begin
         coalesce(d."QTY"::numeric, 0) as qty,
         nullif(btrim(coalesce(d."UI", '')), '') as ui,
         null::text as iclow_id,
-        false as pimas_link_missing,
-        r.match_method as pimas_match_method
+        false as pimas_link_missing
       from rcvd_links l
       join resolved r on r.rcvdno = l.rcvdno
       join raw_kcw.raw_hq_pidet_purchase_lines d
@@ -1137,8 +914,7 @@ begin
         i.qty,
         i.ui,
         i.id as iclow_id,
-        (res.rcvdno is null) as pimas_link_missing,
-        null::text as pimas_match_method
+        (res.rcvdno is null) as pimas_link_missing
       from ic i
       left join (select distinct rcvdno from resolved) res
         on res.rcvdno = i.rcvdno

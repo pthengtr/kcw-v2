@@ -364,6 +364,8 @@ export type PoPendingReceiveRow = {
   billdate?: string | null;
   /** HQ: true when at least one RCVDNO has no matching PIMAS bill */
   pimas_link_missing?: boolean;
+  /** SYP: TF/TFV billnos contributing to received_qty (RCVDNO ∪ REMARKS) */
+  tf_billnos?: string | null;
   /**
    * HQ RCVDNO→PIMAS resolve method for this row:
    * - exact: left(btrim(BILLNO),12) 1:1-style match
@@ -456,6 +458,7 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     billno: (row.billno as string | null) ?? null,
     billdate: (row.billdate as string | null) ?? null,
     pimas_link_missing: Boolean(row.pimas_link_missing),
+    tf_billnos: (row.tf_billnos as string | null | undefined) ?? null,
     pimas_match_method: (() => {
       const m = String(row.pimas_match_method ?? "");
       if (m === "exact" || m === "pattern" || m === "mixed") return m;

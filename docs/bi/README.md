@@ -22,7 +22,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_po_sync_ops.sql](./sql/fn_po_sync_ops.sql) | Service-role RPCs for PO sync via `ops.job_queue` |
 | [sql/fn_po_related_sync_ops.sql](./sql/fn_po_related_sync_ops.sql) | Combined `/po` update button — `sync_po_related` HQ+SYP |
 | [sql/fn_po_list.sql](./sql/fn_po_list.sql) | PO list + last-ingested RPCs / open-PO indexes |
-| [sql/fn_po_pending_receive.sql](./sql/fn_po_pending_receive.sql) | ICLOW `/po` pending tab + partial PO detail (`RCVDNO→PIDET`) |
+| [sql/fn_po_pending_receive.sql](./sql/fn_po_pending_receive.sql) | ICLOW `/po` pending tab; HQ `RCVDNO→PIDET`; SYP `RCVDNO∪REMARKS TF→SIDet` |
 | [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictionary.md) | Stock-more + dead-stock aging rules |
 | [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
 | [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products` |

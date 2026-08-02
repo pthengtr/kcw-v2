@@ -441,16 +441,39 @@ export default function PoPendingReceiveTab({
         },
         {
           key: "billno",
-          header: "RCVDNO",
+          header: site === "SYP" ? "RCVDNO / TF" : "RCVDNO",
           className: "min-w-[8rem] align-middle",
-          render: (r) =>
-            formatRcvdnoCell(r.billno ?? r.rcvdno, {
+          render: (r) => {
+            const rcvd = formatRcvdnoCell(r.billno ?? r.rcvdno, {
               site,
               pimasLinkMissing: r.pimas_link_missing,
               pimasMatchMethod: r.pimas_match_method,
               pimasMatchedBillno: r.pimas_matched_billno,
               onOpenPi: () => void openPiDetail(r),
-            }),
+            });
+            if (site !== "SYP") return rcvd;
+            const tf = r.tf_billnos?.trim() || "";
+            const rcvdno = (r.billno ?? r.rcvdno)?.trim() || "";
+            const showTf =
+              tf.length > 0 &&
+              tf
+                .split(",")
+                .map((s) => s.trim())
+                .some((b) => b && b !== rcvdno);
+            return (
+              <span className="inline-flex max-w-[16rem] flex-col justify-center gap-0.5 align-middle">
+                {rcvd}
+                {showTf ? (
+                  <span
+                    className="break-all font-mono text-xs leading-snug text-muted-foreground"
+                    title="บิล TF ที่นับรวมในจำนวนรับ (RCVDNO ∪ REMARKS)"
+                  >
+                    TF: {tf}
+                  </span>
+                ) : null}
+              </span>
+            );
+          },
         },
       ];
     }
@@ -527,7 +550,9 @@ export default function PoPendingReceiveTab({
                 </div>
               </div>
               <div className="col-span-2">
-                <div className="text-xs text-muted-foreground">RCVDNO</div>
+                <div className="text-xs text-muted-foreground">
+                  {site === "SYP" ? "RCVDNO / TF" : "RCVDNO"}
+                </div>
                 <div>
                   {formatRcvdnoCell(row.billno || row.rcvdno, {
                     site,
@@ -537,6 +562,14 @@ export default function PoPendingReceiveTab({
                     onOpenPi: () => void openPiDetail(row),
                   })}
                 </div>
+                {site === "SYP" && row.tf_billnos?.trim() ? (
+                  <div
+                    className="mt-1 break-all font-mono text-xs text-muted-foreground"
+                    title="บิล TF ที่นับรวมในจำนวนรับ (RCVDNO ∪ REMARKS)"
+                  >
+                    TF: {row.tf_billnos}
+                  </div>
+                ) : null}
               </div>
             </>
           ) : (
@@ -559,7 +592,7 @@ export default function PoPendingReceiveTab({
         {isBcodeQty
           ? site === "HQ"
             ? "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
-            : "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก SIDet ผ่าน RCVDNO→TF บิล HQ (left 12). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
+            : "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก SIDet = TF ผ่าน RCVDNO ∪ TF ที่ REMARKS ตรง DOCNO (ส่งเพิ่มเคลียร์ค้าง). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
           : "รายการรอสั่งซื้อจาก PARTS9 (แยกจาก POMAS/PODET). คลิก DOCNO → POMAS/PODET"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
