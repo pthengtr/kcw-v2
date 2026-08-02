@@ -72,9 +72,9 @@ describe("PO format helpers", () => {
   });
 
   it("labels prepare status from TF/SIMas", () => {
-    expect(prepareStatusLabel("prepared")).toBe("เตรียมแล้ว");
+    expect(prepareStatusLabel("prepared")).toBe("จัดแล้ว");
     expect(prepareStatusLabel("partially_prepared")).toBe("จัดของบางส่วน");
-    expect(prepareStatusLabel("not_prepared")).toBe("ยังไม่เตรียม");
+    expect(prepareStatusLabel("not_prepared")).toBe("ยังไม่จัด");
     expect(prepareStatusBadgeClassName("prepared")).toContain("emerald-100");
     expect(prepareStatusBadgeClassName("partially_prepared")).toContain("amber-100");
     expect(prepareStatusBadgeClassName("not_prepared")).toContain("slate");
