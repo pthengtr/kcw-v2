@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Printer } from "lucide-react";
 
 import PrepareStatusBadge from "@/components/po/PrepareStatusBadge";
+import PoProductCell from "@/components/po/PoProductCell";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -152,8 +153,10 @@ export default function PoSypDetailDialog({
                             className="mx-auto hidden h-4 w-4 border border-black print:inline-block"
                           />
                         </td>
-                        <td className="p-2">{line.bcode ?? "—"}</td>
-                        <td className="p-2">{line.detail ?? "—"}</td>
+                        <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
+                        <td className="p-2">
+                          <PoProductCell detail={line.detail} mcode={line.mcode} />
+                        </td>
                         <td className="p-2 font-medium">
                           {formatHqLocation(
                             line.hq_location1,

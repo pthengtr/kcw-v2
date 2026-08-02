@@ -13,6 +13,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
+import PoProductCell from "@/components/po/PoProductCell";
 import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
 import {
   formatPoAmount,
@@ -109,25 +110,6 @@ function formatRcvdnoCell(
       {showNote ? (
         <span className="whitespace-normal font-sans text-xs leading-snug text-muted-foreground">
           (ไม่พบลิงก์ PIMAS)
-        </span>
-      ) : null}
-    </span>
-  );
-}
-
-function productCell(
-  descr: string | null | undefined,
-  mcode: string | null | undefined
-) {
-  const d = descr?.trim() || "";
-  const m = mcode?.trim() || "";
-  if (!d && !m) return "—";
-  return (
-    <span className="line-clamp-2 break-words">
-      {d || "—"}
-      {m ? (
-        <span className="mt-0.5 block font-mono text-xs text-muted-foreground">
-          {m}
         </span>
       ) : null}
     </span>
@@ -364,7 +346,7 @@ export default function PoPendingReceiveTab({
         key: "product",
         header: "สินค้า",
         className: "max-w-[14rem] hidden md:table-cell",
-        render: (r) => productCell(r.descr, r.mcode),
+        render: (r) => <PoProductCell descr={r.descr} mcode={r.mcode} />,
       },
     ];
 
@@ -460,7 +442,7 @@ export default function PoPendingReceiveTab({
           {row.vendor ? ` · ${row.vendor}` : ""}
         </div>
         <div className="mt-2 text-sm">
-          {productCell(row.descr, row.mcode)}
+          <PoProductCell descr={row.descr} mcode={row.mcode} />
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
           <div>
@@ -602,7 +584,9 @@ export default function PoPendingReceiveTab({
                       <tr key={`${line.line}-${i}`} className="border-b">
                         <td className="p-2">{line.line ?? "—"}</td>
                         <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
-                        <td className="p-2">{productCell(line.detail, line.mcode)}</td>
+                        <td className="p-2">
+                          <PoProductCell detail={line.detail} mcode={line.mcode} />
+                        </td>
                         <td className="p-2 whitespace-nowrap">
                           {line.qty ?? "—"}
                           {line.ui ? ` ${line.ui}` : ""}
