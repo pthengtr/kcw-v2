@@ -1,3 +1,29 @@
+-- Merge HQ PIMAS pattern fallback + SYP follow-up TF REMARKS union into fn_po_pending_receive.
+-- Ensures migration order after 20260802180000 (SYP) and 20260802193000 (HQ pattern)
+-- ends with both behaviors.
+
+create or replace function public.fn_po_syp_tf_bills_by_docno()
+returns table (
+  docno text,
+  billno text
+)
+language sql
+stable
+security definer
+set search_path = raw_kcw, public
+as $$
+  select distinct
+    (regexp_match(s."REMARKS", public.fn_po_syp_docno_pattern(), 'i'))[1] as docno,
+    s."BILLNO" as billno
+  from raw_kcw.raw_hq_simas_sales_bills s
+  where coalesce(s."CANCELED", '') <> 'Y'
+    and public.fn_po_is_tf_transfer_bill(s."BILLNO")
+    and coalesce(s."REMARKS", '') ~* public.fn_po_syp_docno_pattern();
+$$;
+
+revoke all on function public.fn_po_syp_tf_bills_by_docno() from public, anon, authenticated;
+grant execute on function public.fn_po_syp_tf_bills_by_docno() to service_role;
+
 -- ICLOW-backed pending-receive list + partial PO detail for /po.
 -- Source of truth: docs/bi/kcw-iclow-pending-receive-data-dictionary.md §6
 --

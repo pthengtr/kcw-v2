@@ -9,12 +9,8 @@
 --   delivery-note into PIMAS first, then renames BILLNO to the invoice). Marked
 --   match_method='pattern' (not 1:1). Do NOT use PIMAS.PO for membership alone.
 -- Perf: date-filter ICLOW early; skip PIDET for pending_receive; avoid correlated NOT EXISTS.
--- SYP received qty: union of
---   (1) ICLOW.RCVDNO → left(btrim,12) → HQ SIMas/SIDet (first TF)
---   (2) HQ TF/TFV whose REMARKS match SYP DOCNO (fn_po_syp_tf_bills_by_docno)
---     so a follow-up TF clears รับบางส่วน when SIDet covers ordered qty.
--- Do NOT use PIMAS.PO or ICLOW RECEIVED qty alone for complete/partial split.
--- Membership still requires any ICLOW RECEIVED=Y (REMARKS-only TF does not invent rows).
+-- SYP received qty: ICLOW.RCVDNO → left(btrim,12) → HQ SIMas/SIDet (TF transfer bills).
+-- Do NOT use ICLOW RECEIVED qty alone for complete/partial split.
 
 drop function if exists public.fn_po_pending_receive(text, text, text, text, text, integer, integer, integer);
 drop function if exists public.fn_po_pending_receive(text, text, text, text, text, text, integer, integer, integer);
@@ -689,7 +685,7 @@ begin
     ) into v_result;
 
   elsif v_site = 'SYP' then
-    -- complete / partially_received: RCVDNO TF ∪ REMARKS-matched follow-up TF/TFV
+    -- complete / partially_received: RCVDNO → SIMas/SIDet (TF transfer bills at HQ)
     with ic as materialized (
       select
         i."ID" as id,
@@ -761,67 +757,32 @@ begin
       where i.rcvdno is not null
         and i.received = 'Y'
     ),
-    bill_from_rcvdno as materialized (
-      select distinct
-        l.docno,
-        r.billno
-      from rcvd_links l
-      join resolved r on r.rcvdno = l.rcvdno
-    ),
-    bill_from_remarks as materialized (
-      select distinct
-        b.docno,
-        b.billno
-      from public.fn_po_syp_tf_bills_by_docno() b
-      where exists (
-        select 1 from ordered o where o.docno = b.docno
-      )
-    ),
-    all_bills as materialized (
-      select docno, billno from bill_from_rcvdno
-      union
-      select docno, billno from bill_from_remarks
-    ),
     received as materialized (
       select
-        o.docno,
-        o.bcode,
+        l.docno,
+        l.bcode,
         sum(coalesce(d."QTY"::numeric, 0)) as received_qty
-      from ordered o
-      join all_bills ab on ab.docno = o.docno
+      from rcvd_links l
+      join resolved r on r.rcvdno = l.rcvdno
       join raw_kcw.raw_hq_sidet_sales_lines d
-        on d."BILLNO" = ab.billno
-       and d."BCODE" = o.bcode
+        on d."BILLNO" = r.billno
+       and d."BCODE" = l.bcode
        and coalesce(d."CANCELED", '') <> 'Y'
        and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
-      group by o.docno, o.bcode
+      group by l.docno, l.bcode
     ),
-    tf_bills as materialized (
-      select
-        o.docno,
-        o.bcode,
-        string_agg(
-          distinct btrim(ab.billno::text),
-          ', ' order by btrim(ab.billno::text)
-        ) as tf_billnos
-      from ordered o
-      join all_bills ab on ab.docno = o.docno
-      join raw_kcw.raw_hq_sidet_sales_lines d
-        on d."BILLNO" = ab.billno
-       and d."BCODE" = o.bcode
-       and coalesce(d."CANCELED", '') <> 'Y'
-       and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
-      group by o.docno, o.bcode
+    resolved_rcvdnos as materialized (
+      select distinct rcvdno from resolved
     ),
     bill_link as materialized (
       select
-        o.docno,
-        o.bcode,
-        -- true when neither RCVDNO nor REMARKS TF yields SIDet qty for this BCODE
-        (coalesce(r.received_qty, 0) = 0) as pimas_link_missing
-      from ordered o
-      left join received r
-        on r.docno = o.docno and r.bcode = o.bcode
+        l.docno,
+        l.bcode,
+        bool_or(res.rcvdno is null) as pimas_link_missing
+      from rcvd_links l
+      left join resolved_rcvdnos res
+        on res.rcvdno = l.rcvdno
+      group by l.docno, l.bcode
     ),
     classified as (
       select
@@ -843,7 +804,6 @@ begin
         o.rcvdnos as rcvdno,
         o.rcvdnos as billno,
         o.rcvddate as billdate,
-        tb.tf_billnos,
         coalesce(bl.pimas_link_missing, false) as pimas_link_missing,
         case
           when coalesce(r.received_qty, 0) >= o.ordered_qty and o.ordered_qty > 0
@@ -854,8 +814,6 @@ begin
       from ordered o
       left join received r
         on r.docno = o.docno and r.bcode = o.bcode
-      left join tf_bills tb
-        on tb.docno = o.docno and tb.bcode = o.bcode
       left join bill_link bl
         on bl.docno = o.docno and bl.bcode = o.bcode
       left join raw_kcw.raw_hq_apmas_payable ap on ap."ACCTNO" = o.vendor
@@ -874,7 +832,6 @@ begin
           or coalesce(c.mcode, '') ilike '%' || v_q || '%'
           or coalesce(c.rcvdno, '') ilike '%' || v_q || '%'
           or coalesce(c.billno, '') ilike '%' || v_q || '%'
-          or coalesce(c.tf_billnos, '') ilike '%' || v_q || '%'
         )
     )
     select jsonb_build_object(
@@ -1244,27 +1201,18 @@ begin
       from ic
       where rcvdno is not null and bcode is not null
     ),
-    all_bills as (
-      select distinct r.billno
-      from rcvd_links l
-      join resolved r on r.rcvdno = l.rcvdno
-      union
-      select distinct b.billno
-      from public.fn_po_syp_tf_bills_by_docno() b
-      where b.docno = v_docno
-    ),
     bcode_received as (
       select
-        o.bcode,
+        l.bcode,
         sum(coalesce(d."QTY"::numeric, 0)) as received_qty
-      from bcode_ordered o
-      join all_bills ab on true
+      from rcvd_links l
+      join resolved r on r.rcvdno = l.rcvdno
       join raw_kcw.raw_hq_sidet_sales_lines d
-        on d."BILLNO" = ab.billno
-       and d."BCODE" = o.bcode
+        on d."BILLNO" = r.billno
+       and d."BCODE" = l.bcode
        and coalesce(d."CANCELED", '') <> 'Y'
        and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
-      group by o.bcode
+      group by l.bcode
     ),
     missing as (
       select
@@ -1297,15 +1245,13 @@ begin
         nullif(btrim(coalesce(d."UI", '')), '') as ui,
         null::text as iclow_id,
         false as pimas_link_missing
-      from all_bills ab
+      from rcvd_links l
+      join resolved r on r.rcvdno = l.rcvdno
       join raw_kcw.raw_hq_sidet_sales_lines d
-        on d."BILLNO" = ab.billno
-       and nullif(btrim(coalesce(d."BCODE", '')), '') is not null
+        on d."BILLNO" = r.billno
+       and d."BCODE" = l.bcode
        and coalesce(d."CANCELED", '') <> 'Y'
        and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
-      where exists (
-        select 1 from bcode_ordered o where o.bcode = nullif(btrim(coalesce(d."BCODE", '')), '')
-      )
     ),
     orphan_iclow as (
       select
@@ -1326,12 +1272,13 @@ begin
         and i.rcvdno is not null
         and not exists (
           select 1
-          from all_bills ab
+          from resolved r
           join raw_kcw.raw_hq_sidet_sales_lines d
-            on d."BILLNO" = ab.billno
+            on d."BILLNO" = r.billno
            and d."BCODE" = i.bcode
            and coalesce(d."CANCELED", '') <> 'Y'
            and coalesce(d."BILLTYPE", '') in ('1', '2', '3')
+          where r.rcvdno = i.rcvdno
         )
     ),
     received as (

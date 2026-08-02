@@ -110,13 +110,20 @@ Do **not** join `POMAS`/`PODET` for pending-receive membership or list status.
 - **Received link to PI** (when `RECEIVED='Y'`):
 
 ```text
-ICLOW.RCVDNO   = PIMAS.BILLNO
-ICLOW.RCVDDATE = PIMAS.BILLDATE   (optional)
-PIMAS          → PIDET on BILLNO + BILLDATE
-                 (BILLTYPE in 1/2/3, not canceled)
+Primary (1:1 / left-12):
+  ICLOW.RCVDNO   ↔ left(btrim(PIMAS.BILLNO),12)
+  PIMAS          → PIDET on BILLNO (BILLTYPE in 1/2/3, not canceled)
+
+Fallback (pattern — not 1:1 BILLNO):
+  when primary miss: same AP (ICLOW.VENDOR = PIMAS.ACCTNO)
+    + PIMAS.PO contains ICLOW.DOCNO (exact or slash-split multi-PO)
+    + exact BCODE/qty fingerprint of that RCVDNO on the DOCNO
+    + unique best date proximity (RCVDDATE ↔ BILLDATE)
+  UI marks these as pattern recognition (operator often keys a delivery note
+  into PIMAS first, then renames BILLNO to the invoice).
 ```
 
-Do **not** use `PIMAS.PO` — often blank/noisy.
+Do **not** use `PIMAS.PO` alone for membership/qty — only as this secondary remap signal with AP + line fingerprint.
 
 ---
 
@@ -161,7 +168,8 @@ No mixed missing/received breakdown dialog. On ICLOW tabs:
 | Click | Opens |
 |-------|--------|
 | **DOCNO** | Same PO lines dialog as รายการ PO — HQ `POMAS`/`PODET` or SYP `POMAS`/`PODET` (`GET /api/po/hq/[docno]` / `GET /api/po/syp/[docno]`) |
-| **RCVDNO** (HQ, when PIMAS exists) | Purchase invoice — `PIMAS`/`PIDET` via exact `BILLNO` or `left(BILLNO,12)` (`GET /api/po/pi/[billno]`) |
+| **RCVDNO** (HQ, exact / left-12) | Purchase invoice — `GET /api/po/pi/[billno]` |
+| **RCVDNO** with `(จับคู่ pattern ไม่ใช่ 1:1 → {BILLNO})` | Pattern remap (AP+PO+fingerprint); click opens resolved invoice |
 | **RCVDNO** with `(ไม่พบลิงก์ PIMAS)` | Not clickable |
 
 Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]` may still exist but is unused by the simplified UI.
@@ -216,6 +224,7 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 | Date | Change | By |
 |------|--------|-----|
 | 2026-08-02 | SYP รับบางส่วน: union RCVDNO TF + REMARKS follow-up TF (`fn_po_syp_tf_bills_by_docno`); clear backorder when SIDet covers ordered | Agent |
+| 2026-08-02 | HQ fallback: pattern remap RCVDNO→PIMAS via AP+PO+BCODE/qty; UI remark “ไม่ใช่ 1:1” | Agent |
 | 2026-08-01 | Perf: date-filter ICLOW early; skip PIDET for ค้างรับ; resolve RCVDNO→BILLNO once + indexes | Agent |
 | 2026-08-01 | Normalize PIMAS BILLNO with `btrim` + `left(...,12)` before RCVDNO join (leading spaces) | Agent |
 | 2026-08-01 | Default ICLOW dated tabs to last 30 days (avoid 12‑month statement timeouts) | Agent |
