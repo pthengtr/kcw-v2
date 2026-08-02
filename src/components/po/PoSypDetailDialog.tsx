@@ -143,7 +143,7 @@ export default function PoSypDetailDialog({
                     const lineKey = line.line ?? String(i);
                     return (
                       <tr key={`${lineKey}-${i}`} className="border-b">
-                        <td className="p-2 align-middle">
+                        <td className="p-2 align-middle whitespace-nowrap">
                           <PrepareStatusBadge
                             status={line.prepare_line_status}
                             className="print:hidden"

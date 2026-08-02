@@ -178,16 +178,16 @@ export default function PoSypTab({
       {
         key: "prepare_status",
         header: "สถานะ",
-        className: "min-w-[10rem]",
+        className: "w-[1%] whitespace-nowrap align-top",
         render: (r) => (
-          <div className="flex w-fit flex-col items-start gap-1">
+          <span className="inline-flex flex-col items-start gap-1">
             <PrepareStatusBadge status={r.prepare_status} />
             {r.tf_billnos ? (
               <span className="font-mono text-xs text-muted-foreground break-all">
                 {r.tf_billnos}
               </span>
             ) : null}
-          </div>
+          </span>
         ),
       },
     ],

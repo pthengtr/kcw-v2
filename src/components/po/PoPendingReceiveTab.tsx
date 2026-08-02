@@ -300,14 +300,16 @@ export default function PoPendingReceiveTab({
     const statusCol: Column<PoPendingReceiveRow> = {
       key: "status",
       header: "สถานะ",
-      className: "whitespace-nowrap",
+      className: "w-[1%] whitespace-nowrap align-top",
       render: (r) => (
-        <Badge
-          variant={statusBadgeVariant(r.status)}
-          className="w-fit whitespace-nowrap shrink-0"
-        >
-          {statusLabel(r.status)}
-        </Badge>
+        <span className="inline-flex">
+          <Badge
+            variant={statusBadgeVariant(r.status)}
+            className="inline-flex w-max max-w-max whitespace-nowrap"
+          >
+            {statusLabel(r.status)}
+          </Badge>
+        </span>
       ),
     };
     const docnoCol: Column<PoPendingReceiveRow> = {
