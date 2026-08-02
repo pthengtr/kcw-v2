@@ -17,10 +17,11 @@ import {
   formatPoAmount,
   formatPoDate,
   formatPoQty,
+  prepareStatusBadgeClassName,
   prepareStatusLabel,
-  type PoPrepareStatus,
 } from "@/lib/po/format";
 import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
+import { cn } from "@/lib/utils";
 
 function formatHqLocation(
   location1: string | null | undefined,
@@ -30,19 +31,6 @@ function formatHqLocation(
   const loc2 = location2?.trim() || null;
   if (loc1 && loc2) return `${loc1}/${loc2}`;
   return loc1 ?? loc2 ?? "—";
-}
-
-function linePrepareBadgeVariant(
-  status: PoPrepareStatus | string | null | undefined
-): "default" | "secondary" | "outline" {
-  switch (status) {
-    case "prepared":
-      return "secondary";
-    case "partially_prepared":
-      return "outline";
-    default:
-      return "default";
-  }
 }
 
 export default function PoSypDetailDialog({
@@ -96,9 +84,7 @@ export default function PoSypDetailDialog({
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-muted-foreground">เตรียมโอน:</span>
-                  <Badge
-                    variant={linePrepareBadgeVariant(selected.prepare_status)}
-                  >
+                  <Badge className={prepareStatusBadgeClassName(selected.prepare_status)}>
                     {prepareStatusLabel(selected.prepare_status)}
                   </Badge>
                   <span className="text-muted-foreground">
@@ -163,10 +149,12 @@ export default function PoSypDetailDialog({
                       <tr key={`${lineKey}-${i}`} className="border-b">
                         <td className="p-2 align-middle">
                           <Badge
-                            variant={linePrepareBadgeVariant(
-                              line.prepare_line_status
+                            className={cn(
+                              "print:hidden",
+                              prepareStatusBadgeClassName(
+                                line.prepare_line_status
+                              )
                             )}
-                            className="print:hidden"
                           >
                             {prepareStatusLabel(line.prepare_line_status)}
                           </Badge>

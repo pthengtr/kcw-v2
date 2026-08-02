@@ -22,8 +22,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   formatPoAmount,
   formatPoDate,
+  prepareStatusBadgeClassName,
   prepareStatusLabel,
-  type PoPrepareStatus,
   last30DaysPoDateRange,
 } from "@/lib/po/format";
 import type {
@@ -34,19 +34,6 @@ import type {
 } from "@/lib/po/po-queries";
 
 type PoSypView = "list" | PoPendingReceiveStatus;
-
-function prepareBadgeVariant(
-  status: PoPrepareStatus | string | null | undefined
-): "default" | "secondary" | "outline" {
-  switch (status) {
-    case "prepared":
-      return "secondary";
-    case "partially_prepared":
-      return "outline";
-    default:
-      return "default";
-  }
-}
 
 export default function PoSypTab({
   refreshToken,
@@ -199,7 +186,7 @@ export default function PoSypTab({
         className: "min-w-[10rem]",
         render: (r) => (
           <div className="flex flex-col gap-1">
-            <Badge variant={prepareBadgeVariant(r.prepare_status)}>
+            <Badge className={prepareStatusBadgeClassName(r.prepare_status)}>
               {prepareStatusLabel(r.prepare_status)}
             </Badge>
             {r.tf_billnos ? (
@@ -244,7 +231,7 @@ export default function PoSypTab({
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">เตรียมโอน</div>
-            <Badge variant={prepareBadgeVariant(row.prepare_status)}>
+            <Badge className={prepareStatusBadgeClassName(row.prepare_status)}>
               {prepareStatusLabel(row.prepare_status)}
             </Badge>
           </div>
