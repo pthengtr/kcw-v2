@@ -355,7 +355,7 @@ export type PoPendingReceiveRow = {
   received: string | null;
   rcvddate: string | null;
   rcvdno: string | null;
-  /** ICLOW.RCVDNO → PIMAS/PIDET bill ref (HQ) or RCVDNO (SYP) */
+  /** ICLOW.RCVDNO → PIMAS/PIDET (HQ) or SIMas/SIDet TF bill (SYP) */
   billno?: string | null;
   billdate?: string | null;
   /** HQ: true when at least one RCVDNO has no matching PIMAS bill */

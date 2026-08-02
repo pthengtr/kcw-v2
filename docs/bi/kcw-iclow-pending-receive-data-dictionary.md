@@ -142,10 +142,10 @@ Do **not** use `PIMAS.PO` (unreliable).
 |------------|-----------|-------|-----------|
 | `to_be_ordered` | รอสั่งซื้อ | line | `ORDERED=N`. `DOCNO` null in practice. |
 | `pending_receive` | ค้างรับ | bcode | `ORDERED=Y` and **no** ICLOW row for that DOCNO+BCODE has `RECEIVED='Y'`. |
-| `partially_received` | รับบางส่วน | bcode | Any `RECEIVED='Y'` on that DOCNO+BCODE, and PIDET qty via `RCVDNO` **&lt;** ordered qty (includes Y with no matching PIDET). |
+| `partially_received` | รับบางส่วน | bcode | Any `RECEIVED='Y'` on DOCNO+BCODE; received qty from bill lines via `RCVDNO` **&lt;** ordered qty. HQ: `PIMAS`/`PIDET`. SYP: HQ `SIMas`/`SIDet` TF transfer bills (`left(btrim(BILLNO),12)` join). Do **not** use `PIMAS.PO`. |
 | `complete` | รับแล้ว | bcode | Any `RECEIVED='Y'` and PIDET qty via `RCVDNO` **≥** ordered qty. |
 
-SYP has no PIDET: `received_qty` = sum ICLOW `QTY` where `RECEIVED='Y'` on that DOCNO+BCODE; same complete/partial/pending split.
+SYP: `received_qty` = sum `SIDet.QTY` via `ICLOW.RCVDNO` → `left(btrim(SIMas.BILLNO),12)` (TF transfer bills at HQ). Same complete/partial/pending split as HQ; do **not** use ICLOW `RECEIVED` qty alone or `PIMAS.PO`.
 
 ### 6.2 Document links (UI)
 
