@@ -1,0 +1,56 @@
+import { NextResponse } from "next/server";
+
+import { requirePermission } from "@/lib/auth/requirePermission";
+import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { enqueuePoRelatedSync } from "@/lib/po/worker-jobs";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export async function POST() {
+  const permCheck = await requirePermission(PO_PAGE_KEYS.status);
+  if (!permCheck.ok) {
+    return NextResponse.json(
+      { error: permCheck.message },
+      { status: permCheck.status }
+    );
+  }
+
+  try {
+    const supabase = createAdminClient();
+    const result = await enqueuePoRelatedSync({
+      supabase,
+      requestedBy: permCheck.userId,
+    });
+
+    if (result.alreadyRunning) {
+      return NextResponse.json(
+        {
+          alreadyRunning: true,
+          message: "PO-related sync already running",
+          jobs: result.jobs,
+        },
+        { status: 409 }
+      );
+    }
+
+    if (!result.workerOnline) {
+      return NextResponse.json(
+        {
+          error: "No PO-related sync worker is online (HQ-PC or SYP-PC)",
+          offlineWorkers: result.offlineWorkers,
+        },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json({
+      alreadyRunning: false,
+      jobs: result.jobs,
+    });
+  } catch (error) {
+    console.error("po related sync enqueue", error);
+    return NextResponse.json(
+      { error: "Unable to enqueue PO-related sync" },
+      { status: 500 }
+    );
+  }
+}

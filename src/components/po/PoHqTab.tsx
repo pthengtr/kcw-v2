@@ -12,6 +12,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
+import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
 import PoPendingReceiveTab, {
   PO_ICLOW_STATUS_TABS,
 } from "@/components/po/PoPendingReceiveTab";
@@ -20,6 +21,7 @@ import {
   billedLabel,
   formatPoAmount,
   formatPoDate,
+  last30DaysPoDateRange,
 } from "@/lib/po/format";
 import type {
   PoHeaderRow,
@@ -37,6 +39,9 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
   const [error, setError] = useState<string | null>(null);
 
   const [q, setQ] = useState("");
+  const [from, setFrom] = useState(() => last30DaysPoDateRange().from);
+  const [to, setTo] = useState(() => last30DaysPoDateRange().to);
+  const [lookbackId, setLookbackId] = useState("30d");
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
 
@@ -49,7 +54,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
 
   useEffect(() => {
     setOffset(0);
-  }, [q]);
+  }, [q, from, to]);
 
   useEffect(() => {
     if (view !== "list") return;
@@ -61,6 +66,9 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
         const params = new URLSearchParams();
         params.set("status", "all");
         if (q.trim()) params.set("q", q.trim());
+        const range = last30DaysPoDateRange();
+        params.set("from", from.trim() || range.from);
+        params.set("to", to.trim() || range.to);
         params.set("limit", String(limit));
         params.set("offset", String(offset));
 
@@ -76,20 +84,21 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
           rows: PoHeaderRow[];
           count: number | null;
         };
+        if (ac.signal.aborted) return;
         setRows(data.rows ?? []);
         setCount(data.count ?? null);
       } catch (e) {
-        if (String(e).includes("AbortError")) return;
+        if (ac.signal.aborted || String(e).includes("AbortError")) return;
         setError(e instanceof Error ? e.message : String(e));
         setRows([]);
         setCount(null);
       } finally {
-        setLoading(false);
+        if (!ac.signal.aborted) setLoading(false);
       }
     }
     void fetchRows();
     return () => ac.abort();
-  }, [view, q, limit, offset, refreshToken]);
+  }, [view, q, from, to, limit, offset, refreshToken]);
 
   async function openDetail(row: PoHeaderRow) {
     setSelected(row);
@@ -228,6 +237,18 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
                 placeholder="ค้นหา DOCNO / ผู้ขาย"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
+              />
+              <PoDateLookbackControls
+                from={from}
+                to={to}
+                lookbackId={lookbackId}
+                onFromChange={setFrom}
+                onToChange={setTo}
+                onLookbackIdChange={setLookbackId}
+                onRangeChange={(range) => {
+                  setFrom(range.from);
+                  setTo(range.to);
+                }}
               />
             </div>
 

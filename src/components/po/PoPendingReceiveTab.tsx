@@ -11,22 +11,28 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SSRDatePicker } from "@/components/common/SSRDatePicker";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
+import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
 import {
+  formatPoAmount,
   formatPoDate,
   formatPoQty,
+  last30DaysPoDateRange,
 } from "@/lib/po/format";
 import {
   PO_ICLOW_STATUS_TABS,
-  type PoPendingReceiveDetail,
+  type PiHeader,
+  type PiLineRow,
+  type PoLineRow,
   type PoPendingReceiveRow,
   type PoPendingReceiveStatus,
 } from "@/lib/po/po-queries";
 import type { PoSyncSite } from "@/lib/po/worker-jobs";
 
 export { PO_ICLOW_STATUS_TABS };
+
+type DetailKind = "po" | "pi";
 
 function statusLabel(status: PoPendingReceiveStatus): string {
   return PO_ICLOW_STATUS_TABS.find((o) => o.value === status)?.label ?? status;
@@ -49,17 +55,57 @@ function statusBadgeVariant(
   }
 }
 
-/** HQ: annotate RCVDNO when ingested PIMAS bill is missing */
-function formatRcvdnoWithPimasNote(
+function rcvdnoValue(row: Pick<PoPendingReceiveRow, "billno" | "rcvdno">) {
+  return (row.billno ?? row.rcvdno)?.trim() || "";
+}
+
+function canOpenPiDetail(
+  site: PoSyncSite,
+  row: Pick<PoPendingReceiveRow, "billno" | "rcvdno" | "pimas_link_missing">
+) {
+  // PIMAS/PIDET live on HQ; only link when RCVDNO resolves to a bill.
+  return (
+    site === "HQ" &&
+    Boolean(rcvdnoValue(row)) &&
+    !row.pimas_link_missing
+  );
+}
+
+/** HQ: annotate RCVDNO when ingested PIMAS bill is missing; otherwise link to PI detail */
+function formatRcvdnoCell(
   billno: string | null | undefined,
-  opts?: { pimasLinkMissing?: boolean; site?: PoSyncSite }
+  opts: {
+    site: PoSyncSite;
+    pimasLinkMissing?: boolean;
+    onOpenPi?: () => void;
+  }
 ): ReactNode {
   const value = billno?.trim() || "—";
   const showNote =
-    value !== "—" && opts?.site === "HQ" && Boolean(opts.pimasLinkMissing);
+    value !== "—" && opts.site === "HQ" && Boolean(opts.pimasLinkMissing);
+  const clickable =
+    value !== "—" &&
+    opts.site === "HQ" &&
+    !opts.pimasLinkMissing &&
+    typeof opts.onOpenPi === "function";
+
   return (
     <span className="inline-flex max-w-[14rem] flex-col justify-center gap-0.5 align-middle">
-      <span className="break-all font-mono leading-snug">{value}</span>
+      {clickable ? (
+        <button
+          type="button"
+          className="break-all text-left font-mono leading-snug text-primary underline-offset-2 hover:underline"
+          title="เปิดรายละเอียดใบรับ (PIMAS/PIDET)"
+          onClick={(e) => {
+            e.stopPropagation();
+            opts.onOpenPi?.();
+          }}
+        >
+          {value}
+        </button>
+      ) : (
+        <span className="break-all font-mono leading-snug">{value}</span>
+      )}
       {showNote ? (
         <span className="whitespace-normal font-sans text-xs leading-snug text-muted-foreground">
           (ไม่พบลิงก์ PIMAS)
@@ -84,8 +130,9 @@ export default function PoPendingReceiveTab({
   const [error, setError] = useState<string | null>(null);
 
   const [q, setQ] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(() => last30DaysPoDateRange().from);
+  const [to, setTo] = useState(() => last30DaysPoDateRange().to);
+  const [lookbackId, setLookbackId] = useState("30d");
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -94,8 +141,11 @@ export default function PoPendingReceiveTab({
   );
 
   const [detailOpen, setDetailOpen] = useState(false);
-  const [detailDocno, setDetailDocno] = useState<string | null>(null);
-  const [detail, setDetail] = useState<PoPendingReceiveDetail | null>(null);
+  const [detailKind, setDetailKind] = useState<DetailKind>("po");
+  const [detailKey, setDetailKey] = useState<string | null>(null);
+  const [poLines, setPoLines] = useState<PoLineRow[]>([]);
+  const [piHeader, setPiHeader] = useState<PiHeader | null>(null);
+  const [piLines, setPiLines] = useState<PiLineRow[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
@@ -104,17 +154,18 @@ export default function PoPendingReceiveTab({
     status === "pending_receive" ||
     status === "partially_received" ||
     status === "complete";
-  const isPartial = status === "partially_received";
 
   useEffect(() => {
     setOffset(0);
   }, [q, from, to, site, status]);
 
   useEffect(() => {
-    if (!showDates) {
-      setFrom("");
-      setTo("");
-    }
+    // รอสั่งซื้อ has no DOCDATE filter (often null). Other ICLOW tabs default to 30d.
+    if (!showDates) return;
+    const range = last30DaysPoDateRange();
+    setFrom(range.from);
+    setTo(range.to);
+    setLookbackId("30d");
   }, [showDates]);
 
   useEffect(() => {
@@ -127,9 +178,11 @@ export default function PoPendingReceiveTab({
         params.set("site", site);
         params.set("status", status);
         if (q.trim()) params.set("q", q.trim());
-        if (showDates && from.trim()) params.set("from", from.trim());
-        if (showDates && to.trim()) params.set("to", to.trim());
-        if (showDates && !from.trim() && !to.trim()) params.set("months", "12");
+        if (showDates) {
+          const range = last30DaysPoDateRange();
+          params.set("from", from.trim() || range.from);
+          params.set("to", to.trim() || range.to);
+        }
         params.set("limit", String(limit));
         params.set("offset", String(offset));
 
@@ -145,38 +198,76 @@ export default function PoPendingReceiveTab({
           rows: PoPendingReceiveRow[];
           count: number | null;
         };
+        if (ac.signal.aborted) return;
         setRows(data.rows ?? []);
         setCount(data.count ?? null);
       } catch (e) {
-        if (String(e).includes("AbortError")) return;
+        if (ac.signal.aborted || String(e).includes("AbortError")) return;
         setError(e instanceof Error ? e.message : String(e));
         setRows([]);
         setCount(null);
       } finally {
-        setLoading(false);
+        if (!ac.signal.aborted) setLoading(false);
       }
     }
     void fetchRows();
     return () => ac.abort();
   }, [site, status, q, from, to, limit, offset, refreshToken, showDates]);
 
-  async function openPartialDetail(row: PoPendingReceiveRow) {
+  async function openPoDetail(row: PoPendingReceiveRow) {
     if (!row.docno) return;
-    setDetailDocno(row.docno);
+    setDetailKind("po");
+    setDetailKey(row.docno);
     setDetailOpen(true);
-    setDetail(null);
+    setPoLines([]);
+    setPiHeader(null);
+    setPiLines([]);
     setDetailError(null);
     setDetailLoading(true);
     try {
-      const res = await fetch(
-        `/api/po/pending-receive/${encodeURIComponent(row.docno)}?site=${site}`,
-        { cache: "no-store" }
-      );
+      const path =
+        site === "SYP"
+          ? `/api/po/syp/${encodeURIComponent(row.docno)}`
+          : `/api/po/hq/${encodeURIComponent(row.docno)}`;
+      const res = await fetch(path, { cache: "no-store" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error ?? `Request failed (${res.status})`);
       }
-      setDetail((await res.json()) as PoPendingReceiveDetail);
+      const data = (await res.json()) as { lines: PoLineRow[] };
+      setPoLines(data.lines ?? []);
+    } catch (e) {
+      setDetailError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function openPiDetail(row: PoPendingReceiveRow) {
+    if (!canOpenPiDetail(site, row)) return;
+    const key = rcvdnoValue(row);
+    setDetailKind("pi");
+    setDetailKey(key);
+    setDetailOpen(true);
+    setPoLines([]);
+    setPiHeader(null);
+    setPiLines([]);
+    setDetailError(null);
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`/api/po/pi/${encodeURIComponent(key)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `Request failed (${res.status})`);
+      }
+      const data = (await res.json()) as {
+        header: PiHeader;
+        lines: PiLineRow[];
+      };
+      setPiHeader(data.header);
+      setPiLines(data.lines ?? []);
     } catch (e) {
       setDetailError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -221,9 +312,22 @@ export default function PoPendingReceiveTab({
       key: "docno",
       header: "DOCNO",
       className: "whitespace-nowrap",
-      render: (r) => (
-        <span className="font-medium">{r.docno ?? "—"}</span>
-      ),
+      render: (r) =>
+        r.docno ? (
+          <button
+            type="button"
+            className="font-medium text-left text-primary underline-offset-2 hover:underline"
+            title={`เปิดรายละเอียด PO (POMAS/PODET · ${site})`}
+            onClick={(e) => {
+              e.stopPropagation();
+              void openPoDetail(r);
+            }}
+          >
+            {r.docno}
+          </button>
+        ) : (
+          <span className="font-medium">—</span>
+        ),
     };
     const docdateCol: Column<PoPendingReceiveRow> = {
       key: "docdate",
@@ -297,9 +401,10 @@ export default function PoPendingReceiveTab({
           header: "RCVDNO",
           className: "min-w-[8rem] align-middle",
           render: (r) =>
-            formatRcvdnoWithPimasNote(r.billno ?? r.rcvdno, {
+            formatRcvdnoCell(r.billno ?? r.rcvdno, {
               site,
               pimasLinkMissing: r.pimas_link_missing,
+              onOpenPi: () => void openPiDetail(r),
             }),
         },
       ];
@@ -322,13 +427,25 @@ export default function PoPendingReceiveTab({
         ),
       },
     ];
+    // openPoDetail / openPiDetail are stable enough for column render closures
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBcodeQty, site]);
 
   function renderMobileCard(row: PoPendingReceiveRow) {
     return (
       <div className="w-full rounded-md border bg-white p-3 text-left">
         <div className="flex items-start justify-between gap-2">
-          <div className="font-medium break-all">{row.docno || "—"}</div>
+          {row.docno ? (
+            <button
+              type="button"
+              className="font-medium break-all text-left text-primary underline-offset-2 hover:underline"
+              onClick={() => void openPoDetail(row)}
+            >
+              {row.docno}
+            </button>
+          ) : (
+            <div className="font-medium break-all">—</div>
+          )}
           <Badge variant={statusBadgeVariant(row.status)}>
             {statusLabel(row.status)}
           </Badge>
@@ -363,9 +480,10 @@ export default function PoPendingReceiveTab({
               <div className="col-span-2">
                 <div className="text-xs text-muted-foreground">RCVDNO</div>
                 <div>
-                  {formatRcvdnoWithPimasNote(row.billno || row.rcvdno, {
+                  {formatRcvdnoCell(row.billno || row.rcvdno, {
                     site,
                     pimasLinkMissing: row.pimas_link_missing,
+                    onOpenPi: () => void openPiDetail(row),
                   })}
                 </div>
               </div>
@@ -394,9 +512,9 @@ export default function PoPendingReceiveTab({
       <p className="text-sm text-muted-foreground">
         {isBcodeQty
           ? site === "HQ"
-            ? "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). RECEIVED=Y = รับแล้วหรือรับบางส่วนตามจำนวน PIDET"
-            : "เกรน DOCNO+BCODE — สั่ง/รับจาก ICLOW (ไม่มี PIDET ที่ SYP)"
-          : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว"}
+            ? "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
+            : "เกรน DOCNO+BCODE — สั่ง/รับจาก ICLOW (ไม่มี PIDET ที่ SYP). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
+          : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว. คลิก DOCNO → POMAS/PODET"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
@@ -410,24 +528,18 @@ export default function PoPendingReceiveTab({
           onChange={(e) => setQ(e.target.value)}
         />
         {showDates ? (
-          <>
-            <SSRDatePicker
-              name="from-date"
-              placeholder="จากวันที่"
-              value={from || undefined}
-              onChange={(val) => setFrom(val ?? "")}
-              className="sm:w-[180px]"
-              clearable
-            />
-            <SSRDatePicker
-              name="to-date"
-              placeholder="ถึงวันที่"
-              value={to || undefined}
-              onChange={(val) => setTo(val ?? "")}
-              className="sm:w-[180px]"
-              clearable
-            />
-          </>
+          <PoDateLookbackControls
+            from={from}
+            to={to}
+            lookbackId={lookbackId}
+            onFromChange={setFrom}
+            onToChange={setTo}
+            onLookbackIdChange={setLookbackId}
+            onRangeChange={(range) => {
+              setFrom(range.from);
+              setTo(range.to);
+            }}
+          />
         ) : null}
       </div>
 
@@ -444,137 +556,128 @@ export default function PoPendingReceiveTab({
         loading={loading}
         tableMinWidthClassName="min-w-[56rem]"
         rowKey={(row) => row.id || `${row.docno}-${row.bcode}`}
-        onRowClick={isPartial ? openPartialDetail : undefined}
         mobileCardRender={renderMobileCard}
       />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>รับบางส่วน — {detailDocno}</DialogTitle>
+            <DialogTitle>
+              {detailKind === "pi"
+                ? `ใบรับ ${detailKey ?? ""}`
+                : `${site} PO ${detailKey ?? ""}`}
+            </DialogTitle>
           </DialogHeader>
+
           {detailLoading ? (
             <p className="text-sm text-muted-foreground">กำลังโหลด…</p>
           ) : null}
           {detailError ? (
             <p className="text-sm text-destructive">{detailError}</p>
           ) : null}
-          {detail ? (
-            <div className="space-y-4">
-              <div className="text-sm space-y-1">
-                <div>
-                  ผู้ขาย: {detail.acctname ?? "—"} ({detail.vendor ?? "—"})
-                </div>
-                <div>วันที่ (ICLOW DOCDATE): {formatPoDate(detail.docdate)}</div>
-                <div>
-                  BCODE ค้าง qty {detail.missing_count} · รับบน ICLOW{" "}
-                  {detail.received_iclow_count} · แสดงรับ{" "}
-                  {detail.received_display_count}
-                </div>
-              </div>
 
-              <div>
-                <h3 className="mb-2 text-sm font-semibold">
-                  ของที่ยังค้าง (สั่ง − PIDET ผ่าน RCVDNO)
-                </h3>
-                <ScrollArea className="max-h-[28vh] rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/40 text-left">
-                        <th className="p-2">BCODE</th>
-                        <th className="p-2">รายละเอียด</th>
-                        <th className="p-2 text-right">ค้าง</th>
+          {detailKind === "po" && !detailLoading && !detailError ? (
+            <ScrollArea className="max-h-[60vh] rounded-md border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40 text-left">
+                    <th className="p-2">Line</th>
+                    <th className="p-2">BCODE</th>
+                    <th className="p-2">รายละเอียด</th>
+                    <th className="p-2">Qty</th>
+                    <th className="p-2">ราคา</th>
+                    <th className="p-2">จำนวนเงิน</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {poLines.length === 0 ? (
+                    <tr>
+                      <td className="p-2" colSpan={6}>
+                        ไม่มีรายการ
+                      </td>
+                    </tr>
+                  ) : (
+                    poLines.map((line, i) => (
+                      <tr key={`${line.line}-${i}`} className="border-b">
+                        <td className="p-2">{line.line ?? "—"}</td>
+                        <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
+                        <td className="p-2">{line.detail ?? "—"}</td>
+                        <td className="p-2 whitespace-nowrap">
+                          {line.qty ?? "—"}
+                          {line.ui ? ` ${line.ui}` : ""}
+                        </td>
+                        <td className="p-2">{formatPoAmount(line.price)}</td>
+                        <td className="p-2">{formatPoAmount(line.amount)}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {detail.missing.length === 0 ? (
-                        <tr>
-                          <td className="p-2" colSpan={3}>
-                            ไม่มีรายการค้าง
-                          </td>
-                        </tr>
-                      ) : (
-                        detail.missing.map((line, i) => (
-                          <tr
-                            key={line.id ?? `${line.bcode}-${i}`}
-                            className="border-b"
-                          >
-                            <td className="p-2 font-mono">
-                              {line.bcode ?? "—"}
-                            </td>
-                            <td className="p-2">{line.descr ?? "—"}</td>
-                            <td className="p-2 text-right whitespace-nowrap">
-                              {formatPoQty(line.qty)}
-                              {line.ui ? ` ${line.ui}` : ""}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </ScrollArea>
-              </div>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </ScrollArea>
+          ) : null}
 
-              <div>
-                <h3 className="mb-2 text-sm font-semibold">
-                  ของที่รับแล้ว
-                  {site === "HQ"
-                    ? " (RCVDNO → PIDET, หรือ ICLOW ถ้าไม่เจอใบ)"
-                    : " (ICLOW RECEIVED=Y)"}
-                </h3>
-                <ScrollArea className="max-h-[28vh] rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/40 text-left">
-                        <th className="p-2">ที่มา</th>
-                        <th className="p-2">RCVDNO</th>
-                        <th className="p-2">BCODE</th>
-                        <th className="p-2">รายละเอียด</th>
-                        <th className="p-2 text-right">จำนวน</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.received.length === 0 ? (
-                        <tr>
-                          <td className="p-2" colSpan={5}>
-                            ไม่พบรายการรับ
-                          </td>
-                        </tr>
-                      ) : (
-                        detail.received.map((line, i) => (
-                          <tr
-                            key={`${line.source}-${line.billno}-${line.bcode}-${i}`}
-                            className="border-b"
-                          >
-                            <td className="p-2">
-                              <Badge variant="outline" className="font-normal">
-                                {line.source}
-                              </Badge>
-                            </td>
-                            <td className="p-2 align-middle">
-                              {formatRcvdnoWithPimasNote(line.billno, {
-                                site,
-                                pimasLinkMissing: line.pimas_link_missing,
-                              })}
-                              <div className="mt-0.5 text-xs text-muted-foreground">
-                                {formatPoDate(line.billdate)}
-                              </div>
-                            </td>
-                            <td className="p-2 font-mono">
-                              {line.bcode ?? "—"}
-                            </td>
-                            <td className="p-2">{line.descr ?? "—"}</td>
-                            <td className="p-2 text-right whitespace-nowrap">
-                              {formatPoQty(line.qty)}
-                              {line.ui ? ` ${line.ui}` : ""}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </ScrollArea>
+          {detailKind === "pi" && piHeader && !detailLoading && !detailError ? (
+            <div className="space-y-3">
+              <div className="space-y-1 text-sm">
+                <div>
+                  ผู้ขาย: {piHeader.acctname ?? "—"} ({piHeader.acctno ?? "—"})
+                </div>
+                <div>
+                  วันที่: {formatPoDate(piHeader.billdate)} · BILLNO:{" "}
+                  <span className="font-mono">{piHeader.billno}</span>
+                </div>
+                <div>ยอด: {formatPoAmount(piHeader.aftertax)}</div>
+                {piHeader.po ? (
+                  <div>
+                    PO (ในใบรับ):{" "}
+                    <span className="font-mono">{piHeader.po}</span>
+                  </div>
+                ) : null}
+                {piHeader.matched_rcvdno ? (
+                  <div className="text-xs text-muted-foreground">
+                    จับคู่แบบ left(BILLNO,12) จาก RCVDNO{" "}
+                    <span className="font-mono">{piHeader.matched_rcvdno}</span>
+                  </div>
+                ) : null}
+                {piHeader.remarks ? (
+                  <div>หมายเหตุ: {piHeader.remarks}</div>
+                ) : null}
               </div>
+              <ScrollArea className="max-h-[50vh] rounded-md border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40 text-left">
+                      <th className="p-2">BCODE</th>
+                      <th className="p-2">รายละเอียด</th>
+                      <th className="p-2">Qty</th>
+                      <th className="p-2">ราคา</th>
+                      <th className="p-2">จำนวนเงิน</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {piLines.length === 0 ? (
+                      <tr>
+                        <td className="p-2" colSpan={5}>
+                          ไม่มีรายการ
+                        </td>
+                      </tr>
+                    ) : (
+                      piLines.map((line, i) => (
+                        <tr key={`${line.bcode}-${i}`} className="border-b">
+                          <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
+                          <td className="p-2">{line.detail ?? "—"}</td>
+                          <td className="p-2 whitespace-nowrap">
+                            {line.qty ?? "—"}
+                            {line.ui ? ` ${line.ui}` : ""}
+                          </td>
+                          <td className="p-2">{formatPoAmount(line.price)}</td>
+                          <td className="p-2">{formatPoAmount(line.amount)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </ScrollArea>
             </div>
           ) : null}
         </DialogContent>

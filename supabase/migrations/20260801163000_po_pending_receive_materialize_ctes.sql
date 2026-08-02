@@ -4,8 +4,8 @@
 -- Grain for ordered statuses: DOCNO + BCODE.
 -- HQ received qty: sum(PIDET.QTY) via distinct ICLOW.RCVDNO → PIDET.BILLNO + BCODE
 --   (do NOT use PIMAS.PO — unreliable).
--- Legacy PARTS9 ICLOW.RCVDNO is truncated to 12 chars; PIMAS.BILLNO may be longer and/or
--- padded with spaces. Join key: left(btrim(BILLNO),12) = left(btrim(RCVDNO),12), then PIDET.
+-- Legacy PARTS9 ICLOW.RCVDNO is truncated to 12 chars while PIMAS.BILLNO can be longer:
+--   resolve RCVDNO→BILLNO once (exact, else left(BILLNO,12)), then join PIDET on resolved bills.
 -- Perf: date-filter ICLOW early; skip PIDET for pending_receive; avoid correlated NOT EXISTS.
 
 drop function if exists public.fn_po_pending_receive(text, text, text, text, text, integer, integer, integer);
@@ -314,20 +314,28 @@ begin
       where i.rcvdno is not null
         and i.received = 'Y'
     ),
-    -- Normalize BILLNO/RCVDNO: btrim + left(...,12) before join (PARTS9 pad/trunc).
-    resolved as materialized (
-      select distinct on (r.rcvdno)
-        r.rcvdno,
-        p."BILLNO" as billno
+    exact_bills as materialized (
+      select distinct r.rcvdno, p."BILLNO" as billno
       from rcvdnos r
       join raw_kcw.raw_hq_pimas_purchase_bills p
-        on left(btrim(p."BILLNO"), 12) = left(r.rcvdno, 12)
+        on p."BILLNO" = r.rcvdno
        and coalesce(p."CANCELED", '') <> 'Y'
-      order by
-        r.rcvdno,
-        case when btrim(p."BILLNO") = r.rcvdno then 0 else 1 end,
-        char_length(btrim(p."BILLNO")),
-        p."BILLNO"
+    ),
+    prefix_bills as materialized (
+      select distinct r.rcvdno, p."BILLNO" as billno
+      from rcvdnos r
+      left join exact_bills e on e.rcvdno = r.rcvdno
+      join raw_kcw.raw_hq_pimas_purchase_bills p
+        on char_length(r.rcvdno) = 12
+       and left(p."BILLNO", 12) = r.rcvdno
+       and char_length(btrim(p."BILLNO")) > 12
+       and coalesce(p."CANCELED", '') <> 'Y'
+      where e.rcvdno is null
+    ),
+    resolved as materialized (
+      select rcvdno, billno from exact_bills
+      union all
+      select rcvdno, billno from prefix_bills
     ),
     rcvd_links as materialized (
       select distinct i.docno, i.bcode, i.rcvdno
@@ -682,20 +690,28 @@ begin
       from ic
       where rcvdno is not null
     ),
-    -- Normalize BILLNO/RCVDNO: btrim + left(...,12) before join (PARTS9 pad/trunc).
-    resolved as (
-      select distinct on (r.rcvdno)
-        r.rcvdno,
-        p."BILLNO" as billno
+    exact_bills as (
+      select distinct r.rcvdno, p."BILLNO" as billno
       from rcvdnos r
       join raw_kcw.raw_hq_pimas_purchase_bills p
-        on left(btrim(p."BILLNO"), 12) = left(r.rcvdno, 12)
+        on p."BILLNO" = r.rcvdno
        and coalesce(p."CANCELED", '') <> 'Y'
-      order by
-        r.rcvdno,
-        case when btrim(p."BILLNO") = r.rcvdno then 0 else 1 end,
-        char_length(btrim(p."BILLNO")),
-        p."BILLNO"
+    ),
+    prefix_bills as (
+      select distinct r.rcvdno, p."BILLNO" as billno
+      from rcvdnos r
+      left join exact_bills e on e.rcvdno = r.rcvdno
+      join raw_kcw.raw_hq_pimas_purchase_bills p
+        on char_length(r.rcvdno) = 12
+       and left(p."BILLNO", 12) = r.rcvdno
+       and char_length(btrim(p."BILLNO")) > 12
+       and coalesce(p."CANCELED", '') <> 'Y'
+      where e.rcvdno is null
+    ),
+    resolved as (
+      select rcvdno, billno from exact_bills
+      union all
+      select rcvdno, billno from prefix_bills
     ),
     rcvd_links as (
       select distinct bcode, rcvdno
