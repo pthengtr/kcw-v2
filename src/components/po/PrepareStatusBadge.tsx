@@ -17,7 +17,11 @@ export default function PrepareStatusBadge({
     <Badge
       variant="outline"
       className={cn(
+<<<<<<< Updated upstream
         "whitespace-nowrap shrink-0",
+=======
+        "w-fit whitespace-nowrap shrink-0",
+>>>>>>> Stashed changes
         prepareStatusBadgeClassName(status),
         className
       )}
