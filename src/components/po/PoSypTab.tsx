@@ -241,7 +241,7 @@ export default function PoSypTab({
         listContent={
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
-              POMAS/PODET — SYP สั่งจาก HQ. สถานะเตรียมโอนอ่านจากบิล TF/TFV
+              POMAS/PODET — SYP สั่งจาก HQ. สถานะจัดของอ่านจากบิล TF/TFV
               ที่ HQ (SIMas REMARKS ต้องมีเลข PO)
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -250,15 +250,15 @@ export default function PoSypTab({
                 onValueChange={(v) => setPrepare(v as PoPrepareFilter)}
               >
                 <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue placeholder="สถานะเตรียม" />
+                  <SelectValue placeholder="สถานะจัด" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">ทั้งหมด</SelectItem>
-                  <SelectItem value="not_prepared">ยังไม่เตรียม</SelectItem>
+                  <SelectItem value="not_prepared">ยังไม่จัด</SelectItem>
                   <SelectItem value="partially_prepared">
                     จัดของบางส่วน
                   </SelectItem>
-                  <SelectItem value="prepared">เตรียมแล้ว</SelectItem>
+                  <SelectItem value="prepared">จัดแล้ว</SelectItem>
                 </SelectContent>
               </Select>
               <Input

@@ -56,13 +56,13 @@ export type PoPrepareStatus = "not_prepared" | "partially_prepared" | "prepared"
 export function prepareStatusLabel(status: PoPrepareStatus | string | null | undefined) {
   switch (status) {
     case "prepared":
-      return "เตรียมแล้ว";
+      return "จัดแล้ว";
     case "partially_prepared":
       return "จัดของบางส่วน";
     case "not_prepared":
-      return "ยังไม่เตรียม";
+      return "ยังไม่จัด";
     default:
-      return "ยังไม่เตรียม";
+      return "ยังไม่จัด";
   }
 }
 
