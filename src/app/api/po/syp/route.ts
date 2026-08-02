@@ -6,10 +6,21 @@ import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { listPoHeaders } from "@/lib/po/po-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const maxDuration = 60;
+
 const QuerySchema = z.object({
   status: z.enum(["open", "billed", "all"]).default("open"),
   prepare: z.enum(["all", "prepared", "not_prepared"]).default("all"),
   q: z.string().optional(),
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  months: z.coerce.number().int().min(1).max(60).default(1),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -28,6 +39,9 @@ export async function GET(req: Request) {
     status: url.searchParams.get("status") ?? undefined,
     prepare: url.searchParams.get("prepare") ?? undefined,
     q: url.searchParams.get("q") || undefined,
+    from: url.searchParams.get("from") || undefined,
+    to: url.searchParams.get("to") || undefined,
+    months: url.searchParams.get("months") ?? undefined,
     limit: url.searchParams.get("limit") ?? undefined,
     offset: url.searchParams.get("offset") ?? undefined,
   });
@@ -43,6 +57,9 @@ export async function GET(req: Request) {
       site: "SYP",
       status: parsed.data.status,
       q: parsed.data.q,
+      from: parsed.data.from,
+      to: parsed.data.to,
+      months: parsed.data.months,
       limit: parsed.data.limit,
       offset: parsed.data.offset,
       prepareFilter: parsed.data.prepare,

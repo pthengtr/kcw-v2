@@ -93,6 +93,7 @@ Poll with `select ... from ops.job_queue where id = :id` until `done` / `failed`
 | `sync_online_sales` | HQ-PC | site HQ |
 | `sync_pomas_podet` | HQ-PC + SYP-PC | `{ "task","site" }` |
 | `sync_iclow` | HQ-PC + SYP-PC (**2 jobs**, shared `batch_id`) | `{ "task":"sync_iclow", "site":"HQ"\|"SYP", "batch_id" }` |
+| `sync_po_related` | HQ-PC + SYP-PC (**2 jobs**, shared `batch_id`) | `{ "task":"sync_po_related", "site":"HQ"\|"SYP", "batch_id" }` — combined PO page refresh |
 | `bank_statement_import` | `null` (either) | `{ "task":"bank_statement_import" }` |
 | `syp_raw` | SYP-PC | `{ "task","site":"SYP" }` |
 | `hq_raw` / `hq_full` | HQ-PC | `{ "task","site":"HQ" }` |
@@ -111,11 +112,14 @@ New features almost never need new queue tables — only new `job_type` values a
 
 ### PO sync from `/po` (kcw-v2)
 
-- Job: `sync_pomas_podet` with `{ "task":"sync_pomas_podet", "site":"HQ"|"SYP" }`
-- Before insert: if a row for that `site` is already `pending`/`running`, return **already running** (do not enqueue another).
-- Gate on the matching PC heartbeat (`HQ-PC` / `SYP-PC`).
-- UI shows last updated via `fn_po_last_ingested_at`; list via `fn_po_list` (SYP left-joins `po_syp_prepare`).
-- **Note:** PostgREST does not expose schema `ops`. Webapp uses service-role RPCs `fn_po_worker_heartbeat`, `fn_po_find_inflight_sync`, `fn_po_enqueue_sync`, `fn_po_get_job` (see [bi/sql/fn_po_sync_ops.sql](./bi/sql/fn_po_sync_ops.sql)).
+- **Primary UI button อัปเดตข้อมูล** uses `sync_po_related` — one click enqueues **two rows** (HQ-PC + SYP-PC) with shared `batch_id`.
+- Payload: `{ "task":"sync_po_related", "site":"HQ"|"SYP", "batch_id":"<uuid>" }`.
+- Worker BAT for `sync_po_related` should refresh PO-related tables for that site (at least POMAS/PODET + ICLOW; inventory optional).
+- Before insert: if any recent (`< 30 min`) `sync_po_related` is `pending`/`running`, return **already running**.
+- Gate: at least one PC online (~30s); still enqueue both site jobs.
+- UI keeps **per-stream last-updated** (PO HQ/SYP, ICLOW HQ/SYP, สต็อก HQ) so operators can see which side moved.
+- Service-role RPCs: `fn_po_related_find_inflight_sync()`, `fn_po_related_enqueue_sync(p_requested_by)` — see [bi/sql/fn_po_related_sync_ops.sql](./bi/sql/fn_po_related_sync_ops.sql).
+- Legacy single-site `sync_pomas_podet` RPCs remain for LINE/compat (`fn_po_enqueue_sync`) — see [bi/sql/fn_po_sync_ops.sql](./bi/sql/fn_po_sync_ops.sql).
 - Open-PO indexes: [bi/sql/fn_po_list.sql](./bi/sql/fn_po_list.sql).
 
 ### Bank statement sync from `/bank-statement-sync` (kcw-v2)
