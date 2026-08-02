@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { badgeVariants } from "@/components/ui/badge";
 import {
   prepareStatusBadgeClassName,
   prepareStatusLabel,
@@ -14,19 +14,15 @@ export default function PrepareStatusBadge({
   className?: string;
 }) {
   return (
-    <Badge
-      variant="outline"
+    <span
       className={cn(
-<<<<<<< Updated upstream
-        "whitespace-nowrap shrink-0",
-=======
-        "w-fit whitespace-nowrap shrink-0",
->>>>>>> Stashed changes
+        badgeVariants({ variant: "outline" }),
+        "inline-flex w-max max-w-max whitespace-nowrap",
         prepareStatusBadgeClassName(status),
         className
       )}
     >
       {prepareStatusLabel(status)}
-    </Badge>
+    </span>
   );
 }
