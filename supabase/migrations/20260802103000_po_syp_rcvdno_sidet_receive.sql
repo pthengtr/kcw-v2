@@ -1,3 +1,6 @@
+-- SYP partial/complete receive: ICLOW.RCVDNO → left(btrim,12) → HQ SIMas/SIDet (TF bills).
+-- Replaces ICLOW RECEIVED qty for received_qty; same pattern as HQ PIMAS/PIDET join.
+--
 -- ICLOW-backed pending-receive list + partial PO detail for /po.
 -- Source of truth: docs/bi/kcw-iclow-pending-receive-data-dictionary.md §6
 --

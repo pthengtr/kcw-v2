@@ -382,7 +382,7 @@ export default function PoPendingReceiveTab({
         },
         {
           key: "received_qty",
-          header: site === "HQ" ? "รับ (PIDET)" : "รับ",
+          header: site === "HQ" ? "รับ (PIDET)" : "รับ (SIDet)",
           className: "text-right whitespace-nowrap",
           render: (r) => formatPoQty(r.received_qty ?? 0),
         },
@@ -513,7 +513,7 @@ export default function PoPendingReceiveTab({
         {isBcodeQty
           ? site === "HQ"
             ? "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
-            : "เกรน DOCNO+BCODE — สั่ง/รับจาก ICLOW (ไม่มี PIDET ที่ SYP). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
+            : "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก SIDet ผ่าน RCVDNO→TF บิล HQ (left 12). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
           : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว. คลิก DOCNO → POMAS/PODET"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
