@@ -48,6 +48,7 @@ export type PoLineRow = {
   itemno: string | null;
   bcode: string | null;
   detail: string | null;
+  mcode: string | null;
   qty: string | null;
   ui: string | null;
   mtp: string | null;
@@ -84,6 +85,7 @@ function mapLine(row: Record<string, unknown>): PoLineRow {
     itemno: ((row.ITEMNO ?? row.itemno) as string | null) ?? null,
     bcode: ((row.BCODE ?? row.bcode) as string | null) ?? null,
     detail: ((row.DETAIL ?? row.detail) as string | null) ?? null,
+    mcode: ((row.MCODE ?? row.mcode) as string | null) ?? null,
     qty: ((row.QTY ?? row.qty) as string | null) ?? null,
     ui: ((row.UI ?? row.ui) as string | null) ?? null,
     mtp: ((row.MTP ?? row.mtp) as string | null) ?? null,
@@ -309,7 +311,9 @@ export async function fetchPoLines(params: {
 
   const { data, error } = await raw(supabase)
     .from(lineTable(site))
-    .select("DOCNO, LINE, ITEMNO, BCODE, DETAIL, QTY, UI, MTP, PRICE, AMOUNT")
+    .select(
+      "DOCNO, LINE, ITEMNO, BCODE, DETAIL, MCODE, QTY, UI, MTP, PRICE, AMOUNT"
+    )
     .eq("DOCNO", docno)
     .order("LINE", { ascending: true });
 
@@ -336,7 +340,6 @@ export const PO_ICLOW_STATUS_TABS: {
   { value: "to_be_ordered", label: "รอสั่งซื้อ" },
   { value: "pending_receive", label: "ค้างรับ" },
   { value: "partially_received", label: "รับบางส่วน" },
-  { value: "complete", label: "รับแล้ว" },
 ];
 
 export type PoPendingReceiveGrain = "line" | "docno" | "bcode";
@@ -349,6 +352,7 @@ export type PoPendingReceiveRow = {
   acctname: string | null;
   bcode: string | null;
   descr: string | null;
+  mcode: string | null;
   qty: number;
   ui: string | null;
   ordered: string | null;
@@ -433,6 +437,7 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     acctname: (row.acctname as string | null) ?? null,
     bcode: (row.bcode as string | null) ?? null,
     descr: (row.descr as string | null) ?? null,
+    mcode: (row.mcode as string | null) ?? null,
     qty: num(row.qty),
     ui: (row.ui as string | null) ?? null,
     ordered: (row.ordered as string | null) ?? null,

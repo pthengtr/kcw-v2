@@ -115,6 +115,25 @@ function formatRcvdnoCell(
   );
 }
 
+function productCell(
+  descr: string | null | undefined,
+  mcode: string | null | undefined
+) {
+  const d = descr?.trim() || "";
+  const m = mcode?.trim() || "";
+  if (!d && !m) return "—";
+  return (
+    <span className="line-clamp-2 break-words">
+      {d || "—"}
+      {m ? (
+        <span className="mt-0.5 block font-mono text-xs text-muted-foreground">
+          {m}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export default function PoPendingReceiveTab({
   site,
   status,
@@ -151,9 +170,7 @@ export default function PoPendingReceiveTab({
 
   const showDates = status !== "to_be_ordered";
   const isBcodeQty =
-    status === "pending_receive" ||
-    status === "partially_received" ||
-    status === "complete";
+    status === "pending_receive" || status === "partially_received";
 
   useEffect(() => {
     setOffset(0);
@@ -338,28 +355,16 @@ export default function PoPendingReceiveTab({
     const midCols: Column<PoPendingReceiveRow>[] = [
       vendorCol,
       {
-        key: "acctname",
-        header: "ผู้ขาย",
-        className: "max-w-[12rem] hidden lg:table-cell",
-        render: (r) => (
-          <span className="line-clamp-2 break-words">
-            {r.acctname ?? "—"}
-          </span>
-        ),
-      },
-      {
         key: "bcode",
         header: "BCODE",
         className: "whitespace-nowrap font-mono",
         render: (r) => r.bcode ?? "—",
       },
       {
-        key: "descr",
-        header: "รายละเอียด",
+        key: "product",
+        header: "สินค้า",
         className: "max-w-[14rem] hidden md:table-cell",
-        render: (r) => (
-          <span className="line-clamp-2 break-words">{r.descr ?? "—"}</span>
-        ),
+        render: (r) => productCell(r.descr, r.mcode),
       },
     ];
 
@@ -452,9 +457,10 @@ export default function PoPendingReceiveTab({
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
           {formatPoDate(row.docdate)}
+          {row.vendor ? ` · ${row.vendor}` : ""}
         </div>
-        <div className="mt-2 text-sm line-clamp-2 break-words">
-          {row.acctname || row.vendor || "—"}
+        <div className="mt-2 text-sm">
+          {productCell(row.descr, row.mcode)}
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
           <div>
@@ -498,11 +504,6 @@ export default function PoPendingReceiveTab({
             </div>
           )}
         </div>
-        {row.descr ? (
-          <div className="mt-2 text-xs text-muted-foreground line-clamp-2">
-            {row.descr}
-          </div>
-        ) : null}
       </div>
     );
   }
@@ -514,15 +515,15 @@ export default function PoPendingReceiveTab({
           ? site === "HQ"
             ? "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
             : "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก SIDet ผ่าน RCVDNO→TF บิล HQ (left 12). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
-          : "แยกจากรายการ PO (POMAS/PODET) — ข้อมูลจาก ICLOW อย่างเดียว. คลิก DOCNO → POMAS/PODET"}
+          : "แยกจาก POMAS/PODET — ข้อมูลจาก ICLOW อย่างเดียว. คลิก DOCNO → POMAS/PODET"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
           className="w-full sm:max-w-xs"
           placeholder={
             isBcodeQty
-              ? "ค้นหา DOCNO / BCODE / RCVDNO / ผู้ขาย"
-              : "ค้นหา DOCNO / BCODE / ผู้ขาย"
+              ? "ค้นหา DOCNO / BCODE / RCVDNO / VENDOR / รุ่น"
+              : "ค้นหา DOCNO / BCODE / VENDOR / รุ่น"
           }
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -601,7 +602,7 @@ export default function PoPendingReceiveTab({
                       <tr key={`${line.line}-${i}`} className="border-b">
                         <td className="p-2">{line.line ?? "—"}</td>
                         <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
-                        <td className="p-2">{line.detail ?? "—"}</td>
+                        <td className="p-2">{productCell(line.detail, line.mcode)}</td>
                         <td className="p-2 whitespace-nowrap">
                           {line.qty ?? "—"}
                           {line.ui ? ` ${line.ui}` : ""}
