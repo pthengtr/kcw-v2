@@ -114,12 +114,17 @@ Primary (1:1 / left-12):
   ICLOW.RCVDNO   ↔ left(btrim(PIMAS.BILLNO),12)
   PIMAS          → PIDET on BILLNO (BILLTYPE in 1/2/3, not canceled)
 
-Fallback (pattern — not 1:1 BILLNO):
-  when primary miss: same AP (ICLOW.VENDOR = PIMAS.ACCTNO)
-    + PIMAS.PO contains ICLOW.DOCNO (exact or slash-split multi-PO)
+Implied BILLNO (not 1:1 — UI: “จับคู่แบบ implied”):
+  when primary miss: left(BILLNO,12) equals RCVDNO after stripping spaces
+  (e.g. A219623 ↔ "A 219623"). match_method='pattern'.
+
+Fallback PO fingerprint (also implied / not 1:1):
+  when still miss: same AP (ICLOW.VENDOR = PIMAS.ACCTNO)
+    + PIMAS.PO matches ICLOW.DOCNO via fn_po_docno_key
+      (PO6907-579 and 6907-579 are the same key; slash-split multi-PO ok)
     + exact BCODE/qty fingerprint of that RCVDNO on the DOCNO
     + unique best date proximity (RCVDDATE ↔ BILLDATE)
-  UI marks these as pattern recognition (operator often keys a delivery note
+  UI marks these as implied (operator often keys a delivery note
   into PIMAS first, then renames BILLNO to the invoice).
 ```
 
@@ -169,7 +174,7 @@ No mixed missing/received breakdown dialog. On ICLOW tabs:
 |-------|--------|
 | **DOCNO** | Same PO lines dialog as รายการ PO — HQ `POMAS`/`PODET` or SYP `POMAS`/`PODET` (`GET /api/po/hq/[docno]` / `GET /api/po/syp/[docno]`) |
 | **RCVDNO** (HQ, exact / left-12) | Purchase invoice — `GET /api/po/pi/[billno]` |
-| **RCVDNO** with `(จับคู่ pattern ไม่ใช่ 1:1 → {BILLNO})` | Pattern remap (AP+PO+fingerprint); click opens resolved invoice |
+| **RCVDNO** with `(จับคู่แบบ implied ไม่ใช่ 1:1 → {BILLNO})` | Implied remap (space-normalized BILLNO or AP+PO key+fingerprint); click opens resolved invoice |
 | **RCVDNO** with `(ไม่พบลิงก์ PIMAS)` | Not clickable |
 
 Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]` may still exist but is unused by the simplified UI.
@@ -202,6 +207,7 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 | PO lines API | `GET /api/po/hq/[docno]` · `GET /api/po/syp/[docno]` |
 | PI detail API | `GET /api/po/pi/[billno]` (RCVDNO → PIMAS/PIDET) |
 | SYP TF bills by DOCNO | `public.fn_po_syp_tf_bills_by_docno()` (REMARKS → DOCNO; shared with prepare) |
+| PO / DOCNO key | `public.fn_po_docno_key(text)` — `PO6907-579` ≡ `6907-579` for implied PO match |
 | Legacy detail RPC | `public.fn_po_pending_receive_detail` (unused by UI) |
 | SQL | [`sql/fn_po_pending_receive.sql`](./sql/fn_po_pending_receive.sql) |
 
@@ -223,6 +229,7 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-08-02 | HQ implied match: space-normalized BILLNO + `fn_po_docno_key` (PO6907-579 ≡ 6907-579); UI “จับคู่แบบ implied” | Agent |
 | 2026-08-02 | SYP รับบางส่วน: union RCVDNO TF + REMARKS follow-up TF (`fn_po_syp_tf_bills_by_docno`); clear backorder when SIDet covers ordered | Agent |
 | 2026-08-02 | HQ fallback: pattern remap RCVDNO→PIMAS via AP+PO+BCODE/qty; UI remark “ไม่ใช่ 1:1” | Agent |
 | 2026-08-01 | Perf: date-filter ICLOW early; skip PIDET for ค้างรับ; resolve RCVDNO→BILLNO once + indexes | Agent |
