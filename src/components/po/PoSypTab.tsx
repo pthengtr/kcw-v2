@@ -180,7 +180,7 @@ export default function PoSypTab({
         header: "สถานะ",
         className: "min-w-[10rem]",
         render: (r) => (
-          <div className="flex flex-col gap-1">
+          <div className="flex w-fit flex-col items-start gap-1">
             <PrepareStatusBadge status={r.prepare_status} />
             {r.tf_billnos ? (
               <span className="font-mono text-xs text-muted-foreground break-all">
