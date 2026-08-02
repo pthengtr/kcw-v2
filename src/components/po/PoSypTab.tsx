@@ -177,7 +177,7 @@ export default function PoSypTab({
       },
       {
         key: "prepare_status",
-        header: "เตรียมโอน",
+        header: "สถานะ",
         className: "min-w-[10rem]",
         render: (r) => (
           <div className="flex flex-col gap-1">
@@ -223,7 +223,7 @@ export default function PoSypTab({
             </div>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <div className="text-xs text-muted-foreground">เตรียมโอน</div>
+            <div className="text-xs text-muted-foreground">สถานะ</div>
             <PrepareStatusBadge status={row.prepare_status} />
           </div>
         </div>
@@ -256,7 +256,7 @@ export default function PoSypTab({
                   <SelectItem value="all">ทั้งหมด</SelectItem>
                   <SelectItem value="not_prepared">ยังไม่เตรียม</SelectItem>
                   <SelectItem value="partially_prepared">
-                    เตรียมบางส่วน
+                    จัดของบางส่วน
                   </SelectItem>
                   <SelectItem value="prepared">เตรียมแล้ว</SelectItem>
                 </SelectContent>
