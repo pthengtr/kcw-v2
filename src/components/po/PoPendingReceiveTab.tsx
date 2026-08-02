@@ -302,7 +302,10 @@ export default function PoPendingReceiveTab({
       header: "สถานะ",
       className: "whitespace-nowrap",
       render: (r) => (
-        <Badge variant={statusBadgeVariant(r.status)}>
+        <Badge
+          variant={statusBadgeVariant(r.status)}
+          className="whitespace-nowrap shrink-0"
+        >
           {statusLabel(r.status)}
         </Badge>
       ),
@@ -433,7 +436,10 @@ export default function PoPendingReceiveTab({
           ) : (
             <div className="font-medium break-all">—</div>
           )}
-          <Badge variant={statusBadgeVariant(row.status)}>
+          <Badge
+            variant={statusBadgeVariant(row.status)}
+            className="whitespace-nowrap shrink-0"
+          >
             {statusLabel(row.status)}
           </Badge>
         </div>
