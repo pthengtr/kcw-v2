@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -17,13 +16,12 @@ import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
 import PoPendingReceiveTab, {
   PO_ICLOW_STATUS_TABS,
 } from "@/components/po/PoPendingReceiveTab";
+import PrepareStatusBadge from "@/components/po/PrepareStatusBadge";
 import PoSypDetailDialog from "@/components/po/PoSypDetailDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   formatPoAmount,
   formatPoDate,
-  prepareStatusBadgeClassName,
-  prepareStatusLabel,
   last30DaysPoDateRange,
 } from "@/lib/po/format";
 import type {
@@ -186,9 +184,7 @@ export default function PoSypTab({
         className: "min-w-[10rem]",
         render: (r) => (
           <div className="flex flex-col gap-1">
-            <Badge className={prepareStatusBadgeClassName(r.prepare_status)}>
-              {prepareStatusLabel(r.prepare_status)}
-            </Badge>
+            <PrepareStatusBadge status={r.prepare_status} />
             {r.tf_billnos ? (
               <span className="font-mono text-xs text-muted-foreground break-all">
                 {r.tf_billnos}
@@ -231,9 +227,7 @@ export default function PoSypTab({
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">เตรียมโอน</div>
-            <Badge className={prepareStatusBadgeClassName(row.prepare_status)}>
-              {prepareStatusLabel(row.prepare_status)}
-            </Badge>
+            <PrepareStatusBadge status={row.prepare_status} />
           </div>
         </div>
       </button>

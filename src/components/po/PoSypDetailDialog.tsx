@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Printer } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import PrepareStatusBadge from "@/components/po/PrepareStatusBadge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,11 +17,8 @@ import {
   formatPoAmount,
   formatPoDate,
   formatPoQty,
-  prepareStatusBadgeClassName,
-  prepareStatusLabel,
 } from "@/lib/po/format";
 import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
-import { cn } from "@/lib/utils";
 
 function formatHqLocation(
   location1: string | null | undefined,
@@ -84,9 +81,7 @@ export default function PoSypDetailDialog({
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-muted-foreground">เตรียมโอน:</span>
-                  <Badge className={prepareStatusBadgeClassName(selected.prepare_status)}>
-                    {prepareStatusLabel(selected.prepare_status)}
-                  </Badge>
+                  <PrepareStatusBadge status={selected.prepare_status} />
                   <span className="text-muted-foreground">
                     รายบรรทัดครบ: {preparedCount}/{lines.length}
                   </span>
@@ -148,16 +143,10 @@ export default function PoSypDetailDialog({
                     return (
                       <tr key={`${lineKey}-${i}`} className="border-b">
                         <td className="p-2 align-middle">
-                          <Badge
-                            className={cn(
-                              "print:hidden",
-                              prepareStatusBadgeClassName(
-                                line.prepare_line_status
-                              )
-                            )}
-                          >
-                            {prepareStatusLabel(line.prepare_line_status)}
-                          </Badge>
+                          <PrepareStatusBadge
+                            status={line.prepare_line_status}
+                            className="print:hidden"
+                          />
                           <span
                             aria-hidden
                             className="mx-auto hidden h-4 w-4 border border-black print:inline-block"
