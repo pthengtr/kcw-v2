@@ -220,23 +220,30 @@ export default function PoStatusPage() {
 
   const headerHint = useMemo(() => {
     if (!meta) return null;
+
+    const timestampCandidates = [
+      meta.HQ?.lastIngestedAt,
+      meta.SYP?.lastIngestedAt,
+      iclowMeta?.hqLastIngestedAt,
+      iclowMeta?.sypLastIngestedAt,
+      inventoryMeta?.hqLastUpdatedAt,
+      simasMeta?.hqLastIngestedAt,
+    ].filter((value): value is string => Boolean(value));
+
+    let latestTimestamp: string | null = null;
+    let latestMs = Number.NaN;
+    for (const value of timestampCandidates) {
+      const ms = Date.parse(value);
+      if (!Number.isNaN(ms) && (Number.isNaN(latestMs) || ms > latestMs)) {
+        latestMs = ms;
+        latestTimestamp = value;
+      }
+    }
+
     return (
       <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>PO HQ: {formatPoTs(meta.HQ?.lastIngestedAt ?? null)}</span>
-          <span>PO SYP: {formatPoTs(meta.SYP?.lastIngestedAt ?? null)}</span>
-          <span>
-            ICLOW HQ: {formatPoTs(iclowMeta?.hqLastIngestedAt ?? null)}
-          </span>
-          <span>
-            ICLOW SYP: {formatPoTs(iclowMeta?.sypLastIngestedAt ?? null)}
-          </span>
-          <span>
-            สต็อก HQ: {formatPoTs(inventoryMeta?.hqLastUpdatedAt ?? null)}
-          </span>
-          <span>
-            SIMas HQ: {formatPoTs(simasMeta?.hqLastIngestedAt ?? null)}
-          </span>
+        <div>
+          อัปเดตล่าสุด: {formatPoTs(latestTimestamp)}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={meta.HQ?.workerOnline ? "secondary" : "outline"}>
@@ -266,7 +273,7 @@ export default function PoStatusPage() {
         <div className="px-4 py-4 sm:px-8 sm:py-6">
           <Card>
             <CardHeader>
-              <CardTitle>สถานะใบสั่งซื้อ (PO)</CardTitle>
+              <CardTitle>จัดการ PO</CardTitle>
             </CardHeader>
             <CardContent>คุณไม่มีสิทธิ์เข้าถึงหน้านี้</CardContent>
           </Card>
@@ -278,7 +285,7 @@ export default function PoStatusPage() {
           <BackButton href="/home" />
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold sm:text-2xl">
-              สถานะใบสั่งซื้อ (PO)
+              จัดการ PO
             </h2>
             {headerHint}
           </div>
@@ -309,8 +316,8 @@ export default function PoStatusPage() {
           onValueChange={(v) => setTab(v as typeof tab)}
         >
           <TabsList className="h-auto w-fit max-w-full flex-wrap justify-start">
-            <TabsTrigger value="syp">SYP (โอนจาก HQ)</TabsTrigger>
-            <TabsTrigger value="hq">HQ (ซัพพลายเออร์)</TabsTrigger>
+            <TabsTrigger value="syp">PO สาขา</TabsTrigger>
+            <TabsTrigger value="hq">PO จัดซื้อ (HQ)</TabsTrigger>
           </TabsList>
 
           <TabsContent value="syp" className="mt-4">

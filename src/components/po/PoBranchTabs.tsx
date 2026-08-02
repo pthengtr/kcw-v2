@@ -29,7 +29,7 @@ export default function PoBranchTabs({
       <TabsList
         className="h-auto w-fit max-w-full flex-wrap justify-start gap-1 p-1"
       >
-        <TabsTrigger value="list">รายการ PO</TabsTrigger>
+        <TabsTrigger value="list">PO</TabsTrigger>
         <span
           className="mx-0.5 hidden h-5 w-px shrink-0 self-center bg-border sm:inline"
           aria-hidden
