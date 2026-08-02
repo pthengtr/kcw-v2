@@ -60,30 +60,61 @@ function rcvdnoValue(row: Pick<PoPendingReceiveRow, "billno" | "rcvdno">) {
   return (row.billno ?? row.rcvdno)?.trim() || "";
 }
 
+/** Prefer resolved PIMAS BILLNO (exact/pattern); fall back to RCVDNO for left-12 lookup. */
+function piLookupKey(
+  row: Pick<
+    PoPendingReceiveRow,
+    "billno" | "rcvdno" | "pimas_matched_billno" | "pimas_match_method"
+  >
+) {
+  const matched = row.pimas_matched_billno?.trim();
+  if (matched) return matched;
+  return rcvdnoValue(row);
+}
+
 function canOpenPiDetail(
   site: PoSyncSite,
-  row: Pick<PoPendingReceiveRow, "billno" | "rcvdno" | "pimas_link_missing">
+  row: Pick<
+    PoPendingReceiveRow,
+    "billno" | "rcvdno" | "pimas_link_missing" | "pimas_matched_billno"
+  >
 ) {
   // PIMAS/PIDET live on HQ; only link when RCVDNO resolves to a bill.
   return (
     site === "HQ" &&
-    Boolean(rcvdnoValue(row)) &&
+    Boolean(piLookupKey(row)) &&
     !row.pimas_link_missing
   );
 }
 
-/** HQ: annotate RCVDNO when ingested PIMAS bill is missing; otherwise link to PI detail */
+function isPatternMatch(
+  method: PoPendingReceiveRow["pimas_match_method"] | undefined
+) {
+  return method === "pattern" || method === "mixed";
+}
+
+/** HQ: annotate RCVDNO when missing, or when pattern (not 1:1) matched a PIMAS bill */
 function formatRcvdnoCell(
   billno: string | null | undefined,
   opts: {
     site: PoSyncSite;
     pimasLinkMissing?: boolean;
+    pimasMatchMethod?: PoPendingReceiveRow["pimas_match_method"];
+    pimasMatchedBillno?: string | null;
     onOpenPi?: () => void;
   }
 ): ReactNode {
   const value = billno?.trim() || "—";
-  const showNote =
+  const matchedBill = opts.pimasMatchedBillno?.trim() || "";
+  const pattern = isPatternMatch(opts.pimasMatchMethod);
+  const showMissing =
     value !== "—" && opts.site === "HQ" && Boolean(opts.pimasLinkMissing);
+  const showPattern =
+    value !== "—" &&
+    opts.site === "HQ" &&
+    !opts.pimasLinkMissing &&
+    pattern &&
+    Boolean(matchedBill);
   const clickable =
     value !== "—" &&
     opts.site === "HQ" &&
@@ -96,7 +127,11 @@ function formatRcvdnoCell(
         <button
           type="button"
           className="break-all text-left font-mono leading-snug text-primary underline-offset-2 hover:underline"
-          title="เปิดรายละเอียดใบรับ (PIMAS/PIDET)"
+          title={
+            showPattern
+              ? `เปิดใบรับที่จับคู่แบบ pattern (ไม่ใช่ 1:1): ${matchedBill}`
+              : "เปิดรายละเอียดใบรับ (PIMAS/PIDET)"
+          }
           onClick={(e) => {
             e.stopPropagation();
             opts.onOpenPi?.();
@@ -107,9 +142,15 @@ function formatRcvdnoCell(
       ) : (
         <span className="break-all font-mono leading-snug">{value}</span>
       )}
-      {showNote ? (
+      {showMissing ? (
         <span className="whitespace-normal font-sans text-xs leading-snug text-muted-foreground">
           (ไม่พบลิงก์ PIMAS)
+        </span>
+      ) : null}
+      {showPattern ? (
+        <span className="whitespace-normal font-sans text-xs leading-snug text-amber-800">
+          (จับคู่ pattern ไม่ใช่ 1:1 →{" "}
+          <span className="font-mono">{matchedBill}</span>)
         </span>
       ) : null}
     </span>
@@ -244,7 +285,8 @@ export default function PoPendingReceiveTab({
 
   async function openPiDetail(row: PoPendingReceiveRow) {
     if (!canOpenPiDetail(site, row)) return;
-    const key = rcvdnoValue(row);
+    const key = piLookupKey(row);
+    const sourceRcvdno = rcvdnoValue(row);
     setDetailKind("pi");
     setDetailKey(key);
     setDetailOpen(true);
@@ -265,7 +307,16 @@ export default function PoPendingReceiveTab({
         header: PiHeader;
         lines: PiLineRow[];
       };
-      setPiHeader(data.header);
+      const header: PiHeader = {
+        ...data.header,
+        matched_rcvdno:
+          data.header.matched_rcvdno ??
+          (sourceRcvdno && sourceRcvdno !== data.header.billno
+            ? sourceRcvdno
+            : null),
+        match_method: row.pimas_match_method ?? null,
+      };
+      setPiHeader(header);
       setPiLines(data.lines ?? []);
     } catch (e) {
       setDetailError(e instanceof Error ? e.message : String(e));
@@ -396,6 +447,8 @@ export default function PoPendingReceiveTab({
             formatRcvdnoCell(r.billno ?? r.rcvdno, {
               site,
               pimasLinkMissing: r.pimas_link_missing,
+              pimasMatchMethod: r.pimas_match_method,
+              pimasMatchedBillno: r.pimas_matched_billno,
               onOpenPi: () => void openPiDetail(r),
             }),
         },
@@ -479,6 +532,8 @@ export default function PoPendingReceiveTab({
                   {formatRcvdnoCell(row.billno || row.rcvdno, {
                     site,
                     pimasLinkMissing: row.pimas_link_missing,
+                    pimasMatchMethod: row.pimas_match_method,
+                    pimasMatchedBillno: row.pimas_matched_billno,
                     onOpenPi: () => void openPiDetail(row),
                   })}
                 </div>
@@ -628,8 +683,22 @@ export default function PoPendingReceiveTab({
                 ) : null}
                 {piHeader.matched_rcvdno ? (
                   <div className="text-xs text-muted-foreground">
-                    จับคู่แบบ left(BILLNO,12) จาก RCVDNO{" "}
-                    <span className="font-mono">{piHeader.matched_rcvdno}</span>
+                    {isPatternMatch(piHeader.match_method) ? (
+                      <>
+                        จับคู่แบบ{" "}
+                        <span className="font-medium text-amber-800">
+                          pattern recognition (ไม่ใช่ 1:1 BILLNO)
+                        </span>{" "}
+                        จาก RCVDNO{" "}
+                        <span className="font-mono">{piHeader.matched_rcvdno}</span>
+                        {" · "}อิง AP + PO + รายการ BCODE/qty
+                      </>
+                    ) : (
+                      <>
+                        จับคู่แบบ left(BILLNO,12) จาก RCVDNO{" "}
+                        <span className="font-mono">{piHeader.matched_rcvdno}</span>
+                      </>
+                    )}
                   </div>
                 ) : null}
                 {piHeader.remarks ? (
