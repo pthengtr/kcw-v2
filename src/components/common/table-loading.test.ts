@@ -13,7 +13,7 @@ describe("Table loading empty states", () => {
     const src = read("src/components/bank/ServerPagedTable.tsx");
     expect(src).toContain("loading = false");
     expect(src).toContain("TableLoadingState");
-    expect(src).toContain("loading && !rows.length");
+    expect(src).toContain("loading ? (");
   });
 
   it("DataTable shows spinner loading instead of empty when loading", () => {

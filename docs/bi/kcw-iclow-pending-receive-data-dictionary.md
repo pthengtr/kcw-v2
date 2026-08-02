@@ -133,7 +133,8 @@ Exclude from all buckets:
 
 **Ordered grain = `DOCNO + BCODE`** (sum ICLOW `QTY`).  
 **HQ received qty** = sum `PIDET.QTY` joined on distinct `ICLOW.RCVDNO` → `PIDET.BILLNO` + same `BCODE`.  
-Legacy PARTS9 truncates `ICLOW.RCVDNO` to **12 chars** while `PIMAS.BILLNO` can be longer — match exact `BILLNO = RCVDNO`, else `left(BILLNO,12) = RCVDNO` when `length(RCVDNO)=12`.  
+Legacy PARTS9 truncates `ICLOW.RCVDNO` to **12 chars**; `PIMAS.BILLNO` can be longer and/or padded with spaces.  
+Join key: `left(btrim(BILLNO),12) = left(btrim(RCVDNO),12)` (prefer exact `btrim(BILLNO)=RCVDNO` when multiple bills share a key).  
 Do **not** use `PIMAS.PO` (unreliable).  
 `RECEIVED='Y'` alone is not “fully received” — it means complete **or** partial after the PIDET qty check.
 
@@ -146,23 +147,26 @@ Do **not** use `PIMAS.PO` (unreliable).
 
 SYP has no PIDET: `received_qty` = sum ICLOW `QTY` where `RECEIVED='Y'` on that DOCNO+BCODE; same complete/partial/pending split.
 
-### 6.2 Partial PO detail (`fn_po_pending_receive_detail`)
+### 6.2 Document links (UI)
 
-Click a partial DOCNO:
+No mixed missing/received breakdown dialog. On ICLOW tabs:
 
-| Section | Source |
-|---------|--------|
-| **Missing** | Per BCODE: `ordered_qty − received_qty` where still positive (HQ: PIDET via `RCVDNO`) |
-| **Received (HQ)** | Distinct `RCVDNO` → `PIDET` lines on BILLNO+BCODE; orphan ICLOW Y rows if no PIDET match (`source=iclow`) |
-| **Received (SYP)** | ICLOW `RECEIVED='Y'` only (no SYP PIDET) |
+| Click | Opens |
+|-------|--------|
+| **DOCNO** | Same PO lines dialog as รายการ PO — HQ `POMAS`/`PODET` or SYP `POMAS`/`PODET` (`GET /api/po/hq/[docno]` / `GET /api/po/syp/[docno]`) |
+| **RCVDNO** (HQ, when PIMAS exists) | Purchase invoice — `PIMAS`/`PIDET` via exact `BILLNO` or `left(BILLNO,12)` (`GET /api/po/pi/[billno]`) |
+| **RCVDNO** with `(ไม่พบลิงก์ PIMAS)` | Not clickable |
+
+Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]` may still exist but is unused by the simplified UI.
 
 ### 6.3 Notes
 
 - Do **not** use mixed-DOCNO sibling logic for รับบางส่วน.
 - Do **not** use `PIMAS.PO` or `PODET.QTY − PIDET.QTY` for membership.
 - Default UI filter: **`pending_receive`**.
-- `complete` / `partially_received` / `pending_receive` keep a date / months window on `DOCDATE` (default 12).
-- `to_be_ordered` skips the months cutoff.
+- `complete` / `partially_received` / `pending_receive` keep a date window on `DOCDATE` (UI default: **last 30 days**; quick presets: 60d / 3m / 6m / 1y).
+- `to_be_ordered` has **no** date filter (`DOCDATE` is usually null on those ICLOW rows).
+- รายการ PO (HQ/SYP) uses the same lookback presets on `POMAS.DOCDATE`.
 
 ### 6.4 Observed HQ counts (ingested snapshot 2026-08-01)
 
@@ -179,9 +183,10 @@ Click a partial DOCNO:
 | Piece | Contract |
 |-------|----------|
 | List RPC | `public.fn_po_pending_receive` |
-| Detail RPC | `public.fn_po_pending_receive_detail(p_site, p_docno)` |
 | List API | `GET /api/po/pending-receive?site=&status=` |
-| Detail API | `GET /api/po/pending-receive/[docno]?site=` |
+| PO lines API | `GET /api/po/hq/[docno]` · `GET /api/po/syp/[docno]` |
+| PI detail API | `GET /api/po/pi/[billno]` (RCVDNO → PIMAS/PIDET) |
+| Legacy detail RPC | `public.fn_po_pending_receive_detail` (unused by UI) |
 | SQL | [`sql/fn_po_pending_receive.sql`](./sql/fn_po_pending_receive.sql) |
 
 ---
@@ -202,6 +207,10 @@ Click a partial DOCNO:
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-08-01 | Perf: date-filter ICLOW early; skip PIDET for ค้างรับ; resolve RCVDNO→BILLNO once + indexes | Agent |
+| 2026-08-01 | Normalize PIMAS BILLNO with `btrim` + `left(...,12)` before RCVDNO join (leading spaces) | Agent |
+| 2026-08-01 | Default ICLOW dated tabs to last 30 days (avoid 12‑month statement timeouts) | Agent |
+| 2026-08-01 | Simplify UI: DOCNO→POMAS/PODET, RCVDNO→PIMAS/PIDET; drop partial missing/received dialog | Agent |
 | 2026-08-01 | Match truncated RCVDNO via `left(PIMAS.BILLNO,12)` (legacy 12-char ICLOW field) | Agent |
 | 2026-08-01 | UI shows `(ไม่พบลิงก์ PIMAS)` when ICLOW.RCVDNO has no matching ingested PIMAS bill | Agent |
 | 2026-08-01 | BCODE grain: RECEIVED=Y → complete/partial via RCVDNO→PIDET qty; drop mixed DOCNO + PIMAS.PO | Agent |

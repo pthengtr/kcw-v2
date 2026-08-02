@@ -5,9 +5,12 @@ export type PoSyncSite = "HQ" | "SYP";
 export const PO_SYNC_JOB_TYPE = "sync_pomas_podet";
 export const INVENTORY_SYNC_JOB_TYPE = "sync_inventory";
 export const ICLOW_SYNC_JOB_TYPE = "sync_iclow";
+/** Combined PO-related refresh (POMAS/PODET, ICLOW, …) for both site PCs. */
+export const PO_RELATED_SYNC_JOB_TYPE = "sync_po_related";
 export const WORKER_ONLINE_WINDOW_MS = 30_000;
 export const INVENTORY_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
 export const ICLOW_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
+export const PO_RELATED_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
 
 const SITE_WORKER: Record<PoSyncSite, "HQ-PC" | "SYP-PC"> = {
   HQ: "HQ-PC",
@@ -323,4 +326,81 @@ export async function fetchIclowLastIngestedAt(
   });
   if (error) throw error;
   return (data as string | null) ?? null;
+}
+
+export async function findInFlightPoRelatedSync(
+  supabase: SupabaseClient
+): Promise<JobQueueRow[]> {
+  const { data, error } = await supabase.rpc(
+    "fn_po_related_find_inflight_sync"
+  );
+  if (error) throw error;
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  return rows.map((row) => mapJob(row as Record<string, unknown>));
+}
+
+export async function enqueuePoRelatedSync(params: {
+  supabase: SupabaseClient;
+  requestedBy: string;
+}): Promise<
+  | { alreadyRunning: true; jobs: JobQueueRow[] }
+  | { alreadyRunning: false; jobs: JobQueueRow[]; workerOnline: true }
+  | {
+      alreadyRunning: false;
+      workerOnline: false;
+      offlineWorkers: Array<{
+        workerName: string;
+        site: PoSyncSite;
+        lastSeen: string | null;
+      }>;
+    }
+> {
+  const { supabase, requestedBy } = params;
+
+  const running = await findInFlightPoRelatedSync(supabase);
+  if (running.length > 0) {
+    return { alreadyRunning: true, jobs: running };
+  }
+
+  const heartbeats = await Promise.all(
+    PO_RELATED_SYNC_SITES.map(async (site) => {
+      const workerName = workerNameForSite(site);
+      const heartbeat = await getWorkerHeartbeat(supabase, workerName);
+      return {
+        site,
+        workerName,
+        lastSeen: heartbeat?.last_seen ?? null,
+        online: isWorkerOnline(heartbeat?.last_seen ?? null),
+      };
+    })
+  );
+  const offlineWorkers = heartbeats
+    .filter((h) => !h.online)
+    .map((h) => ({
+      workerName: h.workerName,
+      site: h.site,
+      lastSeen: h.lastSeen,
+    }));
+  if (offlineWorkers.length === PO_RELATED_SYNC_SITES.length) {
+    return {
+      alreadyRunning: false,
+      workerOnline: false,
+      offlineWorkers,
+    };
+  }
+
+  const { data, error } = await supabase.rpc("fn_po_related_enqueue_sync", {
+    p_requested_by: requestedBy,
+  });
+  if (error) throw error;
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  if (rows.length === 0) {
+    throw new Error("PO-related enqueue returned no rows");
+  }
+
+  return {
+    alreadyRunning: false,
+    workerOnline: true,
+    jobs: rows.map((row) => mapJob(row as Record<string, unknown>)),
+  };
 }

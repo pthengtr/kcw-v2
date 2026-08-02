@@ -6,6 +6,8 @@ import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { fetchPoPendingReceiveDetail } from "@/lib/po/po-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const maxDuration = 60;
+
 const QuerySchema = z.object({
   site: z.enum(["HQ", "SYP"]),
 });

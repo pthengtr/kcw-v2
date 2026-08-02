@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   findInFlightIclowSync,
   findInFlightInventorySync,
+  findInFlightPoRelatedSync,
   findInFlightPoSync,
   fetchIclowLastIngestedAt,
   fetchInventoryLastUpdatedAt,
@@ -184,15 +185,23 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     })
   );
 
-  const [hqInventoryUpdatedAt, inventoryInFlight, hqIclowAt, sypIclowAt, iclowInFlight, simasLastIngestedAt] =
-    await Promise.all([
-      fetchInventoryLastUpdatedAt(supabase, "HQ"),
-      findInFlightInventorySync(supabase),
-      fetchIclowLastIngestedAt(supabase, "HQ"),
-      fetchIclowLastIngestedAt(supabase, "SYP"),
-      findInFlightIclowSync(supabase),
-      fetchSimasLastIngestedAt(supabase),
-    ]);
+  const [
+    hqInventoryUpdatedAt,
+    inventoryInFlight,
+    hqIclowAt,
+    sypIclowAt,
+    iclowInFlight,
+    poRelatedInFlight,
+    simasLastIngestedAt,
+  ] = await Promise.all([
+    fetchInventoryLastUpdatedAt(supabase, "HQ"),
+    findInFlightInventorySync(supabase),
+    fetchIclowLastIngestedAt(supabase, "HQ"),
+    fetchIclowLastIngestedAt(supabase, "SYP"),
+    findInFlightIclowSync(supabase),
+    findInFlightPoRelatedSync(supabase),
+    fetchSimasLastIngestedAt(supabase),
+  ]);
 
   return {
     sites: Object.fromEntries(siteEntries) as Record<
@@ -218,6 +227,9 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
     simas: {
       hqLastIngestedAt: simasLastIngestedAt,
     },
+    poRelated: {
+      inFlightJobs: poRelatedInFlight,
+    },
   };
 }
 
@@ -226,6 +238,9 @@ export async function listPoHeaders(params: {
   site: PoSyncSite;
   status?: PoStatusFilter;
   q?: string;
+  from?: string;
+  to?: string;
+  months?: number;
   limit: number;
   offset: number;
   prepareFilter?: PoPrepareFilter;
@@ -235,6 +250,9 @@ export async function listPoHeaders(params: {
     site,
     status = "open",
     q,
+    from,
+    to,
+    months = 1,
     limit,
     offset,
     prepareFilter = "all",
@@ -245,6 +263,9 @@ export async function listPoHeaders(params: {
     p_status: status,
     p_prepare: site === "SYP" ? prepareFilter : "all",
     p_q: q?.trim() || null,
+    p_from: from?.trim() || null,
+    p_to: to?.trim() || null,
+    p_months: months,
     p_limit: limit,
     p_offset: offset,
   });
@@ -456,7 +477,7 @@ export async function listPoPendingReceive(params: {
     vendor,
     from,
     to,
-    months = 12,
+    months = 1,
     limit,
     offset,
   } = params;
@@ -499,6 +520,154 @@ export async function listPoPendingReceive(params: {
     rows,
     count: Number.isFinite(count) ? count : null,
     grain,
+  };
+}
+
+export type PiHeader = {
+  billno: string;
+  billdate: string | null;
+  acctno: string | null;
+  acctname: string | null;
+  po: string | null;
+  aftertax: string | null;
+  canceled: string | null;
+  remarks: string | null;
+  /** ICLOW RCVDNO when bill was resolved via left(BILLNO,12) */
+  matched_rcvdno: string | null;
+};
+
+export type PiLineRow = {
+  billno: string;
+  bcode: string | null;
+  detail: string | null;
+  qty: string | null;
+  ui: string | null;
+  price: string | null;
+  amount: string | null;
+};
+
+function billKey12(value: string | null | undefined): string {
+  return String(value ?? "")
+    .trim()
+    .slice(0, 12);
+}
+
+/** Resolve ICLOW RCVDNO / PIMAS BILLNO and load PIDET lines (HQ purchase invoice). */
+export async function fetchPiDetail(params: {
+  supabase: SupabaseClient;
+  billnoOrRcvdno: string;
+}): Promise<{ header: PiHeader; lines: PiLineRow[] } | null> {
+  // PARTS9 may pad BILLNO/RCVDNO with spaces and trunc RCVDNO to 12 chars.
+  const key = params.billnoOrRcvdno.trim();
+  if (!key) return null;
+  const key12 = billKey12(key);
+
+  const db = raw(params.supabase);
+
+  let bill: Record<string, unknown> | null = null;
+  let matchedRcvdno: string | null = null;
+
+  const exact = await db
+    .from("raw_hq_pimas_purchase_bills")
+    .select('"BILLNO","BILLDATE","ACCTNO","PO","AFTERTAX","CANCELED","REMARKS"')
+    .eq("BILLNO", key)
+    .maybeSingle();
+  if (exact.error) throw exact.error;
+  bill = (exact.data as Record<string, unknown> | null) ?? null;
+
+  if (!bill) {
+    // Leading-space / truncated variants: scan a small candidate set, then
+    // match on left(btrim(BILLNO),12) — same rule as fn_po_pending_receive.
+    const prefix = await db
+      .from("raw_hq_pimas_purchase_bills")
+      .select('"BILLNO","BILLDATE","ACCTNO","PO","AFTERTAX","CANCELED","REMARKS"')
+      .like("BILLNO", `%${key12}%`)
+      .neq("CANCELED", "Y")
+      .limit(40);
+    if (prefix.error) throw prefix.error;
+    const candidates = ((prefix.data as Record<string, unknown>[] | null) ?? [])
+      .filter((row) => billKey12(String(row.BILLNO ?? "")) === key12)
+      .sort((a, b) => {
+        const aBill = String(a.BILLNO ?? "");
+        const bBill = String(b.BILLNO ?? "");
+        const aExact = aBill.trim() === key ? 0 : 1;
+        const bExact = bBill.trim() === key ? 0 : 1;
+        if (aExact !== bExact) return aExact - bExact;
+        if (aBill.trim().length !== bBill.trim().length) {
+          return aBill.trim().length - bBill.trim().length;
+        }
+        return aBill.localeCompare(bBill);
+      });
+    if (candidates.length > 0) {
+      bill = candidates[0] ?? null;
+      const resolved = String(bill?.BILLNO ?? "").trim();
+      if (resolved !== key) matchedRcvdno = key;
+    }
+  }
+
+  if (!bill) return null;
+
+  // Keep raw BILLNO for PIDET join (PIDET often shares the same leading space).
+  const billnoRaw = String(bill.BILLNO ?? key);
+  const billno = billnoRaw.trim();
+  const acctno = (bill.ACCTNO as string | null) ?? null;
+  let acctname: string | null = null;
+  if (acctno) {
+    const ap = await db
+      .from("raw_hq_apmas_payable")
+      .select('"ACCTNAME"')
+      .eq("ACCTNO", acctno)
+      .maybeSingle();
+    if (ap.error) throw ap.error;
+    acctname =
+      ((ap.data as Record<string, unknown> | null)?.ACCTNAME as string | null) ??
+      null;
+  }
+
+  let linesRes = await db
+    .from("raw_hq_pidet_purchase_lines")
+    .select('"BILLNO","BCODE","DETAIL","QTY","UI","PRICE","AMOUNT","BILLTYPE","CANCELED"')
+    .eq("BILLNO", billnoRaw)
+    .in("BILLTYPE", ["1", "2", "3"])
+    .limit(500);
+  if (linesRes.error) throw linesRes.error;
+
+  if (((linesRes.data as unknown[] | null) ?? []).length === 0 && billno !== billnoRaw) {
+    linesRes = await db
+      .from("raw_hq_pidet_purchase_lines")
+      .select('"BILLNO","BCODE","DETAIL","QTY","UI","PRICE","AMOUNT","BILLTYPE","CANCELED"')
+      .eq("BILLNO", billno)
+      .in("BILLTYPE", ["1", "2", "3"])
+      .limit(500);
+    if (linesRes.error) throw linesRes.error;
+  }
+
+  const lines = ((linesRes.data as Record<string, unknown>[] | null) ?? [])
+    .filter((row) => String(row.CANCELED ?? "") !== "Y")
+    .map((row) => ({
+      billno: String(row.BILLNO ?? billno).trim(),
+      bcode: (row.BCODE as string | null) ?? null,
+      detail: (row.DETAIL as string | null) ?? null,
+      qty: row.QTY == null ? null : String(row.QTY),
+      ui: (row.UI as string | null) ?? null,
+      price: row.PRICE == null ? null : String(row.PRICE),
+      amount: row.AMOUNT == null ? null : String(row.AMOUNT),
+    }));
+
+  return {
+    header: {
+      billno,
+      billdate:
+        bill.BILLDATE == null ? null : String(bill.BILLDATE).slice(0, 10),
+      acctno,
+      acctname: acctname ? String(acctname) : null,
+      po: (bill.PO as string | null) ?? null,
+      aftertax: bill.AFTERTAX == null ? null : String(bill.AFTERTAX),
+      canceled: (bill.CANCELED as string | null) ?? null,
+      remarks: (bill.REMARKS as string | null) ?? null,
+      matched_rcvdno: matchedRcvdno,
+    },
+    lines,
   };
 }
 

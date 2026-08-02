@@ -6,6 +6,8 @@ import {
   INVENTORY_SYNC_JOB_TYPE,
   INVENTORY_SYNC_SITES,
   isWorkerOnline,
+  PO_RELATED_SYNC_JOB_TYPE,
+  PO_RELATED_SYNC_SITES,
   WORKER_ONLINE_WINDOW_MS,
   workerNameForSite,
 } from "@/lib/po/worker-jobs";
@@ -45,6 +47,11 @@ describe("PO worker helpers", () => {
   it("maps ICLOW sync to both site workers", () => {
     expect(ICLOW_SYNC_JOB_TYPE).toBe("sync_iclow");
     expect(ICLOW_SYNC_SITES).toEqual(["HQ", "SYP"]);
+  });
+
+  it("maps PO-related sync to both site workers", () => {
+    expect(PO_RELATED_SYNC_JOB_TYPE).toBe("sync_po_related");
+    expect(PO_RELATED_SYNC_SITES).toEqual(["HQ", "SYP"]);
   });
 });
 

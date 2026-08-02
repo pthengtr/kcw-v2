@@ -167,7 +167,7 @@ export function ServerPagedTable<T>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {loading && !rows.length ? (
+          {loading ? (
             <TableRow>
               <TableCell colSpan={columns.length} className="p-0">
                 <TableLoadingState />
@@ -215,9 +215,9 @@ export function ServerPagedTable<T>({
     <div className="flex flex-col gap-3">
       <div className="md:hidden flex flex-col gap-3 rounded-md border p-3">
         {pagination}
-        {loading && !rows.length ? (
-          <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-            กำลังโหลด…
+        {loading ? (
+          <div className="rounded-md border p-6">
+            <TableLoadingState />
           </div>
         ) : rows.length ? (
           <div className="flex flex-col gap-2">
