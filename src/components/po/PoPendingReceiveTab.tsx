@@ -495,9 +495,9 @@ export default function PoPendingReceiveTab({
       <p className="text-sm text-muted-foreground">
         {isBcodeQty
           ? site === "HQ"
-            ? "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
-            : "เกรน DOCNO+BCODE — สั่งจาก ICLOW; รับจาก SIDet ผ่าน RCVDNO→TF บิล HQ (left 12). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
-          : "แยกจาก POMAS/PODET — ข้อมูลจาก ICLOW อย่างเดียว. คลิก DOCNO → POMAS/PODET"}
+            ? "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
+            : "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก SIDet ผ่าน RCVDNO→TF บิล HQ (left 12). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
+          : "รายการรอสั่งซื้อจาก PARTS9 (แยกจาก POMAS/PODET). คลิก DOCNO → POMAS/PODET"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Input

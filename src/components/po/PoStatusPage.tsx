@@ -308,7 +308,7 @@ export default function PoStatusPage() {
           value={tab}
           onValueChange={(v) => setTab(v as typeof tab)}
         >
-          <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
+          <TabsList className="h-auto w-fit max-w-full flex-wrap justify-start">
             <TabsTrigger value="syp">SYP (โอนจาก HQ)</TabsTrigger>
             <TabsTrigger value="hq">HQ (ซัพพลายเออร์)</TabsTrigger>
           </TabsList>

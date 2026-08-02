@@ -11,13 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
+import PoBranchTabs from "@/components/po/PoBranchTabs";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
 import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
-import PoPendingReceiveTab, {
-  PO_ICLOW_STATUS_TABS,
-} from "@/components/po/PoPendingReceiveTab";
 import PoProductCell from "@/components/po/PoProductCell";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   billedLabel,
   formatPoAmount,
@@ -199,28 +196,12 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Tabs value={view} onValueChange={(v) => setView(v as PoHqView)}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <TabsList className="h-auto w-full justify-start sm:w-auto">
-            <TabsTrigger value="list">รายการ PO</TabsTrigger>
-          </TabsList>
-          <div
-            className="hidden sm:block h-6 w-px shrink-0 bg-border"
-            aria-hidden
-          />
-          <span className="text-xs font-medium text-muted-foreground sm:mr-1">
-            ICLOW
-          </span>
-          <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
-            {PO_ICLOW_STATUS_TABS.map((tab) => (
-              <TabsTrigger key={tab.value} value={tab.value}>
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
-
-        <TabsContent value="list" className="mt-3">
+      <PoBranchTabs
+        site="HQ"
+        view={view}
+        onViewChange={setView}
+        refreshToken={refreshToken}
+        listContent={
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
               POMAS/PODET — รายการใบสั่งซื้อจาก PARTS9
@@ -339,18 +320,8 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
               fallbackName={accountRow?.acctname}
             />
           </div>
-        </TabsContent>
-
-        {PO_ICLOW_STATUS_TABS.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value} className="mt-3">
-            <PoPendingReceiveTab
-              site="HQ"
-              status={tab.value}
-              refreshToken={refreshToken}
-            />
-          </TabsContent>
-        ))}
-      </Tabs>
+        }
+      />
     </div>
   );
 }
