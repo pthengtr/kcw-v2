@@ -16,6 +16,7 @@ import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
 import PoPendingReceiveTab, {
   PO_ICLOW_STATUS_TABS,
 } from "@/components/po/PoPendingReceiveTab";
+import PoProductCell from "@/components/po/PoProductCell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   billedLabel,
@@ -158,14 +159,6 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
           ),
       },
       {
-        key: "acctname",
-        header: "ผู้ขาย",
-        className: "max-w-[14rem] hidden lg:table-cell",
-        render: (r) => (
-          <span className="line-clamp-2 break-words">{r.acctname ?? "—"}</span>
-        ),
-      },
-      {
         key: "aftertax",
         header: "ยอด",
         className: "text-right whitespace-nowrap",
@@ -188,25 +181,15 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
             {formatPoDate(row.docdate)}
           </div>
         </div>
-        <div className="mt-3 grid gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-3">
           <div>
-            <div className="text-xs text-muted-foreground">ผู้ขาย</div>
-            <div className="text-sm line-clamp-2 break-words">
-              {row.acctname || "—"}
-            </div>
+            <div className="text-xs text-muted-foreground">ACCTNO</div>
+            <div className="text-sm font-mono break-all">{row.acctno || "—"}</div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-xs text-muted-foreground">ACCTNO</div>
-              <div className="text-sm font-mono break-all">
-                {row.acctno || "—"}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">ยอด</div>
-              <div className="text-sm font-medium whitespace-nowrap">
-                {formatPoAmount(row.aftertax)}
-              </div>
+          <div>
+            <div className="text-xs text-muted-foreground">ยอด</div>
+            <div className="text-sm font-medium whitespace-nowrap">
+              {formatPoAmount(row.aftertax)}
             </div>
           </div>
         </div>
@@ -216,25 +199,36 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Tabs
-        value={view}
-        onValueChange={(v) => setView(v as typeof view)}
-      >
-        <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
-          <TabsTrigger value="list">รายการ PO</TabsTrigger>
-          {PO_ICLOW_STATUS_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <Tabs value={view} onValueChange={(v) => setView(v as PoHqView)}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <TabsList className="h-auto w-full justify-start sm:w-auto">
+            <TabsTrigger value="list">รายการ PO</TabsTrigger>
+          </TabsList>
+          <div
+            className="hidden sm:block h-6 w-px shrink-0 bg-border"
+            aria-hidden
+          />
+          <span className="text-xs font-medium text-muted-foreground sm:mr-1">
+            ICLOW
+          </span>
+          <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
+            {PO_ICLOW_STATUS_TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         <TabsContent value="list" className="mt-3">
           <div className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              POMAS/PODET — รายการใบสั่งซื้อจาก PARTS9
+            </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Input
                 className="w-full sm:max-w-xs"
-                placeholder="ค้นหา DOCNO / ผู้ขาย"
+                placeholder="ค้นหา DOCNO / ACCTNO"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
@@ -264,7 +258,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
               onLimitChange={setLimit}
               onRowClick={openDetail}
               loading={loading}
-              tableMinWidthClassName="min-w-[40rem]"
+              tableMinWidthClassName="min-w-[36rem]"
               rowKey={(row) => row.docno}
               mobileCardRender={renderPoHqMobileCard}
             />
@@ -277,11 +271,8 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
                 {selected ? (
                   <div className="space-y-2 text-sm">
                     <div>
-                      ผู้ขาย: {selected.acctname ?? "—"} (
-                      {selected.acctno ?? "—"})
-                    </div>
-                    <div>
-                      วันที่: {formatPoDate(selected.docdate)} · สถานะ:{" "}
+                      ACCTNO: {selected.acctno ?? "—"} · วันที่:{" "}
+                      {formatPoDate(selected.docdate)} · สถานะ:{" "}
                       {billedLabel(selected.billed)}
                     </div>
                     <div>ยอด: {formatPoAmount(selected.aftertax)}</div>
@@ -293,7 +284,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
                       <tr className="border-b bg-muted/40 text-left">
                         <th className="p-2">Line</th>
                         <th className="p-2">BCODE</th>
-                        <th className="p-2">รายละเอียด</th>
+                        <th className="p-2">สินค้า</th>
                         <th className="p-2">Qty</th>
                         <th className="p-2">ราคา</th>
                         <th className="p-2">จำนวนเงิน</th>
@@ -316,8 +307,13 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
                         lines.map((line, i) => (
                           <tr key={`${line.line}-${i}`} className="border-b">
                             <td className="p-2">{line.line ?? "—"}</td>
-                            <td className="p-2">{line.bcode ?? "—"}</td>
-                            <td className="p-2">{line.detail ?? "—"}</td>
+                            <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
+                            <td className="p-2">
+                              <PoProductCell
+                                detail={line.detail}
+                                mcode={line.mcode}
+                              />
+                            </td>
                             <td className="p-2">
                               {line.qty ?? "—"} {line.ui ?? ""}
                             </td>

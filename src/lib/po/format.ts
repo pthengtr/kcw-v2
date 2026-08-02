@@ -24,6 +24,16 @@ export function formatPoQty(value: string | number | null | undefined) {
   });
 }
 
+export function formatProductDescr(
+  descr: string | null | undefined,
+  mcode: string | null | undefined
+) {
+  const d = descr?.trim() || "";
+  const m = mcode?.trim() || "";
+  if (d && m) return `${d} · ${m}`;
+  return d || m || "—";
+}
+
 export function formatPoDate(value: string | null | undefined) {
   if (!value) return "—";
   // DOCDATE often comes as YYYY-MM-DD already

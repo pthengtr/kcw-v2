@@ -100,15 +100,16 @@ describe("PO pending receive statuses", () => {
     ]);
   });
 
-  it("exposes four ICLOW status tab labels", () => {
+  it("exposes three ICLOW status tab labels", () => {
     expect(PO_ICLOW_STATUS_TABS.map((t) => t.label)).toEqual([
       "รอสั่งซื้อ",
       "ค้างรับ",
       "รับบางส่วน",
-      "รับแล้ว",
     ]);
     expect(PO_ICLOW_STATUS_TABS.map((t) => t.value)).toEqual([
-      ...PO_PENDING_RECEIVE_STATUSES,
+      "to_be_ordered",
+      "pending_receive",
+      "partially_received",
     ]);
   });
 });
