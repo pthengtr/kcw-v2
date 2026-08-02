@@ -440,11 +440,7 @@ export default function PoPendingReceiveTab({
           )}
           <Badge
             variant={statusBadgeVariant(row.status)}
-<<<<<<< Updated upstream
-            className="whitespace-nowrap shrink-0"
-=======
-            className="w-fit whitespace-nowrap shrink-0"
->>>>>>> Stashed changes
+            className="inline-flex w-max max-w-max whitespace-nowrap"
           >
             {statusLabel(row.status)}
           </Badge>
