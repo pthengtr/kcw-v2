@@ -364,6 +364,15 @@ export type PoPendingReceiveRow = {
   billdate?: string | null;
   /** HQ: true when at least one RCVDNO has no matching PIMAS bill */
   pimas_link_missing?: boolean;
+  /**
+   * HQ RCVDNO→PIMAS resolve method for this row:
+   * - exact: left(btrim(BILLNO),12) 1:1-style match
+   * - pattern: AP + PO + BCODE/qty fingerprint (DN→invoice rename)
+   * - mixed: both methods among RCVDNOs on the BCODE
+   */
+  pimas_match_method?: "exact" | "pattern" | "mixed" | null;
+  /** HQ: resolved PIMAS BILLNO (when pattern/exact); used to open PI detail */
+  pimas_matched_billno?: string | null;
   status: PoPendingReceiveStatus;
   grain: PoPendingReceiveGrain;
   ordered_qty?: number;
@@ -447,6 +456,12 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     billno: (row.billno as string | null) ?? null,
     billdate: (row.billdate as string | null) ?? null,
     pimas_link_missing: Boolean(row.pimas_link_missing),
+    pimas_match_method: (() => {
+      const m = String(row.pimas_match_method ?? "");
+      if (m === "exact" || m === "pattern" || m === "mixed") return m;
+      return null;
+    })(),
+    pimas_matched_billno: (row.pimas_matched_billno as string | null) ?? null,
     status,
     grain,
     ordered_qty:
@@ -537,8 +552,10 @@ export type PiHeader = {
   aftertax: string | null;
   canceled: string | null;
   remarks: string | null;
-  /** ICLOW RCVDNO when bill was resolved via left(BILLNO,12) */
+  /** ICLOW RCVDNO when bill was resolved via left(BILLNO,12) or pattern */
   matched_rcvdno: string | null;
+  /** How RCVDNO was resolved when opening from ICLOW list */
+  match_method?: "exact" | "pattern" | "mixed" | null;
 };
 
 export type PiLineRow = {
