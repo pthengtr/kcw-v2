@@ -142,10 +142,17 @@ Do **not** use `PIMAS.PO` (unreliable).
 |------------|-----------|-------|-----------|
 | `to_be_ordered` | รอสั่งซื้อ | line | `ORDERED=N`. `DOCNO` null in practice. |
 | `pending_receive` | ค้างรับ | bcode | `ORDERED=Y` and **no** ICLOW row for that DOCNO+BCODE has `RECEIVED='Y'`. |
-| `partially_received` | รับบางส่วน | bcode | Any `RECEIVED='Y'` on DOCNO+BCODE; received qty from bill lines via `RCVDNO` **&lt;** ordered qty. HQ: `PIMAS`/`PIDET`. SYP: HQ `SIMas`/`SIDet` TF transfer bills (`left(btrim(BILLNO),12)` join). Do **not** use `PIMAS.PO`. |
-| `complete` | รับแล้ว | bcode | Any `RECEIVED='Y'` and PIDET qty via `RCVDNO` **≥** ordered qty. |
+| `partially_received` | รับบางส่วน | bcode | Any `RECEIVED='Y'` on DOCNO+BCODE; received qty from bill lines **&lt;** ordered qty. HQ: `PIMAS`/`PIDET` via `RCVDNO`. SYP: HQ TF `SIMas`/`SIDet` via `RCVDNO` **∪** REMARKS-matched follow-up TF/TFV. Do **not** use `PIMAS.PO`. |
+| `complete` | รับแล้ว | bcode | Any `RECEIVED='Y'` and received qty **≥** ordered qty. |
 
-SYP: `received_qty` = sum `SIDet.QTY` via `ICLOW.RCVDNO` → `left(btrim(SIMas.BILLNO),12)` (TF transfer bills at HQ). Same complete/partial/pending split as HQ; do **not** use ICLOW `RECEIVED` qty alone or `PIMAS.PO`.
+**SYP `received_qty`** = sum distinct `SIDet.QTY` for that `BCODE` over the union of:
+
+1. TF bills from `ICLOW.RCVDNO` → `left(btrim(SIMas.BILLNO),12)` (first receive)
+2. HQ TF/TFV bills whose `REMARKS` match the SYP `DOCNO` via `fn_po_syp_tf_bills_by_docno()` (same pattern as prepare — e.g. `1PO6906-388##…`)
+
+Membership still requires any ICLOW `RECEIVED='Y'` (a REMARKS-only TF does not invent rows). Same complete/partial/pending split as HQ; do **not** use ICLOW `RECEIVED` qty alone or `PIMAS.PO`.
+
+**Clear SYP รับบางส่วน (backorder):** HQ opens a follow-up TF/TFV for the same SYP PO (`DOCNO` in `REMARKS`) covering the missing BCODE qty → sync (`อัปเดตข้อมูล`) → when summed SIDet ≥ ordered, the line becomes `complete` and drops off รับบางส่วน. Will-not-ship remainder: cancel/reduce that ICLOW line in PARTS9, then sync.
 
 ### 6.2 Document links (UI)
 
@@ -186,6 +193,7 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 | List API | `GET /api/po/pending-receive?site=&status=` |
 | PO lines API | `GET /api/po/hq/[docno]` · `GET /api/po/syp/[docno]` |
 | PI detail API | `GET /api/po/pi/[billno]` (RCVDNO → PIMAS/PIDET) |
+| SYP TF bills by DOCNO | `public.fn_po_syp_tf_bills_by_docno()` (REMARKS → DOCNO; shared with prepare) |
 | Legacy detail RPC | `public.fn_po_pending_receive_detail` (unused by UI) |
 | SQL | [`sql/fn_po_pending_receive.sql`](./sql/fn_po_pending_receive.sql) |
 
@@ -207,6 +215,7 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-08-02 | SYP รับบางส่วน: union RCVDNO TF + REMARKS follow-up TF (`fn_po_syp_tf_bills_by_docno`); clear backorder when SIDet covers ordered | Agent |
 | 2026-08-01 | Perf: date-filter ICLOW early; skip PIDET for ค้างรับ; resolve RCVDNO→BILLNO once + indexes | Agent |
 | 2026-08-01 | Normalize PIMAS BILLNO with `btrim` + `left(...,12)` before RCVDNO join (leading spaces) | Agent |
 | 2026-08-01 | Default ICLOW dated tabs to last 30 days (avoid 12‑month statement timeouts) | Agent |

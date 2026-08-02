@@ -364,6 +364,8 @@ export type PoPendingReceiveRow = {
   billdate?: string | null;
   /** HQ: true when at least one RCVDNO has no matching PIMAS bill */
   pimas_link_missing?: boolean;
+  /** SYP: TF/TFV billnos contributing to received_qty (RCVDNO ∪ REMARKS) */
+  tf_billnos?: string | null;
   status: PoPendingReceiveStatus;
   grain: PoPendingReceiveGrain;
   ordered_qty?: number;
@@ -447,6 +449,7 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     billno: (row.billno as string | null) ?? null,
     billdate: (row.billdate as string | null) ?? null,
     pimas_link_missing: Boolean(row.pimas_link_missing),
+    tf_billnos: (row.tf_billnos as string | null | undefined) ?? null,
     status,
     grain,
     ordered_qty:

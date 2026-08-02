@@ -1,3 +1,29 @@
+-- SYP partial-receive: count follow-up HQ TF/TFV (REMARKS → SYP DOCNO) toward received_qty.
+-- Keeps RCVDNO→SIMas path; unions REMARKS-matched TF bills so a second TF clears รับบางส่วน.
+-- Shared bill discovery with prepare (fn_po_is_tf_transfer_bill + fn_po_syp_docno_pattern).
+
+create or replace function public.fn_po_syp_tf_bills_by_docno()
+returns table (
+  docno text,
+  billno text
+)
+language sql
+stable
+security definer
+set search_path = raw_kcw, public
+as $$
+  select distinct
+    (regexp_match(s."REMARKS", public.fn_po_syp_docno_pattern(), 'i'))[1] as docno,
+    s."BILLNO" as billno
+  from raw_kcw.raw_hq_simas_sales_bills s
+  where coalesce(s."CANCELED", '') <> 'Y'
+    and public.fn_po_is_tf_transfer_bill(s."BILLNO")
+    and coalesce(s."REMARKS", '') ~* public.fn_po_syp_docno_pattern();
+$$;
+
+revoke all on function public.fn_po_syp_tf_bills_by_docno() from public, anon, authenticated;
+grant execute on function public.fn_po_syp_tf_bills_by_docno() to service_role;
+
 -- ICLOW-backed pending-receive list + partial PO detail for /po.
 -- Source of truth: docs/bi/kcw-iclow-pending-receive-data-dictionary.md §6
 --
