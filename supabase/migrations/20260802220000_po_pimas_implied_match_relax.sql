@@ -1,3 +1,8 @@
+-- HQ implied PIMAS match relax:
+-- 1) BILLNO equals RCVDNO after stripping spaces (A219623 ↔ "A 219623") → match_method=pattern
+-- 2) PO key via fn_po_docno_key: PO6907-579 ≡ 6907-579 for pattern candidates
+-- UI labels these as "implied" (not 1:1).
+
 -- ICLOW-backed pending-receive list + partial PO detail for /po.
 -- Source of truth: docs/bi/kcw-iclow-pending-receive-data-dictionary.md §6
 --

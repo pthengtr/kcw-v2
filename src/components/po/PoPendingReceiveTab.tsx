@@ -93,7 +93,7 @@ function isPatternMatch(
   return method === "pattern" || method === "mixed";
 }
 
-/** HQ: annotate RCVDNO when missing, or when pattern (not 1:1) matched a PIMAS bill */
+/** HQ: annotate RCVDNO when missing, or when implied/pattern (not 1:1) matched a PIMAS bill */
 function formatRcvdnoCell(
   billno: string | null | undefined,
   opts: {
@@ -129,7 +129,7 @@ function formatRcvdnoCell(
           className="break-all text-left font-mono leading-snug text-primary underline-offset-2 hover:underline"
           title={
             showPattern
-              ? `เปิดใบรับที่จับคู่แบบ pattern (ไม่ใช่ 1:1): ${matchedBill}`
+              ? `เปิดใบรับที่จับคู่แบบ implied (ไม่ใช่ 1:1): ${matchedBill}`
               : "เปิดรายละเอียดใบรับ (PIMAS/PIDET)"
           }
           onClick={(e) => {
@@ -149,7 +149,7 @@ function formatRcvdnoCell(
       ) : null}
       {showPattern ? (
         <span className="whitespace-normal font-sans text-xs leading-snug text-amber-800">
-          (จับคู่ pattern ไม่ใช่ 1:1 →{" "}
+          (จับคู่แบบ implied ไม่ใช่ 1:1 →{" "}
           <span className="font-mono">{matchedBill}</span>)
         </span>
       ) : null}
@@ -591,7 +591,7 @@ export default function PoPendingReceiveTab({
       <p className="text-sm text-muted-foreground">
         {isBcodeQty
           ? site === "HQ"
-            ? "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก PIDET ผ่าน RCVDNO (ไม่ใช้ PIMAS.PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
+            ? "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก PIDET ผ่าน RCVDNO (exact หรือ implied จาก BILLNO/PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
             : "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก SIDet = TF ผ่าน RCVDNO ∪ TF ที่ REMARKS ตรง DOCNO (ส่งเพิ่มเคลียร์ค้าง). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
           : "รายการรอสั่งซื้อจาก PARTS9 (แยกจาก POMAS/PODET). คลิก DOCNO → POMAS/PODET"}
       </p>
@@ -720,11 +720,11 @@ export default function PoPendingReceiveTab({
                       <>
                         จับคู่แบบ{" "}
                         <span className="font-medium text-amber-800">
-                          pattern recognition (ไม่ใช่ 1:1 BILLNO)
+                          implied (ไม่ใช่ 1:1 BILLNO)
                         </span>{" "}
                         จาก RCVDNO{" "}
                         <span className="font-mono">{piHeader.matched_rcvdno}</span>
-                        {" · "}อิง AP + PO + รายการ BCODE/qty
+                        {" · "}อิง BILLNO ใกล้เคียง / AP + PO + รายการ BCODE/qty
                       </>
                     ) : (
                       <>
