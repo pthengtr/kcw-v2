@@ -56,6 +56,20 @@ export function prepareStatusLabel(status: PoPrepareStatus | string | null | und
   }
 }
 
+/** High-contrast badge colors for prepare status on /po SYP tab. */
+export function prepareStatusBadgeClassName(
+  status: PoPrepareStatus | string | null | undefined
+): string {
+  switch (status) {
+    case "prepared":
+      return "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-600 dark:border-emerald-500 dark:bg-emerald-600";
+    case "partially_prepared":
+      return "border-amber-500 bg-amber-500 text-white hover:bg-amber-500 dark:border-amber-500 dark:bg-amber-600";
+    default:
+      return "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200";
+  }
+}
+
 function isoDateLocal(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
