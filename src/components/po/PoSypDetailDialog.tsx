@@ -122,7 +122,7 @@ export default function PoSypDetailDialog({
             <table className="w-full min-w-[60rem] border-collapse text-sm print:min-w-0">
               <thead>
                 <tr className="border-b bg-muted/40 text-left">
-                  <th className="p-2">เตรียม</th>
+                  <th className="p-2">สถานะ</th>
                   <th className="p-2">BCODE</th>
                   <th className="p-2">รายละเอียด</th>
                   <th className="p-2">ที่เก็บ HQ</th>
