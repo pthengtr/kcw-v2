@@ -8,7 +8,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const QuerySchema = z.object({
   status: z.enum(["open", "billed", "all"]).default("open"),
-  prepare: z.enum(["all", "prepared", "not_prepared"]).default("all"),
+  prepare: z
+    .enum(["all", "prepared", "partially_prepared", "not_prepared"])
+    .default("all"),
   q: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),

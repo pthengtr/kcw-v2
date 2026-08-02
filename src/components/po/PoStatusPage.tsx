@@ -38,6 +38,10 @@ type IclowMeta = {
   inFlightJobs: JobQueueRow[];
 };
 
+type SimasMeta = {
+  hqLastIngestedAt: string | null;
+};
+
 export default function PoStatusPage() {
   const [tab, setTab] = useState<"hq" | "syp">("syp");
   const [refreshToken, setRefreshToken] = useState(0);
@@ -46,6 +50,7 @@ export default function PoStatusPage() {
     null
   );
   const [iclowMeta, setIclowMeta] = useState<IclowMeta | null>(null);
+  const [simasMeta, setSimasMeta] = useState<SimasMeta | null>(null);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [syncingSite, setSyncingSite] = useState<PoSyncSite | null>(null);
   const [inventorySyncing, setInventorySyncing] = useState(false);
@@ -69,10 +74,12 @@ export default function PoStatusPage() {
         meta: PoMeta;
         inventory: InventoryMeta;
         iclow?: IclowMeta;
+        simas?: SimasMeta;
       };
       setMeta(data.meta);
       setInventoryMeta(data.inventory);
       setIclowMeta(data.iclow ?? null);
+      setSimasMeta(data.simas ?? null);
     } catch (e) {
       if (String(e).includes("AbortError")) return;
       setMetaError(e instanceof Error ? e.message : String(e));
@@ -426,6 +433,7 @@ export default function PoStatusPage() {
           สต็อก HQ: {formatPoTs(inventoryMeta?.hqLastUpdatedAt ?? null)}
         </span>
         <span>ICLOW {activeSite}: {formatPoTs(iclowLastAt ?? null)}</span>
+        <span>SIMas HQ: {formatPoTs(simasMeta?.hqLastIngestedAt ?? null)}</span>
         <Badge variant={siteMeta.workerOnline ? "secondary" : "outline"}>
           {siteMeta.workerName}{" "}
           {siteMeta.workerOnline ? "online" : "offline"}
@@ -449,6 +457,7 @@ export default function PoStatusPage() {
     inventoryInFlight,
     iclowLastAt,
     iclowInFlight,
+    simasMeta?.hqLastIngestedAt,
   ]);
 
   return (
@@ -534,7 +543,7 @@ export default function PoStatusPage() {
           </TabsList>
 
           <TabsContent value="syp" className="mt-4">
-            <PoSypTab refreshToken={refreshToken} onChanged={refresh} />
+            <PoSypTab refreshToken={refreshToken} />
           </TabsContent>
           <TabsContent value="hq" className="mt-4">
             <PoHqTab refreshToken={refreshToken} />

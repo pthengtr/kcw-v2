@@ -40,3 +40,18 @@ export function billedLabel(billed: string | null | undefined) {
   if (billed === "N") return "เปิด";
   return billed ?? "—";
 }
+
+export type PoPrepareStatus = "not_prepared" | "partially_prepared" | "prepared";
+
+export function prepareStatusLabel(status: PoPrepareStatus | string | null | undefined) {
+  switch (status) {
+    case "prepared":
+      return "เตรียมแล้ว";
+    case "partially_prepared":
+      return "เตรียมบางส่วน";
+    case "not_prepared":
+      return "ยังไม่เตรียม";
+    default:
+      return "ยังไม่เตรียม";
+  }
+}

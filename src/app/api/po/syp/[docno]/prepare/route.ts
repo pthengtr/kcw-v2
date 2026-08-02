@@ -1,19 +1,11 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
-import { upsertSypPrepare } from "@/lib/po/po-queries";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 type Params = { params: Promise<{ docno: string }> };
 
-const BodySchema = z.object({
-  prepared: z.boolean(),
-  note: z.string().max(500).nullable().optional(),
-});
-
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(_req: Request, { params }: Params) {
   const permCheck = await requirePermission(PO_PAGE_KEYS.status);
   if (!permCheck.ok) {
     return NextResponse.json(
@@ -28,34 +20,11 @@ export async function PATCH(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Missing DOCNO" }, { status: 400 });
   }
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  const parsed = BodySchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  }
-
-  try {
-    const supabase = createAdminClient();
-    const row = await upsertSypPrepare({
-      supabase,
-      docno,
-      prepared: parsed.data.prepared,
-      note: parsed.data.note ?? null,
-      userId: permCheck.userId,
-      syncLines: true,
-    });
-    return NextResponse.json({ row });
-  } catch (error) {
-    console.error("po syp prepare", error);
-    return NextResponse.json(
-      { error: "Unable to update prepare status" },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json(
+    {
+      error:
+        "Manual prepare is disabled. Status is derived from HQ TF/TFV bills (SIMas REMARKS → PO docno).",
+    },
+    { status: 409 }
+  );
 }

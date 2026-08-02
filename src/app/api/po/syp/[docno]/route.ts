@@ -24,8 +24,12 @@ export async function GET(_req: Request, { params }: Params) {
 
   try {
     const supabase = createAdminClient();
-    const lines = await fetchPoLines({ supabase, site: "SYP", docno });
-    return NextResponse.json({ docno, lines });
+    const { lines, tf_billnos } = await fetchPoLines({
+      supabase,
+      site: "SYP",
+      docno,
+    });
+    return NextResponse.json({ docno, lines, tf_billnos });
   } catch (error) {
     console.error("po syp lines", error);
     return NextResponse.json(
