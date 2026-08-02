@@ -16,7 +16,11 @@ export default function PrepareStatusBadge({
   return (
     <Badge
       variant="outline"
-      className={cn(prepareStatusBadgeClassName(status), className)}
+      className={cn(
+        "whitespace-nowrap shrink-0",
+        prepareStatusBadgeClassName(status),
+        className
+      )}
     >
       {prepareStatusLabel(status)}
     </Badge>
