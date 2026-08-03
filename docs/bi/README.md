@@ -16,6 +16,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [kcw-purchase-data-dictionary.md](./kcw-purchase-data-dictionary.md) | HQ PIDET purchase **invoice** lines (JOURMODE / BILLTYPE) |
 | [kcw-po-data-dictionary.md](./kcw-po-data-dictionary.md) | Purchase **orders** in `raw_kcw` (HQ+SYP); PO id = `DOCNO`; SYP prepare = `po_syp_prepare` |
 | [kcw-iclow-pending-receive-data-dictionary.md](./kcw-iclow-pending-receive-data-dictionary.md) | PARTS9 **ค้างรับ** = `ICLOW` (`ORDERED`/`RECEIVED`/`CANCELED`) |
+| [kcw-brdet-bpdet-cheque-transfers-data-dictionary.md](./kcw-brdet-bpdet-cheque-transfers-data-dictionary.md) | PARTS9 **ทะเบียนเช็ครับ/จ่าย** = `BRDET`/`BPDET` (`CHKNO` = cheque # or method label) |
 | [sql/po_syp_prepare.sql](./sql/po_syp_prepare.sql) | App overlay for SYP “prepared for transfer” (header) |
 | [sql/po_syp_prepare_line.sql](./sql/po_syp_prepare_line.sql) | Per-line prepare + HQ LOCATION1/2 + HQ inventory qty via `fn_po_syp_lines` |
 | [sql/fn_inventory_sync_ops.sql](./sql/fn_inventory_sync_ops.sql) | Enqueue/poll `sync_inventory` + last HQ inventory `updated_at` |
@@ -24,6 +25,8 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_po_list.sql](./sql/fn_po_list.sql) | PO list + last-ingested RPCs / open-PO indexes |
 | [sql/fn_po_pending_receive.sql](./sql/fn_po_pending_receive.sql) | ICLOW `/po` pending tab; HQ `RCVDNO→PIDET`; SYP `RCVDNO∪REMARKS TF→SIDet` |
 | [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictionary.md) | Stock-more + dead-stock aging rules |
+| [sql/fn_bank_sync_ops.sql](./sql/fn_bank_sync_ops.sql) | Enqueue/poll `bank_statement_import` (HQ-PC) |
+| [sql/create_raw_hq_brdet_bpdet.sql](./sql/create_raw_hq_brdet_bpdet.sql) | `raw_kcw` BRDET/BPDET cheque+transfer registers (from kcw-analytics) |
 | [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
 | [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products` |
 | [sql/fn_bi_product_movement.sql](./sql/fn_bi_product_movement.sql) | RPC used by `/bi/product-movement` |
@@ -35,6 +38,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 ## App entry
 
 - UI: `/po` — HQ/SYP purchase-order status; pending receive (ค้างรับ) = `ICLOW` — see [ICLOW dictionary](./kcw-iclow-pending-receive-data-dictionary.md)
+- UI: `/bank-statement-sync` — bank Excel import + match; daily HQ sync also refreshes BRDET/BPDET — see [cheque/transfer dictionary](./kcw-brdet-bpdet-cheque-transfers-data-dictionary.md)
 - UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/income`
 - API: `GET /api/bi/sales/overview?from=&to=&branch=`
 - API: `GET /api/bi/sales/compare?mode=years|months&years=&periods=&branch=`

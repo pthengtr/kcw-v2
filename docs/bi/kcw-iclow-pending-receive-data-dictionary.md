@@ -2,9 +2,11 @@
 
 Source of truth for PARTS9 **ค้างรับ** (pending receive) — the legacy report / operator list.
 
+Upstream analytic docs: [`kcw-analytics/docs/parts9_pending_receive.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/parts9_pending_receive.md).
+
 Status legend: **Confirmed** · **TBD** · **Inferred**
 
-Last reviewed: 2026-08-01
+Last reviewed: 2026-08-03
 
 **Related:** purchase **orders** [`POMAS`/`PODET`](./kcw-po-data-dictionary.md); purchase **invoices** [`PIMAS`/`PIDET`](./kcw-purchase-data-dictionary.md).
 
@@ -229,6 +231,7 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-08-03 | Link upstream `kcw-analytics/docs/parts9_pending_receive.md` | Agent |
 | 2026-08-02 | HQ implied match: space-normalized BILLNO + `fn_po_docno_key` (PO6907-579 ≡ 6907-579); UI “จับคู่แบบ implied” | Agent |
 | 2026-08-02 | SYP รับบางส่วน: union RCVDNO TF + REMARKS follow-up TF (`fn_po_syp_tf_bills_by_docno`); clear backorder when SIDet covers ordered | Agent |
 | 2026-08-02 | HQ fallback: pattern remap RCVDNO→PIMAS via AP+PO+BCODE/qty; UI remark “ไม่ใช่ 1:1” | Agent |

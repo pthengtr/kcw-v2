@@ -12,7 +12,8 @@ export { getJobById, isWorkerOnline };
 export type { JobQueueRow, WorkerHeartbeatRow };
 
 export const BANK_IMPORT_JOB_TYPE = "bank_statement_import";
-export const BANK_WORKER_CANDIDATES = ["HQ-PC", "SYP-PC"] as const;
+/** Bank statement import runs on HQ-PC only (Drive path / credentials live there). */
+export const BANK_WORKER_CANDIDATES = ["HQ-PC"] as const;
 
 function mapJob(row: Record<string, unknown>): JobQueueRow {
   return {

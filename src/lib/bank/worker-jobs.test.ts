@@ -8,9 +8,9 @@ import {
 } from "@/lib/bank/worker-jobs";
 
 describe("Bank sync worker helpers", () => {
-  it("uses bank_statement_import job type and either-PC workers", () => {
+  it("uses bank_statement_import job type and HQ-PC only", () => {
     expect(BANK_IMPORT_JOB_TYPE).toBe("bank_statement_import");
-    expect(BANK_WORKER_CANDIDATES).toEqual(["HQ-PC", "SYP-PC"]);
+    expect(BANK_WORKER_CANDIDATES).toEqual(["HQ-PC"]);
   });
 });
 
