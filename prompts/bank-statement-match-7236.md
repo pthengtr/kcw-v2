@@ -15,10 +15,10 @@ Scope rules:
 1. Only account **064-8-91723-6**
 2. If `{{account_no}}` is not `064-8-91723-6`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Only touch rows with `direction = 'in'` and `match_status = 'pending'`
+4. Only touch rows with `direction = 'in'` and `match_status` in (`pending`, `unmatched`)
 5. Never change amount / description / source_* / any money fields
 6. Write only `match_*` and `matched_*` fields
-7. **Never** update rows in `matched` / `review` / `resolved` / `unmatched` / `manual` / `ignored` — those belong to finished agent work or operators
+7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
 ## Match sources (priority order)
 
@@ -134,7 +134,7 @@ For these categories set:
 Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` only; never write back to `pending`
+  - Start from `pending` or `unmatched` only; never write back to `pending`
   - Operators own `resolved` / `manual` — do not touch those rows
 - `match_reason`: short Thai text from the tables above (shown in the Thai UI)
 - `match_confidence`: 0 to 1
@@ -177,7 +177,7 @@ Do not use cryptic codes like `tr_remainder:` or `T+1 net=` as the main `match_n
 Report briefly in English:
 
 - Counts of `matched` / `review` / `ignored` / `unmatched`
-- Confirm zero remaining `pending` in scope (or list any still pending and why)
+- Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
 - Breakdown by source: TR / TAR / RVMAS / non-sales categories
 - Any TAR shortfall catch-up pairs found
 - Rows that need human review

@@ -22,12 +22,12 @@ Scope rules:
 1. Only account **233-1-18475-9**
 2. If `{{account_no}}` is not `233-1-18475-9`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Touch both directions while `match_status = 'pending'`:
+4. Touch both directions while `match_status` in (`pending`, `unmatched`):
    - `direction = 'out'` → expense PV sources first, then residual outflows
    - `direction = 'in'` → internal funding only (no sales)
 5. Never change amount / description / source_* / any money fields
 6. Write only `match_*` and `matched_*` fields
-7. **Never** update rows in `matched` / `review` / `resolved` / `unmatched` / `manual` / `ignored` — those belong to finished agent work or operators
+7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 8. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
 
 ## Match sources — OUTBOUND (priority order)
@@ -116,7 +116,7 @@ July 2026 inflows observed were funding sweeps from **X0393** and **X7236** only
 Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` only; never write back to `pending`
+  - Start from `pending` or `unmatched` only; never write back to `pending`
   - Operators own `resolved` / `manual` — do not touch those rows
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
@@ -161,6 +161,6 @@ If your run lands far below that for the same month, re-check filters (`total_ne
 Report briefly in English:
 
 - Counts of `matched` / `review` / `ignored` / `unmatched` (split by `in` / `out` if useful)
-- Confirm zero remaining `pending` in scope (or list any still pending and why)
+- Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
 - Breakdown by source: expense_pv / internal / other
 - Rows that need human review

@@ -98,7 +98,7 @@ describe("bank match prompt", () => {
     expect(template).toContain("credit_note_refund");
     expect(template).toContain("Non-VAT SIDET");
     expect(template).toContain("Account: `{{account_no}}`");
-    expect(template).toContain("match_status = 'pending'");
+    expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("บิลโอน TR (ใบเดียว)");
     expect(template).toContain("match_notes");
     expect(template).toContain(HQ_7236);
@@ -125,7 +125,7 @@ describe("bank match prompt", () => {
     expect(template).toContain("raw_hq_pvmas_notes_vouchers");
     expect(template).toContain("raw_hq_pimas_purchase_bills");
     expect(template).toContain("ใบสำคัญจ่าย (วันเดียวกัน)");
-    expect(template).toContain("match_status = 'pending'");
+    expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("direction = 'out'");
     expect(template).toContain(HQ_3557);
     expect(template).toContain(
@@ -156,7 +156,7 @@ describe("bank match prompt", () => {
     expect(template).toContain("คืนเงินสำรอง");
     expect(template).toContain(SYP_4759);
     expect(template).toContain("total_net");
-    expect(template).toContain("match_status = 'pending'");
+    expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("direction = 'in'");
     expect(template).toContain("direction = 'out'");
     expect(template).toContain(SYP_0393);
@@ -187,7 +187,7 @@ describe("bank match prompt", () => {
     expect(template).toContain("internal_transfer");
     expect(template).toContain("No sales matching");
     expect(template).toContain("3TR");
-    expect(template).toContain("match_status = 'pending'");
+    expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("direction = 'out'");
     expect(template).toContain("agent:bank-matcher-4759-v1");
     expect(template).toContain("ใบสำคัญจ่าย PV (วันเดียวกัน)");
@@ -217,7 +217,7 @@ describe("bank match prompt", () => {
     expect(template).toContain("ใบสำคัญรับเงินออนไลน์ RVI (วันเดียวกัน)");
     expect(template).toContain("internal_transfer");
     expect(template).toContain("Do **not** match individual TAD");
-    expect(template).toContain("match_status = 'pending'");
+    expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("agent:bank-matcher-1139-v1");
     expect(template).toContain(HQ_7236);
 
@@ -243,7 +243,7 @@ describe("bank match prompt", () => {
     expect(template).toContain("bank_cheque");
     expect(template).toContain("do nothing");
     expect(template).toContain("direction = 'in'");
-    expect(template).toContain("match_status = 'pending'");
+    expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("agent:bank-matcher-6184-v1");
     expect(template).toContain("เงินเดือน (PAY1 รวมส่วนต่าง)");
     expect(template).toContain("ใบสำคัญจ่าย PV (ค่าสาธารณูปโภค)");

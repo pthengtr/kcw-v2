@@ -19,12 +19,12 @@ Scope rules:
 1. Only account **064-8-92039-3**
 2. If `{{account_no}}` is not `064-8-92039-3`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Touch both directions while `match_status = 'pending'`:
+4. Touch both directions while `match_status` in (`pending`, `unmatched`):
    - `direction = 'in'` → sales sources first, then non-sales inflows
    - `direction = 'out'` → expense PV sources, then non-expense outflows
 5. Never change amount / description / source_* / any money fields
 6. Write only `match_*` and `matched_*` fields
-7. **Never** update rows in `matched` / `review` / `resolved` / `unmatched` / `manual` / `ignored` — those belong to finished agent work or operators
+7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 8. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
 
 ## Match sources — INBOUND (priority order)
@@ -174,7 +174,7 @@ Notes from May/June probe:
 Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` only; never write back to `pending`
+  - Start from `pending` or `unmatched` only; never write back to `pending`
   - Operators own `resolved` / `manual` — do not touch those rows
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
@@ -219,7 +219,7 @@ If your run lands far below that for the same months, re-check filters (`CANCELE
 Report briefly in English:
 
 - Counts of `matched` / `review` / `ignored` / `unmatched` (split by `in` / `out` if useful)
-- Confirm zero remaining `pending` in scope (or list any still pending and why)
+- Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
 - Breakdown by source: 3TR / 3TAR / expense_pv / internal / other
 - Any 3TAR shortfall catch-up pairs or missing settlement days
 - Rows that need human review

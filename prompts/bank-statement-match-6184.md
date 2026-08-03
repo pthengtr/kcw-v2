@@ -21,11 +21,11 @@ Scope rules:
 1. Only account **248-6-00618-4**
 2. If `{{account_no}}` is not `248-6-00618-4`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Primary target: `direction = 'out'` and `match_status = 'pending'`
+4. Primary target: `direction = 'out'` and `match_status` in (`pending`, `unmatched`)
 5. **Inbound (`direction = 'in'`): do nothing** — leave `pending` (or whatever status they already have). Never write match fields on inflows for this account
 6. Never change amount / description / source_* / any money fields
 7. Write only `match_*` and `matched_*` fields
-8. **Never** update rows in `matched` / `review` / `resolved` / `unmatched` / `manual` / `ignored` — those belong to finished agent work or operators
+8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 9. Cheque number lives in `bank_reference` and/or `raw_json->>'CHEQUE NO.'` for ICAS clears (`TRANSACTION CODE` often `CBCA`)
 
 ## Match sources — OUTBOUND (priority order)
@@ -212,7 +212,7 @@ Small personal TRs (e.g. 3,000 baht education / advances) with no unique expense
 Always set (outbound only):
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` only; never write back to `pending`
+  - Start from `pending` or `unmatched` only; never write back to `pending`
   - Operators own `resolved` / `manual` — do not touch those rows
   - Inflows stay untouched (may remain `pending`)
 - `match_reason`: short Thai text from the tables above
@@ -249,6 +249,7 @@ If utility + payroll coverage collapses for the same months, re-check `total_net
 Report briefly in English:
 
 - Counts of `matched` / `review` / `ignored` / `unmatched` for **outbound** only
+- Confirm zero remaining `pending` or `unmatched` outbound rows in scope (or list any still open and why)
 - Confirm inflows were left untouched
 - Breakdown: payroll / expense_pv / pimas / pimas_possible_bundle review / bank_cheque review / other
 - Rows that need human review (especially ICAS cheques and paid-unlinked PIMAS candidates)
