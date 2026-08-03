@@ -21,6 +21,18 @@ Scope rules:
 7. Write only `match_*` and `matched_*` fields
 8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
+## Date window policy
+
+When comparing source dates to statement `txn_date`:
+
+1. **Auto-`matched` tier** — only when the hit is within the strict window documented for that source below.
+2. **Review tier (relaxed window)** — if amount + source uniquely identify one candidate **outside** the auto-tier but still within the relaxed window, set `match_status = review` — **not** `unmatched`. Always populate `matched_ref_type`, `matched_ref_id`, `match_reason`, and `match_confidence`. Prefix `match_notes` with `⚠️ วันที่ไม่ตรงช่วงปกติ:` and explain the candidate (ref id, amount, source date, `txn_date`, days apart, why it is still plausible).
+3. **`unmatched`** — only when no plausible candidate exists after the relaxed window, or multiple candidates collide.
+
+Default relaxed window for RVI on this account: auto same day; relaxed `review` **`txn_date − 5 .. txn_date + 5`**.
+
+Never auto-`matched` outside the strict auto-tier. Wider hits are always `review` with the warning prefix.
+
 ## Date parsing note (important)
 
 RVMAS `VOUCDATE` / `RCPTDATE` in this project are usually ISO dates like `2026-05-05` (with dashes). Sometimes they appear as `YYYYMMDD`. Always parse both forms before comparing to `txn_date`.
@@ -38,15 +50,16 @@ This account’s inflows are almost entirely **`VOUCNO` starting with `RVI`** (o
 - Not canceled (`CANCELED = 'N'`)
 - Prefer **`VOUCNO LIKE 'RVI%'`**
 - Match **1:1** on `PAYAMT` ≈ statement `amount`
-- Prefer **same calendar day**: parsed `VOUCDATE = txn_date`
+- Auto-`matched`: parsed `VOUCDATE = txn_date` (same calendar day)
 - Amount compare: use `ROUND(..., 2)`; allow **±0.01** when the voucher is otherwise unique same-day (seen for TikTok / floating money, e.g. bank `56056.49` ↔ voucher `56056.50`)
+- Relaxed `review`: unique `PAYAMT` within **`txn_date − 5 .. txn_date + 5`** — populate matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` warning; do not leave `unmatched` when a plausible late/early settlement exists
 - If multiple vouchers collide on the same amount+day → `review`
-- Do **not** widen to multi-day windows for auto-`matched` unless amount is unique within ±1 day and clearly the same settlement (otherwise leave `unmatched` or `review`)
 
 | Kind | Meaning | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
 | `rvi_same_day` | Unique `PAYAMT` on `VOUCDATE = txn_date` | `matched` | `ใบสำคัญรับเงินออนไลน์ RVI (วันเดียวกัน)` |
 | `rvi_rounding` | Unique same-day hit within ±0.01 | `matched` | `ใบสำคัญรับเงินออนไลน์ RVI (ปัดเศษ)` |
+| `rvi_relaxed` | Unique hit within ±5d relaxed window | `review` | `ใบสำคัญรับเงินออนไลน์ RVI (วันไม่ตรง — รอตรวจ)` |
 | ambiguous | Multiple candidates | `review` | `ใบสำคัญรับเงินออนไลน์ RVI (กำกวม)` |
 
 `matched_ref_type = rvmas`  
@@ -147,7 +160,8 @@ Do not use cryptic codes like `rvi:` or `T+0=` as the main `match_notes` text.
 - Match individual TAD / CNTAD bills directly to deposits
 - Force classic `RC…` customer receipts onto this account
 - Invent blind subset-sums across many vouchers
-- Force a match when unsure — use `review` or set `unmatched`
+- Force auto-`matched` outside strict date windows — use relaxed `review` with matched info + warning instead
+- Leave `unmatched` when a plausible relaxed-window candidate exists — use `review` with matched refs
 - Open a PR / change repo code for this job unless required to update data
 
 ## End-of-run summary

@@ -27,7 +27,11 @@ describe("bank match status workflow", () => {
     expect(canOperatorTransitionMatchStatus("review", "resolved")).toBe(true);
     expect(canOperatorTransitionMatchStatus("unmatched", "manual")).toBe(true);
     expect(canOperatorTransitionMatchStatus("pending", "manual")).toBe(true);
-    expect(canOperatorTransitionMatchStatus("matched", "pending")).toBe(false);
+    expect(canOperatorTransitionMatchStatus("matched", "pending")).toBe(true);
+    expect(canOperatorTransitionMatchStatus("review", "pending")).toBe(true);
+    expect(canOperatorTransitionMatchStatus("resolved", "pending")).toBe(true);
+    expect(canOperatorTransitionMatchStatus("ignored", "pending")).toBe(true);
+    expect(canOperatorTransitionMatchStatus("pending", "pending")).toBe(true);
     expect(canOperatorEditMatchFields("review")).toBe(true);
   });
 

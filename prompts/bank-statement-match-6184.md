@@ -28,6 +28,23 @@ Scope rules:
 8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 9. Cheque number lives in `bank_reference` and/or `raw_json->>'CHEQUE NO.'` for ICAS clears (`TRANSACTION CODE` often `CBCA`)
 
+## Date window policy
+
+When comparing source dates to statement `txn_date`:
+
+1. **Auto-`matched` tier** — only when the hit is within the strict window documented for that source below.
+2. **Review tier (relaxed window)** — if amount + source uniquely identify one candidate **outside** the auto-tier but still within the relaxed window, set `match_status = review` — **not** `unmatched`. Always populate `matched_ref_type`, `matched_ref_id`, `match_reason`, and `match_confidence`. Prefix `match_notes` with `⚠️ วันที่ไม่ตรงช่วงปกติ:` and explain the candidate (ref id, amount, source date, `txn_date`, days apart, why it is still plausible).
+3. **`unmatched`** — only when no plausible candidate exists after the relaxed window, or multiple candidates collide.
+
+Default relaxed windows for this account:
+
+| Source | Auto-`matched` | Relaxed `review` |
+|---|---|---|
+| Payroll / expense PV | same day; ±3d | ±7d |
+| PIMAS cheque bundles | `txn_date − 60 .. txn_date + 2` | `txn_date − 90 .. txn_date + 5` |
+
+Never auto-`matched` outside the strict auto-tier. Wider hits are always `review` with the warning prefix.
+
 ## Match sources — OUTBOUND (priority order)
 
 Apply in this order. Later sources must not steal rows already claimed by earlier sources.
@@ -46,8 +63,9 @@ Amount rules:
 
 - Bank payroll often posts as **one large `PAY1 …` transfer** plus a **small residual TR** to an employee on the same day
 - Match when `PAY1.amount + residual_TR.amount = HQ.signed_total + SYP.signed_total` (exact, 2 decimals)
-- Prefer `receipt_date` within **txn_date − 3 .. txn_date + 3**
-- Unique month pair only for auto-`matched`. If only one of PAY1 / residual is present → `review`
+- Auto-`matched`: `receipt_date` within **txn_date − 3 .. txn_date + 3**
+- Relaxed `review`: unique salary pair within **txn_date − 7 .. txn_date + 7** — populate matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` warning
+- If only one of PAY1 / residual is present → `review`
 
 | Kind | Meaning | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
@@ -91,9 +109,9 @@ Round to 2 decimals. Prefer `abs(total_net) = amount`. Fall back to `abs(signed_
 
 Date window:
 
-- Prefer **same calendar day** on `receipt_date::date = txn_date`
-- Allow `receipt_date` within **txn_date − 3 .. txn_date + 3** when same-day is empty but the amount is unique
-- Unique 1:1 only for auto-`matched`. Multiple candidates → `review`
+- Auto-`matched`: same calendar day on `receipt_date::date = txn_date`, or within **txn_date − 3 .. txn_date + 3** when same-day is empty but amount is unique
+- Relaxed `review`: unique net within **txn_date − 7 .. txn_date + 7** — populate matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` warning
+- Multiple candidates → `review`
 - Multi-receipt **bundle** only when payment method is the **group** 6184 method (or a clearly same-day unique sum); otherwise do not invent blind subset-sums
 
 Common May/June pattern: **Provincial Electricity** bank description (`Provincial Electricit…`) 1:1 with `voucher_description` ค่าไฟฟ้า and party การไฟฟ้าส่วนภูมิภาค.
@@ -101,7 +119,8 @@ Common May/June pattern: **Provincial Electricity** bank description (`Provincia
 | Kind | Meaning | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
 | `expense_pv_same_day` | Unique net on same `receipt_date` | `matched` | `ใบสำคัญจ่าย PV (วันเดียวกัน)` |
-| `expense_pv_near` | Unique net within ±3d | `matched` if clearly unique else `review` | `ใบสำคัญจ่าย PV (ใกล้วัน)` |
+| `expense_pv_near` | Unique net within ±3d auto window | `matched` if clearly unique else `review` | `ใบสำคัญจ่าย PV (ใกล้วัน)` |
+| `expense_pv_relaxed` | Unique net within ±7d relaxed window | `review` | `ใบสำคัญจ่าย PV (วันไม่ตรง — รอตรวจ)` |
 | `expense_pv_utility` | Electricity / utility transfer | `matched` | `ใบสำคัญจ่าย PV (ค่าสาธารณูปโภค)` |
 | `expense_pv_bundle` | Several receipts on group cheque | `matched` / `review` | `ใบสำคัญจ่าย PV (รวมหลายใบ)` |
 | ambiguous | Multiple candidates | `review` | `ใบสำคัญจ่าย PV (กำกวม)` |
@@ -123,7 +142,7 @@ Rows with description like `SBK:11 SBR:642 ICAS INCL R1` and a cheque number in 
 
 **Key insight from May/June 2026 probe:** almost all ICAS cheques on this account are payments to **บจก.ศรีสยามกลการ (สาขาที่ 00001)** (`ACCTNAME ILIKE '%ศรีสยาม%'`). The cheque payment date is stored in `REMARKS` as `D/M/YY##<tax-id>` (Thai Buddhist year, 2-digit: `69` = 2026). Match by grouping `CHKAMT` bills per parsed `REMARKS` date and comparing the **bundle sum** to the statement amount.
 
-**Date lag:** cheques typically clear ICAS **28–32 days** after the `REMARKS` payment date (Thailand 30-day payment terms). Use a window of `chk_date` between `txn_date − 60` and `txn_date + 2`.
+**Date lag:** cheques typically clear ICAS **28–32 days** after the `REMARKS` payment date (Thailand 30-day payment terms). Auto-`matched` window: `chk_date` between `txn_date − 60` and `txn_date + 2`. Relaxed `review` window: **`txn_date − 90 .. txn_date + 5`** when bundle is otherwise unique — populate matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` warning.
 
 **Amount tolerance:** PIMAS stores CHKAMT with sub-baht precision; the bank statement rounds to whole baht. Accept `abs(bundle_sum − amount) < 1.00`.
 
@@ -174,6 +193,7 @@ This fallback is always `review`, never automatically `matched`, because the mis
 |---|---|---|---|
 | PIMAS bundle exact | `pimas` | `matched` | `บิลซื้อ PIMAS (เช็คจ่ายชัดเจน)` |
 | PIMAS bundle ≈ (< 1฿ diff) | `pimas` | `matched` | `บิลซื้อ PIMAS (เช็คจ่ายชัดเจน)` |
+| PIMAS bundle relaxed window | `pimas` | `review` | `บิลซื้อ PIMAS (เช็ค — วันไม่ตรง รอตรวจ)` |
 | Paid unlinked PIMAS combination | `pimas_possible_bundle` | `review` | `อาจเป็นเช็ครวมหลายบิล PIMAS ที่ไม่มีเลขใบสำคัญจ่าย` |
 | no PIMAS hit (after fallback) | `bank_cheque` | `review` | `เช็คเคลียร์ (ยังไม่พบใบสั่งซื้อ)` |
 

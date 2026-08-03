@@ -30,6 +30,18 @@ Scope rules:
 7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 8. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
 
+## Date window policy
+
+When comparing source dates to statement `txn_date`:
+
+1. **Auto-`matched` tier** — only when the hit is within the strict window documented for that source below.
+2. **Review tier (relaxed window)** — if amount + source uniquely identify one candidate **outside** the auto-tier but still within the relaxed window, set `match_status = review` — **not** `unmatched`. Always populate `matched_ref_type`, `matched_ref_id`, `match_reason`, and `match_confidence`. Prefix `match_notes` with `⚠️ วันที่ไม่ตรงช่วงปกติ:` and explain the candidate (ref id, amount, source date, `txn_date`, days apart, why it is still plausible).
+3. **`unmatched`** — only when no plausible candidate exists after the relaxed window, or multiple candidates collide.
+
+Default relaxed window for expense PV on this account: auto ±3d, relaxed `review` ±7d.
+
+Never auto-`matched` outside the strict auto-tier. Wider hits are always `review` with the warning prefix.
+
 ## Match sources — OUTBOUND (priority order)
 
 ### 1) App payment vouchers PV / 3PV (`public.expense_*`)
@@ -59,14 +71,15 @@ Round to 2 decimals. Prefer `abs(total_net) = amount`. Fall back to `abs(signed_
 
 Date window:
 
-- Prefer **same calendar day** on `receipt_date::date = txn_date`
-- Allow `receipt_date` within **txn_date − 3 .. txn_date + 3** when same-day is empty but the amount is unique
-- Unique 1:1 only for auto-`matched`. Multiple candidates → `review`
+- Auto-`matched`: same calendar day on `receipt_date::date = txn_date`, or within **txn_date − 3 .. txn_date + 3** when same-day is empty but amount is unique
+- Relaxed `review`: unique net within **txn_date − 7 .. txn_date + 7** — populate matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` warning
+- Multiple candidates → `review`
 
 | Kind | Meaning | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
 | `expense_pv_same_day` | Unique net on same `receipt_date` | `matched` | `ใบสำคัญจ่าย PV (วันเดียวกัน)` |
-| `expense_pv_near` | Unique net within ±3d | `matched` if clearly unique else `review` | `ใบสำคัญจ่าย PV (ใกล้วัน)` |
+| `expense_pv_near` | Unique net within ±3d auto window | `matched` if clearly unique else `review` | `ใบสำคัญจ่าย PV (ใกล้วัน)` |
+| `expense_pv_relaxed` | Unique net within ±7d relaxed window | `review` | `ใบสำคัญจ่าย PV (วันไม่ตรง — รอตรวจ)` |
 | `expense_pv_bundle` | Several receipts sum to one transfer | `matched` / `review` | `ใบสำคัญจ่าย PV (รวมหลายใบ)` |
 | ambiguous | Multiple candidates | `review` | `ใบสำคัญจ่าย PV (กำกวม)` |
 

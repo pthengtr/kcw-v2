@@ -1378,6 +1378,19 @@ export default function StatementLinesTab({
                         ไม่ใช้
                       </Button>
                     ) : null}
+                    {canOperatorTransitionMatchStatus(
+                      selected.match_status,
+                      "pending"
+                    ) ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={savingMatch}
+                        onClick={() => void saveMatchUpdate("pending")}
+                      >
+                        ส่งกลับรอจับคู่ (AI)
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ) : (

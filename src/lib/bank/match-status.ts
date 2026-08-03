@@ -74,15 +74,20 @@ export function canOperatorTransitionMatchStatus(
     case "pending":
       return to === "manual" || to === "ignored";
     case "review":
-      return to === "resolved" || to === "ignored" || to === "manual";
+      return (
+        to === "resolved" ||
+        to === "ignored" ||
+        to === "manual" ||
+        to === "pending"
+      );
     case "unmatched":
-      return to === "manual" || to === "ignored";
+      return to === "manual" || to === "ignored" || to === "pending";
     case "manual":
-      return to === "ignored" || to === "resolved";
+      return to === "ignored" || to === "resolved" || to === "pending";
     case "resolved":
-      return to === "manual" || to === "ignored";
+      return to === "manual" || to === "ignored" || to === "pending";
     case "matched":
-      return to === "review" || to === "ignored";
+      return to === "review" || to === "ignored" || to === "pending";
     case "ignored":
       return to === "pending" || to === "manual" || to === "review";
     default:

@@ -127,22 +127,36 @@ export async function PATCH(
     );
   }
 
+  const requeueForAgent =
+    nextStatus === "pending" && currentStatus !== "pending";
+
   const patch: Record<string, unknown> = {
     match_status: nextStatus,
-    matched_at: new Date().toISOString(),
-    matched_by: operatorMatchBy(permCheck.userEmail),
   };
 
-  if (parsed.data.match_reason !== undefined) {
+  if (requeueForAgent) {
+    patch.match_reason = null;
+    patch.match_notes = null;
+    patch.match_confidence = null;
+    patch.matched_ref_type = null;
+    patch.matched_ref_id = null;
+    patch.matched_at = null;
+    patch.matched_by = null;
+  } else {
+    patch.matched_at = new Date().toISOString();
+    patch.matched_by = operatorMatchBy(permCheck.userEmail);
+  }
+
+  if (parsed.data.match_reason !== undefined && !requeueForAgent) {
     patch.match_reason = parsed.data.match_reason;
   }
-  if (parsed.data.match_notes !== undefined) {
+  if (parsed.data.match_notes !== undefined && !requeueForAgent) {
     patch.match_notes = parsed.data.match_notes;
   }
-  if (parsed.data.matched_ref_type !== undefined) {
+  if (parsed.data.matched_ref_type !== undefined && !requeueForAgent) {
     patch.matched_ref_type = parsed.data.matched_ref_type;
   }
-  if (parsed.data.matched_ref_id !== undefined) {
+  if (parsed.data.matched_ref_id !== undefined && !requeueForAgent) {
     patch.matched_ref_id = parsed.data.matched_ref_id;
   }
 
