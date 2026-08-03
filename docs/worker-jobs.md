@@ -170,7 +170,7 @@ New features almost never need new queue tables — only new `job_type` values a
 - Placeholders `{{account_no}}` / `{{from}}` / `{{to}}` are injected by the API with the full selected `account_no`.
 - Requires server env `CURSOR_API_KEY` (optional `CURSOR_AGENT_REPO_URL`, `CURSOR_AGENT_STARTING_REF`, `CURSOR_AGENT_MODEL`, `CURSOR_AGENT_MODEL_OPTIMIZE_FOR`).
 - Launches Cursor Cloud Agent via `POST https://api.cursor.com/v1/agents` with Cursor Router Auto by default (`model.id=auto-smart`, `optimize_for=balanced`). If Auto/Router is rejected for the API key, the launcher retries with no `model` (user/team/system default). Override with `CURSOR_AGENT_MODEL` (`auto-smart` | `auto` | explicit id | `omit`).
-- Agent updates `bank.statement_lines` match_* fields only, and **only** rows with `match_status = 'pending'`.
+- Agent updates `bank.statement_lines` match_* fields only, and **only** rows with `match_status` in (`pending`, `unmatched`).
 - Operator workflow: edit reason/notes in the row dialog; `review` → `resolved`, leftovers `unmatched`/`pending` → `manual`; CSV export from Statement Lines filters.
 - Status SQL: [`bi/sql/alter_bank_statement_lines_match_workflow.sql`](./bi/sql/alter_bank_statement_lines_match_workflow.sql).
 

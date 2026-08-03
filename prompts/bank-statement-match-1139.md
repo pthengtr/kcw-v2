@@ -15,11 +15,11 @@ Scope rules:
 1. Only account **248-0-42113-9**
 2. If `{{account_no}}` is not `248-0-42113-9`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Primary target: `direction = 'in'` and `match_status = 'pending'`
-5. Also clear outbound (`direction = 'out'`) pending rows using the internal-transfer rule below
+4. Primary target: `direction = 'in'` and `match_status` in (`pending`, `unmatched`)
+5. Also clear outbound (`direction = 'out'`) rows with `match_status` in (`pending`, `unmatched`) using the internal-transfer rule below
 6. Never change amount / description / source_* / any money fields
 7. Write only `match_*` and `matched_*` fields
-8. **Never** update rows in `matched` / `review` / `resolved` / `unmatched` / `manual` / `ignored` — those belong to finished agent work or operators
+8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
 ## Date parsing note (important)
 
@@ -119,7 +119,7 @@ If your run lands far below that for the same months, re-check date parsing (ISO
 Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` only; never write back to `pending`
+  - Start from `pending` or `unmatched` only; never write back to `pending`
   - Operators own `resolved` / `manual` — do not touch those rows
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
@@ -155,7 +155,7 @@ Do not use cryptic codes like `rvi:` or `T+0=` as the main `match_notes` text.
 Report briefly in English:
 
 - Counts of `matched` / `review` / `ignored` / `unmatched`
-- Confirm zero remaining `pending` in scope (or list any still pending and why)
+- Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
 - Breakdown by source: RVI / internal sweep / interest
 - Any ±0.01 rounding pairs
 - Rows that need human review (missing vouchers, collisions)
