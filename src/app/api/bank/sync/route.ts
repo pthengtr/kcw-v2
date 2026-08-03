@@ -35,7 +35,7 @@ export async function POST() {
     if (!result.workerOnline) {
       return NextResponse.json(
         {
-          error: "No bank sync worker is online (HQ-PC or SYP-PC)",
+          error: "No bank sync worker is online (HQ-PC)",
           workers: result.workers,
         },
         { status: 503 }

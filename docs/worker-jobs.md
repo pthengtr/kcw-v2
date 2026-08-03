@@ -73,7 +73,7 @@ insert into ops.job_queue (
   'bank_statement_import',
   '{"task":"bank_statement_import"}'::jsonb,
   'pending',
-  null,                 -- either HQ-PC or SYP-PC
+  'HQ-PC',
   '<user_id>',
   'web'
 )
@@ -94,7 +94,7 @@ Poll with `select ... from ops.job_queue where id = :id` until `done` / `failed`
 | `sync_pomas_podet` | HQ-PC + SYP-PC | `{ "task","site" }` |
 | `sync_iclow` | HQ-PC + SYP-PC (**2 jobs**, shared `batch_id`) | `{ "task":"sync_iclow", "site":"HQ"\|"SYP", "batch_id" }` |
 | `sync_po_related` | HQ-PC + SYP-PC (**2 jobs**, shared `batch_id`) | `{ "task":"sync_po_related", "site":"HQ"\|"SYP", "batch_id" }` — combined PO page refresh |
-| `bank_statement_import` | `null` (either) | `{ "task":"bank_statement_import" }` |
+| `bank_statement_import` | HQ-PC | `{ "task":"bank_statement_import" }` |
 | `syp_raw` | SYP-PC | `{ "task","site":"SYP" }` |
 | `hq_raw` / `hq_full` | HQ-PC | `{ "task","site":"HQ" }` |
 
@@ -124,9 +124,9 @@ New features almost never need new queue tables — only new `job_type` values a
 
 ### Bank statement sync from `/bank-statement-sync` (kcw-v2)
 
-- Job: `bank_statement_import` with `{ "task":"bank_statement_import" }`, `worker_name=null` (either PC).
+- Job: `bank_statement_import` with `{ "task":"bank_statement_import" }`, `worker_name='HQ-PC'` (HQ only).
 - Before insert: if a `bank_statement_import` row is already `pending`/`running`, return **already running**.
-- Gate on **any** online PC heartbeat (`HQ-PC` or `SYP-PC`, ~30s).
+- Gate on **HQ-PC** heartbeat (~30s).
 - UI **Bank Sync** button → `POST /api/bank/sync`, then poll `GET /api/bank/sync/:jobId`; meta via `GET /api/bank/meta`.
 - Service-role RPCs: `fn_bank_find_inflight_import`, `fn_bank_enqueue_import` (plus shared `fn_po_worker_heartbeat` / `fn_po_get_job`) — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql).
 
