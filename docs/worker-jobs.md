@@ -94,7 +94,7 @@ Poll with `select ... from ops.job_queue where id = :id` until `done` / `failed`
 | `sync_pomas_podet` | HQ-PC + SYP-PC | `{ "task","site" }` |
 | `sync_iclow` | HQ-PC + SYP-PC (**2 jobs**, shared `batch_id`) | `{ "task":"sync_iclow", "site":"HQ"\|"SYP", "batch_id" }` |
 | `sync_po_related` | HQ-PC + SYP-PC (**2 jobs**, shared `batch_id`) | `{ "task":"sync_po_related", "site":"HQ"\|"SYP", "batch_id" }` — combined PO page refresh |
-| `bank_statement_import` | HQ-PC | `{ "task":"bank_statement_import" }` |
+| `bank_statement_import` | HQ-PC | `{ "task":"bank_statement_import" }` — BAT: BRDET/BPDET + Drive statement Excel → `bank.statement_*` |
 | `syp_raw` | SYP-PC | `{ "task","site":"SYP" }` |
 | `hq_raw` / `hq_full` | HQ-PC | `{ "task","site":"HQ" }` |
 
@@ -114,7 +114,10 @@ New features almost never need new queue tables — only new `job_type` values a
 
 - **Primary UI button อัปเดตข้อมูล** uses `sync_po_related` — one click enqueues **two rows** (HQ-PC + SYP-PC) with shared `batch_id`.
 - Payload: `{ "task":"sync_po_related", "site":"HQ"|"SYP", "batch_id":"<uuid>" }`.
-- Worker BAT for `sync_po_related` should refresh PO-related tables for that site (at least POMAS/PODET + ICLOW; inventory optional).
+- Worker BATs (kcw-analytics):
+  - **HQ** [`run_hq_po_related_sync.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_hq_po_related_sync.bat): POMAS/PODET + ICLOW + **SIDET/SIMAS** (latest 6 months) → Drive + `raw_kcw`, then inventory on-hand qty.
+  - **SYP** [`run_syp_po_related_sync.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_syp_po_related_sync.bat): POMAS/PODET + ICLOW → Drive + `raw_kcw`, then inventory (no sales Supabase upload).
+- Pending-receive / ค้างรับ semantics: [bi/kcw-iclow-pending-receive-data-dictionary.md](./bi/kcw-iclow-pending-receive-data-dictionary.md) (from analytic `parts9_pending_receive`).
 - Before insert: if any recent (`< 30 min`) `sync_po_related` is `pending`/`running`, return **already running**.
 - Gate: at least one PC online (~30s); still enqueue both site jobs.
 - UI keeps **per-stream last-updated** (PO HQ/SYP, ICLOW HQ/SYP, สต็อก HQ) so operators can see which side moved.
@@ -124,7 +127,11 @@ New features almost never need new queue tables — only new `job_type` values a
 
 ### Bank statement sync from `/bank-statement-sync` (kcw-v2)
 
-- Job: `bank_statement_import` with `{ "task":"bank_statement_import" }`, `worker_name='HQ-PC'` (HQ only).
+- Job: `bank_statement_import` with `{ "task":"bank_statement_import" }`, `worker_name='HQ-PC'` (**HQ only** — Drive statement path + PARTS9 BRDET/BPDET live on HQ).
+- Worker BAT [`run_bank_statement_import.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_bank_statement_import.bat) (kcw-analytics) runs **two** steps on HQ:
+  1. PARTS9 **BRDET/BPDET** (ทะเบียนเช็ครับ/จ่าย — cheque **or** transfer lines) → Drive + `raw_kcw.raw_hq_brdet_cheques_received` / `raw_hq_bpdet_cheques_paid`
+  2. Drive `01_raw/statement` Excel (KBANK + KTB) → `bank.statement_*`
+- Data dictionary: [bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md](./bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md).
 - Before insert: if a `bank_statement_import` row is already `pending`/`running`, return **already running**.
 - Gate on **HQ-PC** heartbeat (~30s).
 - UI **Bank Sync** button → `POST /api/bank/sync`, then poll `GET /api/bank/sync/:jobId`; meta via `GET /api/bank/meta`.

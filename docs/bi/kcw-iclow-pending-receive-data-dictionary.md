@@ -2,9 +2,11 @@
 
 Source of truth for PARTS9 **ค้างรับ** (pending receive) — the legacy report / operator list.
 
+Upstream analytic docs: [`kcw-analytics/docs/parts9_pending_receive.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/parts9_pending_receive.md).
+
 Status legend: **Confirmed** · **TBD** · **Inferred**
 
-Last reviewed: 2026-08-01
+Last reviewed: 2026-08-03
 
 **Related:** purchase **orders** [`POMAS`/`PODET`](./kcw-po-data-dictionary.md); purchase **invoices** [`PIMAS`/`PIDET`](./kcw-purchase-data-dictionary.md).
 
