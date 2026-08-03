@@ -27,6 +27,24 @@ Scope rules:
 7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 8. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
 
+## Date window policy
+
+When comparing source dates to statement `txn_date`:
+
+1. **Auto-`matched` tier** — only when the hit is within the strict window documented for that source below.
+2. **Review tier (relaxed window)** — if amount + source uniquely identify one candidate **outside** the auto-tier but still within the relaxed window, set `match_status = review` — **not** `unmatched`. Always populate `matched_ref_type`, `matched_ref_id`, `match_reason`, and `match_confidence`. Prefix `match_notes` with `⚠️ วันที่ไม่ตรงช่วงปกติ:` and explain the candidate (ref id, amount, source date, `txn_date`, days apart, why it is still plausible).
+3. **`unmatched`** — only when no plausible candidate exists after the relaxed window, or multiple candidates collide.
+
+Default relaxed windows for this account:
+
+| Source | Auto-`matched` | Relaxed `review` |
+|---|---|---|
+| 3TR bills | same day; T+1 .. T+3 | up to T+5 |
+| 3TAR net | T+1 .. T+4 | up to T+7 |
+| Expense PV | same day; ±3d | ±7d |
+
+Never auto-`matched` outside the strict auto-tier. Wider hits are always `review` with the warning prefix.
+
 ## Match sources — INBOUND (priority order)
 
 Apply in this order. Later sources must not steal rows already claimed by earlier sources.
@@ -56,7 +74,9 @@ Notes:
 - Daily 3TR count is small, so same-day / next-day allocation is fine
 - Do not mix daily 3TAR−3CNTAR net rows into 3TR matching
 - Prefer smallest unique lag when a bill/bundle can hit multiple days
-- If no unique allocation → `review` or leave for later sources / `unmatched`
+- Auto-`matched` on same day or T+1 .. T+3
+- Relaxed `review` up to **T+5** when amount + billdate are uniquely clear — populate matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` warning
+- If no unique allocation after relaxed window → `unmatched`
 
 `matched_ref_type = tr_bill` | `tr_bundle` | `tr_remainder`  
 `matched_ref_id = <BILLNO>` or comma-separated BILLNOs for bundles / remainders
@@ -80,8 +100,9 @@ Matching to inbound deposits:
 
 - Find rows where `amount = net`
 - Usually settles on **T+1**
-- Allow **T+2 / T+3** (and occasionally **T+4** around long weekends / holidays) when T+1 is missing
-- Prefer the smallest unique lag
+- Auto-`matched` on **T+1 .. T+4** (long weekends / holidays)
+- Relaxed `review` up to **T+7** when T+1–T+4 is empty but amount + billdate are uniquely clear
+- Prefer the smallest unique lag within each tier
 - If multiple competing rows → `review`
 - **Shortfall catch-up:** sometimes the main settlement is short, and a separate smaller transfer arrives later to catch up. When you detect that pattern, match it and explain it clearly in `match_notes`
 - Some bill-dates may have **no** settlement inside the statement window (observed gaps in late May) — do not invent matches; leave related open inflows for review/`unmatched`
@@ -91,6 +112,7 @@ Matching to inbound deposits:
 - T+1 → `ยอดขายสุทธิ 3TAR (เข้าวันถัดไป)`
 - T+2 → `ยอดขายสุทธิ 3TAR (เข้าช้า 2 วัน)`
 - T+3 / T+4 → `ยอดขายสุทธิ 3TAR (เข้าช้า N วัน)`
+- T+5 .. T+7 (review only) → `ยอดขายสุทธิ 3TAR (เข้าช้า — รอตรวจ)`
 - Shortfall catch-up → `ยอดขายสุทธิ 3TAR (ชดเชยส่วนขาด)`
 
 `matched_ref_type = tar_cntar_net`  
@@ -132,14 +154,15 @@ Round to 2 decimals. Prefer `abs(total_net) = amount`. Fall back to `abs(signed_
 
 Date window:
 
-- Prefer **same calendar day** on `receipt_date::date = txn_date`
-- Allow `receipt_date` within **txn_date − 3 .. txn_date + 3** when same-day is empty but the amount is unique
-- Unique 1:1 only for auto-`matched`. Multiple candidates → `review`
+- Auto-`matched`: same calendar day on `receipt_date::date = txn_date`, or within **txn_date − 3 .. txn_date + 3** when same-day is empty but amount is unique
+- Relaxed `review`: unique net within **txn_date − 7 .. txn_date + 7** — populate matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` warning
+- Multiple candidates → `review`
 
 | Kind | Meaning | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
 | `expense_pv_same_day` | Unique net on same `receipt_date` | `matched` | `ใบสำคัญจ่าย PV (วันเดียวกัน)` |
-| `expense_pv_near` | Unique net within ±3d | `matched` if clearly unique else `review` | `ใบสำคัญจ่าย PV (ใกล้วัน)` |
+| `expense_pv_near` | Unique net within ±3d auto window | `matched` if clearly unique else `review` | `ใบสำคัญจ่าย PV (ใกล้วัน)` |
+| `expense_pv_relaxed` | Unique net within ±7d relaxed window | `review` | `ใบสำคัญจ่าย PV (วันไม่ตรง — รอตรวจ)` |
 | `expense_pv_bundle` | Several receipts sum to one transfer | `matched` / `review` | `ใบสำคัญจ่าย PV (รวมหลายใบ)` |
 | ambiguous | Multiple candidates | `review` | `ใบสำคัญจ่าย PV (กำกวม)` |
 

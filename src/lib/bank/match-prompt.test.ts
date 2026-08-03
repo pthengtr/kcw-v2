@@ -25,6 +25,18 @@ const SYP_4759 = "233-1-18475-9";
 const KTB_1139 = "248-0-42113-9";
 const KTB_6184 = "248-6-00618-4";
 
+const DATE_WINDOW_POLICY_MARKERS = [
+  "## Date window policy",
+  "⚠️ วันที่ไม่ตรงช่วงปกติ:",
+  "Relaxed `review`",
+] as const;
+
+function expectDateWindowPolicy(template: string) {
+  for (const marker of DATE_WINDOW_POLICY_MARKERS) {
+    expect(template).toContain(marker);
+  }
+}
+
 describe("bank match prompt", () => {
   it("supports configured match accounts and Thai button name", () => {
     expect(BANK_MATCH_ACCOUNT_NO).toBe(HQ_7236);
@@ -105,6 +117,7 @@ describe("bank match prompt", () => {
     expect(template).toContain(
       `If \`{{account_no}}\` is not \`${HQ_7236}\``
     );
+    expectDateWindowPolicy(template);
 
     const filled = fillBankMatchPrompt(template, {
       account_no: HQ_7236,
@@ -131,6 +144,7 @@ describe("bank match prompt", () => {
     expect(template).toContain(
       `If \`{{account_no}}\` is not \`${HQ_3557}\``
     );
+    expectDateWindowPolicy(template);
 
     const filled = buildBankMatchPrompt({
       account_no: HQ_3557,
@@ -163,6 +177,7 @@ describe("bank match prompt", () => {
     expect(template).toContain(
       `If \`{{account_no}}\` is not \`${SYP_0393}\``
     );
+    expectDateWindowPolicy(template);
 
     const filled = buildBankMatchPrompt({
       account_no: SYP_0393,
@@ -194,6 +209,7 @@ describe("bank match prompt", () => {
     expect(template).toContain(
       `If \`{{account_no}}\` is not \`${SYP_4759}\``
     );
+    expectDateWindowPolicy(template);
 
     const filled = buildBankMatchPrompt({
       account_no: SYP_4759,
@@ -220,6 +236,7 @@ describe("bank match prompt", () => {
     expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("agent:bank-matcher-1139-v1");
     expect(template).toContain(HQ_7236);
+    expectDateWindowPolicy(template);
 
     const filled = buildBankMatchPrompt({
       account_no: KTB_1139,
@@ -251,6 +268,7 @@ describe("bank match prompt", () => {
     expect(template).toContain(SYP_4759);
     expect(template).not.toContain("<<<<<<<");
     expect(template).not.toContain(">>>>>>>");
+    expectDateWindowPolicy(template);
 
     const filled = buildBankMatchPrompt({
       account_no: KTB_6184,

@@ -21,6 +21,23 @@ Scope rules:
 7. Write only `match_*` and `matched_*` fields
 8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
+## Date window policy
+
+When comparing source dates to statement `txn_date`:
+
+1. **Auto-`matched` tier** — only when the hit is within the strict window documented for that source below.
+2. **Review tier (relaxed window)** — if amount + source uniquely identify one candidate **outside** the auto-tier but still within the relaxed window, set `match_status = review` — **not** `unmatched`. Always populate `matched_ref_type`, `matched_ref_id`, `match_reason`, and `match_confidence`. Prefix `match_notes` with `⚠️ วันที่ไม่ตรงช่วงปกติ:` and explain the candidate (ref id, amount, source date, `txn_date`, days apart, why it is still plausible).
+3. **`unmatched`** — only when no plausible candidate exists after the relaxed window, or multiple candidates collide.
+
+Default relaxed windows for this account:
+
+| Source | Auto-`matched` | Relaxed `review` |
+|---|---|---|
+| PVMAS | same `VOUCDATE` / `NOTEDATE` | `txn_date − 5 .. txn_date + 5` |
+| PIMAS | same day or within ±7d | `txn_date − 14 .. txn_date + 3` |
+
+Never auto-`matched` outside the strict auto-tier. Wider hits are always `review` with the warning prefix.
+
 ## Match sources (priority order)
 
 Apply in this order. Later sources must not steal rows already claimed by earlier sources.
@@ -33,7 +50,8 @@ Source: `raw_kcw.raw_hq_pvmas_notes_vouchers`
 - Match **1:1** on `PAYAMT` = statement `amount`
 - Prefer **same calendar day** on `VOUCDATE = txn_date`
 - If no unique same-day `VOUCDATE` hit, allow same-day `NOTEDATE = txn_date`
-- Do **not** widen to multi-day windows for auto-`matched` unless the amount is unique and the voucher is clearly the same payment (otherwise `review`)
+- Auto-`matched` only within same-day windows above
+- Relaxed `review`: unique `PAYAMT` within **`txn_date − 5 .. txn_date + 5`** on `VOUCDATE` or `NOTEDATE` — populate matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` warning
 - If multiple vouchers / statement rows collide on the same amount+day → `review`
 - Common voucher prefixes include `P69…` and `KCPN…` — do not restrict by prefix; use amount + date uniqueness
 
@@ -41,6 +59,7 @@ Source: `raw_kcw.raw_hq_pvmas_notes_vouchers`
 |---|---|---|---|
 | `pvmas_same_day` | Unique `PAYAMT` on `VOUCDATE = txn_date` | `matched` | `ใบสำคัญจ่าย (วันเดียวกัน)` |
 | `pvmas_note_same_day` | Unique `PAYAMT` on `NOTEDATE = txn_date` (no VOUCDATE hit) | `matched` | `ใบสำคัญจ่าย (ตามวันโน้ต)` |
+| `pvmas_near` | Unique `PAYAMT` within relaxed ±5d window | `review` | `ใบสำคัญจ่าย (วันไม่ตรง — รอตรวจ)` |
 | ambiguous | Multiple candidates | `review` | `ใบสำคัญจ่าย (กำกวม)` |
 
 `matched_ref_type = pvmas`  
@@ -60,16 +79,18 @@ Use **only** for outbound rows still `pending` after PVMAS claims are written (o
 
 - Not canceled (`CANCELED = 'N'`)
 - Prefer amount fields in this order: `AFTERTAX`, then `CHKAMT` (cheque), then `DUEAMT` / `CASHAMT` if uniquely needed
-- Date window: `VOUCDATE1` / `NOTEDATE` / `BILLDATE` within **txn_date − 7 .. txn_date + 1**
+- Date window: auto-`matched` on `VOUCDATE1` / `NOTEDATE` / `BILLDATE` within **txn_date − 7 .. txn_date + 1**
+- Relaxed `review` window: **`txn_date − 14 .. txn_date + 3`** when amount is unique
 - Prefer same-day `BILLDATE` or `VOUCDATE1` when unique
 - If `VOUCNO1` is already filled, prefer resolving via that PVMAS voucher instead of matching the bill directly
-- Unique 1:1 only. If multiple bills collide → `review`
-- Because many of these lack a filled payment voucher link, treat weaker date hits as `review` rather than forcing `matched`
+- Unique 1:1 only for auto-`matched`. If multiple bills collide → `review`
+- Weaker / near-window hits → `review` with matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` — do not leave `unmatched` when a plausible bill exists
 
 | Kind | Meaning | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
 | `pimas_bill_same_day` | Unique bill amount on same `BILLDATE` | `matched` (only if clearly unique) or `review` | `บิลซื้อ PIMAS (วันเดียวกัน)` |
-| `pimas_near` | Unique within ±7d window | `review` unless very clear | `บิลซื้อ PIMAS (ใกล้วัน)` |
+| `pimas_near` | Unique within ±7d auto window | `review` unless very clear | `บิลซื้อ PIMAS (ใกล้วัน)` |
+| `pimas_relaxed` | Unique within ±14d relaxed window | `review` | `บิลซื้อ PIMAS (วันไม่ตรง — รอตรวจ)` |
 | cheque | Matched on `CHKAMT` | `matched` / `review` as above | `บิลซื้อ PIMAS (เช็ค)` |
 
 `matched_ref_type = pimas`  

@@ -20,6 +20,24 @@ Scope rules:
 6. Write only `match_*` and `matched_*` fields
 7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
+## Date window policy
+
+When comparing source dates to statement `txn_date`:
+
+1. **Auto-`matched` tier** — only when the hit is within the strict window documented for that source below.
+2. **Review tier (relaxed window)** — if amount + source uniquely identify one candidate **outside** the auto-tier but still within the relaxed window, set `match_status = review` — **not** `unmatched`. Always populate `matched_ref_type`, `matched_ref_id`, `match_reason`, and `match_confidence`. Prefix `match_notes` with `⚠️ วันที่ไม่ตรงช่วงปกติ:` and explain the candidate (ref id, amount, source date, `txn_date`, days apart, why it is still plausible).
+3. **`unmatched`** — only when no plausible candidate exists after the relaxed window, or multiple candidates collide.
+
+Default relaxed windows for this account (unless a source section is stricter):
+
+| Source | Auto-`matched` | Relaxed `review` |
+|---|---|---|
+| TR bills | same day | T+1 .. T+5 |
+| TAR net | T+1 .. T+3 | up to T+7 |
+| RVMAS | same day or next day | ±5 calendar days |
+
+Never auto-`matched` outside the strict auto-tier. Wider hits are always `review` with the warning prefix.
+
 ## Match sources (priority order)
 
 Apply in this order. Later sources must not steal rows already claimed by earlier sources.
@@ -48,7 +66,8 @@ Notes:
 
 - Daily TR bill count is usually small (~3–8), so same-day allocation / subset-sum is fine
 - Do not mix daily TAR−CNTAR net rows into TR matching
-- If same-day match fails, set `unmatched` (do not expand to T+1)
+- Auto-`matched` only on same calendar day (`BILLDATE = txn_date`)
+- If same-day fails but a unique bill/bundle/remainder fits on **T+1 .. T+5**, set `review` with matched refs and `⚠️ วันที่ไม่ตรงช่วงปกติ:` in `match_notes` — do not leave `unmatched` when a plausible late transfer exists
 
 ### 2) Daily net TAR − CNTAR
 
@@ -69,8 +88,9 @@ Matching to inbound deposits:
 
 - Find rows where `amount = net`
 - Usually settles on **T+1**
-- Allow **T+2 / T+3** around weekends / holidays or when T+1 is missing
-- Prefer the smallest unique lag
+- Auto-`matched` on **T+1 .. T+3** (weekends / holidays)
+- Relaxed `review` up to **T+7** when T+1–T+3 is empty but amount + billdate are uniquely clear
+- Prefer the smallest unique lag within each tier
 - If multiple competing rows → `review`
 - **Shortfall catch-up:** sometimes the main settlement is short, and a separate smaller transfer arrives days later to catch up. When you detect that pattern, match it and explain it clearly in `match_notes` (which TAR day it completes, how much shortfall, which later deposit closes it)
 
@@ -79,6 +99,7 @@ Matching to inbound deposits:
 - T+1 → `ยอดขายสุทธิ TAR (เข้าวันถัดไป)`
 - T+2 → `ยอดขายสุทธิ TAR (เข้าช้า 2 วัน)`
 - T+3 → `ยอดขายสุทธิ TAR (เข้าช้า 3 วัน)`
+- T+4 .. T+7 (review only) → `ยอดขายสุทธิ TAR (เข้าช้า — รอตรวจ)`
 - Shortfall catch-up → `ยอดขายสุทธิ TAR (ชดเชยส่วนขาด)`
 
 `matched_ref_type = tar_cntar_net`  
@@ -91,7 +112,8 @@ Source: `raw_kcw.raw_hq_rvmas_notes_vouchers`
 - Use `VOUCNO` starting with `RC` or `RVI`
 - Not canceled (`CANCELED = 'N'`)
 - Match **1:1** on `PAYAMT`
-- Same day as voucher or next day (`RCPTDATE`/`VOUCDATE` → `txn_date`)
+- Auto-`matched`: same day or next day (`RCPTDATE`/`VOUCDATE` → `txn_date`)
+- Relaxed `review`: unique hit within **±5 calendar days** — populate matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` warning
 - **Cheque deposits** (`ฝากด้วยเช็ค`) are RVMAS too — different deposit method, same source table
 - If multiple vouchers/rows collide on amount → `review`
 
@@ -99,6 +121,7 @@ Source: `raw_kcw.raw_hq_rvmas_notes_vouchers`
 
 - Same day → `ใบสำคัญรับเงิน (วันเดียวกัน)`
 - Next day → `ใบสำคัญรับเงิน (วันถัดไป)`
+- Relaxed window (review only) → `ใบสำคัญรับเงิน (วันไม่ตรง — รอตรวจ)`
 - Cheque deposit → `ใบสำคัญรับเงิน (ฝากเช็ค)`
 
 `matched_ref_type = rvmas`  
@@ -169,7 +192,8 @@ Do not use cryptic codes like `tr_remainder:` or `T+1 net=` as the main `match_n
 - Match any account other than `064-8-91723-6`
 - Change money fields or source descriptions
 - Use non-VAT SIDET or unconstrained blind subset-sum
-- Force a match when unsure — use `review` or set `unmatched`
+- Force auto-`matched` outside strict date windows — use relaxed `review` with matched info + warning instead
+- Leave `unmatched` when a plausible relaxed-window candidate exists — use `review` with matched refs
 - Open a PR / change repo code for this job unless required to update data
 
 ## End-of-run summary
