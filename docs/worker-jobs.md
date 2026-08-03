@@ -188,4 +188,7 @@ New features almost never need new queue tables — only new `job_type` values a
 ## Related
 
 - Purchase orders synced by `sync_pomas_podet` — see [bi/kcw-po-data-dictionary.md](./bi/kcw-po-data-dictionary.md)
+- Pending receive / ICLOW — [bi/kcw-iclow-pending-receive-data-dictionary.md](./bi/kcw-iclow-pending-receive-data-dictionary.md)
+- Cheque/transfer registers (BRDET/BPDET) — [bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md](./bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md)
 - BI data docs — [bi/README.md](./bi/README.md)
+- Analytic pipelines / BATs — [kcw-analytics](https://github.com/pthengtr/kcw-analytics)
