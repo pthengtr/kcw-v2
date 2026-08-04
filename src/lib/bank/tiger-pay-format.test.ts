@@ -44,7 +44,7 @@ describe("Tiger Pay integration placement", () => {
     expect(route).toContain("TigerPayPage");
 
     const home = read("src/app/(root)/home/page.tsx");
-    expect(home).toContain('href="/tiger-pay"');
+    expect(home).toMatch(/href(?:=|:)\s*"\/tiger-pay"/);
     expect(home).toContain("Tiger Pay");
   });
 
