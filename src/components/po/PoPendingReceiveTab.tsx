@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
 import PoProductCell from "@/components/po/PoProductCell";
@@ -656,11 +655,10 @@ export default function PoPendingReceiveTab({
           ) : null}
 
           {detailKind === "po" && !detailLoading && !detailError ? (
-            <ScrollArea className="max-h-[60vh] rounded-md border">
-              <table className="w-full text-sm">
+            <div className="max-h-[60vh] overflow-auto rounded-md border">
+              <table className="w-full min-w-[40rem] border-collapse text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40 text-left">
-                    <th className="p-2">Line</th>
                     <th className="p-2">BCODE</th>
                     <th className="p-2">รายละเอียด</th>
                     <th className="p-2">Qty</th>
@@ -671,14 +669,13 @@ export default function PoPendingReceiveTab({
                 <tbody>
                   {poLines.length === 0 ? (
                     <tr>
-                      <td className="p-2" colSpan={6}>
+                      <td className="p-2" colSpan={5}>
                         ไม่มีรายการ
                       </td>
                     </tr>
                   ) : (
                     poLines.map((line, i) => (
                       <tr key={`${line.line}-${i}`} className="border-b">
-                        <td className="p-2">{line.line ?? "—"}</td>
                         <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
                         <td className="p-2">
                           <PoProductCell detail={line.detail} mcode={line.mcode} />
@@ -694,7 +691,7 @@ export default function PoPendingReceiveTab({
                   )}
                 </tbody>
               </table>
-            </ScrollArea>
+            </div>
           ) : null}
 
           {detailKind === "pi" && piHeader && !detailLoading && !detailError ? (
@@ -738,8 +735,8 @@ export default function PoPendingReceiveTab({
                   <div>หมายเหตุ: {piHeader.remarks}</div>
                 ) : null}
               </div>
-              <ScrollArea className="max-h-[50vh] rounded-md border">
-                <table className="w-full text-sm">
+              <div className="max-h-[50vh] overflow-auto rounded-md border">
+                <table className="w-full min-w-[36rem] border-collapse text-sm">
                   <thead>
                     <tr className="border-b bg-muted/40 text-left">
                       <th className="p-2">BCODE</th>
@@ -772,7 +769,7 @@ export default function PoPendingReceiveTab({
                     )}
                   </tbody>
                 </table>
-              </ScrollArea>
+              </div>
             </div>
           ) : null}
         </DialogContent>
