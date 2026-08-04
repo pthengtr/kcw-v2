@@ -34,6 +34,11 @@ export default function Home() {
           />
           <CardIcon href="/tiger-pay" label="Tiger Pay" icon="Wallet" />
           <CardIcon href="/po" label="ใบสั่งซื้อ (PO)" icon="ClipboardList" />
+          <CardIcon
+            href="/stock-audit"
+            label="ตรวจนับสต็อก"
+            icon="ClipboardCheck"
+          />
           <CardIcon href="/bi/income" label="BI" icon="BarChart3" />
         </CardIconMenu>
       </div>

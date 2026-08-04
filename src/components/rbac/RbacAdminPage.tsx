@@ -45,6 +45,8 @@ const PAGE_KEY_LABELS: Record<string, string> = {
   bi_expenses: "BI: ภาพรวมค่าใช้จ่าย",
   bank_tiger_pay: "Bank: TigerPay",
   bank_statement_sync: "Bank: Statement Upload",
+  po_status: "PO: สถานะใบสั่งซื้อ",
+  stock_audit: "ตรวจนับสต็อก (Date Audit)",
 };
 
 const DEFAULT_ROLE_EMAILS: Record<string, string[]> = {
