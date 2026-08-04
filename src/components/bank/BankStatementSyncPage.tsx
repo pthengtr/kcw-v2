@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, RefreshCcw } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { Loader2, RefreshCcw, Upload } from "lucide-react";
 
 import PermissionGate from "@/components/auth/PermissionGate";
 import BackButton from "@/components/common/BackButton";
@@ -9,21 +9,10 @@ import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import ImportFilesTab from "@/components/bank/ImportFilesTab";
 import StatementLinesTab from "@/components/bank/StatementLinesTab";
-import type { JobQueueRow } from "@/lib/bank/worker-jobs";
-
-type BankSyncMeta = {
-  workerOnline: boolean;
-  workers: Array<{
-    workerName: string;
-    online: boolean;
-    lastSeen: string | null;
-    status: string | null;
-  }>;
-  inFlightJob: JobQueueRow | null;
-};
+import StatementUploadDialog from "@/components/bank/StatementUploadDialog";
+import { formatBankStatementImportMessage } from "@/lib/bank/statement-upload";
 
 export default function BankStatementSyncPage() {
   const [tab, setTab] = useState<"import-files" | "statement-lines">(
@@ -31,153 +20,18 @@ export default function BankStatementSyncPage() {
   );
   const [refreshToken, setRefreshToken] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [meta, setMeta] = useState<BankSyncMeta | null>(null);
-  const [metaError, setMetaError] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const loadMeta = useCallback(async (signal?: AbortSignal) => {
-    setMetaError(null);
-    try {
-      const res = await fetch("/api/bank/meta", { cache: "no-store", signal });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error ?? `Request failed (${res.status})`);
-      }
-      const data = (await res.json()) as { meta: BankSyncMeta };
-      setMeta(data.meta);
-    } catch (e) {
-      if (String(e).includes("AbortError")) return;
-      setMetaError(e instanceof Error ? e.message : String(e));
-    }
-  }, []);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
     setRefreshToken((x) => x + 1);
-    try {
-      await loadMeta();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [loadMeta]);
-
-  useEffect(() => {
-    const ac = new AbortController();
-    void loadMeta(ac.signal);
-    return () => ac.abort();
-  }, [loadMeta]);
-
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
+    // Let child tabs react to refreshToken; brief spinner for feedback.
+    await new Promise((r) => setTimeout(r, 200));
+    setRefreshing(false);
   }, []);
 
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    setSyncing(false);
-  }, []);
-
-  const startPolling = useCallback(
-    (jobId: number) => {
-      stopPolling();
-      setSyncing(true);
-      setSyncMessage(`กำลัง sync จาก Drive (job #${jobId})…`);
-
-      pollRef.current = setInterval(async () => {
-        try {
-          const res = await fetch(`/api/bank/sync/${jobId}`, {
-            cache: "no-store",
-          });
-          if (!res.ok) return;
-          const data = (await res.json()) as { job: JobQueueRow };
-          const status = data.job.status;
-          if (status === "done") {
-            stopPolling();
-            setSyncMessage(
-              data.job.result_message || "Bank sync สำเร็จ — รายการอัปเดตแล้ว"
-            );
-            refresh();
-          } else if (status === "failed") {
-            stopPolling();
-            setSyncMessage(data.job.error_message || "Bank sync ล้มเหลว");
-            refresh();
-          }
-        } catch {
-          // keep polling
-        }
-      }, 2000);
-    },
-    [refresh, stopPolling]
-  );
-
-  // Resume polling if meta already has an in-flight job
-  useEffect(() => {
-    if (!meta || syncing) return;
-    const job = meta.inFlightJob;
-    if (job) {
-      startPolling(job.id);
-    }
-  }, [meta, syncing, startPolling]);
-
-  async function handleSync() {
-    setSyncMessage(null);
-    setSyncing(true);
-    try {
-      const res = await fetch("/api/bank/sync", { method: "POST" });
-      const body = await res.json().catch(() => ({}));
-
-      if (res.status === 409 && body?.job?.id) {
-        setSyncMessage("มี bank sync กำลังรันอยู่แล้ว");
-        startPolling(body.job.id as number);
-        return;
-      }
-
-      if (res.status === 503) {
-        setSyncing(false);
-        setSyncMessage(body?.error ?? "Worker offline");
-        return;
-      }
-
-      if (!res.ok) {
-        setSyncing(false);
-        setSyncMessage(body?.error ?? `Sync failed (${res.status})`);
-        return;
-      }
-
-      const jobId = body?.job?.id as number;
-      startPolling(jobId);
-    } catch (e) {
-      setSyncing(false);
-      setSyncMessage(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  const title = useMemo(() => "Bank Statement Sync", []);
-
-  const headerHint = useMemo(() => {
-    if (!meta) return null;
-    const onlineNames = meta.workers
-      .filter((w) => w.online)
-      .map((w) => w.workerName);
-    return (
-      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <Badge variant={meta.workerOnline ? "secondary" : "outline"}>
-          {meta.workerOnline
-            ? `Worker online (${onlineNames.join(", ")})`
-            : "Worker offline"}
-        </Badge>
-        {meta.inFlightJob || syncing ? (
-          <Badge variant="outline">กำลัง sync…</Badge>
-        ) : null}
-      </div>
-    );
-  }, [meta, syncing]);
+  const title = useMemo(() => "Bank Statement", []);
 
   return (
     <PermissionGate
@@ -198,16 +52,18 @@ export default function BankStatementSyncPage() {
           <BackButton href="/home" />
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
-            {headerHint}
+            <p className="text-sm text-muted-foreground">
+              อัปโหลด Excel statement (KBANK / KTB) แล้วจับคู่รายการ
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={handleSync}
-              disabled={syncing || !!meta?.inFlightJob}
+              onClick={() => setUploadOpen(true)}
             >
-              Bank Sync
+              <Upload className="mr-1 h-4 w-4" />
+              อัปโหลด Statement
             </Button>
             <Button
               variant="outline"
@@ -225,11 +81,8 @@ export default function BankStatementSyncPage() {
           </div>
         </div>
 
-        {metaError ? (
-          <p className="mb-3 text-sm text-destructive">{metaError}</p>
-        ) : null}
-        {syncMessage ? (
-          <p className="mb-3 text-sm text-muted-foreground">{syncMessage}</p>
+        {uploadMessage ? (
+          <p className="mb-3 text-sm text-muted-foreground">{uploadMessage}</p>
         ) : null}
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
@@ -246,6 +99,18 @@ export default function BankStatementSyncPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <StatementUploadDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        onImported={(result) => {
+          setUploadMessage(formatBankStatementImportMessage(result));
+          setRefreshToken((x) => x + 1);
+          if (result.status === "imported") {
+            setTab("import-files");
+          }
+        }}
+      />
     </PermissionGate>
   );
 }

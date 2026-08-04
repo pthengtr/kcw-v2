@@ -219,7 +219,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                 {showStatementSync ? (
                   <NavLinkButton
                     href="/bank-statement-sync"
-                    label="Bank Sync"
+                    label="Bank Statement"
                     icon={Menu}
                     active={pathname === "/bank-statement-sync"}
                     onNavigate={closeSheet}
@@ -303,7 +303,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                 <NavigationMenuItem>
                   <NavLinkButton
                     href="/bank-statement-sync"
-                    label="Bank Sync"
+                    label="Bank Statement"
                     icon={Menu}
                     active={pathname === "/bank-statement-sync"}
                     className="whitespace-nowrap px-2.5"
