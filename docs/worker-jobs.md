@@ -94,7 +94,7 @@ Poll with `select ... from ops.job_queue where id = :id` until `done` / `failed`
 | `sync_pomas_podet` | HQ-PC + SYP-PC | `{ "task","site" }` |
 | `sync_iclow` | HQ-PC + SYP-PC (**2 jobs**, shared `batch_id`) | `{ "task":"sync_iclow", "site":"HQ"\|"SYP", "batch_id" }` |
 | `sync_po_related` | HQ-PC + SYP-PC (**2 jobs**, shared `batch_id`) | `{ "task":"sync_po_related", "site":"HQ"\|"SYP", "batch_id" }` — combined PO page refresh |
-| `bank_statement_import` | HQ-PC | `{ "task":"bank_statement_import" }` — BAT: BRDET/BPDET + Drive statement Excel → `bank.statement_*` |
+| `bank_statement_import` | HQ-PC | `{ "task":"bank_statement_import" }` — BAT: BRDET/BPDET + Drive statement Excel → `bank.statement_*` (web UI uses Edge Function instead; see below) |
 | `syp_raw` | SYP-PC | `{ "task","site":"SYP" }` |
 | `hq_raw` / `hq_full` | HQ-PC | `{ "task","site":"HQ" }` |
 
@@ -125,17 +125,14 @@ New features almost never need new queue tables — only new `job_type` values a
 - Legacy single-site `sync_pomas_podet` RPCs remain for LINE/compat (`fn_po_enqueue_sync`) — see [bi/sql/fn_po_sync_ops.sql](./bi/sql/fn_po_sync_ops.sql).
 - Open-PO indexes: [bi/sql/fn_po_list.sql](./bi/sql/fn_po_list.sql).
 
-### Bank statement sync from `/bank-statement-sync` (kcw-v2)
+### Bank statement upload from `/bank-statement-sync` (kcw-v2) — **not** a PC worker job
 
-- Job: `bank_statement_import` with `{ "task":"bank_statement_import" }`, `worker_name='HQ-PC'` (**HQ only** — Drive statement path + PARTS9 BRDET/BPDET live on HQ).
-- Worker BAT [`run_bank_statement_import.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_bank_statement_import.bat) (kcw-analytics) runs **two** steps on HQ:
-  1. PARTS9 **BRDET/BPDET** (ทะเบียนเช็ครับ/จ่าย — cheque **or** transfer lines) → Drive + `raw_kcw.raw_hq_brdet_cheques_received` / `raw_hq_bpdet_cheques_paid`
-  2. Drive `01_raw/statement` Excel (KBANK + KTB) → `bank.statement_*`
+- UI **อัปโหลด Statement** → browser calls Supabase Edge Function `import-bank-statement` with `FormData` (`file` + `bank_name` = `KBANK`|`KTB`).
+- Parse + insert into `bank.statement_*` and Storage `bank-statements` live in **kcw-analytics** (same `auto_v1` heuristics as the Drive notebook). Contract: [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md).
+- Caller must be signed in with email in `public.kcw_admin`; kcw-v2 only provides the upload UI (`StatementUploadDialog`).
+- Daily HQ BAT [`run_bank_statement_import.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_bank_statement_import.bat) can still run offline Drive drops + BRDET/BPDET; web uploads no longer enqueue `ops.job_queue`.
 - Data dictionary: [bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md](./bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md).
-- Before insert: if a `bank_statement_import` row is already `pending`/`running`, return **already running**.
-- Gate on **HQ-PC** heartbeat (~30s).
-- UI **Bank Sync** button → `POST /api/bank/sync`, then poll `GET /api/bank/sync/:jobId`; meta via `GET /api/bank/meta`.
-- Service-role RPCs: `fn_bank_find_inflight_import`, `fn_bank_enqueue_import` (plus shared `fn_po_worker_heartbeat` / `fn_po_get_job`) — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql).
+- Legacy service-role RPCs `fn_bank_find_inflight_import` / `fn_bank_enqueue_import` remain for LINE/compat — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql) — but the kcw-v2 web button no longer uses them.
 
 ### Inventory sync from `/po` (kcw-v2)
 

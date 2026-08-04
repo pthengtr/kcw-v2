@@ -10,7 +10,7 @@ This repo is a single **Next.js 15** (App Router, React 19, TypeScript, Turbopac
 - **Supabase (hosted)** — the only backend: Postgres + Auth + Storage + `fn_bi_*` RPCs. There is **no** local Supabase/Docker stack and no `supabase/config.toml` in this repo; the schema/RPCs/tables are managed externally, so a fresh local Supabase will not satisfy the app. The app talks to a pre-provisioned hosted project and **500s on every request** (even `/login`) if the Supabase env vars are missing — `src/lib/supabase/middleware.tsx` builds a Supabase client on every request.
 - **OpenAI** — optional, used only by the Knowledge Base (`/kb`) embedding feature (`OPENAI_API_KEY`, `KB_EMBEDDING_MODEL`, `KB_EMBEDDING_DIMENSIONS`).
 - **Cursor Cloud Agents API** — optional, used only by the bank-statement AI matching button (`CURSOR_API_KEY`); the route returns 503 if absent.
-- **Windows PC workers (HQ-PC / SYP-PC)** — external `kcw-api` project that polls `ops.job_queue`; not runnable in this environment. Sync buttons (inventory / PO / image / bank import) enqueue jobs that stay pending here. All read-only views still work.
+- **Windows PC workers (HQ-PC / SYP-PC)** — external `kcw-api` project that polls `ops.job_queue`; not runnable in this environment. Sync buttons (inventory / PO / image) enqueue jobs that stay pending here. Bank statement Excel upload goes through the `import-bank-statement` Edge Function (no PC worker). All read-only views still work.
 
 ### Required environment variables (secrets)
 

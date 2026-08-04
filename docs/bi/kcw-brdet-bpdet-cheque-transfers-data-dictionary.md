@@ -8,7 +8,7 @@ Status legend: **Confirmed** · **TBD** · **Inferred**
 
 Last reviewed: 2026-08-03
 
-**Related:** bank statement sync ([worker-jobs](../worker-jobs.md#bank-statement-sync-from-bank-statement-sync-kcw-v2)); payment vouchers `PVMAS` / receipt vouchers `RVMAS`; purchase bills [`PIMAS`](./kcw-purchase-data-dictionary.md).
+**Related:** bank statement upload ([worker-jobs](../worker-jobs.md#bank-statement-upload-from-bank-statement-sync-kcw-v2--not-a-pc-worker-job)); payment vouchers `PVMAS` / receipt vouchers `RVMAS`; purchase bills [`PIMAS`](./kcw-purchase-data-dictionary.md).
 
 ---
 
@@ -146,7 +146,7 @@ python -m src.kcw.pipeline upload-brdet-bpdet
 1. HQ BRDET/BPDET → Drive + `raw_kcw` (via `run_hq_brdet_bpdet_sync.bat`)
 2. Drive `01_raw/statement` Excel (KBANK + KTB) → `bank.statement_*`
 
-kcw-v2 **Bank Sync** enqueues one `ops.job_queue` row with `job_type='bank_statement_import'`, `worker_name='HQ-PC'` — see [worker-jobs](../worker-jobs.md#bank-statement-sync-from-bank-statement-sync-kcw-v2).
+kcw-v2 **อัปโหลด Statement** calls Edge Function `import-bank-statement` (no `ops.job_queue`); the daily HQ BAT can still refresh BRDET/BPDET + Drive Excel — see [worker-jobs](../worker-jobs.md#bank-statement-upload-from-bank-statement-sync-kcw-v2--not-a-pc-worker-job).
 
 Focused cheque-only BAT (no statement Excel): `run_hq_brdet_bpdet_sync.bat` (not exposed as a separate web button yet).
 

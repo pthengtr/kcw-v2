@@ -25,7 +25,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_po_list.sql](./sql/fn_po_list.sql) | PO list + last-ingested RPCs / open-PO indexes |
 | [sql/fn_po_pending_receive.sql](./sql/fn_po_pending_receive.sql) | ICLOW `/po` pending tab; HQ `RCVDNO→PIDET`; SYP `RCVDNO∪REMARKS TF→SIDet` |
 | [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictionary.md) | Stock-more + dead-stock aging rules |
-| [sql/fn_bank_sync_ops.sql](./sql/fn_bank_sync_ops.sql) | Enqueue/poll `bank_statement_import` (HQ-PC) |
+| [sql/fn_bank_sync_ops.sql](./sql/fn_bank_sync_ops.sql) | Legacy enqueue/poll `bank_statement_import` (HQ-PC); web UI uses Edge Function |
 | [sql/create_raw_hq_brdet_bpdet.sql](./sql/create_raw_hq_brdet_bpdet.sql) | `raw_kcw` BRDET/BPDET cheque+transfer registers (from kcw-analytics) |
 | [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
 | [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products` |
@@ -38,7 +38,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 ## App entry
 
 - UI: `/po` — HQ/SYP purchase-order status; pending receive (ค้างรับ) = `ICLOW` — see [ICLOW dictionary](./kcw-iclow-pending-receive-data-dictionary.md)
-- UI: `/bank-statement-sync` — bank Excel import + match; daily HQ sync also refreshes BRDET/BPDET — see [cheque/transfer dictionary](./kcw-brdet-bpdet-cheque-transfers-data-dictionary.md)
+- UI: `/bank-statement-sync` — upload Excel via `import-bank-statement` Edge Function + match; daily HQ BAT can still refresh Drive Excel + BRDET/BPDET — see [cheque/transfer dictionary](./kcw-brdet-bpdet-cheque-transfers-data-dictionary.md)
 - UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/income`
 - API: `GET /api/bi/sales/overview?from=&to=&branch=`
 - API: `GET /api/bi/sales/compare?mode=years|months&years=&periods=&branch=`
