@@ -22,6 +22,12 @@ export type StockAuditSummary = {
   over_365_count: number;
   app_marked_count: number;
   marked_today_count: number;
+  marked_week_count: number;
+};
+
+export type StockAuditDailyMark = {
+  date: string;
+  count: number;
 };
 
 export type StockAuditRow = {
@@ -57,6 +63,7 @@ export type StockAuditOverview = {
   sales_from: string | null;
   sales_to: string | null;
   summary: StockAuditSummary;
+  daily_marks: StockAuditDailyMark[];
   open_batches: StockAuditOpenBatchSummary[];
   rows: StockAuditRow[];
   row_total: number;
@@ -122,14 +129,14 @@ export const STOCK_AUDIT_BUCKETS: {
 }[] = [
   {
     key: "never",
-    label: "ไม่เคยตรวจ",
-    hint: "ไม่มีวันที่ในแอปหรือ POS",
+    label: "ยังไม่เคยตรวจ",
+    hint: "ยังไม่เคยกดบันทึกในแอป",
     tone: "border-l-slate-400 bg-slate-50/90",
     chip: "bg-slate-200 text-slate-800",
   },
   {
     key: "over_365",
-    label: "> 1 ปี",
+    label: "นานกว่า 1 ปี",
     hint: "เกิน 365 วัน",
     tone: "border-l-rose-600 bg-rose-50/85",
     chip: "bg-rose-100 text-rose-800",
@@ -150,14 +157,14 @@ export const STOCK_AUDIT_BUCKETS: {
   },
   {
     key: "d90",
-    label: "30–90 วัน",
+    label: "1–3 เดือน",
     hint: "31–90 วัน",
     tone: "border-l-lime-500 bg-lime-50/80",
     chip: "bg-lime-100 text-lime-900",
   },
   {
     key: "d30",
-    label: "≤ 30 วัน",
+    label: "สด ≤ 30 วัน",
     hint: "ตรวจล่าสุดภายใน 30 วัน",
     tone: "border-l-emerald-500 bg-emerald-50/80",
     chip: "bg-emerald-100 text-emerald-900",

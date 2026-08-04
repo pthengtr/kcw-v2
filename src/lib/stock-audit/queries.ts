@@ -6,6 +6,7 @@ import type {
   StockAuditBatchItemStatus,
   StockAuditBranch,
   StockAuditBucket,
+  StockAuditDailyMark,
   StockAuditLookup,
   StockAuditMarkSource,
   StockAuditOpenBatchSummary,
@@ -82,6 +83,7 @@ function parseSummary(value: unknown): StockAuditSummary {
     over_365_count: asNumber(r.over_365_count),
     app_marked_count: asNumber(r.app_marked_count),
     marked_today_count: asNumber(r.marked_today_count),
+    marked_week_count: asNumber(r.marked_week_count),
   };
 }
 
@@ -157,6 +159,14 @@ function parseBatch(value: unknown): StockAuditBatch {
   };
 }
 
+function parseDailyMark(value: unknown): StockAuditDailyMark {
+  const r = (value ?? {}) as Record<string, unknown>;
+  return {
+    date: asString(r.date).slice(0, 10),
+    count: asNumber(r.count),
+  };
+}
+
 function parseOverview(value: unknown): StockAuditOverview {
   const r = (value ?? {}) as Record<string, unknown>;
   const bucketRaw = asNullableString(r.bucket);
@@ -167,6 +177,9 @@ function parseOverview(value: unknown): StockAuditOverview {
     sales_from: asNullableString(r.sales_from),
     sales_to: asNullableString(r.sales_to),
     summary: parseSummary(r.summary),
+    daily_marks: Array.isArray(r.daily_marks)
+      ? r.daily_marks.map(parseDailyMark)
+      : [],
     open_batches: Array.isArray(r.open_batches)
       ? r.open_batches.map(parseOpenBatch)
       : [],

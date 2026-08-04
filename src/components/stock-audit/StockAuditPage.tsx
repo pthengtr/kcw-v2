@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   ClipboardCheck,
   Loader2,
   PackageSearch,
   RefreshCcw,
   SkipForward,
+  Target,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,6 +26,8 @@ import {
 } from "@/lib/stock-audit/types";
 import { cn } from "@/lib/utils";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
+import StockAuditDailyChart from "@/components/stock-audit/StockAuditDailyChart";
+import StockAuditFreshnessPie from "@/components/stock-audit/StockAuditFreshnessPie";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,9 +41,11 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type TabId = "overview" | "work" | "ondemand";
+type TabId = "work" | "overview" | "ondemand";
 
 const PAGE_SIZE = 50;
+/** Soft daily target for the progress KPI (operator can still pick any count). */
+const DAILY_TARGET = 30;
 
 function summaryCount(
   overview: StockAuditOverview | null,
@@ -63,26 +70,28 @@ function summaryCount(
 }
 
 export default function StockAuditPage() {
-  const [tab, setTab] = useState<TabId>("overview");
+  const [tab, setTab] = useState<TabId>("work");
   const [branch, setBranch] = useState<StockAuditBranch>("HQ");
   const [withStockOnly, setWithStockOnly] = useState(true);
-  const [bucket, setBucket] = useState<StockAuditBucket | "ALL">("over_365");
+  const [bucket, setBucket] = useState<StockAuditBucket | "ALL">("never");
   const [offset, setOffset] = useState(0);
   const [overview, setOverview] = useState<StockAuditOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [batchCount, setBatchCount] = useState(30);
+  const [batchCount, setBatchCount] = useState(DAILY_TARGET);
   const [locationFilter, setLocationFilter] = useState("");
   const [creatingBatch, setCreatingBatch] = useState(false);
   const [activeBatch, setActiveBatch] = useState<StockAuditBatch | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
   const [markingBcode, setMarkingBcode] = useState<string | null>(null);
+  const [expandedBcode, setExpandedBcode] = useState<string | null>(null);
 
   const [lookupBcode, setLookupBcode] = useState("");
   const [lookup, setLookup] = useState<StockAuditLookup | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [markingLookup, setMarkingLookup] = useState(false);
+  const [showLookupExtra, setShowLookupExtra] = useState(false);
 
   const loadOverview = useCallback(
     async (signal?: AbortSignal) => {
@@ -167,7 +176,7 @@ export default function StockAuditPage() {
       setTab("work");
       toast.success(
         batch.items.length > 0
-          ? `สร้างชุดตรวจ ${batch.items.length} รายการ`
+          ? `ได้รายการตรวจ ${batch.items.length} ชิ้น`
           : "ไม่พบรายการที่ต้องตรวจ"
       );
       void loadOverview();
@@ -193,7 +202,7 @@ export default function StockAuditPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "mark failed");
-      toast.success(`บันทึกตรวจนับ ${bcode}`);
+      toast.success(`บันทึกแล้ว ${bcode}`);
       if (batchId && activeBatch) {
         await loadBatch(batchId);
       }
@@ -230,6 +239,7 @@ export default function StockAuditPage() {
     if (!bcode) return;
     setLookupLoading(true);
     setLookup(null);
+    setShowLookupExtra(false);
     try {
       const params = new URLSearchParams({ branch, bcode });
       const res = await fetch(`/api/stock-audit/lookup?${params}`);
@@ -256,20 +266,22 @@ export default function StockAuditPage() {
 
   const pendingItems =
     activeBatch?.items.filter((i) => i.status === "pending") ?? [];
+  const todayDone = overview?.summary.marked_today_count ?? 0;
+  const weekDone = overview?.summary.marked_week_count ?? 0;
+  const todayProgress = Math.min(100, Math.round((100 * todayDone) / DAILY_TARGET));
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
-      <header className="space-y-2">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
+      <header className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-3">
-          <ClipboardCheck className="h-7 w-7 text-slate-700" aria-hidden />
+          <ClipboardCheck className="h-7 w-7 text-teal-800" aria-hidden />
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            ตรวจนับสต็อก (Date Audit)
+            ตรวจนับสต็อก
           </h1>
         </div>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          เลือก BCODE ที่ควรตรวจจากยอดขายช่วง 30 วันล่าสุด + สถานะตรวจในแอป
-          นับที่ POS ตามปกติ แล้วกดบันทึกที่นี่ — ไม่ปรับยอดในระบบนี้
-          วันที่ใน POS (DATEAUDIT) แสดงอ้างอิงเท่านั้น ไม่ใช้จัดสถานะ
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          ระบบเลือกสินค้าขายดีที่ควรไปนับให้ · นับที่ POS ตามปกติ ·
+          แล้วกด “ตรวจแล้ว” ที่นี่
         </p>
       </header>
 
@@ -294,7 +306,7 @@ export default function StockAuditPage() {
           </Select>
         </div>
         <div className="space-y-1">
-          <Label>สต็อก</Label>
+          <Label>ขอบเขต</Label>
           <Select
             value={withStockOnly ? "stock" : "all"}
             onValueChange={(v) => {
@@ -306,7 +318,7 @@ export default function StockAuditPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="stock">มีสต็อกเท่านั้น</SelectItem>
+              <SelectItem value="stock">มีของในสต็อก</SelectItem>
               <SelectItem value="all">ทุกรหัส</SelectItem>
             </SelectContent>
           </Select>
@@ -328,12 +340,33 @@ export default function StockAuditPage() {
         </Button>
       </div>
 
+      {/* Compact progress strip always visible */}
+      {overview ? (
+        <div className="rounded-lg border border-teal-100 bg-teal-50/60 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span className="font-medium text-teal-950">
+              วันนี้ตรวจแล้ว {formatCount(todayDone)} / เป้า{" "}
+              {formatCount(DAILY_TARGET)}
+            </span>
+            <span className="text-xs text-teal-900/70">
+              7 วันนี้ {formatCount(weekDone)} รายการ
+            </span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-teal-100">
+            <div
+              className="h-full rounded-full bg-teal-600 transition-all"
+              style={{ width: `${todayProgress}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
         {(
           [
-            ["overview", "ภาพรวม"],
             ["work", "งานวันนี้"],
-            ["ondemand", "ตรวจตามรหัส"],
+            ["overview", "ภาพรวม"],
+            ["ondemand", "ค้นหารหัส"],
           ] as const
         ).map(([id, label]) => (
           <Button
@@ -354,93 +387,276 @@ export default function StockAuditPage() {
         </p>
       ) : null}
 
+      {tab === "work" ? (
+        <section className="space-y-5">
+          <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="space-y-1">
+              <Label htmlFor="batch-count">จะตรวจกี่ชิ้น</Label>
+              <Input
+                id="batch-count"
+                type="number"
+                min={1}
+                max={200}
+                className="w-[120px]"
+                value={batchCount}
+                onChange={(e) =>
+                  setBatchCount(
+                    Math.min(200, Math.max(1, Number(e.target.value) || 1))
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="loc-filter">โซนที่เก็บ (ถ้ามี)</Label>
+              <Input
+                id="loc-filter"
+                className="w-[200px]"
+                placeholder="เช่น 1F"
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={() => void createBatch()}
+              disabled={creatingBatch}
+              className="gap-1.5 bg-teal-700 hover:bg-teal-800"
+            >
+              {creatingBatch ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ClipboardCheck className="h-4 w-4" />
+              )}
+              สร้างรายการให้ฉัน
+            </Button>
+            {overview?.open_batches?.length ? (
+              <p className="text-xs text-muted-foreground sm:ml-auto">
+                ค้างในชุดเปิด{" "}
+                {formatCount(
+                  overview.open_batches.reduce(
+                    (n, b) => n + b.pending_count,
+                    0
+                  )
+                )}{" "}
+                ชิ้น
+              </p>
+            ) : null}
+          </div>
+
+          {batchLoading && !activeBatch ? (
+            <Skeleton className="h-40 w-full rounded-lg" />
+          ) : activeBatch ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <Badge variant="outline">
+                  {activeBatch.status === "open" ? "กำลังทำ" : "เสร็จชุดนี้"}
+                </Badge>
+                <span className="text-muted-foreground">
+                  เหลือ {formatCount(activeBatch.pending_count)} · เสร็จ{" "}
+                  {formatCount(activeBatch.done_count)}
+                  {activeBatch.skipped_count > 0
+                    ? ` · ข้าม ${formatCount(activeBatch.skipped_count)}`
+                    : ""}
+                </span>
+              </div>
+
+              {pendingItems.length === 0 ? (
+                <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
+                  ชุดนี้ทำครบแล้ว — สร้างรายการใหม่ได้เลย หรือดูภาพรวม
+                </p>
+              ) : (
+                <ul className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200">
+                  {pendingItems.map((item) => {
+                    const open = expandedBcode === item.bcode;
+                    return (
+                      <li
+                        key={item.bcode}
+                        className="flex flex-col gap-3 bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0 space-y-0.5">
+                          <p className="font-mono text-sm font-semibold">
+                            {item.bcode}
+                          </p>
+                          <p className="truncate text-sm text-slate-700">
+                            {item.descr || "—"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            ที่เก็บ {item.location1 || "—"} · คงเหลือ{" "}
+                            {formatCount(item.qty)} · ขาย 30 วัน{" "}
+                            {formatCount(item.sell_qty_period)}
+                          </p>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-0.5 text-[11px] text-slate-500 hover:text-slate-800"
+                            onClick={() =>
+                              setExpandedBcode(open ? null : item.bcode)
+                            }
+                          >
+                            {open ? (
+                              <ChevronDown className="h-3 w-3" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3" />
+                            )}
+                            รายละเอียด
+                          </button>
+                          {open ? (
+                            <p className="text-[11px] text-muted-foreground">
+                              ตรวจในแอป:{" "}
+                              {item.app_dateaudit || "ยังไม่เคย"}
+                              {item.pos_dateaudit
+                                ? ` · วันที่ใน POS (อ้างอิง): ${item.pos_dateaudit}`
+                                : ""}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="gap-1"
+                            disabled={markingBcode === item.bcode}
+                            onClick={() =>
+                              void skipItem(item.bcode, activeBatch.id)
+                            }
+                          >
+                            <SkipForward className="h-3.5 w-3.5" />
+                            ข้าม
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="gap-1 bg-teal-700 hover:bg-teal-800"
+                            disabled={markingBcode === item.bcode}
+                            onClick={() =>
+                              void markItem(item.bcode, activeBatch.id)
+                            }
+                          >
+                            {markingBcode === item.bcode ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            )}
+                            ตรวจแล้ว
+                          </Button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/80 px-4 py-8 text-center">
+              <Target className="mx-auto mb-2 h-8 w-8 text-teal-700" />
+              <p className="text-sm font-medium text-slate-800">
+                เริ่มจากกด “สร้างรายการให้ฉัน”
+              </p>
+              <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
+                ระบบจะเลือกสินค้าขายดีที่ยังไม่เคยบันทึกตรวจในแอป
+                จัดกลุ่มตามที่เก็บให้เดินนับง่ายขึ้น
+              </p>
+            </div>
+          )}
+        </section>
+      ) : null}
+
       {tab === "overview" ? (
         <section className="space-y-5">
           {loading && !overview ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 rounded-lg" />
-              ))}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Skeleton className="h-56 rounded-lg" />
+              <Skeleton className="h-56 rounded-lg" />
             </div>
           ) : overview ? (
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <SalesKpiCard
-                  title="สินค้าในขอบเขต"
-                  value={formatCount(overview.summary.total)}
-                  hint={withStockOnly ? "มีสต็อก > 0" : "ทุกรหัสที่ยังใช้"}
-                  icon={<PackageSearch className="h-4 w-4" />}
-                />
-                <SalesKpiCard
-                  title="ตรวจในแอปวันนี้"
-                  value={formatCount(overview.summary.marked_today_count)}
-                  hint={`เคย mark ในแอป ${formatCount(overview.summary.app_marked_count)}`}
+                  title="วันนี้"
+                  value={`${formatCount(todayDone)} / ${formatCount(DAILY_TARGET)}`}
+                  hint="เป้าแนะนำต่อวัน"
                   icon={<CheckCircle2 className="h-4 w-4" />}
                 />
                 <SalesKpiCard
-                  title="ยังไม่เคยตรวจในแอป"
-                  value={formatCount(overview.summary.never_count)}
-                  hint={
-                    overview.sales_from && overview.sales_to
-                      ? `จัดลำดับงานด้วยยอดขาย ${overview.sales_from} → ${overview.sales_to}`
-                      : "สถานะนับเฉพาะ mark ในแอป"
-                  }
+                  title="7 วันนี้"
+                  value={formatCount(weekDone)}
+                  hint="จำนวนที่กดตรวจแล้ว"
+                  icon={<Target className="h-4 w-4" />}
                 />
                 <SalesKpiCard
-                  title="สด ≤ 30 วัน (แอป)"
+                  title="ยังไม่เคยตรวจ"
+                  value={formatCount(overview.summary.never_count)}
+                  hint={`จาก ${formatCount(overview.summary.total)} รหัสที่มีสต็อก`}
+                />
+                <SalesKpiCard
+                  title="สด ≤ 30 วัน"
                   value={formatCount(overview.summary.d30_count)}
-                  hint="ไม่ใช้ POS DATEAUDIT จัด bucket"
+                  hint="สุขภาพสต็อกที่ดี"
                 />
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBucket("ALL");
-                    setOffset(0);
-                  }}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 text-sm font-medium transition",
-                    bucket === "ALL"
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  )}
-                >
-                  ทั้งหมด {formatCount(overview.summary.total)}
-                </button>
-                {STOCK_AUDIT_BUCKETS.map((b) => {
-                  const count = summaryCount(overview, b.key);
-                  return (
-                    <button
-                      key={b.key}
-                      type="button"
-                      onClick={() => {
-                        setBucket(b.key);
-                        setOffset(0);
-                      }}
-                      className={cn(
-                        "rounded-md px-3 py-1.5 text-sm font-medium transition",
-                        b.chip,
-                        bucket === b.key && "ring-2 ring-slate-900 ring-offset-1"
-                      )}
-                    >
-                      {b.label} {formatCount(count)}
-                    </button>
-                  );
-                })}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <StockAuditFreshnessPie overview={overview} />
+                <StockAuditDailyChart
+                  series={overview.daily_marks}
+                  markedToday={todayDone}
+                  markedWeek={weekDone}
+                />
+              </div>
+
+              <div>
+                <h2 className="mb-2 text-sm font-semibold text-slate-800">
+                  รายการตามสถานะ
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBucket("ALL");
+                      setOffset(0);
+                    }}
+                    className={cn(
+                      "rounded-md px-3 py-1.5 text-sm font-medium transition",
+                      bucket === "ALL"
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    )}
+                  >
+                    ทั้งหมด {formatCount(overview.summary.total)}
+                  </button>
+                  {STOCK_AUDIT_BUCKETS.map((b) => {
+                    const count = summaryCount(overview, b.key);
+                    return (
+                      <button
+                        key={b.key}
+                        type="button"
+                        onClick={() => {
+                          setBucket(b.key);
+                          setOffset(0);
+                        }}
+                        className={cn(
+                          "rounded-md px-3 py-1.5 text-sm font-medium transition",
+                          b.chip,
+                          bucket === b.key &&
+                            "ring-2 ring-slate-900 ring-offset-1"
+                        )}
+                      >
+                        {b.label} {formatCount(count)}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="overflow-x-auto rounded-lg border border-slate-200">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <thead className="bg-slate-50 text-left text-xs text-slate-500">
                     <tr>
-                      <th className="px-3 py-2">BCODE</th>
+                      <th className="px-3 py-2">รหัส</th>
                       <th className="px-3 py-2">ชื่อ</th>
                       <th className="px-3 py-2">ที่เก็บ</th>
                       <th className="px-3 py-2 text-right">คงเหลือ</th>
                       <th className="px-3 py-2 text-right">ขาย 30 วัน</th>
-                      <th className="px-3 py-2">วันตรวจ (แอป)</th>
                       <th className="px-3 py-2">สถานะ</th>
                     </tr>
                   </thead>
@@ -448,7 +664,7 @@ export default function StockAuditPage() {
                     {overview.rows.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={6}
                           className="px-3 py-8 text-center text-muted-foreground"
                         >
                           ไม่มีรายการในกลุ่มนี้
@@ -457,6 +673,7 @@ export default function StockAuditPage() {
                     ) : (
                       overview.rows.map((row) => {
                         const meta = bucketMeta(row.bucket);
+                        const open = expandedBcode === `ov-${row.bcode}`;
                         return (
                           <tr
                             key={row.bcode}
@@ -468,8 +685,27 @@ export default function StockAuditPage() {
                             <td className="px-3 py-2 font-mono text-xs sm:text-sm">
                               {row.bcode}
                             </td>
-                            <td className="max-w-[220px] truncate px-3 py-2">
-                              {row.descr || "—"}
+                            <td className="max-w-[220px] px-3 py-2">
+                              <div className="truncate">{row.descr || "—"}</div>
+                              <button
+                                type="button"
+                                className="mt-0.5 text-[11px] text-slate-500 hover:text-slate-800"
+                                onClick={() =>
+                                  setExpandedBcode(
+                                    open ? null : `ov-${row.bcode}`
+                                  )
+                                }
+                              >
+                                {open ? "ซ่อน" : "รายละเอียด"}
+                              </button>
+                              {open ? (
+                                <div className="mt-1 text-[11px] text-muted-foreground">
+                                  ตรวจในแอป: {row.app_dateaudit || "ยังไม่เคย"}
+                                  {row.pos_dateaudit
+                                    ? ` · POS (อ้างอิง): ${row.pos_dateaudit}`
+                                    : ""}
+                                </div>
+                              ) : null}
                             </td>
                             <td className="px-3 py-2 text-slate-600">
                               {row.location1 || "—"}
@@ -479,19 +715,6 @@ export default function StockAuditPage() {
                             </td>
                             <td className="px-3 py-2 text-right tabular-nums">
                               {formatCount(row.sell_qty_period)}
-                            </td>
-                            <td className="px-3 py-2 tabular-nums">
-                              {row.effective_date ?? "—"}
-                              {row.days_since != null ? (
-                                <span className="ml-1 text-xs text-muted-foreground">
-                                  ({formatCount(row.days_since)} วัน)
-                                </span>
-                              ) : null}
-                              {row.pos_dateaudit ? (
-                                <div className="text-[11px] text-muted-foreground">
-                                  POS {row.pos_dateaudit}
-                                </div>
-                              ) : null}
                             </td>
                             <td className="px-3 py-2">
                               <Badge
@@ -542,158 +765,11 @@ export default function StockAuditPage() {
         </section>
       ) : null}
 
-      {tab === "work" ? (
-        <section className="space-y-5">
-          <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-slate-50/60 p-4 sm:flex-row sm:flex-wrap sm:items-end">
-            <div className="space-y-1">
-              <Label htmlFor="batch-count">จำนวนวันนี้</Label>
-              <Input
-                id="batch-count"
-                type="number"
-                min={1}
-                max={200}
-                className="w-[120px]"
-                value={batchCount}
-                onChange={(e) =>
-                  setBatchCount(
-                    Math.min(200, Math.max(1, Number(e.target.value) || 1))
-                  )
-                }
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="loc-filter">ที่เก็บ (ไม่บังคับ)</Label>
-              <Input
-                id="loc-filter"
-                className="w-[200px]"
-                placeholder="เช่น A1"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-              />
-            </div>
-            <Button
-              type="button"
-              onClick={() => void createBatch()}
-              disabled={creatingBatch}
-              className="gap-1.5"
-            >
-              {creatingBatch ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ClipboardCheck className="h-4 w-4" />
-              )}
-              สร้างชุดตรวจอัจฉริยะ
-            </Button>
-            {overview?.open_batches?.length ? (
-              <p className="text-xs text-muted-foreground sm:ml-auto">
-                ชุดเปิดอยู่ {overview.open_batches.length} ชุด · ค้าง{" "}
-                {formatCount(
-                  overview.open_batches.reduce(
-                    (n, b) => n + b.pending_count,
-                    0
-                  )
-                )}{" "}
-                รายการ
-              </p>
-            ) : null}
-          </div>
-
-          {batchLoading && !activeBatch ? (
-            <Skeleton className="h-40 w-full rounded-lg" />
-          ) : activeBatch ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <Badge variant="outline">
-                  {activeBatch.status === "open" ? "กำลังทำ" : "ปิดแล้ว"}
-                </Badge>
-                <span className="text-muted-foreground">
-                  รอ {formatCount(activeBatch.pending_count)} · เสร็จ{" "}
-                  {formatCount(activeBatch.done_count)} · ข้าม{" "}
-                  {formatCount(activeBatch.skipped_count)}
-                </span>
-              </div>
-
-              {pendingItems.length === 0 ? (
-                <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
-                  ชุดนี้ไม่มีรายการค้าง — สร้างชุดใหม่หรือไปแท็บภาพรวมได้
-                </p>
-              ) : (
-                <ul className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200">
-                  {pendingItems.map((item) => (
-                    <li
-                      key={item.bcode}
-                      className="flex flex-col gap-3 bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="min-w-0 space-y-0.5">
-                        <p className="font-mono text-sm font-medium">
-                          {item.bcode}
-                        </p>
-                        <p className="truncate text-sm text-slate-700">
-                          {item.descr || "—"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          ที่เก็บ {item.location1 || "—"} · คงเหลือ{" "}
-                          {formatCount(item.qty)} · ขาย 30 วัน{" "}
-                          {formatCount(item.sell_qty_period)}
-                          {item.app_dateaudit
-                            ? ` · แอป ${item.app_dateaudit}`
-                            : " · ยังไม่เคยตรวจในแอป"}
-                          {item.pos_dateaudit
-                            ? ` · POS ${item.pos_dateaudit}`
-                            : ""}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="gap-1"
-                          disabled={markingBcode === item.bcode}
-                          onClick={() =>
-                            void skipItem(item.bcode, activeBatch.id)
-                          }
-                        >
-                          <SkipForward className="h-3.5 w-3.5" />
-                          ข้าม
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="gap-1"
-                          disabled={markingBcode === item.bcode}
-                          onClick={() =>
-                            void markItem(item.bcode, activeBatch.id)
-                          }
-                        >
-                          {markingBcode === item.bcode ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          )}
-                          ตรวจแล้ว
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              ยังไม่มีชุดงานเปิด — เลือกจำนวนแล้วกดสร้างชุดตรวจอัจฉริยะ
-              ระบบจัดลำดับจากยอดขาย 30 วันล่าสุด × ความเก่าของการตรวจในแอป
-              (ไม่พึ่ง POS DATEAUDIT) และจัดกลุ่มตามที่เก็บ
-            </p>
-          )}
-        </section>
-      ) : null}
-
       {tab === "ondemand" ? (
         <section className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="space-y-1">
-              <Label htmlFor="lookup-bcode">BCODE</Label>
+              <Label htmlFor="lookup-bcode">รหัสสินค้า</Label>
               <Input
                 id="lookup-bcode"
                 className="w-full font-mono sm:w-[240px]"
@@ -702,7 +778,7 @@ export default function StockAuditPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void runLookup();
                 }}
-                placeholder="สแกนหรือพิมพ์รหัส"
+                placeholder="สแกนหรือพิมพ์"
               />
             </div>
             <Button
@@ -747,22 +823,28 @@ export default function StockAuditPage() {
                     <dd>{formatCount(lookup.sell_qty_period ?? 0)}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">POS DATEAUDIT (อ้างอิง)</dt>
-                    <dd>{lookup.pos_dateaudit || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">วันตรวจในแอป</dt>
-                    <dd>
-                      {lookup.app_dateaudit || "ยังไม่เคย"}
-                      {lookup.app_audited_by
-                        ? ` (${lookup.app_audited_by})`
-                        : ""}
-                    </dd>
+                    <dt className="text-muted-foreground">ตรวจในแอปล่าสุด</dt>
+                    <dd>{lookup.app_dateaudit || "ยังไม่เคย"}</dd>
                   </div>
                 </dl>
+                <button
+                  type="button"
+                  className="text-xs text-slate-500 hover:text-slate-800"
+                  onClick={() => setShowLookupExtra((v) => !v)}
+                >
+                  {showLookupExtra ? "ซ่อนรายละเอียด" : "รายละเอียดเพิ่ม"}
+                </button>
+                {showLookupExtra ? (
+                  <p className="text-xs text-muted-foreground">
+                    วันที่ใน POS (อ้างอิง): {lookup.pos_dateaudit || "—"}
+                    {lookup.app_audited_by
+                      ? ` · บันทึกโดย ${lookup.app_audited_by}`
+                      : ""}
+                  </p>
+                ) : null}
                 <Button
                   type="button"
-                  className="gap-1.5"
+                  className="gap-1.5 bg-teal-700 hover:bg-teal-800"
                   disabled={markingLookup}
                   onClick={() => void markLookup()}
                 >
@@ -775,7 +857,9 @@ export default function StockAuditPage() {
                 </Button>
               </div>
             ) : (
-              <p className="text-sm text-rose-700">ไม่พบรหัสนี้ในสาขา {branch}</p>
+              <p className="text-sm text-rose-700">
+                ไม่พบรหัสนี้ในสาขา {branch}
+              </p>
             )
           ) : null}
         </section>

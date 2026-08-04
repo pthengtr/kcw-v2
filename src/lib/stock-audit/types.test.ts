@@ -17,5 +17,6 @@ describe("stock audit bucket meta", () => {
   it("returns meta for known and fallback bucket", () => {
     expect(bucketMeta("over_365").label).toContain("1 ปี");
     expect(bucketMeta("d30").chip).toContain("emerald");
+    expect(bucketMeta("never").label).toContain("ยังไม่เคย");
   });
 });

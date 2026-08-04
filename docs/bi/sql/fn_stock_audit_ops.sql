@@ -350,8 +350,37 @@ begin
         count(*) filter (
           where app_audited_at is not null
             and (app_audited_at at time zone 'Asia/Bangkok')::date = v_today
-        )::int as marked_today_count
+        )::int as marked_today_count,
+        count(*) filter (
+          where app_audited_at is not null
+            and (app_audited_at at time zone 'Asia/Bangkok')::date >= (v_today - 6)
+        )::int as marked_week_count
       from bucketed
+    ),
+    day_series as (
+      select generate_series(v_today - 13, v_today, interval '1 day')::date as d
+    ),
+    daily_marks as (
+      select coalesce(
+        jsonb_agg(
+          jsonb_build_object(
+            'date', ds.d,
+            'count', coalesce(e.n, 0)
+          )
+          order by ds.d
+        ),
+        '[]'::jsonb
+      ) as series
+      from day_series ds
+      left join (
+        select
+          (audited_at at time zone 'Asia/Bangkok')::date as d,
+          count(*)::int as n
+        from stock.audit_event
+        where branch = v_branch
+          and (audited_at at time zone 'Asia/Bangkok')::date >= (v_today - 13)
+        group by 1
+      ) e on e.d = ds.d
     ),
     open_batches as (
       select
@@ -412,6 +441,7 @@ begin
       'sales_from', v_sales_from,
       'sales_to', v_today,
       'summary', to_jsonb(s),
+      'daily_marks', dm.series,
       'open_batches', ob.batches,
       'rows', coalesce(
         (
@@ -445,6 +475,7 @@ begin
     from summary s
     cross join open_batches ob
     cross join list_total lt
+    cross join daily_marks dm
   );
 end;
 $$;
