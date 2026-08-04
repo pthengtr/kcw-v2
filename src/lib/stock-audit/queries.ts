@@ -95,6 +95,8 @@ function parseRow(value: unknown): StockAuditRow {
     location1: asString(r.location1),
     category: asString(r.category),
     qty: asNumber(r.qty),
+    sell_qty_period: asNumber(r.sell_qty_period),
+    sell_revenue_period: asNumber(r.sell_revenue_period),
     pos_dateaudit: asNullableString(r.pos_dateaudit),
     app_dateaudit: asNullableString(r.app_dateaudit),
     effective_date: asNullableString(r.effective_date),
@@ -122,9 +124,12 @@ function parseBatchItem(value: unknown): StockAuditBatchItem {
     status: asItemStatus(r.status),
     priority_score: asNumber(r.priority_score),
     pos_dateaudit: asNullableString(r.pos_dateaudit),
+    app_dateaudit: asNullableString(r.app_dateaudit),
     location1: asNullableString(r.location1),
     descr: asNullableString(r.descr),
     qty: asNumber(r.qty),
+    sell_qty_period: asNumber(r.sell_qty_period),
+    sell_revenue_period: asNumber(r.sell_revenue_period),
     done_at: asNullableString(r.done_at),
     done_by: asNullableString(r.done_by),
   };
@@ -159,6 +164,8 @@ function parseOverview(value: unknown): StockAuditOverview {
     branch: asBranch(r.branch),
     with_stock_only: Boolean(r.with_stock_only ?? true),
     as_of: asString(r.as_of),
+    sales_from: asNullableString(r.sales_from),
+    sales_to: asNullableString(r.sales_to),
     summary: parseSummary(r.summary),
     open_batches: Array.isArray(r.open_batches)
       ? r.open_batches.map(parseOpenBatch)
@@ -300,6 +307,12 @@ export async function lookupStockAuditProduct(
     model: asNullableString(data.model) ?? undefined,
     location1: asNullableString(data.location1) ?? undefined,
     qty: data.qty == null ? undefined : asNumber(data.qty),
+    sell_qty_period:
+      data.sell_qty_period == null ? undefined : asNumber(data.sell_qty_period),
+    sell_revenue_period:
+      data.sell_revenue_period == null
+        ? undefined
+        : asNumber(data.sell_revenue_period),
     pos_dateaudit: asNullableString(data.pos_dateaudit),
     app_dateaudit: asNullableString(data.app_dateaudit),
     app_audited_by: asNullableString(data.app_audited_by),

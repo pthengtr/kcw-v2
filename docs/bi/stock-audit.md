@@ -1,61 +1,59 @@
 # Stock date-audit (kcw-v2)
 
-Track **when** each product (`BCODE`) was last stock-checked. Qty adjustment stays in legacy POS; this app only records the audit date so we can see inventory audit health.
+Track **when** each product (`BCODE`) was last stock-checked in kcw-v2. Qty adjustment stays in legacy POS; this app only records the audit date and prioritizes what to check next.
 
-## Why not POS `DATEAUDIT` alone?
+## Schema: `stock` (not `public`)
 
-ICMAS already has `DATEAUDIT`, but operators find it unreliable / hard to set. As of the first cut (HQ, with stock):
+Matches other domain schemas (`bank`, `kb`, `ops`, `tiger_pay`):
 
-| Bucket | Approx count |
-|--------|--------------|
-| ≤30d | ~2.0k |
-| 31–90d | ~2.9k |
-| 91–180d | ~2.8k |
-| 181–365d | ~4.4k |
-| **>1 year** | **~13.6k** |
-| Never (app∪POS) | hundreds (mostly odd qty edges) |
+| Object | Location |
+|--------|----------|
+| Tables | `stock.audit_status`, `stock.audit_event`, `stock.audit_batch`, `stock.audit_batch_item` |
+| RPCs | `public.fn_stock_audit_*` (service_role SECURITY DEFINER) |
 
-We keep POS as a **baseline** and treat app marks as the write path.
+Tables are service_role-only (RLS on, no anon/authenticated grants).
 
-**Effective last audit** = `GREATEST(app last mark date, POS DATEAUDIT)` (either side may be null).
+SQL: `docs/bi/sql/fn_stock_audit_ops.sql`  
+Migration: `supabase/migrations/20260804180000_stock_audit_ops.sql`
+
+## What counts as “last audited”?
+
+**App marks only** (`stock.audit_status`).
+
+POS ICMAS `DATEAUDIT` is treated as **stale / unreliable** — shown as reference on rows, **not** used for:
+
+- status color buckets
+- smart-pick priority
+- “skip if audited in last 7 days”
+
+Until operators start marking in kcw-v2, almost every stocked SKU is in the **never** bucket. That is intentional.
+
+## Smart pick (daily / on-demand batch)
+
+Rank score (higher = pick sooner):
+
+1. **Current-period sales** (last 30 days Bangkok) — sell qty + light revenue (best sellers first)
+2. **App-audit staleness** — never marked in app gets a large boost; older marks score higher
+3. **On-hand qty** — light preference for items that still have stock
+4. Soft cluster by `LOCATION1` for walking the warehouse
+
+Operator chooses count (1–200) and optional location filter.
 
 ## Features
 
-1. **Smart daily batch** — operator chooses how many (1–200), optional location filter. Picks never/stale first, clusters by `LOCATION1`, skips items already pending or audited within 7 days.
-2. **Mark audited** — one tap after checking in POS; no qty fields. Also on-demand by BCODE.
-3. **Status dashboard** — color buckets: never / ≤30d / 30–90 / 3–6m / 6–12m / >1y.
+1. Smart daily batch + mark / skip queue
+2. On-demand BCODE lookup + mark
+3. Status dashboard buckets: never / ≤30d / 30–90 / 3–6m / 6–12m / >1y (**app dates**)
 
-## Schema / RPCs
+## Access
 
-Source of truth SQL: `docs/bi/sql/fn_stock_audit_ops.sql`  
-Migration mirror: `supabase/migrations/20260804180000_stock_audit_ops.sql`
-
-Tables (service_role only, RLS on, no anon/authenticated grants):
-
-- `stock_audit_status` — latest app mark per `(branch, bcode)`
-- `stock_audit_event` — append-only history
-- `stock_audit_batch` / `stock_audit_batch_item` — work sets
-
-RPCs (execute → service_role):
-
-- `fn_stock_audit_overview`
-- `fn_stock_audit_create_batch`
-- `fn_stock_audit_get_batch`
-- `fn_stock_audit_mark`
-- `fn_stock_audit_skip_item`
-- `fn_stock_audit_lookup`
-
-## App surface
-
-- Page: `/stock-audit` (RBAC key `stock_audit`)
-- APIs under `/api/stock-audit/*`
-- Home menu tile: ตรวจนับสต็อก
-
-Admin users bypass RBAC; grant `stock_audit` to other roles via `/admin/rbac`.
+- Page: `/stock-audit`
+- RBAC: `stock_audit` (admins bypass; grant via `/admin/rbac`)
+- Home tile: ตรวจนับสต็อก
 
 ## Out of scope (v1)
 
 - Writing back into POS `DATEAUDIT`
-- Cycle-count qty entry / variance
-- Auto-scheduling / cron batches
-- Mobile scanner PWA polish (desktop + barcode keyboard input works today)
+- Cycle-count qty / variance
+- Cron auto-batches
+- Configurable sales window (fixed 30d for now)

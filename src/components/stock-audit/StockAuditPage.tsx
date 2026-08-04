@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   CheckCircle2,
   ClipboardCheck,
@@ -147,15 +147,6 @@ export default function StockAuditPage() {
     return () => ac.abort();
   }, [tab, openBatchId, loadBatch]);
 
-  const staleShare = useMemo(() => {
-    if (!overview || overview.summary.total <= 0) return null;
-    const stale =
-      overview.summary.never_count +
-      overview.summary.over_365_count +
-      overview.summary.d365_count;
-    return Math.round((1000 * stale) / overview.summary.total) / 10;
-  }, [overview]);
-
   async function createBatch() {
     setCreatingBatch(true);
     try {
@@ -276,8 +267,9 @@ export default function StockAuditPage() {
           </h1>
         </div>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          เลือก BCODE ที่ควรตรวจ นับที่ POS ตามปกติ แล้วกดบันทึกที่นี่ —
-          ไม่ปรับยอดในระบบนี้ ใช้ติดตามความสดของวันที่ตรวจนับ
+          เลือก BCODE ที่ควรตรวจจากยอดขายช่วง 30 วันล่าสุด + สถานะตรวจในแอป
+          นับที่ POS ตามปกติ แล้วกดบันทึกที่นี่ — ไม่ปรับยอดในระบบนี้
+          วันที่ใน POS (DATEAUDIT) แสดงอ้างอิงเท่านั้น ไม่ใช้จัดสถานะ
         </p>
       </header>
 
@@ -382,25 +374,22 @@ export default function StockAuditPage() {
                 <SalesKpiCard
                   title="ตรวจในแอปวันนี้"
                   value={formatCount(overview.summary.marked_today_count)}
-                  hint={`รวมที่เคย mark ในแอป ${formatCount(overview.summary.app_marked_count)}`}
+                  hint={`เคย mark ในแอป ${formatCount(overview.summary.app_marked_count)}`}
                   icon={<CheckCircle2 className="h-4 w-4" />}
                 />
                 <SalesKpiCard
-                  title="เก่ากว่า 1 ปี / ไม่เคย"
-                  value={formatCount(
-                    overview.summary.over_365_count +
-                      overview.summary.never_count
-                  )}
+                  title="ยังไม่เคยตรวจในแอป"
+                  value={formatCount(overview.summary.never_count)}
                   hint={
-                    staleShare != null
-                      ? `คิดเป็น ${staleShare}% ของขอบเขต`
-                      : undefined
+                    overview.sales_from && overview.sales_to
+                      ? `จัดลำดับงานด้วยยอดขาย ${overview.sales_from} → ${overview.sales_to}`
+                      : "สถานะนับเฉพาะ mark ในแอป"
                   }
                 />
                 <SalesKpiCard
-                  title="สด ≤ 30 วัน"
+                  title="สด ≤ 30 วัน (แอป)"
                   value={formatCount(overview.summary.d30_count)}
-                  hint="effective = max(แอป, POS DATEAUDIT)"
+                  hint="ไม่ใช้ POS DATEAUDIT จัด bucket"
                 />
               </div>
 
@@ -450,7 +439,8 @@ export default function StockAuditPage() {
                       <th className="px-3 py-2">ชื่อ</th>
                       <th className="px-3 py-2">ที่เก็บ</th>
                       <th className="px-3 py-2 text-right">คงเหลือ</th>
-                      <th className="px-3 py-2">วันตรวจล่าสุด</th>
+                      <th className="px-3 py-2 text-right">ขาย 30 วัน</th>
+                      <th className="px-3 py-2">วันตรวจ (แอป)</th>
                       <th className="px-3 py-2">สถานะ</th>
                     </tr>
                   </thead>
@@ -458,7 +448,7 @@ export default function StockAuditPage() {
                     {overview.rows.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="px-3 py-8 text-center text-muted-foreground"
                         >
                           ไม่มีรายการในกลุ่มนี้
@@ -487,12 +477,20 @@ export default function StockAuditPage() {
                             <td className="px-3 py-2 text-right tabular-nums">
                               {formatCount(row.qty)}
                             </td>
+                            <td className="px-3 py-2 text-right tabular-nums">
+                              {formatCount(row.sell_qty_period)}
+                            </td>
                             <td className="px-3 py-2 tabular-nums">
                               {row.effective_date ?? "—"}
                               {row.days_since != null ? (
                                 <span className="ml-1 text-xs text-muted-foreground">
                                   ({formatCount(row.days_since)} วัน)
                                 </span>
+                              ) : null}
+                              {row.pos_dateaudit ? (
+                                <div className="text-[11px] text-muted-foreground">
+                                  POS {row.pos_dateaudit}
+                                </div>
                               ) : null}
                             </td>
                             <td className="px-3 py-2">
@@ -635,10 +633,14 @@ export default function StockAuditPage() {
                         </p>
                         <p className="text-xs text-muted-foreground">
                           ที่เก็บ {item.location1 || "—"} · คงเหลือ{" "}
-                          {formatCount(item.qty)}
+                          {formatCount(item.qty)} · ขาย 30 วัน{" "}
+                          {formatCount(item.sell_qty_period)}
+                          {item.app_dateaudit
+                            ? ` · แอป ${item.app_dateaudit}`
+                            : " · ยังไม่เคยตรวจในแอป"}
                           {item.pos_dateaudit
                             ? ` · POS ${item.pos_dateaudit}`
-                            : " · POS ไม่มีวันที่"}
+                            : ""}
                         </p>
                       </div>
                       <div className="flex shrink-0 gap-2">
@@ -680,7 +682,8 @@ export default function StockAuditPage() {
           ) : (
             <p className="text-sm text-muted-foreground">
               ยังไม่มีชุดงานเปิด — เลือกจำนวนแล้วกดสร้างชุดตรวจอัจฉริยะ
-              ระบบจะจัดลำดับจากไม่เคยตรวจ / เก่าที่สุด และจัดกลุ่มตามที่เก็บ
+              ระบบจัดลำดับจากยอดขาย 30 วันล่าสุด × ความเก่าของการตรวจในแอป
+              (ไม่พึ่ง POS DATEAUDIT) และจัดกลุ่มตามที่เก็บ
             </p>
           )}
         </section>
@@ -740,21 +743,21 @@ export default function StockAuditPage() {
                     <dd>{formatCount(lookup.qty ?? 0)}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">POS DATEAUDIT</dt>
+                    <dt className="text-muted-foreground">ขาย 30 วัน</dt>
+                    <dd>{formatCount(lookup.sell_qty_period ?? 0)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">POS DATEAUDIT (อ้างอิง)</dt>
                     <dd>{lookup.pos_dateaudit || "—"}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">วันตรวจในแอป</dt>
                     <dd>
-                      {lookup.app_dateaudit || "—"}
+                      {lookup.app_dateaudit || "ยังไม่เคย"}
                       {lookup.app_audited_by
                         ? ` (${lookup.app_audited_by})`
                         : ""}
                     </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">วันตรวจที่ใช้จริง</dt>
-                    <dd>{lookup.effective_date || "ไม่เคยตรวจ"}</dd>
                   </div>
                 </dl>
                 <Button

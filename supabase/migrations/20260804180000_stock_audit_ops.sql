@@ -1,10 +1,26 @@
 -- Stock date-audit tracking for kcw-v2.
--- App-owned source of truth for "when was this BCODE last audited".
--- Qty adjustments stay in legacy POS; operators only mark audit complete here.
--- Effective last-audit date = GREATEST(app mark, POS DATEAUDIT) when either exists.
--- Tables are service-role only (same pattern as bank_match_agent_locks).
+-- Domain tables live in schema `stock` (same pattern as bank / kb / ops),
+-- not public. RPCs stay in public as service_role SECURITY DEFINER entrypoints.
+--
+-- App marks are the source of truth for "last audited".
+-- POS ICMAS DATEAUDIT is stale/unreliable — shown as reference only, NOT used
+-- for status buckets or pick priority.
+--
+-- Smart pick balances: never/stale app-audit + current-period sales velocity
+-- (+ light on-hand qty), clustered by LOCATION1.
 
-create table if not exists public.stock_audit_status (
+create schema if not exists stock;
+
+revoke all on schema stock from public, anon, authenticated;
+grant usage on schema stock to service_role;
+
+-- Drop v1 public tables if they exist (empty / agent smoke data only).
+drop table if exists public.stock_audit_batch_item cascade;
+drop table if exists public.stock_audit_batch cascade;
+drop table if exists public.stock_audit_event cascade;
+drop table if exists public.stock_audit_status cascade;
+
+create table if not exists stock.audit_status (
   branch text not null,
   bcode text not null,
   last_audited_at timestamptz not null,
@@ -18,7 +34,7 @@ create table if not exists public.stock_audit_status (
   constraint stock_audit_status_audit_count_check check (audit_count >= 1)
 );
 
-create table if not exists public.stock_audit_event (
+create table if not exists stock.audit_event (
   id bigserial primary key,
   branch text not null,
   bcode text not null,
@@ -33,7 +49,7 @@ create table if not exists public.stock_audit_event (
     check (source in ('batch', 'ondemand', 'manual'))
 );
 
-create table if not exists public.stock_audit_batch (
+create table if not exists stock.audit_batch (
   id uuid primary key default gen_random_uuid(),
   branch text not null,
   created_at timestamptz not null default now(),
@@ -48,15 +64,18 @@ create table if not exists public.stock_audit_batch (
     check (target_count >= 1 and target_count <= 500)
 );
 
-create table if not exists public.stock_audit_batch_item (
-  batch_id uuid not null references public.stock_audit_batch (id) on delete cascade,
+create table if not exists stock.audit_batch_item (
+  batch_id uuid not null references stock.audit_batch (id) on delete cascade,
   bcode text not null,
   status text not null default 'pending',
   priority_score numeric not null default 0,
   pos_dateaudit date,
+  app_dateaudit date,
   location1 text,
   descr text,
   qty numeric not null default 0,
+  sell_qty_period numeric not null default 0,
+  sell_revenue_period numeric not null default 0,
   done_at timestamptz,
   done_by text,
   constraint stock_audit_batch_item_pkey primary key (batch_id, bcode),
@@ -66,46 +85,48 @@ create table if not exists public.stock_audit_batch_item (
 );
 
 create index if not exists stock_audit_status_last_audited_idx
-  on public.stock_audit_status (branch, last_audited_at desc);
+  on stock.audit_status (branch, last_audited_at desc);
 
 create index if not exists stock_audit_event_branch_bcode_idx
-  on public.stock_audit_event (branch, bcode, audited_at desc);
+  on stock.audit_event (branch, bcode, audited_at desc);
 
 create index if not exists stock_audit_batch_open_idx
-  on public.stock_audit_batch (branch, created_at desc)
+  on stock.audit_batch (branch, created_at desc)
   where status = 'open';
 
 create index if not exists stock_audit_batch_item_pending_idx
-  on public.stock_audit_batch_item (batch_id, status)
+  on stock.audit_batch_item (batch_id, status)
   where status = 'pending';
 
-alter table public.stock_audit_status enable row level security;
-alter table public.stock_audit_event enable row level security;
-alter table public.stock_audit_batch enable row level security;
-alter table public.stock_audit_batch_item enable row level security;
+alter table stock.audit_status enable row level security;
+alter table stock.audit_event enable row level security;
+alter table stock.audit_batch enable row level security;
+alter table stock.audit_batch_item enable row level security;
 
-revoke all on table public.stock_audit_status from public, anon, authenticated;
-revoke all on table public.stock_audit_event from public, anon, authenticated;
-revoke all on table public.stock_audit_batch from public, anon, authenticated;
-revoke all on table public.stock_audit_batch_item from public, anon, authenticated;
+revoke all on table stock.audit_status from public, anon, authenticated;
+revoke all on table stock.audit_event from public, anon, authenticated;
+revoke all on table stock.audit_batch from public, anon, authenticated;
+revoke all on table stock.audit_batch_item from public, anon, authenticated;
 
-grant select, insert, update, delete on table public.stock_audit_status to service_role;
-grant select, insert, update, delete on table public.stock_audit_event to service_role;
-grant select, insert, update, delete on table public.stock_audit_batch to service_role;
-grant select, insert, update, delete on table public.stock_audit_batch_item to service_role;
-grant usage, select on sequence public.stock_audit_event_id_seq to service_role;
+grant select, insert, update, delete on table stock.audit_status to service_role;
+grant select, insert, update, delete on table stock.audit_event to service_role;
+grant select, insert, update, delete on table stock.audit_batch to service_role;
+grant select, insert, update, delete on table stock.audit_batch_item to service_role;
+grant usage, select on sequence stock.audit_event_id_seq to service_role;
 
-comment on table public.stock_audit_status is
-  'Latest app-recorded stock audit per branch+bcode (qty adjust stays in legacy POS).';
-comment on table public.stock_audit_event is
+comment on schema stock is
+  'Stock / inventory ops owned by kcw-v2 (date-audit, future cycle-count helpers).';
+comment on table stock.audit_status is
+  'Latest app-recorded stock audit per branch+bcode. POS DATEAUDIT is not authoritative.';
+comment on table stock.audit_event is
   'Append-only audit mark history.';
-comment on table public.stock_audit_batch is
+comment on table stock.audit_batch is
   'Daily / on-demand work set of bcodes for operators to audit.';
-comment on table public.stock_audit_batch_item is
-  'Items inside a stock audit batch.';
+comment on table stock.audit_batch_item is
+  'Items inside a stock audit batch (includes period sales snapshot used for ranking).';
 
 -- ---------------------------------------------------------------------------
--- Helpers (internal)
+-- Helpers
 -- ---------------------------------------------------------------------------
 
 create or replace function public._stock_audit_parse_date(p_text text)
@@ -139,8 +160,17 @@ as $$
   select coalesce(upper(btrim(coalesce(p_canceled, ''))), 'N') in ('Y', '1', 'T', 'TRUE');
 $$;
 
+-- Bangkok "today" and default sales window (last 30 days inclusive).
+create or replace function public._stock_audit_bangkok_today()
+returns date
+language sql
+stable
+as $$
+  select (timezone('Asia/Bangkok', now()))::date;
+$$;
+
 -- ---------------------------------------------------------------------------
--- Overview: age buckets for dashboard
+-- Overview: buckets from APP audit only; POS date is reference on each row
 -- ---------------------------------------------------------------------------
 
 drop function if exists public.fn_stock_audit_overview(text, boolean);
@@ -157,7 +187,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = public, raw_kcw, curated_kcw
+set search_path = public, stock, raw_kcw, curated_kcw
 set statement_timeout = '60s'
 as $$
 declare
@@ -165,6 +195,8 @@ declare
   v_bucket text;
   v_limit int;
   v_offset int;
+  v_today date := public._stock_audit_bangkok_today();
+  v_sales_from date;
 begin
   v_branch := upper(coalesce(nullif(btrim(p_branch), ''), 'HQ'));
   if v_branch not in ('HQ', 'SYP') then
@@ -180,6 +212,7 @@ begin
 
   v_limit := greatest(1, least(coalesce(p_limit, 50), 200));
   v_offset := greatest(0, coalesce(p_offset, 0));
+  v_sales_from := v_today - 29;
 
   return (
     with icmas as (
@@ -218,6 +251,48 @@ begin
       from curated_kcw.inventory_qty_latest i
       where i.branch = v_branch
     ),
+    sales_bills as (
+      select
+        b."BRANCH" as store_branch,
+        b."BILLNO" as bill_no,
+        case
+          when coalesce(b."BILLTYPE_STD", '') = 'TAD' then 'ONLINE'
+          when coalesce(b."BILLTYPE_STD", '') = 'CN'
+            and b."BILLNO" ~* '^CNTAD' then 'ONLINE'
+          else b."BRANCH"
+        end as reporting_branch
+      from curated_kcw.fact_sales_bills_all b
+      where b."CANCELED" = 'N'
+        and b."JOURMODE" <> '0'
+        and coalesce(b."BILLTYPE_STD", '') not in ('TF', 'TFV', 'TAR')
+        and b."BILLDATE" >= v_sales_from::text
+        and b."BILLDATE" < (v_today + 1)::text
+    ),
+    sales_period as (
+      select
+        nullif(btrim(l."BCODE"), '') as bcode,
+        sum(
+          coalesce(nullif(replace(l."QTY", ',', ''), '')::numeric, 0)
+          * coalesce(
+              nullif(
+                coalesce(nullif(replace(nullif(trim(l."MTP"), ''), ',', ''), '')::numeric, 0),
+                0
+              ),
+              1
+            )
+        ) as sell_qty,
+        sum(coalesce(nullif(replace(l."AMOUNT", ',', ''), '')::numeric, 0)) as sell_revenue
+      from curated_kcw.fact_sales_all l
+      join sales_bills b
+        on b.store_branch = l."BRANCH"
+       and b.bill_no = l."BILLNO"
+      where nullif(btrim(l."BCODE"), '') is not null
+        and (
+          v_branch = 'HQ' and b.reporting_branch in ('HQ', 'ONLINE')
+          or v_branch = 'SYP' and b.reporting_branch = 'SYP'
+        )
+      group by 1
+    ),
     joined as (
       select
         c.bcode,
@@ -228,20 +303,16 @@ begin
         c.category,
         c.pos_dateaudit,
         coalesce(i.qty, c.qty_icmas, 0) as qty,
+        coalesce(sp.sell_qty, 0) as sell_qty_period,
+        coalesce(sp.sell_revenue, 0) as sell_revenue_period,
         s.last_audited_at as app_audited_at,
         (s.last_audited_at at time zone 'Asia/Bangkok')::date as app_dateaudit,
-        case
-          when s.last_audited_at is null and c.pos_dateaudit is null then null
-          when s.last_audited_at is null then c.pos_dateaudit
-          when c.pos_dateaudit is null then (s.last_audited_at at time zone 'Asia/Bangkok')::date
-          else greatest(
-            (s.last_audited_at at time zone 'Asia/Bangkok')::date,
-            c.pos_dateaudit
-          )
-        end as effective_date
+        -- App-only effective date (POS is not trusted for status)
+        (s.last_audited_at at time zone 'Asia/Bangkok')::date as effective_date
       from icmas c
       left join inv i on i.bcode = c.bcode
-      left join public.stock_audit_status s
+      left join sales_period sp on sp.bcode = c.bcode
+      left join stock.audit_status s
         on s.branch = v_branch and s.bcode = c.bcode
     ),
     filtered as (
@@ -254,15 +325,15 @@ begin
         f.*,
         case
           when f.effective_date is null then 'never'
-          when f.effective_date >= (current_date - 30) then 'd30'
-          when f.effective_date >= (current_date - 90) then 'd90'
-          when f.effective_date >= (current_date - 180) then 'd180'
-          when f.effective_date >= (current_date - 365) then 'd365'
+          when f.effective_date >= (v_today - 30) then 'd30'
+          when f.effective_date >= (v_today - 90) then 'd90'
+          when f.effective_date >= (v_today - 180) then 'd180'
+          when f.effective_date >= (v_today - 365) then 'd365'
           else 'over_365'
         end as bucket,
         case
           when f.effective_date is null then null
-          else (current_date - f.effective_date)
+          else (v_today - f.effective_date)
         end as days_since
       from filtered f
     ),
@@ -278,7 +349,7 @@ begin
         count(*) filter (where app_audited_at is not null)::int as app_marked_count,
         count(*) filter (
           where app_audited_at is not null
-            and (app_audited_at at time zone 'Asia/Bangkok')::date = current_date
+            and (app_audited_at at time zone 'Asia/Bangkok')::date = v_today
         )::int as marked_today_count
       from bucketed
     ),
@@ -293,12 +364,12 @@ begin
               'target_count', b.target_count,
               'pending_count', (
                 select count(*)::int
-                from public.stock_audit_batch_item i
+                from stock.audit_batch_item i
                 where i.batch_id = b.id and i.status = 'pending'
               ),
               'done_count', (
                 select count(*)::int
-                from public.stock_audit_batch_item i
+                from stock.audit_batch_item i
                 where i.batch_id = b.id and i.status = 'done'
               )
             )
@@ -306,7 +377,7 @@ begin
           ),
           '[]'::jsonb
         ) as batches
-      from public.stock_audit_batch b
+      from stock.audit_batch b
       where b.branch = v_branch and b.status = 'open'
     ),
     list_rows as (
@@ -322,6 +393,7 @@ begin
           when 'd90' then 4
           else 5
         end,
+        sell_qty_period desc,
         days_since desc nulls first,
         qty desc,
         bcode
@@ -336,7 +408,9 @@ begin
     select jsonb_build_object(
       'branch', v_branch,
       'with_stock_only', coalesce(p_with_stock_only, true),
-      'as_of', current_date,
+      'as_of', v_today,
+      'sales_from', v_sales_from,
+      'sales_to', v_today,
       'summary', to_jsonb(s),
       'open_batches', ob.batches,
       'rows', coalesce(
@@ -350,6 +424,8 @@ begin
               'location1', r.location1,
               'category', r.category,
               'qty', r.qty,
+              'sell_qty_period', r.sell_qty_period,
+              'sell_revenue_period', r.sell_revenue_period,
               'pos_dateaudit', r.pos_dateaudit,
               'app_dateaudit', r.app_dateaudit,
               'effective_date', r.effective_date,
@@ -374,7 +450,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Get one batch with items (defined before create_batch which returns it)
+-- Get batch
 -- ---------------------------------------------------------------------------
 
 drop function if exists public.fn_stock_audit_get_batch(uuid);
@@ -384,17 +460,17 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = public
+set search_path = public, stock
 as $$
 declare
-  v_batch public.stock_audit_batch%rowtype;
+  v_batch stock.audit_batch%rowtype;
 begin
   if p_batch_id is null then
     raise exception 'batch_id required';
   end if;
 
   select * into v_batch
-  from public.stock_audit_batch
+  from stock.audit_batch
   where id = p_batch_id;
 
   if not found then
@@ -411,15 +487,15 @@ begin
     'filters', v_batch.filters,
     'closed_at', v_batch.closed_at,
     'pending_count', (
-      select count(*)::int from public.stock_audit_batch_item i
+      select count(*)::int from stock.audit_batch_item i
       where i.batch_id = v_batch.id and i.status = 'pending'
     ),
     'done_count', (
-      select count(*)::int from public.stock_audit_batch_item i
+      select count(*)::int from stock.audit_batch_item i
       where i.batch_id = v_batch.id and i.status = 'done'
     ),
     'skipped_count', (
-      select count(*)::int from public.stock_audit_batch_item i
+      select count(*)::int from stock.audit_batch_item i
       where i.batch_id = v_batch.id and i.status = 'skipped'
     ),
     'items', coalesce(
@@ -430,19 +506,22 @@ begin
             'status', i.status,
             'priority_score', i.priority_score,
             'pos_dateaudit', i.pos_dateaudit,
+            'app_dateaudit', i.app_dateaudit,
             'location1', i.location1,
             'descr', i.descr,
             'qty', i.qty,
+            'sell_qty_period', i.sell_qty_period,
+            'sell_revenue_period', i.sell_revenue_period,
             'done_at', i.done_at,
             'done_by', i.done_by
           )
           order by
             case i.status when 'pending' then 0 when 'done' then 1 else 2 end,
-            i.location1,
             i.priority_score desc,
+            i.location1,
             i.bcode
         )
-        from public.stock_audit_batch_item i
+        from stock.audit_batch_item i
         where i.batch_id = v_batch.id
       ),
       '[]'::jsonb
@@ -452,7 +531,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Create a smart daily / on-demand batch
+-- Create smart batch (sales velocity + app-audit staleness)
 -- ---------------------------------------------------------------------------
 
 drop function if exists public.fn_stock_audit_create_batch(text, integer, text, boolean, text, text);
@@ -468,7 +547,7 @@ create or replace function public.fn_stock_audit_create_batch(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, raw_kcw, curated_kcw
+set search_path = public, stock, raw_kcw, curated_kcw
 set statement_timeout = '60s'
 as $$
 declare
@@ -478,6 +557,8 @@ declare
   v_location text;
   v_batch_id uuid;
   v_inserted int;
+  v_today date := public._stock_audit_bangkok_today();
+  v_sales_from date;
 begin
   v_branch := upper(coalesce(nullif(btrim(p_branch), ''), 'HQ'));
   if v_branch not in ('HQ', 'SYP') then
@@ -490,12 +571,13 @@ begin
     v_category := lpad(left(v_category, 2), 2, '0');
   end if;
   v_location := nullif(btrim(coalesce(p_location, '')), '');
+  v_sales_from := v_today - 29;
 
   if nullif(btrim(coalesce(p_created_by, '')), '') is null then
     raise exception 'created_by required';
   end if;
 
-  insert into public.stock_audit_batch (
+  insert into stock.audit_batch (
     branch, created_by, target_count, filters
   ) values (
     v_branch,
@@ -504,15 +586,18 @@ begin
     jsonb_build_object(
       'with_stock_only', coalesce(p_with_stock_only, true),
       'category', v_category,
-      'location', v_location
+      'location', v_location,
+      'sales_from', v_sales_from,
+      'sales_to', v_today,
+      'rank_mode', 'sales_x_app_staleness'
     )
   )
   returning id into v_batch_id;
 
   with pending as (
     select i.bcode
-    from public.stock_audit_batch_item i
-    join public.stock_audit_batch b on b.id = i.batch_id
+    from stock.audit_batch_item i
+    join stock.audit_batch b on b.id = i.batch_id
     where b.branch = v_branch
       and b.status = 'open'
       and i.status = 'pending'
@@ -547,6 +632,48 @@ begin
     from curated_kcw.inventory_qty_latest i
     where i.branch = v_branch
   ),
+  sales_bills as (
+    select
+      b."BRANCH" as store_branch,
+      b."BILLNO" as bill_no,
+      case
+        when coalesce(b."BILLTYPE_STD", '') = 'TAD' then 'ONLINE'
+        when coalesce(b."BILLTYPE_STD", '') = 'CN'
+          and b."BILLNO" ~* '^CNTAD' then 'ONLINE'
+        else b."BRANCH"
+      end as reporting_branch
+    from curated_kcw.fact_sales_bills_all b
+    where b."CANCELED" = 'N'
+      and b."JOURMODE" <> '0'
+      and coalesce(b."BILLTYPE_STD", '') not in ('TF', 'TFV', 'TAR')
+      and b."BILLDATE" >= v_sales_from::text
+      and b."BILLDATE" < (v_today + 1)::text
+  ),
+  sales_period as (
+    select
+      nullif(btrim(l."BCODE"), '') as bcode,
+      sum(
+        coalesce(nullif(replace(l."QTY", ',', ''), '')::numeric, 0)
+        * coalesce(
+            nullif(
+              coalesce(nullif(replace(nullif(trim(l."MTP"), ''), ',', ''), '')::numeric, 0),
+              0
+            ),
+            1
+          )
+      ) as sell_qty,
+      sum(coalesce(nullif(replace(l."AMOUNT", ',', ''), '')::numeric, 0)) as sell_revenue
+    from curated_kcw.fact_sales_all l
+    join sales_bills b
+      on b.store_branch = l."BRANCH"
+     and b.bill_no = l."BILLNO"
+    where nullif(btrim(l."BCODE"), '') is not null
+      and (
+        v_branch = 'HQ' and b.reporting_branch in ('HQ', 'ONLINE')
+        or v_branch = 'SYP' and b.reporting_branch = 'SYP'
+      )
+    group by 1
+  ),
   candidates as (
     select
       c.bcode,
@@ -554,44 +681,45 @@ begin
       c.location1,
       c.pos_dateaudit,
       coalesce(i.qty, c.qty_icmas, 0) as qty,
-      case
-        when s.last_audited_at is null and c.pos_dateaudit is null then null
-        when s.last_audited_at is null then c.pos_dateaudit
-        when c.pos_dateaudit is null then (s.last_audited_at at time zone 'Asia/Bangkok')::date
-        else greatest(
-          (s.last_audited_at at time zone 'Asia/Bangkok')::date,
-          c.pos_dateaudit
-        )
-      end as effective_date
+      coalesce(sp.sell_qty, 0) as sell_qty,
+      coalesce(sp.sell_revenue, 0) as sell_revenue,
+      (s.last_audited_at at time zone 'Asia/Bangkok')::date as app_dateaudit
     from icmas c
     left join inv i on i.bcode = c.bcode
-    left join public.stock_audit_status s
+    left join sales_period sp on sp.bcode = c.bcode
+    left join stock.audit_status s
       on s.branch = v_branch and s.bcode = c.bcode
     where not exists (select 1 from pending p where p.bcode = c.bcode)
       and (not coalesce(p_with_stock_only, true) or coalesce(i.qty, c.qty_icmas, 0) > 0)
       and (v_category is null or c.category = v_category)
       and (v_location is null or c.location1 ilike '%' || v_location || '%')
+      -- Skip only if APP-audited within 7 days (ignore POS DATEAUDIT)
+      and (
+        s.last_audited_at is null
+        or (s.last_audited_at at time zone 'Asia/Bangkok')::date < (v_today - 7)
+      )
   ),
   scored as (
     select
       c.*,
       (
-        case when c.effective_date is null then 100000
-             else greatest(0, (current_date - c.effective_date))
-        end
-        + least(ln(1 + greatest(c.qty, 0)) * 8, 80)
+        -- Sales velocity (best sellers first): log-scaled qty + light revenue
+        least(ln(1 + greatest(c.sell_qty, 0)) * 120, 900)
+        + least(ln(1 + greatest(c.sell_revenue, 0) / 1000.0) * 40, 200)
+        -- App-audit staleness: never audited in app dominates
+        + case
+            when c.app_dateaudit is null then 500
+            else least((v_today - c.app_dateaudit)::numeric * 1.5, 400)
+          end
+        -- Prefer items that still have stock
+        + least(ln(1 + greatest(c.qty, 0)) * 8, 60)
       )::numeric as priority_score
     from candidates c
-    -- Skip items audited within the last 7 days (effective = app OR POS)
-    where c.effective_date is null
-       or c.effective_date < (current_date - 7)
   ),
-  -- Prefer clustering by location: take top locations by max priority, then fill.
   loc_rank as (
     select
       location1,
-      max(priority_score) as loc_score,
-      count(*) as loc_n
+      max(priority_score) as loc_score
     from scored
     group by location1
   ),
@@ -600,9 +728,9 @@ begin
       s.*,
       row_number() over (
         order by
+          s.priority_score desc,
           coalesce(lr.loc_score, 0) desc,
           s.location1,
-          s.priority_score desc,
           s.bcode
       ) as rn
     from scored s
@@ -612,8 +740,9 @@ begin
     select * from ordered where rn <= v_count
   ),
   ins as (
-    insert into public.stock_audit_batch_item (
-      batch_id, bcode, status, priority_score, pos_dateaudit, location1, descr, qty
+    insert into stock.audit_batch_item (
+      batch_id, bcode, status, priority_score, pos_dateaudit, app_dateaudit,
+      location1, descr, qty, sell_qty_period, sell_revenue_period
     )
     select
       v_batch_id,
@@ -621,16 +750,19 @@ begin
       'pending',
       p.priority_score,
       p.pos_dateaudit,
+      p.app_dateaudit,
       p.location1,
       p.descr,
-      p.qty
+      p.qty,
+      p.sell_qty,
+      p.sell_revenue
     from picked p
     returning 1
   )
   select count(*)::int into v_inserted from ins;
 
   if v_inserted = 0 then
-    update public.stock_audit_batch
+    update stock.audit_batch
     set status = 'closed', closed_at = now()
     where id = v_batch_id;
   end if;
@@ -640,7 +772,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Mark audited (batch item or on-demand single bcode)
+-- Mark audited
 -- ---------------------------------------------------------------------------
 
 drop function if exists public.fn_stock_audit_mark(text, text, text, text, uuid, text);
@@ -656,7 +788,7 @@ create or replace function public.fn_stock_audit_mark(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, raw_kcw
+set search_path = public, stock, raw_kcw
 as $$
 declare
   v_branch text;
@@ -700,14 +832,14 @@ begin
     raise exception 'Unknown bcode';
   end if;
 
-  insert into public.stock_audit_event (
+  insert into stock.audit_event (
     branch, bcode, audited_at, audited_by, source, batch_id, notes
   ) values (
     v_branch, v_bcode, v_now, btrim(p_audited_by), v_source, p_batch_id,
     nullif(btrim(coalesce(p_notes, '')), '')
   );
 
-  insert into public.stock_audit_status as s (
+  insert into stock.audit_status as s (
     branch, bcode, last_audited_at, last_audited_by, audit_count, notes, updated_at
   ) values (
     v_branch, v_bcode, v_now, btrim(p_audited_by), 1,
@@ -721,40 +853,36 @@ begin
     updated_at = excluded.updated_at;
 
   if p_batch_id is not null then
-    update public.stock_audit_batch_item
+    update stock.audit_batch_item
     set status = 'done', done_at = v_now, done_by = btrim(p_audited_by)
     where batch_id = p_batch_id
       and bcode = v_bcode
       and status = 'pending';
 
-    -- Auto-close batch when no pending left
     if not exists (
-      select 1 from public.stock_audit_batch_item
+      select 1 from stock.audit_batch_item
       where batch_id = p_batch_id and status = 'pending'
     ) then
-      update public.stock_audit_batch
+      update stock.audit_batch
       set status = 'closed', closed_at = v_now
       where id = p_batch_id and status = 'open';
     end if;
-  end if;
-
-  -- Also mark matching pending items in any open batch for this branch/bcode
-  if p_batch_id is null then
-    update public.stock_audit_batch_item i
+  else
+    update stock.audit_batch_item i
     set status = 'done', done_at = v_now, done_by = btrim(p_audited_by)
-    from public.stock_audit_batch b
+    from stock.audit_batch b
     where i.batch_id = b.id
       and b.branch = v_branch
       and b.status = 'open'
       and i.bcode = v_bcode
       and i.status = 'pending';
 
-    update public.stock_audit_batch b
+    update stock.audit_batch b
     set status = 'closed', closed_at = v_now
     where b.branch = v_branch
       and b.status = 'open'
       and not exists (
-        select 1 from public.stock_audit_batch_item i
+        select 1 from stock.audit_batch_item i
         where i.batch_id = b.id and i.status = 'pending'
       );
   end if;
@@ -771,7 +899,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Skip a batch item (not counted as audited)
+-- Skip item
 -- ---------------------------------------------------------------------------
 
 drop function if exists public.fn_stock_audit_skip_item(uuid, text, text);
@@ -784,7 +912,7 @@ create or replace function public.fn_stock_audit_skip_item(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, stock
 as $$
 declare
   v_bcode text;
@@ -798,7 +926,7 @@ begin
     raise exception 'bcode required';
   end if;
 
-  update public.stock_audit_batch_item
+  update stock.audit_batch_item
   set status = 'skipped', done_at = v_now, done_by = nullif(btrim(coalesce(p_by, '')), '')
   where batch_id = p_batch_id and bcode = v_bcode and status = 'pending';
 
@@ -807,10 +935,10 @@ begin
   end if;
 
   if not exists (
-    select 1 from public.stock_audit_batch_item
+    select 1 from stock.audit_batch_item
     where batch_id = p_batch_id and status = 'pending'
   ) then
-    update public.stock_audit_batch
+    update stock.audit_batch
     set status = 'closed', closed_at = v_now
     where id = p_batch_id and status = 'open';
   end if;
@@ -820,7 +948,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Lookup a single product for on-demand mark UI
+-- Lookup
 -- ---------------------------------------------------------------------------
 
 drop function if exists public.fn_stock_audit_lookup(text, text);
@@ -833,12 +961,14 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = public, raw_kcw, curated_kcw
+set search_path = public, stock, raw_kcw, curated_kcw
 as $$
 declare
   v_branch text;
   v_bcode text;
   v_row jsonb;
+  v_today date := public._stock_audit_bangkok_today();
+  v_sales_from date := v_today - 29;
 begin
   v_branch := upper(coalesce(nullif(btrim(p_branch), ''), 'HQ'));
   if v_branch not in ('HQ', 'SYP') then
@@ -872,28 +1002,63 @@ begin
     from raw_kcw.raw_syp_icmas_products p
     where v_branch = 'SYP' and nullif(btrim(p."BCODE"), '') = v_bcode
   ),
+  sales_bills as (
+    select
+      b."BRANCH" as store_branch,
+      b."BILLNO" as bill_no,
+      case
+        when coalesce(b."BILLTYPE_STD", '') = 'TAD' then 'ONLINE'
+        when coalesce(b."BILLTYPE_STD", '') = 'CN'
+          and b."BILLNO" ~* '^CNTAD' then 'ONLINE'
+        else b."BRANCH"
+      end as reporting_branch
+    from curated_kcw.fact_sales_bills_all b
+    where b."CANCELED" = 'N'
+      and b."JOURMODE" <> '0'
+      and coalesce(b."BILLTYPE_STD", '') not in ('TF', 'TFV', 'TAR')
+      and b."BILLDATE" >= v_sales_from::text
+      and b."BILLDATE" < (v_today + 1)::text
+  ),
+  sales_period as (
+    select
+      sum(
+        coalesce(nullif(replace(l."QTY", ',', ''), '')::numeric, 0)
+        * coalesce(
+            nullif(
+              coalesce(nullif(replace(nullif(trim(l."MTP"), ''), ',', ''), '')::numeric, 0),
+              0
+            ),
+            1
+          )
+      ) as sell_qty,
+      sum(coalesce(nullif(replace(l."AMOUNT", ',', ''), '')::numeric, 0)) as sell_revenue
+    from curated_kcw.fact_sales_all l
+    join sales_bills b
+      on b.store_branch = l."BRANCH"
+     and b.bill_no = l."BILLNO"
+    where nullif(btrim(l."BCODE"), '') = v_bcode
+      and (
+        v_branch = 'HQ' and b.reporting_branch in ('HQ', 'ONLINE')
+        or v_branch = 'SYP' and b.reporting_branch = 'SYP'
+      )
+  ),
   joined as (
     select
       c.*,
       coalesce(i.qty, c.qty_icmas, 0) as qty,
+      coalesce(sp.sell_qty, 0) as sell_qty_period,
+      coalesce(sp.sell_revenue, 0) as sell_revenue_period,
       s.last_audited_at as app_audited_at,
       (s.last_audited_at at time zone 'Asia/Bangkok')::date as app_dateaudit,
       s.last_audited_by as app_audited_by,
       s.audit_count,
-      case
-        when s.last_audited_at is null and c.pos_dateaudit is null then null
-        when s.last_audited_at is null then c.pos_dateaudit
-        when c.pos_dateaudit is null then (s.last_audited_at at time zone 'Asia/Bangkok')::date
-        else greatest(
-          (s.last_audited_at at time zone 'Asia/Bangkok')::date,
-          c.pos_dateaudit
-        )
-      end as effective_date
+      (s.last_audited_at at time zone 'Asia/Bangkok')::date as effective_date
     from icmas c
     left join curated_kcw.inventory_qty_latest i
       on i.branch = v_branch and nullif(btrim(i.bcode), '') = c.bcode
-    left join public.stock_audit_status s
+    left join stock.audit_status s
       on s.branch = v_branch and s.bcode = c.bcode
+    cross join sales_period sp
   )
   select to_jsonb(j) into v_row from joined j limit 1;
 
@@ -914,6 +1079,7 @@ revoke all on function public.fn_stock_audit_lookup(text, text) from public, ano
 revoke all on function public._stock_audit_parse_date(text) from public, anon, authenticated;
 revoke all on function public._stock_audit_parse_qty(text) from public, anon, authenticated;
 revoke all on function public._stock_audit_is_canceled(text) from public, anon, authenticated;
+revoke all on function public._stock_audit_bangkok_today() from public, anon, authenticated;
 
 grant execute on function public.fn_stock_audit_overview(text, boolean, text, integer, integer) to service_role;
 grant execute on function public.fn_stock_audit_create_batch(text, integer, text, boolean, text, text) to service_role;

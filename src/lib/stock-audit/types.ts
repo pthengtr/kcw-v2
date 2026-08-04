@@ -32,6 +32,8 @@ export type StockAuditRow = {
   location1: string;
   category: string;
   qty: number;
+  sell_qty_period: number;
+  sell_revenue_period: number;
   pos_dateaudit: string | null;
   app_dateaudit: string | null;
   effective_date: string | null;
@@ -52,6 +54,8 @@ export type StockAuditOverview = {
   branch: StockAuditBranch;
   with_stock_only: boolean;
   as_of: string;
+  sales_from: string | null;
+  sales_to: string | null;
   summary: StockAuditSummary;
   open_batches: StockAuditOpenBatchSummary[];
   rows: StockAuditRow[];
@@ -66,9 +70,12 @@ export type StockAuditBatchItem = {
   status: StockAuditBatchItemStatus;
   priority_score: number;
   pos_dateaudit: string | null;
+  app_dateaudit: string | null;
   location1: string | null;
   descr: string | null;
   qty: number;
+  sell_qty_period: number;
+  sell_revenue_period: number;
   done_at: string | null;
   done_by: string | null;
 };
@@ -97,6 +104,8 @@ export type StockAuditLookup = {
   model?: string;
   location1?: string;
   qty?: number;
+  sell_qty_period?: number;
+  sell_revenue_period?: number;
   pos_dateaudit?: string | null;
   app_dateaudit?: string | null;
   app_audited_by?: string | null;
