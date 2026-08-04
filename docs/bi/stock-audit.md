@@ -41,9 +41,14 @@ Operator chooses count (1–200) and optional location filter.
 
 ## Features
 
-1. Smart daily batch + mark / skip queue
-2. On-demand BCODE lookup + mark
-3. Status dashboard buckets: never / ≤30d / 30–90 / 3–6m / 6–12m / >1y (**app dates**)
+1. **งานวันนี้** (default tab) — pick count, get smart list, mark/skip
+2. **ภาพรวม** — progress KPIs, freshness pie chart, daily bar chart, filterable list
+3. On-demand BCODE lookup + mark
+4. POS dates hidden behind “รายละเอียด” (reference only)
+
+Status buckets: never / ≤30d / 1–3m / 3–6m / 6–12m / >1y (**app dates**)
+
+Progress strip: soft daily target of 30 + week count (`marked_week_count`, `daily_marks` last 14 days).
 
 ## Access
 
