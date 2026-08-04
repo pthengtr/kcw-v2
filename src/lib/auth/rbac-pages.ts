@@ -23,6 +23,9 @@ export const PO_PAGE_KEYS = {
   status: "po_status",
 } as const;
 
+/** Stock date-audit operator page (daily pick + mark + status dashboard). */
+export const STOCK_AUDIT_PAGE_KEY: RbacPageKey = "stock_audit";
+
 export const RBAC_PROTECTED_PAGE_KEYS: RbacPageKey[] = [
   ADMIN_RBAC_PAGE,
   BI_PAGE_KEYS.income,
@@ -35,5 +38,6 @@ export const RBAC_PROTECTED_PAGE_KEYS: RbacPageKey[] = [
   BANK_PAGE_KEYS.tigerPay,
   BANK_PAGE_KEYS.statementSync,
   PO_PAGE_KEYS.status,
+  STOCK_AUDIT_PAGE_KEY,
 ];
 
