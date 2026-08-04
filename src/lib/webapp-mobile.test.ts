@@ -17,14 +17,21 @@ describe("Webapp mobile layout", () => {
     expect(navbar).toContain('aria-label="เปิดเมนู"');
   });
 
-  it("keeps home/menu cards fluid on narrow screens", () => {
+  it("keeps shared menu cards fluid on narrow screens", () => {
     const card = read("src/components/common/CardIcon.tsx");
     expect(card).toContain("w-full max-w-80");
     expect(card).toContain("sm:w-80");
+  });
 
+  it("uses a responsive, grouped workspace on the home page", () => {
     const home = read("src/app/(root)/home/page.tsx");
-    expect(home).toContain("text-3xl");
-    expect(home).toContain("sm:text-6xl");
+    expect(home).toContain("grid-cols-1");
+    expect(home).toContain("sm:grid-cols-2");
+    expect(home).toContain("xl:grid-cols-4");
+    expect(home).toContain("งานประจำวัน");
+    expect(home).toContain("การเงินและรับชำระ");
+    expect(home).toContain("ข้อมูลและสินค้า");
+    expect(home).toContain('aria-labelledby="section-analytics"');
   });
 
   it("stacks expense create/update panes under md", () => {
