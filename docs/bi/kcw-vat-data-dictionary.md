@@ -84,6 +84,8 @@ forecast_x = actual_x × factor
 
 `as_of` defaults to today (Asia/Bangkok), clamped into `[p_from, p_to]`. Complete periods set `forecast.enabled = false`.
 
+UI presets **เดือนนี้ / YTD / custom-month** pass the **full calendar end** as `p_to` (not capped at today) so mid-month forecast has a real target; actuals stop at `as_of`.
+
 ---
 
 ## 6. App entry
