@@ -113,6 +113,9 @@ describe("bank match prompt", () => {
     expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("บิลโอน TR (ใบเดียว)");
     expect(template).toContain("match_notes");
+    expect(template).toContain("internal_transfer");
+    expect(template).toContain("direction = 'out'");
+    expect(template).toContain("โอนไป X3557");
     expect(template).toContain(HQ_7236);
     expect(template).toContain(
       `If \`{{account_no}}\` is not \`${HQ_7236}\``
@@ -140,6 +143,9 @@ describe("bank match prompt", () => {
     expect(template).toContain("ใบสำคัญจ่าย (วันเดียวกัน)");
     expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("direction = 'out'");
+    expect(template).toContain("internal_transfer");
+    expect(template).toContain("โอนภายใน");
+    expect(template).toContain(HQ_7236);
     expect(template).toContain(HQ_3557);
     expect(template).toContain(
       `If \`{{account_no}}\` is not \`${HQ_3557}\``
@@ -258,7 +264,9 @@ describe("bank match prompt", () => {
     expect(template).toContain("expense_payroll");
     expect(template).toContain("expense_pv");
     expect(template).toContain("bank_cheque");
-    expect(template).toContain("do nothing");
+    expect(template).toContain("internal_transfer");
+    expect(template).toContain("TR fr 2480421139");
+    expect(template).toContain("004-0648920393");
     expect(template).toContain("direction = 'in'");
     expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("agent:bank-matcher-6184-v1");
@@ -266,6 +274,10 @@ describe("bank match prompt", () => {
     expect(template).toContain("ใบสำคัญจ่าย PV (ค่าสาธารณูปโภค)");
     expect(template).toContain(SYP_0393);
     expect(template).toContain(SYP_4759);
+    expect(template).toContain(KTB_1139);
+    expect(template).not.toContain("do nothing");
+    expect(template).not.toContain("Inflows stay untouched");
+    expect(template).not.toContain("**do not match or update them**");
     expect(template).not.toContain("<<<<<<<");
     expect(template).not.toContain(">>>>>>>");
     expectDateWindowPolicy(template);

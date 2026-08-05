@@ -7,7 +7,15 @@ Account **248-6-00618-4** (Krungthai, ends with **6184**) is the **payroll + OpE
 
 - **Outbound** ≈ app expenses / payment vouchers (**PV / 3PV**) and **payroll** from `public.expense_*`
 - Payments clear as bank cheques (`SBK… ICAS…`, `CHEQUE NO.` in `raw_json`) or as payroll / utility transfers
-- **Inbound** transfers (from `248-0-42113-9` / `064-8-92039-3` / `064-8-91723-6`) fund the account — **do not match or update them**
+- **Inbound** ≈ funding sweeps from sister KCW accounts — mark as **internal transfers** (`ignored`); do **not** run sales matching here
+
+Known inbound counterparts (July 2026 ground truth):
+
+| Description pattern | Counterpart account | Notes |
+|---|---|---|
+| `TR fr 2480421139 KIATCHAI AUTO PART 2007` | `248-0-42113-9` (ends 1139) | Marketplace settlement sweeps |
+| `004-0648920393` | `064-8-92039-3` (ends 0393) | SYP operating funding |
+| Transfer text naming `064-8-91723-6` / X7236 | `064-8-91723-6` | HQ operating funding (if present) |
 
 Do **not** use PARTS9 `raw_kcw.raw_hq_pvmas_notes_vouchers` for this account (that belongs to **141-1-72355-7**).
 
@@ -21,12 +29,13 @@ Scope rules:
 1. Only account **248-6-00618-4**
 2. If `{{account_no}}` is not `248-6-00618-4`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Primary target: `direction = 'out'` and `match_status` in (`pending`, `unmatched`)
-5. **Inbound (`direction = 'in'`): do nothing** — leave `pending` (or whatever status they already have). Never write match fields on inflows for this account
-6. Never change amount / description / source_* / any money fields
-7. Write only `match_*` and `matched_*` fields
-8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
-9. Cheque number lives in `bank_reference` and/or `raw_json->>'CHEQUE NO.'` for ICAS clears (`TRANSACTION CODE` often `CBCA`)
+4. Touch both directions while `match_status` in (`pending`, `unmatched`):
+   - `direction = 'out'` → payroll / expense PV / PIMAS cheque sources first
+   - `direction = 'in'` → **internal funding only** (no sales / RVMAS matching)
+5. Never change amount / description / source_* / any money fields
+6. Write only `match_*` and `matched_*` fields
+7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+8. Cheque number lives in `bank_reference` and/or `raw_json->>'CHEQUE NO.'` for ICAS clears (`TRANSACTION CODE` often `CBCA`)
 
 ## Date window policy
 
@@ -219,22 +228,44 @@ Notes from May/June 2026 probe:
 
 Small personal TRs (e.g. 3,000 baht education / advances) with no unique expense row → `unmatched` or `review` with a Thai note. Do not invent links to cash `expense_general` on unrelated payment methods.
 
+## Match sources — INBOUND (internal funding only)
+
+No sales / RVMAS / TAR matching on this account. **Always classify clear funding sweeps** — do not leave them `pending`.
+
+| Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
+|---|---|---|---|---|
+| Internal transfer in from 1139 | `internal_transfer` | `ignored` | `TR fr 2480421139…` / `248-0-42113-9` | `โอนภายใน` |
+| Internal transfer in from 0393 | `internal_transfer` | `ignored` | `004-0648920393` / `064-8-92039-3` | `โอนภายใน` |
+| Internal transfer in from 7236 | `internal_transfer` | `ignored` | HQ operating funding when description names X7236 / `064-8-91723-6` | `โอนภายใน` |
+| Other / unclear inflow | — | `review` / `unmatched` | Do not invent sales matches | `รายรับรอตรวจ` |
+
+`matched_ref_id` = counterpart full account no. when known.  
+Confidence: **1.0** when description clearly names a KCW counterpart.
+
+Thai note examples:
+
+- `โอนภายในจากบัญชี 248-0-42113-9 (X1139) จำนวน 86,000.00 บาท วันที่ 01/07/2026 — เติมเงินบัญชีเช็ค/เงินเดือน`
+- `โอนภายในจากบัญชี 064-8-92039-3 (X0393) จำนวน 200,000.00 บาท วันที่ 10/07/2026 — เติมเงินบัญชีเช็ค/เงินเดือน`
+
+July 2026: every observed inflow was one of the two patterns above (1139 sweep or 0393 funding). Operators previously marked these manually as `โยกเงินภายในบริษัท` — the agent should finish them as `ignored` + `internal_transfer` instead.
+
 ## Exclusions (do not use)
 
-- **Any update to `direction = 'in'`**
-- `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (account **141-1-72355-7**)
+- Sales sources (TR / TAR / RVMAS / RVI) on this account’s inflows
+- `raw_kcw.raw_hq_pvmas_notes_vouchers` (account **141-1-72355-7**) — PIMAS purchase bills **are** used for ICAS cheques (section 3)
 - Expense receipts paid via **064-8-92039-3** / **233-1-18475-9** (`%0393%` / `%4759%` payment methods) / director reimbursement / online-fee skip methods
 - Blind unconstrained subset-sum across many receipts or across different PIMAS suppliers (paid-unlinked fallback may combine **2–4** bills of the **same `ACCTNO` only**)
+- Leaving clear inbound funding sweeps as `pending`
 - Changing money fields
 
 ## Fields to write on each decision
 
-Always set (outbound only):
+Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
   - Start from `pending` or `unmatched` only; never write back to `pending`
   - Operators own `resolved` / `manual` — do not touch those rows
-  - Inflows stay untouched (may remain `pending`)
+  - Inbound internal funding → `ignored` (finished classification)
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
 - `matched_ref_type` / `matched_ref_id`
@@ -250,17 +281,18 @@ Examples:
 - `จับคู่กับใบสำคัญจ่ายค่าไฟฟ้า 000095634096 สุทธิ 8,274.37 บาท วันที่ 22/05/2026 ชำระผ่าน กรุงไทย xxxxxx6184 (Provincial Electricity)`
 - `เช็คเลขที่ 10127780 เคลียร์ ICAS ยอด 136,633.00 บาท วันที่ 05/05/2026 — ยังไม่พบ expense_receipt ยอดตรง รอตรวจ`
 - `เช็คเลขที่ 10127908 เคลียร์วันที่ 22/06/2026 ยอด 219,945.05 บาท — อาจตรงกับบิลของผู้ขาย 7SSY: D-O-260100347 78,382.58 บาท + D-O-260300852 141,558.89 บาท รวม 219,941.47 บาท ต่าง 3.58 บาท ทั้งสองบิลถูกระบุว่าชำระแล้วแต่ไม่มีเลข PVMAS รอตรวจสอบ`
+- `โอนภายในจากบัญชี 248-0-42113-9 จำนวน 86,000.00 บาท วันที่ 01/07/2026 — เติมเงินบัญชีเช็ค/เงินเดือน`
 
 Do not use cryptic codes like `payroll:` or `ICAS=` as the main `match_notes` text.
 
-## Expected coverage (probe, May+June 2026 outbound)
+## Expected coverage (probe, May+June 2026 outbound; July 2026 inbound)
 
 Approximate (do not force these numbers; sanity check only):
 
 - Utility / direct 6184 expense PV ≈ **4** outs (electricity)
 - Payroll bundle ≈ **2** outs in June (PAY1 + residual); May salary may be absent from the window
 - ICAS cheque clears ≈ **25** outs → ~18 match PIMAS ศรีสยาม bundles (0.90–0.95); leftovers try paid-unlinked fallback (`pimas_possible_bundle` / `review`) before plain `bank_cheque` review
-- Inflows ≈ **24** → **leave pending**
+- Inflows (July): all `TR fr 2480421139…` and `004-0648920393` → **`ignored` internal_transfer** (do not leave pending)
 
 If utility + payroll coverage collapses for the same months, re-check `total_net` VAT/WHT formula and payment_method text before inventing new rules.
 
@@ -268,8 +300,8 @@ If utility + payroll coverage collapses for the same months, re-check `total_net
 
 Report briefly in English:
 
-- Counts of `matched` / `review` / `ignored` / `unmatched` for **outbound** only
-- Confirm zero remaining `pending` or `unmatched` outbound rows in scope (or list any still open and why)
-- Confirm inflows were left untouched
-- Breakdown: payroll / expense_pv / pimas / pimas_possible_bundle review / bank_cheque review / other
+- Counts of `matched` / `review` / `ignored` / `unmatched` (split by `in` / `out` if useful)
+- Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
+- Confirm inbound funding sweeps were classified as `ignored` + `internal_transfer`
+- Breakdown: payroll / expense_pv / pimas / pimas_possible_bundle review / bank_cheque review / **inbound internal_transfer** / other
 - Rows that need human review (especially ICAS cheques and paid-unlinked PIMAS candidates)
