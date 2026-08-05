@@ -22,10 +22,11 @@ Scope rules:
 4. Touch both directions while `match_status` in (`pending`, `unmatched`):
    - `direction = 'in'` → sales sources first, then non-sales inflows
    - `direction = 'out'` → expense PV sources, then non-expense outflows
-5. Never change amount / description / source_* / any money fields
-6. Write only `match_*` and `matched_*` fields
-7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
-8. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
+5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. 3TR / 3TAR / expense_receipt often land after the bank feed; when a unique candidate now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
+6. Never change amount / description / source_* / any money fields
+7. Write only `match_*` and `matched_*` fields
+8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+9. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
 
 ## Date window policy
 
@@ -181,9 +182,12 @@ Notes from May/June probe:
 
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
-| Internal sweep out | `internal_transfer` | `ignored` | Large transfers to other KCW accounts (e.g. X6184) | `โอนภายใน` |
+| Internal sweep out | `internal_transfer` | `ignored` | **Always classify** large transfers to X6184 / X4759 / X7236 / other KCW accounts when counterpart is clear from `raw_json` or same-day sister-account inflow — do not leave `pending`/`unmatched` | `โอนภายใน` |
+| Director parts reimbursement | `expense_pv` or best available | `matched` / `review` | Transfers to Narumon X2446 that settle branch parts paid via `3RV…` (not always a same-day `%0393%` PV) — populate refs when unique; else `review` with Thai note | `คืนเงินอะไหล่สาขา (กรรมการ)` |
+| 3CTAR / sales adjustment refund | — | `review` / `ignored` | Small transfer to X2446 that exactly equals a same-day 3TAR shortfall / 3CTAR adjustment — explain both legs in `match_notes` | `โอนคืนปรับปรุงยอดขาย` |
 | No unique expense | — | `unmatched` / `review` | Do not invent blind subset-sums across many receipts | `ยังไม่พบใบสำคัญจ่าย` |
 
+July 2026: six outs to X6184 / X4759 were operator-marked `โอนภายใน` — the agent must finish those as `ignored` + `internal_transfer` on every run.
 ## Exclusions (do not use)
 
 - HQ `TR%` / `billgen.fin_tar_lines` / `fin_cntar_lines` (those belong to **064-8-91723-6**)

@@ -17,9 +17,10 @@ Scope rules:
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
 4. Primary target: `direction = 'in'` and `match_status` in (`pending`, `unmatched`)
 5. Also clear outbound (`direction = 'out'`) rows with `match_status` in (`pending`, `unmatched`) using the internal-transfer rule below
-6. Never change amount / description / source_* / any money fields
-7. Write only `match_*` and `matched_*` fields
-8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+6. **Re-match `unmatched` every run** — a prior `unmatched` is not final. RVI vouchers often post after the bank settlement; when a unique RVI now exists, overwrite the old unmatched decision with `matched` / `review`. Never skip `unmatched` rows. **Do not** “finish” an inflow by writing only a channel label (Shopee/Lazada/TikTok) without an RVI `matched_ref_id` — leave it `unmatched` so the next run can attach the voucher.
+7. Never change amount / description / source_* / any money fields
+8. Write only `match_*` and `matched_*` fields
+9. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
 ## Date window policy
 
@@ -68,14 +69,16 @@ Confidence: clear unique same-day ≥ **0.95**; ±0.01 rounding ≈ **0.90**; re
 
 #### Channel hints (description → typical RVI `ACCTNAME`)
 
-Use these only as supporting evidence in `match_notes` — amount + same-day uniqueness still decides the match.
+Use these only as supporting evidence in `match_notes` — amount + same-day uniqueness still decides the match. **Channel label alone is never a finished match.**
 
 | Statement `description` pattern | Channel | Typical RVI shops |
 |---|---|---|
 | `004-8471012131` | Shopee | `SHOPEE (พี่ภู่)`, `PNT TRACTOR (Shopee)`, `SHOPEE I.C.E tractor`, `ICE AUTO PARTS ( SHOPEE)` |
+| `TR from 9825080752 Shopeepay` | ShopeePay | same Shopee RVI shops |
 | `BPS/…/Lazada Ltd.…` | Lazada | `LAZADA (KC INDUSTRY)`, `PNT TRACTOR (Lazada)`, `LAZADA I.C.E tractor`, `ICE AUTO PARTS (LAZADA)`, `LAZADA (Tractor Group )` |
 | `004-1521670041…` or `024-6993647915…` | TikTok | `ICE TIKTOK SHOP` |
 
+July 2026 lesson: all 29 marketplace inflows had a unique RVI within ±5d, but operators only wrote channel labels (`Shopee` / `Lazada` / `TikTok`) with no `matched_ref_id`. Always attach `VOUCNO`. If RVI is missing today, leave `unmatched` (so the next run can rematch) — do not convert to `manual`-style channel-only notes.
 ### 2) Do **not** match individual TAD bills to deposits
 
 Source **not** used for this account’s bank lines: `curated_kcw.fact_sales_bills_all` with `BILLTYPE_STD = 'TAD'`.

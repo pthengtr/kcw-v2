@@ -1,9 +1,14 @@
 # Match inbound deposits for account 064-8-91723-6
 
-You are a matching agent for inbound rows in `bank.statement_lines`.
+You are a matching agent for bank rows in `bank.statement_lines`.
 Follow the rules below strictly, then update rows in Supabase directly.
 
 Account **064-8-91723-6** (Kasikorn, ends **7236**) is the **HQ** operating / inbound sales account.
+
+- **Inbound** ≈ sales (TR / TAR / RVMAS) and occasional non-sales credits
+- **Outbound** ≈ funding sweeps to other KCW accounts (X3557 / X4759 / X0393 / X6184) — mark as internal transfers; do **not** run PVMAS/PIMAS here
+
+KBANK narrative detail often lives in `raw_json->>'รายละเอียด'` while `description` is only `โอนเงิน` / `รับโอนเงิน`. Always read `raw_json` when classifying transfers.
 
 ## Job scope (injected by the system)
 
@@ -15,10 +20,13 @@ Scope rules:
 1. Only account **064-8-91723-6**
 2. If `{{account_no}}` is not `064-8-91723-6`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Only touch rows with `direction = 'in'` and `match_status` in (`pending`, `unmatched`)
-5. Never change amount / description / source_* / any money fields
-6. Write only `match_*` and `matched_*` fields
-7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+4. Touch both directions while `match_status` in (`pending`, `unmatched`):
+   - `direction = 'in'` → sales sources first, then non-sales categories
+   - `direction = 'out'` → **internal sweeps only** (no expense / PVMAS matching)
+5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. Bills / RVMAS / TAR often land after the bank feed; when a unique candidate now exists, overwrite the old unmatched decision with `matched` / `review` / `ignored`. Never skip `unmatched` rows.
+6. Never change amount / description / source_* / any money fields
+7. Write only `match_*` and `matched_*` fields
+8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
 ## Date window policy
 
@@ -68,6 +76,30 @@ Notes:
 - Do not mix daily TAR−CNTAR net rows into TR matching
 - Auto-`matched` only on same calendar day (`BILLDATE = txn_date`)
 - If same-day fails but a unique bill/bundle/remainder fits on **T+1 .. T+5**, set `review` with matched refs and `⚠️ วันที่ไม่ตรงช่วงปกติ:` in `match_notes` — do not leave `unmatched` when a plausible late transfer exists
+- **Thai QR remainder may include unclaimed RC + TR** from that day (July: RC6907-001 + TR6907-001 → Thai QR). Prefer same-day TR remainder first; if RC vouchers clearly fill the gap and are not already claimed elsewhere, include them in the remainder note / refs
+
+### 1b) Cash front-store deposits — เงินสดหน้าร้าน (Narumon)
+
+July ground truth: front-store cash sales are deposited into this account from Narumon’s personal KTB accounts, then matched to the prior day’s TR bills.
+
+Detect via `raw_json->>'รายละเอียด'` (not just `description`):
+
+- `X2446` / `NARUMON WITHAYAPAL`
+- `X8822` / `MISS NARUMON`
+
+Matching:
+
+- Amount = one TR bill or a small same-`BILLDATE` TR bundle (same allocation rules as §1)
+- Typical lag: bank `txn_date` = bill date **+ 1** (sometimes +2 for weekend / multi-bill)
+- Auto-`matched` when unique on T+1; else relaxed `review` within T+1 .. T+5
+- Do **not** treat these as internal transfers (personal KTB, not a KCW company account)
+
+| Kind | `matched_ref_type` | `match_status` | `match_reason` (Thai) |
+|---|---|---|---|
+| Cash → 1 TR | `tr_bill` | `matched` / `review` | `เงินสดหน้าร้าน (บิลโอน TR)` |
+| Cash → several TR | `tr_bundle` | `matched` / `review` | `เงินสดหน้าร้าน (บิลโอน TR รวมหลายใบ)` |
+
+`matched_ref_id` = bill no. (comma-separated for bundles). Mention X2446/X8822 and bill dates in `match_notes`.
 
 ### 2) Daily net TAR − CNTAR
 
@@ -127,9 +159,11 @@ Source: `raw_kcw.raw_hq_rvmas_notes_vouchers`
 `matched_ref_type = rvmas`  
 `matched_ref_id = <VOUCNO>`
 
-## Non-sales categories (after sales sources)
+Month-boundary note (July): vouchers numbered `RC6908-…` can still clear on **31/07** with same-day `VOUCDATE`/`RCPTDATE`. Match by amount + date, not by the month digits inside `VOUCNO`. If the unique hit is slightly outside ±5d, still use `review` with the warning prefix — do not leave `unmatched` when the voucher is clearly the same receipt.
 
-Confirmed from June ground truth (may not appear every month). Handle these after TR / TAR / RVMAS.
+## Non-sales categories — INBOUND (after sales sources)
+
+Confirmed from June/July ground truth (may not appear every month). Handle these after TR / TAR / RVMAS.
 
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
@@ -138,12 +172,41 @@ Confirmed from June ground truth (may not appear every month). Handle these afte
 | Director refund | `director_refund` | `ignored` | Corrects a duplicate transfer | `คืนเงินกรรมการ` |
 | Credit note refund | `credit_note_refund` | `matched` | VAT cash-sale reversal, CN-prefixed; confidence **1.0** | `คืนเงินใบลดหนี้` |
 | Vendor rebate | `vendor_rebate` | `matched` | No internal source table — match by description; confidence ~**0.9** | `เงินคืนจากผู้ขาย` |
-| Internal sweeps | `internal_transfer` | `ignored` | Same amount as both in/out, or transfer text naming another KCW account | `โอนภายใน` |
+| Internal transfer in | `internal_transfer` | `ignored` | Funding / return from another KCW account (rare on this account) | `โอนภายใน` |
 
 For these categories set:
 
 - `matched_ref_id` to the best stable key available (reference code, CN no., counterpart account, or txn id)
 - `match_notes` in Thai explaining why it was classified that way
+
+## OUTBOUND — internal sweeps only
+
+All observed July 2026 outflows on this account are large K BIZ transfers funding sister KCW accounts. **Always classify them** — do not leave outbound rows `pending`.
+
+How to detect (any one is enough):
+
+1. `raw_json->>'รายละเอียด'` contains `โอนไป X3557` / `X4759` / `X0393` / `X6184` / `X1139` (last-4 of a KCW account) + company name
+2. Same-day counterpart `direction = 'in'` on another KCW account (`141-1-72355-7`, `233-1-18475-9`, `064-8-92039-3`, `248-6-00618-4`, `248-0-42113-9`) with the same amount
+3. Large round amounts (often 500,000 / 1,000,000) with `description = 'โอนเงิน'` and K BIZ channel — still confirm via `raw_json` or counterpart before ignoring
+
+| Kind | `matched_ref_type` | `match_status` | `match_reason` (Thai) |
+|---|---|---|---|
+| Internal sweep out | `internal_transfer` | `ignored` | `โอนภายใน` |
+
+`matched_ref_id` = counterpart full account no. when known (e.g. `141-1-72355-7`), else the `X####` from `รายละเอียด`.  
+Confidence: **1.0** when counterpart account is clear from `raw_json` or same-day sister-account inflow.
+
+July 2026 examples (do not hard-code; pattern only):
+
+- 15/23/26 Jul: 1,000,000 → `โอนไป X3557` (funds `141-1-72355-7`)
+- 29 Jul: 500,000 → `โอนไป X3557` + 500,000 → `โอนไป X4759` (funds `233-1-18475-9`)
+
+Thai note examples:
+
+- `โอนภายในไปบัญชี X3557 (141-1-72355-7) จำนวน 1,000,000.00 บาท วันที่ 15/07/2026 — ไม่ใช่ยอดขาย`
+- `โอนภายในไปบัญชี X4759 (233-1-18475-9) จำนวน 500,000.00 บาท วันที่ 29/07/2026 — เติมเงินบัญชี OpEx`
+
+If an outbound row is clearly **not** an internal sweep (unknown counterpart, personal TR, etc.) → `review` with a Thai note — do not invent PVMAS/PIMAS matches on this account.
 
 ## Exclusions (do not use)
 
@@ -151,6 +214,8 @@ For these categories set:
 - **Blind subset-sum without a customer / source constraint** — too many coincidental combinations to trust
   - TR bundling is allowed only within that day's TR bills
   - Do not invent cross-source or unconstrained amount puzzles
+- **PVMAS / PIMAS / expense_receipt** on this account’s outflows — those belong to **141-1-72355-7** / **248-6-00618-4** / **233-1-18475-9**
+- Leaving outbound internal sweeps as `pending` / `unmatched` when `raw_json` or counterpart clearly names another KCW account
 
 ## Fields to write on each decision
 
@@ -159,6 +224,7 @@ Always set:
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
   - Start from `pending` or `unmatched` only; never write back to `pending`
   - Operators own `resolved` / `manual` — do not touch those rows
+  - Outbound internal sweeps → `ignored` (finished classification; operators treat them as done)
 - `match_reason`: short Thai text from the tables above (shown in the Thai UI)
 - `match_confidence`: 0 to 1
 - `matched_ref_type` / `matched_ref_id`
@@ -171,7 +237,7 @@ Confidence guide:
 - Clear 1:1 sales / CN refund ≥ 0.95 (CN refund = 1.0)
 - TR bundle / remainder / TAR T+2 / vendor rebate ≈ 0.85–0.90
 - Ambiguous → `review` and confidence ≤ 0.55
-- Ignored non-sales categories: still set confidence when useful (e.g. 1.0 for clear interest/WHT pair)
+- Ignored non-sales categories / internal transfers: confidence **1.0** when counterpart or interest/WHT pair is clear
 
 ## Thai note style (required for operator UI)
 
@@ -184,6 +250,7 @@ Write `match_notes` so Thai staff can read them immediately, for example:
 - `จับคู่กับใบสำคัญรับเงิน RC6905-002 จำนวน 32,937.06 บาท วันที่ 01/05/2026 (วันเดียวกับใบสำคัญ)`
 - `ฝากเช็คตามใบสำคัญรับเงิน RC6906-015 จำนวน 50,000.00 บาท`
 - `ดอกเบี้ยเงินฝากคู่กับภาษีหัก ณ ที่จ่าย รหัสอ้างอิงเดียวกัน วันที่ 15/06/2026 — ไม่ใช่ยอดขาย`
+- `โอนภายในไปบัญชี X3557 (141-1-72355-7) จำนวน 1,000,000.00 บาท วันที่ 15/07/2026 — ไม่ใช่ยอดขาย`
 
 Do not use cryptic codes like `tr_remainder:` or `T+1 net=` as the main `match_notes` text.
 
@@ -194,14 +261,15 @@ Do not use cryptic codes like `tr_remainder:` or `T+1 net=` as the main `match_n
 - Use non-VAT SIDET or unconstrained blind subset-sum
 - Force auto-`matched` outside strict date windows — use relaxed `review` with matched info + warning instead
 - Leave `unmatched` when a plausible relaxed-window candidate exists — use `review` with matched refs
+- Leave outbound internal sweeps `pending` when `raw_json` names X3557 / X4759 / other KCW accounts
 - Open a PR / change repo code for this job unless required to update data
 
 ## End-of-run summary
 
 Report briefly in English:
 
-- Counts of `matched` / `review` / `ignored` / `unmatched`
+- Counts of `matched` / `review` / `ignored` / `unmatched` (split by `in` / `out` if useful)
 - Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
-- Breakdown by source: TR / TAR / RVMAS / non-sales categories
+- Breakdown by source: TR / TAR / RVMAS / non-sales inbound / **outbound internal_transfer**
 - Any TAR shortfall catch-up pairs found
 - Rows that need human review
