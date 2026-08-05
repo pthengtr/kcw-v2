@@ -39,7 +39,7 @@ const { data, error } = await supabase.functions.invoke(
 // bank-statements/reports/{year}/{mm}/bank_statement_report_{year}_{mm}.xlsx
 ```
 
-Source of the Edge Function: [`supabase/functions/generate-bank-statement-report/`](../supabase/functions/generate-bank-statement-report/).  
+Source of the Edge Function: [`supabase/functions/generate-bank-statement-report/`](../supabase/functions/generate-bank-statement-report/) (Deno; excluded from the Next.js `tsconfig` so `npm:` imports are not typechecked by `next build`).  
 No Google Drive write — operators download from the signed URL (or Storage path under the private `bank-statements` bucket).
 
 ## Removed
