@@ -26,16 +26,26 @@ describe("Webapp mobile layout", () => {
   it("uses a responsive, grouped workspace on the home page", () => {
     const home = read("src/app/(root)/home/page.tsx");
     expect(home).toContain("grid-cols-1");
-    expect(home).toContain("grid-cols-2");
-    expect(home).toContain("lg:grid-cols-5");
     expect(home).toContain("xl:grid-cols-4");
-    expect(home).toContain("เมนูโปรด");
-    expect(home).toContain("ภาพรวมพื้นที่ทำงาน");
+    expect(home).toContain("FavoriteMenuSection");
+    expect(home).toContain("WorkspaceTodoSection");
     expect(home).toContain("เครื่องมือทั้งหมด");
-    expect(home).toContain("งานประจำวัน");
-    expect(home).toContain("การเงินและรับชำระ");
-    expect(home).toContain("ข้อมูลและสินค้า");
-    expect(home).toContain("รายงานและความรู้");
+
+    const favorites = read("src/components/home/FavoriteMenuSection.tsx");
+    expect(favorites).toContain("เมนูโปรด");
+    expect(favorites).toContain("จัดการเมนูโปรด");
+    expect(favorites).toContain("grid-cols-2");
+    expect(favorites).toContain("lg:grid-cols-5");
+
+    const todos = read("src/components/home/WorkspaceTodoSection.tsx");
+    expect(todos).toContain("ภาพรวมพื้นที่ทำงาน");
+    expect(todos).toContain("md:grid-cols-3");
+
+    const menu = read("src/lib/home/menu.ts");
+    expect(menu).toContain("งานประจำวัน");
+    expect(menu).toContain("การเงินและรับชำระ");
+    expect(menu).toContain("ข้อมูลและสินค้า");
+    expect(menu).toContain("รายงานและความรู้");
   });
 
   it("stacks expense create/update panes under md", () => {

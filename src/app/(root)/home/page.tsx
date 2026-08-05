@@ -1,187 +1,16 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  ArrowRight,
-  ArrowRightLeft,
-  Banknote,
-  BarChart3,
-  BookOpen,
-  Boxes,
-  ClipboardList,
-  Grid3X3,
-  Handshake,
-  Images,
-  Link2,
-  MessageCircleWarning,
-  Star,
-  Wallet,
-} from "lucide-react";
+import { ArrowRight, Grid3X3 } from "lucide-react";
 import Link from "next/link";
 
+import { getMyCookie } from "@/app/(root)/action";
+import FavoriteMenuSection from "@/components/home/FavoriteMenuSection";
+import WorkspaceTodoSection from "@/components/home/WorkspaceTodoSection";
+import { FAVORITES_COOKIE_KEY, parseFavoriteKeys } from "@/lib/home/favorites";
+import { HOME_MENU_GROUPS, type HomeMenuGroup } from "@/lib/home/menu";
+import { fetchWorkspaceTodos } from "@/lib/home/workspace-todos";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-type MenuItem = {
-  href: string;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-  iconClassName: string;
-  iconSurfaceClassName: string;
-};
-
-type MenuGroup = {
-  title: string;
-  items: MenuItem[];
-};
-
-const menuItems = {
-  reminder: {
-    href: "/reminder",
-    label: "เตือนโอน",
-    description: "ติดตามรายการและกำหนดการโอนเงิน",
-    icon: MessageCircleWarning,
-    iconClassName: "text-amber-600",
-    iconSurfaceClassName: "bg-amber-50 ring-amber-100",
-  },
-  expense: {
-    href: "/expense",
-    label: "ค่าใช้จ่าย",
-    description: "บันทึกและตรวจสอบค่าใช้จ่าย",
-    icon: Banknote,
-    iconClassName: "text-emerald-600",
-    iconSurfaceClassName: "bg-emerald-50 ring-emerald-100",
-  },
-  po: {
-    href: "/po",
-    label: "ใบสั่งซื้อ (PO)",
-    description: "ตรวจสอบสถานะใบสั่งซื้อ",
-    icon: ClipboardList,
-    iconClassName: "text-violet-600",
-    iconSurfaceClassName: "bg-violet-50 ring-violet-100",
-  },
-  stockAudit: {
-    href: "/stock-audit",
-    label: "ตรวจนับสต็อก",
-    description: "ติดตามความครบถ้วนของการตรวจนับ",
-    icon: Boxes,
-    iconClassName: "text-sky-600",
-    iconSurfaceClassName: "bg-sky-50 ring-sky-100",
-  },
-  bankStatement: {
-    href: "/bank-statement-sync",
-    label: "Bank Statement",
-    description: "นำเข้าและจับคู่รายการเดินบัญชี",
-    icon: ArrowRightLeft,
-    iconClassName: "text-blue-600",
-    iconSurfaceClassName: "bg-blue-50 ring-blue-100",
-  },
-  tigerPay: {
-    href: "/tiger-pay",
-    label: "Tiger Pay",
-    description: "ตรวจสอบธุรกรรมและการรับชำระ",
-    icon: Wallet,
-    iconClassName: "text-orange-600",
-    iconSurfaceClassName: "bg-orange-50 ring-orange-100",
-  },
-  party: {
-    href: "/party",
-    label: "รายชื่อคู่ค้า",
-    description: "ดูแลข้อมูลลูกค้าและผู้ขาย",
-    icon: Handshake,
-    iconClassName: "text-indigo-600",
-    iconSurfaceClassName: "bg-indigo-50 ring-indigo-100",
-  },
-  relatedProducts: {
-    href: "/product-related",
-    label: "สินค้าที่ซื้อด้วยกัน",
-    description: "ค้นหาความสัมพันธ์ระหว่างสินค้า",
-    icon: Link2,
-    iconClassName: "text-fuchsia-600",
-    iconSurfaceClassName: "bg-fuchsia-50 ring-fuchsia-100",
-  },
-  productImages: {
-    href: "/product-images",
-    label: "จัดการรูปสินค้า",
-    description: "ซิงก์และตรวจสอบรูปภาพสินค้า",
-    icon: Images,
-    iconClassName: "text-rose-600",
-    iconSurfaceClassName: "bg-rose-50 ring-rose-100",
-  },
-  faq: {
-    href: "/kb",
-    label: "จัดการ FAQ",
-    description: "ดูแลคลังความรู้สำหรับทีม",
-    icon: BookOpen,
-    iconClassName: "text-teal-600",
-    iconSurfaceClassName: "bg-teal-50 ring-teal-100",
-  },
-  bi: {
-    href: "/bi/income",
-    label: "รายงาน BI",
-    description: "ดูภาพรวมและวิเคราะห์ข้อมูลธุรกิจ",
-    icon: BarChart3,
-    iconClassName: "text-blue-600",
-    iconSurfaceClassName: "bg-blue-50 ring-blue-100",
-  },
-} satisfies Record<string, MenuItem>;
-
-const favoriteItems = [
-  menuItems.reminder,
-  menuItems.expense,
-  menuItems.po,
-  menuItems.bi,
-  menuItems.bankStatement,
-];
-
-const menuGroups: MenuGroup[] = [
-  {
-    title: "งานประจำวัน",
-    items: [menuItems.reminder, menuItems.expense, menuItems.po],
-  },
-  {
-    title: "การเงินและรับชำระ",
-    items: [menuItems.bankStatement, menuItems.tigerPay],
-  },
-  {
-    title: "ข้อมูลและสินค้า",
-    items: [
-      menuItems.party,
-      menuItems.relatedProducts,
-      menuItems.productImages,
-      menuItems.stockAudit,
-    ],
-  },
-  {
-    title: "รายงานและความรู้",
-    items: [menuItems.bi, menuItems.faq],
-  },
-];
-
-function FavoriteCard({ item }: { item: MenuItem }) {
-  const Icon = item.icon;
-
-  return (
-    <Link
-      href={item.href}
-      aria-label={item.label}
-      className="group flex min-h-28 flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-5 text-center shadow-sm outline-none transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-    >
-      <span
-        className={`inline-flex h-11 w-11 items-center justify-center rounded-xl ring-1 ring-inset ${item.iconSurfaceClassName}`}
-      >
-        <Icon
-          className={`h-5 w-5 ${item.iconClassName}`}
-          strokeWidth={1.8}
-          aria-hidden
-        />
-      </span>
-      <span className="text-sm font-semibold text-slate-700 transition-colors group-hover:text-blue-700">
-        {item.label}
-      </span>
-    </Link>
-  );
-}
-
-function MenuGroupCard({ group }: { group: MenuGroup }) {
+function MenuGroupCard({ group }: { group: HomeMenuGroup }) {
   return (
     <section
       className="h-full rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm"
@@ -242,6 +71,14 @@ function getDisplayName(metadata: Record<string, unknown> | undefined) {
   return candidate?.trim();
 }
 
+function getAdminClientOrNull() {
+  try {
+    return createAdminClient();
+  } catch {
+    return null;
+  }
+}
+
 export default async function Home() {
   const supabase = await createClient();
   const {
@@ -250,8 +87,15 @@ export default async function Home() {
   const displayName = getDisplayName(
     user?.user_metadata as Record<string, unknown> | undefined
   );
-  const totalTools = Object.keys(menuItems).length;
   const currentYear = new Date().getFullYear();
+  const favoriteKeys = parseFavoriteKeys(
+    await getMyCookie(FAVORITES_COOKIE_KEY)
+  );
+  const adminClient = getAdminClientOrNull() ?? supabase;
+  const workspaceTodos = await fetchWorkspaceTodos({
+    userClient: supabase,
+    adminClient,
+  });
 
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-slate-50/70">
@@ -271,72 +115,9 @@ export default async function Home() {
           </div>
         </header>
 
-        <section className="mt-8" aria-labelledby="favorite-menu">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden />
-              <h2
-                id="favorite-menu"
-                className="text-base font-bold text-slate-900 sm:text-lg"
-              >
-                เมนูโปรด
-              </h2>
-            </div>
-            <span className="text-xs font-medium text-slate-400">
-              {favoriteItems.length} เมนู
-            </span>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {favoriteItems.map((item) => (
-              <FavoriteCard key={item.href} item={item} />
-            ))}
-          </div>
-        </section>
+        <FavoriteMenuSection initialKeys={favoriteKeys} />
 
-        <section className="mt-8" aria-labelledby="workspace-summary">
-          <h2
-            id="workspace-summary"
-            className="text-base font-bold text-slate-900 sm:text-lg"
-          >
-            ภาพรวมพื้นที่ทำงาน
-          </h2>
-          <div className="mt-3 grid grid-cols-1 divide-y divide-slate-100 rounded-2xl border border-slate-200/80 bg-white shadow-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-            <div className="px-6 py-5 text-center">
-              <p className="text-xs font-medium text-slate-500">
-                เครื่องมือทั้งหมด
-              </p>
-              <p className="mt-1 text-3xl font-bold text-blue-600">
-                {totalTools}
-                <span className="ml-1.5 text-xs font-medium text-slate-500">
-                  รายการ
-                </span>
-              </p>
-              <p className="mt-1 text-xs text-slate-400">พร้อมให้คุณใช้งาน</p>
-            </div>
-            <div className="px-6 py-5 text-center">
-              <p className="text-xs font-medium text-slate-500">หมวดงาน</p>
-              <p className="mt-1 text-3xl font-bold text-violet-600">
-                {menuGroups.length}
-                <span className="ml-1.5 text-xs font-medium text-slate-500">
-                  หมวด
-                </span>
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                แบ่งตามลักษณะการทำงาน
-              </p>
-            </div>
-            <div className="px-6 py-5 text-center">
-              <p className="text-xs font-medium text-slate-500">เมนูด่วน</p>
-              <p className="mt-1 text-3xl font-bold text-amber-500">
-                {favoriteItems.length}
-                <span className="ml-1.5 text-xs font-medium text-slate-500">
-                  รายการ
-                </span>
-              </p>
-              <p className="mt-1 text-xs text-slate-400">เข้าถึงได้จากด้านบน</p>
-            </div>
-          </div>
-        </section>
+        <WorkspaceTodoSection items={workspaceTodos} />
 
         <section className="mt-8" aria-labelledby="all-tools">
           <h2
@@ -346,7 +127,7 @@ export default async function Home() {
             เครื่องมือทั้งหมด
           </h2>
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {menuGroups.map((group) => (
+            {HOME_MENU_GROUPS.map((group) => (
               <MenuGroupCard key={group.title} group={group} />
             ))}
           </div>
