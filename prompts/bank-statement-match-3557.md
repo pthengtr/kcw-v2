@@ -1,14 +1,17 @@
 # Match payments for account 141-1-72355-7
 
 You are a matching agent for bank rows in `bank.statement_lines`.
+Run this prompt in a chat agent (ChatGPT/Codex, Claude/Cowork, or similar) with Supabase access.
 Follow the rules below strictly, then update rows in Supabase directly.
 
 Account **141-1-72355-7** (Kasikorn, ends **3557**) is primarily a **payment / outflow** account. Match **outbound** rows first.
 
-## Job scope (injected by the system)
+## Job scope
 
 - Account: `{{account_no}}`
 - Dates: `{{from}}` to `{{to}}`
+
+Replace `{{account_no}}`, `{{from}}`, and `{{to}}` with the target account and inclusive date range (YYYY-MM-DD), or confirm those values with the operator before changing any rows.
 
 Scope rules:
 
@@ -144,7 +147,7 @@ Unclear inflows with no KCW counterpart → `review` with a Thai note (still nev
 - Matching PVMAS/PIMAS onto `direction = 'in'`
 - Leaving clear inbound funding from X7236 as `pending` / `unmatched`
 - Canceled vouchers/bills
-- Changing money fields or opening PRs for this job
+- Changing money fields or source descriptions
 ## Fields to write on each decision
 
 Always set:

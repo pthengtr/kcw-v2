@@ -153,22 +153,19 @@ New features almost never need new queue tables — only new `job_type` values a
 - UI **อัพเดตรอสั่งซื้อ/ค้างรับ** → `POST /api/po/iclow-sync`, poll `GET /api/po/iclow-sync/:jobId`; meta includes `iclow.hqLastIngestedAt` / `sypLastIngestedAt` + `iclow.inFlightJobs`.
 - Service-role RPCs: `fn_iclow_find_inflight_sync()`, `fn_iclow_enqueue_sync(p_requested_by)`, `fn_iclow_last_ingested_at` — see [bi/sql/fn_iclow_sync_ops.sql](./bi/sql/fn_iclow_sync_ops.sql).
 
-### Bank statement match — จับคู่ยอดเข้า (full account numbers)
+### Bank statement match — จับคู่ยอดเข้า (chat agents)
 
-- Not a PC worker job. UI button **จับคู่ยอดเข้า** on Statement Lines → `POST /api/bank/match`.
-- Scope comes from the selected month; allowed accounts come from `BANK_MATCH_PROMPTS` in [`match-prompt-constants.ts`](../src/lib/bank/match-prompt-constants.ts). Keys must match `bank.statement_lines.account_no` (KBANK now stores full numbers, same as KTB).
-- Prompt sources:
+- **Not** a kcw-v2 UI / API trigger and **not** a `ops.job_queue` PC worker job. Matching is run by a chat agent (ChatGPT/Codex, Claude/Cowork, or similar) using the account prompts under [`prompts/`](../prompts/).
+- Prompt sources (keys = `bank.statement_lines.account_no`, full numbers):
   - `064-8-91723-6` (ends 7236) inbound sales + outbound internal sweeps: [`prompts/bank-statement-match-7236.md`](../prompts/bank-statement-match-7236.md)
   - `141-1-72355-7` (ends 3557) outbound payments + inbound internal funding: [`prompts/bank-statement-match-3557.md`](../prompts/bank-statement-match-3557.md)
   - `064-8-92039-3` (ends 0393) SYP sales (3TR / 3TAR) + app expense PV: [`prompts/bank-statement-match-0393.md`](../prompts/bank-statement-match-0393.md)
   - `233-1-18475-9` (ends 4759) SYP OpEx (took over 0393 expense payments from Jul 2026): [`prompts/bank-statement-match-4759.md`](../prompts/bank-statement-match-4759.md)
   - `248-0-42113-9` (KTB / ends 1139) marketplace RVI: [`prompts/bank-statement-match-1139.md`](../prompts/bank-statement-match-1139.md)
   - `248-6-00618-4` payroll / expense cheques + inbound internal funding: [`prompts/bank-statement-match-6184.md`](../prompts/bank-statement-match-6184.md)
-- Placeholders `{{account_no}}` / `{{from}}` / `{{to}}` are injected by the API with the full selected `account_no`.
-- Requires server env `CURSOR_API_KEY` (optional `CURSOR_AGENT_REPO_URL`, `CURSOR_AGENT_STARTING_REF`, `CURSOR_AGENT_MODEL`, `CURSOR_AGENT_MODEL_OPTIMIZE_FOR`).
-- Launches Cursor Cloud Agent via `POST https://api.cursor.com/v1/agents` with Cursor Router Auto by default (`model.id=auto-smart`, `optimize_for=balanced`). If Auto/Router is rejected for the API key, the launcher retries with no `model` (user/team/system default). Override with `CURSOR_AGENT_MODEL` (`auto-smart` | `auto` | explicit id | `omit`).
+- Before running, fill placeholders `{{account_no}}` / `{{from}}` / `{{to}}` (or tell the chat agent the account + date range). Optional local Codex wrapper: [`worker_tasks/run_bank_statement_match.bat`](../worker_tasks/run_bank_statement_match.bat).
 - Agent updates `bank.statement_lines` match_* fields only, and **only** rows with `match_status` in (`pending`, `unmatched`). Re-run rematches prior `unmatched` rows when source data catches up.
-- Operator workflow: edit reason/notes in the row dialog; `review` → `resolved`, leftovers `unmatched`/`pending` → `manual`; CSV export from Statement Lines filters.
+- Operator workflow in `/bank-statement-sync` Statement Lines: review results, edit reason/notes; `review` → `resolved`, leftovers → `manual`; CSV export from filters.
 - Status SQL: [`bi/sql/alter_bank_statement_lines_match_workflow.sql`](./bi/sql/alter_bank_statement_lines_match_workflow.sql).
 
 ### Do / don’t

@@ -10,7 +10,7 @@ export const BANK_MATCH_STATUSES = [
 
 export type BankMatchStatus = (typeof BANK_MATCH_STATUSES)[number];
 
-/** Rows the match agent may read and overwrite on each run. */
+/** Rows chat-agent matchers may read and overwrite on each run. */
 export const AGENT_INPUT_MATCH_STATUSES = [
   "pending",
   "unmatched",

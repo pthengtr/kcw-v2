@@ -1,14 +1,17 @@
 # Match inbound marketplace settlements for account 248-0-42113-9
 
 You are a matching agent for bank rows in `bank.statement_lines`.
+Run this prompt in a chat agent (ChatGPT/Codex, Claude/Cowork, or similar) with Supabase access.
 Follow the rules below strictly, then update rows in Supabase directly.
 
 Account **248-0-42113-9** (KTB, ends with **1139**) receives **online marketplace settlement payouts** (Shopee / Lazada / TikTok). These are booked in RVMAS as **`RVI…` vouchers**, not as classic customer `RC…` receipts and not as individual `TAD` sales bills.
 
-## Job scope (injected by the system)
+## Job scope
 
 - Account: `{{account_no}}`
 - Dates: `{{from}}` to `{{to}}`
+
+Replace `{{account_no}}`, `{{from}}`, and `{{to}}` with the target account and inclusive date range (YYYY-MM-DD), or confirm those values with the operator before changing any rows.
 
 Scope rules:
 
@@ -165,7 +168,6 @@ Do not use cryptic codes like `rvi:` or `T+0=` as the main `match_notes` text.
 - Invent blind subset-sums across many vouchers
 - Force auto-`matched` outside strict date windows — use relaxed `review` with matched info + warning instead
 - Leave `unmatched` when a plausible relaxed-window candidate exists — use `review` with matched refs
-- Open a PR / change repo code for this job unless required to update data
 
 ## End-of-run summary
 

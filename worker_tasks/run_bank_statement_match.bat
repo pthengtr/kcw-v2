@@ -1,14 +1,14 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-rem Worker entrypoint for bank-statement AI matching via local Codex CLI.
+rem Chat-agent entrypoint for bank-statement matching via local Codex CLI.
 rem Usage:
 rem   run_bank_statement_match.bat ^<4digits^|all^> ^<YYYY-MM^>
 rem Examples:
 rem   run_bank_statement_match.bat 7236 2026-06
 rem   run_bank_statement_match.bat all 2026-06
 rem
-rem Designed for unattended Python worker calls:
+rem Designed for unattended calls (or manual runs):
 rem   subprocess.run([r"...\\worker_tasks\\run_bank_statement_match.bat", "7236", "2026-06"], check=True)
 
 set "SCRIPT_DIR=%~dp0"
