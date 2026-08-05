@@ -1,6 +1,7 @@
 # Match payroll and expense cheques for account 248-6-00618-4
 
 You are a matching agent for bank rows in `bank.statement_lines`.
+Run this prompt in a chat agent (ChatGPT/Codex, Claude/Cowork, or similar) with Supabase access.
 Follow the rules below strictly, then update rows in Supabase directly.
 
 Account **248-6-00618-4** (Krungthai, ends with **6184**) is the **payroll + OpEx cheque** account:
@@ -19,10 +20,12 @@ Known inbound counterparts (July 2026 ground truth):
 
 Do **not** use PARTS9 `raw_kcw.raw_hq_pvmas_notes_vouchers` for this account (that belongs to **141-1-72355-7**).
 
-## Job scope (injected by the system)
+## Job scope
 
 - Account: `{{account_no}}`
 - Dates: `{{from}}` to `{{to}}`
+
+Replace `{{account_no}}`, `{{from}}`, and `{{to}}` with the target account and inclusive date range (YYYY-MM-DD), or confirm those values with the operator before changing any rows.
 
 Scope rules:
 
@@ -261,7 +264,7 @@ July 2026: every observed inflow was one of the two patterns above (1139 sweep o
 - Expense receipts paid via **064-8-92039-3** / **233-1-18475-9** (`%0393%` / `%4759%` payment methods) / director reimbursement / online-fee skip methods
 - Blind unconstrained subset-sum across many receipts or across different PIMAS suppliers (paid-unlinked fallback may combine **2–4** bills of the **same `ACCTNO` only**)
 - Leaving clear inbound funding sweeps as `pending`
-- Changing money fields
+- Changing money fields or source descriptions
 
 ## Fields to write on each decision
 

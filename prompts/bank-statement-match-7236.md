@@ -1,6 +1,7 @@
 # Match inbound deposits for account 064-8-91723-6
 
 You are a matching agent for bank rows in `bank.statement_lines`.
+Run this prompt in a chat agent (ChatGPT/Codex, Claude/Cowork, or similar) with Supabase access.
 Follow the rules below strictly, then update rows in Supabase directly.
 
 Account **064-8-91723-6** (Kasikorn, ends **7236**) is the **HQ** operating / inbound sales account.
@@ -10,10 +11,12 @@ Account **064-8-91723-6** (Kasikorn, ends **7236**) is the **HQ** operating / in
 
 KBANK narrative detail often lives in `raw_json->>'รายละเอียด'` while `description` is only `โอนเงิน` / `รับโอนเงิน`. Always read `raw_json` when classifying transfers.
 
-## Job scope (injected by the system)
+## Job scope
 
 - Account: `{{account_no}}`
 - Dates: `{{from}}` to `{{to}}`
+
+Replace `{{account_no}}`, `{{from}}`, and `{{to}}` with the target account and inclusive date range (YYYY-MM-DD), or confirm those values with the operator before changing any rows.
 
 Scope rules:
 
@@ -262,7 +265,6 @@ Do not use cryptic codes like `tr_remainder:` or `T+1 net=` as the main `match_n
 - Force auto-`matched` outside strict date windows — use relaxed `review` with matched info + warning instead
 - Leave `unmatched` when a plausible relaxed-window candidate exists — use `review` with matched refs
 - Leave outbound internal sweeps `pending` when `raw_json` names X3557 / X4759 / other KCW accounts
-- Open a PR / change repo code for this job unless required to update data
 
 ## End-of-run summary
 
