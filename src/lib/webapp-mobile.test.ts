@@ -26,12 +26,16 @@ describe("Webapp mobile layout", () => {
   it("uses a responsive, grouped workspace on the home page", () => {
     const home = read("src/app/(root)/home/page.tsx");
     expect(home).toContain("grid-cols-1");
-    expect(home).toContain("sm:grid-cols-2");
+    expect(home).toContain("grid-cols-2");
+    expect(home).toContain("lg:grid-cols-5");
     expect(home).toContain("xl:grid-cols-4");
+    expect(home).toContain("เมนูโปรด");
+    expect(home).toContain("ภาพรวมพื้นที่ทำงาน");
+    expect(home).toContain("เครื่องมือทั้งหมด");
     expect(home).toContain("งานประจำวัน");
     expect(home).toContain("การเงินและรับชำระ");
     expect(home).toContain("ข้อมูลและสินค้า");
-    expect(home).toContain('aria-labelledby="section-analytics"');
+    expect(home).toContain("รายงานและความรู้");
   });
 
   it("stacks expense create/update panes under md", () => {
