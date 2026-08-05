@@ -24,6 +24,7 @@ import {
   type StockAuditLookup,
   type StockAuditOverview,
 } from "@/lib/stock-audit/types";
+import { STOCK_AUDIT_DAILY_TARGET } from "@/lib/home/workspace-todos";
 import { cn } from "@/lib/utils";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import StockAuditDailyChart from "@/components/stock-audit/StockAuditDailyChart";
@@ -44,8 +45,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 type TabId = "work" | "overview" | "ondemand";
 
 const PAGE_SIZE = 50;
-/** Soft daily target for the progress KPI (operator can still pick any count). */
-const DAILY_TARGET = 30;
 
 function summaryCount(
   overview: StockAuditOverview | null,
@@ -79,7 +78,7 @@ export default function StockAuditPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [batchCount, setBatchCount] = useState(DAILY_TARGET);
+  const [batchCount, setBatchCount] = useState(STOCK_AUDIT_DAILY_TARGET);
   const [locationFilter, setLocationFilter] = useState("");
   const [creatingBatch, setCreatingBatch] = useState(false);
   const [activeBatch, setActiveBatch] = useState<StockAuditBatch | null>(null);
@@ -268,7 +267,7 @@ export default function StockAuditPage() {
     activeBatch?.items.filter((i) => i.status === "pending") ?? [];
   const todayDone = overview?.summary.marked_today_count ?? 0;
   const weekDone = overview?.summary.marked_week_count ?? 0;
-  const todayProgress = Math.min(100, Math.round((100 * todayDone) / DAILY_TARGET));
+  const todayProgress = Math.min(100, Math.round((100 * todayDone) / STOCK_AUDIT_DAILY_TARGET));
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
@@ -346,7 +345,7 @@ export default function StockAuditPage() {
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="font-medium text-teal-950">
               วันนี้ตรวจแล้ว {formatCount(todayDone)} / เป้า{" "}
-              {formatCount(DAILY_TARGET)}
+              {formatCount(STOCK_AUDIT_DAILY_TARGET)}
             </span>
             <span className="text-xs text-teal-900/70">
               7 วันนี้ {formatCount(weekDone)} รายการ
@@ -573,7 +572,7 @@ export default function StockAuditPage() {
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <SalesKpiCard
                   title="วันนี้"
-                  value={`${formatCount(todayDone)} / ${formatCount(DAILY_TARGET)}`}
+                  value={`${formatCount(todayDone)} / ${formatCount(STOCK_AUDIT_DAILY_TARGET)}`}
                   hint="เป้าแนะนำต่อวัน"
                   icon={<CheckCircle2 className="h-4 w-4" />}
                 />
