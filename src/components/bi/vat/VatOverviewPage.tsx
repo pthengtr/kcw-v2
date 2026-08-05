@@ -47,6 +47,56 @@ import VatTrendChart from "./VatTrendChart";
 
 const PERIODS: BiPeriodPreset[] = ["month", "ytd", "custom"];
 
+/** Full calendar end (not capped at today) so mid-period VAT forecast can extrapolate. */
+function resolveVatPeriodRange(
+  preset: BiPeriodPreset,
+  customFrom: string,
+  customTo: string,
+  customMode: BiCustomDateMode,
+  customMonth: string
+): { from: string; to: string } {
+  const today = bangkokTodayIso();
+
+  if (preset === "month") {
+    const monthIso = today.slice(0, 7);
+    const year = Number(monthIso.slice(0, 4));
+    const month = Number(monthIso.slice(5, 7));
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return {
+      from: `${monthIso}-01`,
+      to: `${monthIso}-${String(lastDay).padStart(2, "0")}`,
+    };
+  }
+
+  if (preset === "ytd") {
+    const year = Number(today.slice(0, 4));
+    return { from: `${year}-01-01`, to: `${year}-12-31` };
+  }
+
+  if (customMode === "month") {
+    const monthIso = customMonth || bangkokCurrentMonthIso();
+    const match = /^(\d{4})-(\d{2})$/.exec(monthIso);
+    if (match) {
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+      const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+      return {
+        from: `${match[1]}-${match[2]}-01`,
+        to: `${match[1]}-${match[2]}-${String(lastDay).padStart(2, "0")}`,
+      };
+    }
+  }
+
+  return resolvePeriodRange(
+    preset,
+    customFrom,
+    customTo,
+    new Date(),
+    customMode,
+    customMonth
+  );
+}
+
 export default function VatOverviewPage() {
   const [preset, setPreset] = useState<BiPeriodPreset>("month");
   const [branch, setBranch] = useState<BiVatBranchFilter>("ALL");
@@ -60,11 +110,10 @@ export default function VatOverviewPage() {
 
   const range = useMemo(
     () =>
-      resolvePeriodRange(
+      resolveVatPeriodRange(
         preset,
         customFrom,
         customTo,
-        new Date(),
         customMode,
         customMonth
       ),
