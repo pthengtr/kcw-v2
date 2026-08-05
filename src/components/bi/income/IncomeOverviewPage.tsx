@@ -32,6 +32,7 @@ import type {
 } from "@/lib/bi/sales-types";
 import { cn } from "@/lib/utils";
 import BiHighlightsCard from "@/components/bi/BiHighlightsCard";
+import BiLoadingBody from "@/components/bi/BiLoadingBody";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -328,7 +329,7 @@ export default function IncomeOverviewPage() {
       ) : null}
 
       {overview ? (
-        <>
+        <BiLoadingBody loading={loading}>
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <SalesKpiCard
               title="ยอดขายสุทธิ"
@@ -426,7 +427,7 @@ export default function IncomeOverviewPage() {
             branch={branch === "ALL" ? null : branch}
             expectedCount={overview.summary.blank_cost_line_count}
           />
-        </>
+        </BiLoadingBody>
       ) : null}
     </div>
   );

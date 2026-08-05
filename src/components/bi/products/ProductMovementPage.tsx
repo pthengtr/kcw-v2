@@ -29,6 +29,7 @@ import type {
   BiPeriodPreset,
 } from "@/lib/bi/sales-types";
 import { cn } from "@/lib/utils";
+import BiLoadingBody from "@/components/bi/BiLoadingBody";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -422,7 +423,7 @@ export default function ProductMovementPage() {
       ) : null}
 
       {overview ? (
-        <>
+        <BiLoadingBody loading={loading}>
           <section
             className={cn(
               "grid grid-cols-1 gap-3",
@@ -505,7 +506,7 @@ export default function ProductMovementPage() {
               onJumpPage={onDeadJumpPage}
             />
           )}
-        </>
+        </BiLoadingBody>
       ) : null}
     </div>
   );

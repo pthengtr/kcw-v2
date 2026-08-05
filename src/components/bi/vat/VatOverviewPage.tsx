@@ -28,6 +28,7 @@ import type { BiCustomDateMode, BiPeriodPreset } from "@/lib/bi/sales-types";
 import type { BiVatBranchFilter, BiVatOverview } from "@/lib/bi/vat-types";
 import { cn } from "@/lib/utils";
 import BiHighlightsCard from "@/components/bi/BiHighlightsCard";
+import BiLoadingBody from "@/components/bi/BiLoadingBody";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -350,27 +351,7 @@ export default function VatOverviewPage() {
           </div>
         </div>
       ) : overview ? (
-        <div className="relative">
-          {loading ? (
-            <div
-              className="absolute inset-0 z-20 flex items-start justify-center rounded-xl bg-white/70 pt-24 backdrop-blur-[1px]"
-              role="status"
-              aria-live="polite"
-              aria-busy="true"
-            >
-              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-md">
-                <Loader2 className="h-4 w-4 animate-spin text-sky-700" />
-                กำลังโหลด…
-              </div>
-            </div>
-          ) : null}
-
-          <div
-            className={cn(
-              "space-y-4 md:space-y-5",
-              loading && "pointer-events-none select-none opacity-60"
-            )}
-          >
+        <BiLoadingBody loading={loading}>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <SalesKpiCard
                 title="ภาษีขาย"
@@ -446,8 +427,7 @@ export default function VatOverviewPage() {
               />
               <VatBranchTable rows={overview.by_branch} />
             </div>
-          </div>
-        </div>
+        </BiLoadingBody>
       ) : null}
     </div>
   );
