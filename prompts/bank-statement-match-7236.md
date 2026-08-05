@@ -23,9 +23,10 @@ Scope rules:
 4. Touch both directions while `match_status` in (`pending`, `unmatched`):
    - `direction = 'in'` → sales sources first, then non-sales categories
    - `direction = 'out'` → **internal sweeps only** (no expense / PVMAS matching)
-5. Never change amount / description / source_* / any money fields
-6. Write only `match_*` and `matched_*` fields
-7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. Bills / RVMAS / TAR often land after the bank feed; when a unique candidate now exists, overwrite the old unmatched decision with `matched` / `review` / `ignored`. Never skip `unmatched` rows.
+6. Never change amount / description / source_* / any money fields
+7. Write only `match_*` and `matched_*` fields
+8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
 ## Date window policy
 
@@ -75,6 +76,30 @@ Notes:
 - Do not mix daily TAR−CNTAR net rows into TR matching
 - Auto-`matched` only on same calendar day (`BILLDATE = txn_date`)
 - If same-day fails but a unique bill/bundle/remainder fits on **T+1 .. T+5**, set `review` with matched refs and `⚠️ วันที่ไม่ตรงช่วงปกติ:` in `match_notes` — do not leave `unmatched` when a plausible late transfer exists
+- **Thai QR remainder may include unclaimed RC + TR** from that day (July: RC6907-001 + TR6907-001 → Thai QR). Prefer same-day TR remainder first; if RC vouchers clearly fill the gap and are not already claimed elsewhere, include them in the remainder note / refs
+
+### 1b) Cash front-store deposits — เงินสดหน้าร้าน (Narumon)
+
+July ground truth: front-store cash sales are deposited into this account from Narumon’s personal KTB accounts, then matched to the prior day’s TR bills.
+
+Detect via `raw_json->>'รายละเอียด'` (not just `description`):
+
+- `X2446` / `NARUMON WITHAYAPAL`
+- `X8822` / `MISS NARUMON`
+
+Matching:
+
+- Amount = one TR bill or a small same-`BILLDATE` TR bundle (same allocation rules as §1)
+- Typical lag: bank `txn_date` = bill date **+ 1** (sometimes +2 for weekend / multi-bill)
+- Auto-`matched` when unique on T+1; else relaxed `review` within T+1 .. T+5
+- Do **not** treat these as internal transfers (personal KTB, not a KCW company account)
+
+| Kind | `matched_ref_type` | `match_status` | `match_reason` (Thai) |
+|---|---|---|---|
+| Cash → 1 TR | `tr_bill` | `matched` / `review` | `เงินสดหน้าร้าน (บิลโอน TR)` |
+| Cash → several TR | `tr_bundle` | `matched` / `review` | `เงินสดหน้าร้าน (บิลโอน TR รวมหลายใบ)` |
+
+`matched_ref_id` = bill no. (comma-separated for bundles). Mention X2446/X8822 and bill dates in `match_notes`.
 
 ### 2) Daily net TAR − CNTAR
 
@@ -133,6 +158,8 @@ Source: `raw_kcw.raw_hq_rvmas_notes_vouchers`
 
 `matched_ref_type = rvmas`  
 `matched_ref_id = <VOUCNO>`
+
+Month-boundary note (July): vouchers numbered `RC6908-…` can still clear on **31/07** with same-day `VOUCDATE`/`RCPTDATE`. Match by amount + date, not by the month digits inside `VOUCNO`. If the unique hit is slightly outside ±5d, still use `review` with the warning prefix — do not leave `unmatched` when the voucher is clearly the same receipt.
 
 ## Non-sales categories — INBOUND (after sales sources)
 

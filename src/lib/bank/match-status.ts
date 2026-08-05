@@ -10,6 +10,17 @@ export const BANK_MATCH_STATUSES = [
 
 export type BankMatchStatus = (typeof BANK_MATCH_STATUSES)[number];
 
+/** Rows the match agent may read and overwrite on each run. */
+export const AGENT_INPUT_MATCH_STATUSES = [
+  "pending",
+  "unmatched",
+] as const satisfies readonly BankMatchStatus[];
+
+/**
+ * @deprecated Prefer `AGENT_INPUT_MATCH_STATUSES` (pending + unmatched).
+ * Kept so older imports still resolve; unmatched must also be re-processed
+ * because source tables often lag the bank feed.
+ */
 export const AGENT_WRITABLE_MATCH_STATUS: BankMatchStatus = "pending";
 
 export const AGENT_OUTPUT_MATCH_STATUSES = [

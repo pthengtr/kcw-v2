@@ -32,10 +32,11 @@ Scope rules:
 4. Touch both directions while `match_status` in (`pending`, `unmatched`):
    - `direction = 'out'` → payroll / expense PV / PIMAS cheque sources first
    - `direction = 'in'` → **internal funding only** (no sales / RVMAS matching)
-5. Never change amount / description / source_* / any money fields
-6. Write only `match_*` and `matched_*` fields
-7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
-8. Cheque number lives in `bank_reference` and/or `raw_json->>'CHEQUE NO.'` for ICAS clears (`TRANSACTION CODE` often `CBCA`)
+5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. Payroll / expense_receipt / PIMAS often lag the bank clear; when a unique candidate now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
+6. Never change amount / description / source_* / any money fields
+7. Write only `match_*` and `matched_*` fields
+8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+9. Cheque number lives in `bank_reference` and/or `raw_json->>'CHEQUE NO.'` for ICAS clears (`TRANSACTION CODE` often `CBCA`)
 
 ## Date window policy
 
@@ -226,8 +227,12 @@ Notes from May/June 2026 probe:
 
 ### 4) Other residual outflows
 
-Small personal TRs (e.g. 3,000 baht education / advances) with no unique expense row → `unmatched` or `review` with a Thai note. Do not invent links to cash `expense_general` on unrelated payment methods.
+| Category | `match_status` | Notes | `match_reason` (Thai) |
+|---|---|---|---|
+| Employee advance / small personal TR | `review` or `unmatched` | Recurring ฿3,000 transfers to employees (July: Ronnachai / Nutcha / Jaksunit) with no expense_receipt — do not invent cash `expense_general` links | `พนักงานเบิกเงินล่วงหน้า` |
+| No unique expense / cheque source | `unmatched` / `review` | Leave open for rematch when PIMAS / PV catches up | `ยังไม่พบใบสำคัญจ่าย` |
 
+Do not invent links to cash `expense_general` on unrelated payment methods.
 ## Match sources — INBOUND (internal funding only)
 
 No sales / RVMAS / TAR matching on this account. **Always classify clear funding sweeps** — do not leave them `pending`.

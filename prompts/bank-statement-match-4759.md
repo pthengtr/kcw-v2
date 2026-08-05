@@ -25,10 +25,11 @@ Scope rules:
 4. Touch both directions while `match_status` in (`pending`, `unmatched`):
    - `direction = 'out'` → expense PV sources first, then residual outflows
    - `direction = 'in'` → internal funding only (no sales)
-5. Never change amount / description / source_* / any money fields
-6. Write only `match_*` and `matched_*` fields
-7. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
-8. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
+5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. `expense_receipt` rows often appear after the bank feed; when a unique PV now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
+6. Never change amount / description / source_* / any money fields
+7. Write only `match_*` and `matched_*` fields
+8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+9. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
 
 ## Date window policy
 

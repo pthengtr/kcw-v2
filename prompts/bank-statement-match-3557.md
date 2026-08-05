@@ -17,9 +17,10 @@ Scope rules:
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
 4. Primary target: `direction = 'out'` and `match_status` in (`pending`, `unmatched`)
 5. Also clear inbound (`direction = 'in'`) rows still `pending` / `unmatched` using the internal-transfer rule below — these are funding sweeps from **064-8-91723-6** (X7236), not PVMAS/PIMAS
-6. Never change amount / description / source_* / any money fields
-7. Write only `match_*` and `matched_*` fields
-8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+6. **Re-match `unmatched` every run** — a prior `unmatched` is not final. PVMAS / PIMAS often sync after the bank feed; when a unique voucher or bill now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
+7. Never change amount / description / source_* / any money fields
+8. Write only `match_*` and `matched_*` fields
+9. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
 ## Date window policy
 
@@ -75,7 +76,7 @@ Notes from May/June probe:
 
 Source: `raw_kcw.raw_hq_pimas_purchase_bills`
 
-Use **only** for outbound rows still `pending` after PVMAS claims are written (or still pending because PVMAS had no unique hit).
+Use **only** for outbound rows still `pending` / `unmatched` after PVMAS claims are written (or still open because PVMAS had no unique hit).
 
 - Not canceled (`CANCELED = 'N'`)
 - Prefer amount fields in this order: `AFTERTAX`, then `CHKAMT` (cheque), then `DUEAMT` / `CASHAMT` if uniquely needed
@@ -86,16 +87,28 @@ Use **only** for outbound rows still `pending` after PVMAS claims are written (o
 - Unique 1:1 only for auto-`matched`. If multiple bills collide → `review`
 - Weaker / near-window hits → `review` with matched refs + `⚠️ วันที่ไม่ตรงช่วงปกติ:` — do not leave `unmatched` when a plausible bill exists
 
+#### Cash / COD purchases — สินค้าถึงเบิกเลย / จ่ายสด (July pattern)
+
+Many July outs that operators finished manually are **same-day or ±1d PIMAS cash purchases** (goods received and paid immediately), often as a **2–3 bill bundle** for one supplier:
+
+- Tax-invoice style bill nos. like `CBD26-…`, Kubota `8033…`, `7SPG…`, `7KBTK…`, `IV 69…`
+- Narrative in notes: `สั่งแล้วโอนเลย` / `ของถึงโอนเลย` / `จ่ายสด`
+- Auto-`matched` when a unique same-supplier bundle sums to the bank amount within the auto date window (allow **±0.01**)
+- Multi-bill same-supplier bundles are allowed here (unlike blind cross-supplier subset-sum)
+- If the unique bundle is only clear in the relaxed window → `review` with matched bill nos. and the warning prefix
+- One supplier invoice paid as **two bank transfers** the same day (July Kubota split) → match both legs to the same bill(s) and explain the split in `match_notes`
+
 | Kind | Meaning | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
 | `pimas_bill_same_day` | Unique bill amount on same `BILLDATE` | `matched` (only if clearly unique) or `review` | `บิลซื้อ PIMAS (วันเดียวกัน)` |
+| `pimas_cod_bundle` | Same-supplier cash/COD multi-bill sum | `matched` / `review` | `บิลซื้อ PIMAS (ถึงเบิกเลย/จ่ายสด)` |
 | `pimas_near` | Unique within ±7d auto window | `review` unless very clear | `บิลซื้อ PIMAS (ใกล้วัน)` |
 | `pimas_relaxed` | Unique within ±14d relaxed window | `review` | `บิลซื้อ PIMAS (วันไม่ตรง — รอตรวจ)` |
 | cheque | Matched on `CHKAMT` | `matched` / `review` as above | `บิลซื้อ PIMAS (เช็ค)` |
 
-`matched_ref_type = pimas`  
-`matched_ref_id = <BILLNO>`  
-Confidence: strong same-day unique ≈ **0.85–0.90**; near-window / weaker ≤ **0.70** and usually `review`
+`matched_ref_type = pimas` (always lowercase)  
+`matched_ref_id = <BILLNO>` (comma-separated for bundles)  
+Confidence: strong same-day unique / COD bundle ≈ **0.85–0.95**; near-window / weaker ≤ **0.70** and usually `review`
 
 ### 3) Large / residual outflows
 

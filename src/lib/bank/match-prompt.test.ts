@@ -31,8 +31,19 @@ const DATE_WINDOW_POLICY_MARKERS = [
   "Relaxed `review`",
 ] as const;
 
+const REMATCH_POLICY_MARKERS = [
+  "Re-match `unmatched` every run",
+  "match_status` in (`pending`, `unmatched`)",
+] as const;
+
 function expectDateWindowPolicy(template: string) {
   for (const marker of DATE_WINDOW_POLICY_MARKERS) {
+    expect(template).toContain(marker);
+  }
+}
+
+function expectRematchPolicy(template: string) {
+  for (const marker of REMATCH_POLICY_MARKERS) {
     expect(template).toContain(marker);
   }
 }
@@ -113,6 +124,8 @@ describe("bank match prompt", () => {
     expect(template).toContain("match_status` in (`pending`, `unmatched`)");
     expect(template).toContain("บิลโอน TR (ใบเดียว)");
     expect(template).toContain("match_notes");
+    expect(template).toContain("เงินสดหน้าร้าน");
+    expect(template).toContain("X2446");
     expect(template).toContain("internal_transfer");
     expect(template).toContain("direction = 'out'");
     expect(template).toContain("โอนไป X3557");
@@ -121,6 +134,7 @@ describe("bank match prompt", () => {
       `If \`{{account_no}}\` is not \`${HQ_7236}\``
     );
     expectDateWindowPolicy(template);
+    expectRematchPolicy(template);
 
     const filled = fillBankMatchPrompt(template, {
       account_no: HQ_7236,

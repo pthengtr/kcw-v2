@@ -35,6 +35,13 @@ describe("bank match status workflow", () => {
     expect(canOperatorEditMatchFields("review")).toBe(true);
   });
 
+  it("lists agent input statuses as pending + unmatched", async () => {
+    const mod = await import("@/lib/bank/match-status");
+    expect(mod.AGENT_INPUT_MATCH_STATUSES).toEqual(["pending", "unmatched"]);
+    expect(mod.AGENT_OUTPUT_MATCH_STATUSES).toContain("unmatched");
+    expect(mod.AGENT_WRITABLE_MATCH_STATUS).toBe("pending");
+  });
+
   it("formats operator matched_by", () => {
     expect(operatorMatchBy("ada@example.com")).toBe("operator:ada@example.com");
   });
