@@ -43,6 +43,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import VatBranchTable from "./VatBranchTable";
 import VatDocTable from "./VatDocTable";
 import VatForecastCard from "./VatForecastCard";
+import VatSalesDocChart from "./VatSalesDocChart";
 import VatTrendChart from "./VatTrendChart";
 
 const PERIODS: BiPeriodPreset[] = ["month", "ytd", "custom"];
@@ -250,6 +251,7 @@ export default function VatOverviewPage() {
                   variant={preset === p ? "default" : "outline"}
                   className={cn("h-8", preset === p && "shadow-sm")}
                   onClick={() => setPreset(p)}
+                  disabled={loading}
                 >
                   {periodLabel(p)}
                 </Button>
@@ -262,6 +264,7 @@ export default function VatOverviewPage() {
             <Select
               value={branch}
               onValueChange={(v) => setBranch(v as BiVatBranchFilter)}
+              disabled={loading}
             >
               <SelectTrigger className="h-9">
                 <SelectValue />
@@ -337,81 +340,114 @@ export default function VatOverviewPage() {
       ) : null}
 
       {loading && !overview ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
-          ))}
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-slate-200/80 bg-white/90 py-16 shadow-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-sky-700" aria-hidden />
+          <p className="text-sm text-muted-foreground">กำลังโหลดรายงานภาษี…</p>
+          <div className="mt-2 grid w-full max-w-3xl gap-3 px-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 rounded-xl" />
+            ))}
+          </div>
         </div>
       ) : overview ? (
-        <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <SalesKpiCard
-              title="ภาษีขาย"
-              value={formatBahtCompact(overview.summary.sales_vat)}
-              deltaPct={salesDelta}
-              hint={`${formatCount(overview.summary.sales_bill_count)} บิล · มูลค่า ${formatBahtCompact(overview.summary.sales_before)}`}
-              icon={<Receipt className="h-4 w-4" />}
+        <div className="relative">
+          {loading ? (
+            <div
+              className="absolute inset-0 z-20 flex items-start justify-center rounded-xl bg-white/70 pt-24 backdrop-blur-[1px]"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-md">
+                <Loader2 className="h-4 w-4 animate-spin text-sky-700" />
+                กำลังโหลด…
+              </div>
+            </div>
+          ) : null}
+
+          <div
+            className={cn(
+              "space-y-4 md:space-y-5",
+              loading && "pointer-events-none select-none opacity-60"
+            )}
+          >
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <SalesKpiCard
+                title="ภาษีขาย"
+                value={formatBahtCompact(overview.summary.sales_vat)}
+                deltaPct={salesDelta}
+                hint={`${formatCount(overview.summary.sales_bill_count)} บิล · มูลค่า ${formatBahtCompact(overview.summary.sales_before)}`}
+                icon={<Receipt className="h-4 w-4" />}
+              />
+              <SalesKpiCard
+                title="ภาษีซื้อ (สินค้า)"
+                value={formatBahtCompact(overview.summary.purchase_vat)}
+                deltaPct={purchaseDelta}
+                hint={`${formatCount(overview.summary.purchase_bill_count)} บิล · มูลค่า ${formatBahtCompact(overview.summary.purchase_before)}`}
+                icon={<ShoppingCart className="h-4 w-4" />}
+              />
+              <SalesKpiCard
+                title="ภาษีซื้อ (ค่าใช้จ่าย)"
+                value={formatBahtCompact(overview.summary.expense_vat)}
+                deltaPct={expenseDelta}
+                hint={`${formatCount(overview.summary.expense_bill_count)} ใบเสร็จ · มูลค่า ${formatBahtCompact(overview.summary.expense_before)}`}
+                icon={<Wallet className="h-4 w-4" />}
+              />
+              <SalesKpiCard
+                title="ภาษีสุทธิที่ต้องชำระ"
+                value={formatBahtCompact(overview.summary.net_vat)}
+                deltaPct={netDelta}
+                hint="ภาษีขาย − ภาษีซื้อ − ค่าใช้จ่าย"
+                icon={<Calculator className="h-4 w-4" />}
+              />
+            </div>
+
+            <BiHighlightsCard lines={highlightLines} />
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <VatSalesDocChart
+                rows={overview.by_sales_doc}
+                totalVat={overview.summary.sales_vat}
+                totalBefore={overview.summary.sales_before}
+                billCount={overview.summary.sales_bill_count}
+              />
+              <VatForecastCard
+                forecast={overview.forecast}
+                summary={overview.summary}
+                from={overview.from}
+                to={overview.to}
+              />
+            </div>
+
+            <VatTrendChart
+              title={useDaily ? "แนวโน้มรายวัน" : "แนวโน้มรายเดือน (12 เดือน)"}
+              rows={trendRows}
+              mode={useDaily ? "daily" : "monthly"}
             />
-            <SalesKpiCard
-              title="ภาษีซื้อ (สินค้า)"
-              value={formatBahtCompact(overview.summary.purchase_vat)}
-              deltaPct={purchaseDelta}
-              hint={`${formatCount(overview.summary.purchase_bill_count)} บิล · มูลค่า ${formatBahtCompact(overview.summary.purchase_before)}`}
-              icon={<ShoppingCart className="h-4 w-4" />}
-            />
-            <SalesKpiCard
-              title="ภาษีซื้อ (ค่าใช้จ่าย)"
-              value={formatBahtCompact(overview.summary.expense_vat)}
-              deltaPct={expenseDelta}
-              hint={`${formatCount(overview.summary.expense_bill_count)} ใบเสร็จ · มูลค่า ${formatBahtCompact(overview.summary.expense_before)}`}
-              icon={<Wallet className="h-4 w-4" />}
-            />
-            <SalesKpiCard
-              title="ภาษีสุทธิที่ต้องชำระ"
-              value={formatBahtCompact(overview.summary.net_vat)}
-              deltaPct={netDelta}
-              hint="ภาษีขาย − ภาษีซื้อ − ค่าใช้จ่าย"
-              icon={<Calculator className="h-4 w-4" />}
-            />
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <VatDocTable
+                title="ภาษีขายตามประเภทเอกสาร (รายสาขา)"
+                rows={overview.by_sales_doc}
+                showBranch
+              />
+              <VatDocTable
+                title="ภาษีซื้อตามสมุด (BOOKNO)"
+                rows={overview.by_purchase_book}
+                emptyText="ไม่มีภาษีซื้อสินค้า (หรือเลือกสาขา SYP — สินค้าซื้อที่ HQ เท่านั้น)"
+              />
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <VatDocTable
+                title="ภาษีซื้อจากค่าใช้จ่ายแอป"
+                rows={overview.by_expense_doc}
+                showBranch
+              />
+              <VatBranchTable rows={overview.by_branch} />
+            </div>
           </div>
-
-          <BiHighlightsCard lines={highlightLines} />
-
-          <VatForecastCard
-            forecast={overview.forecast}
-            summary={overview.summary}
-            from={overview.from}
-            to={overview.to}
-          />
-
-          <VatTrendChart
-            title={useDaily ? "แนวโน้มรายวัน" : "แนวโน้มรายเดือน (12 เดือน)"}
-            rows={trendRows}
-            mode={useDaily ? "daily" : "monthly"}
-          />
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <VatDocTable
-              title="ภาษีขายตามประเภทเอกสาร"
-              rows={overview.by_sales_doc}
-              showBranch
-            />
-            <VatDocTable
-              title="ภาษีซื้อตามสมุด (BOOKNO)"
-              rows={overview.by_purchase_book}
-              emptyText="ไม่มีภาษีซื้อสินค้า (หรือเลือกสาขา SYP — สินค้าซื้อที่ HQ เท่านั้น)"
-            />
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <VatDocTable
-              title="ภาษีซื้อจากค่าใช้จ่ายแอป"
-              rows={overview.by_expense_doc}
-              showBranch
-            />
-            <VatBranchTable rows={overview.by_branch} />
-          </div>
-        </>
+        </div>
       ) : null}
     </div>
   );
