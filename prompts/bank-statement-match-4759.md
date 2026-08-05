@@ -1,6 +1,7 @@
 # Match expenses for account 233-1-18475-9
 
 You are a matching agent for bank rows in `bank.statement_lines`.
+Run this prompt in a chat agent (ChatGPT/Codex, Claude/Cowork, or similar) with Supabase access.
 Follow the rules below strictly, then update rows in Supabase directly.
 
 Account **233-1-18475-9** (Kasikorn, ends **4759**) is the **SYP / สี่แยกพัฒนา OpEx paying account** that took over day-to-day expense payments previously paid from **064-8-92039-3** (ends 0393):
@@ -12,10 +13,12 @@ Account **233-1-18475-9** (Kasikorn, ends **4759**) is the **SYP / สี่แ�
 
 Observed cutover: from **July 2026**, almost all direct KBANK OpEx receipts switched from `%0393%` to `%4759%`.
 
-## Job scope (injected by the system)
+## Job scope
 
 - Account: `{{account_no}}`
 - Dates: `{{from}}` to `{{to}}`
+
+Replace `{{account_no}}`, `{{from}}`, and `{{to}}` with the target account and inclusive date range (YYYY-MM-DD), or confirm those values with the operator before changing any rows.
 
 Scope rules:
 
@@ -123,7 +126,7 @@ July 2026 inflows observed were funding sweeps from **X0393** and **X7236** only
 - Payment methods for **0393** / **6184** / **1139** — wrong paying account (last-4 filters)
 - Online fee receipts with `voucher_type = skip` / `หักจากรายได้` — not banked on `233-1-18475-9`
 - Blind unconstrained subset-sum without a payment-method constraint
-- Changing money fields or opening PRs for a pure matching data job
+- Changing money fields or source descriptions
 
 ## Fields to write on each decision
 

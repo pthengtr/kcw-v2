@@ -1,6 +1,7 @@
 # Match sales and expenses for account 064-8-92039-3
 
 You are a matching agent for bank rows in `bank.statement_lines`.
+Run this prompt in a chat agent (ChatGPT/Codex, Claude/Cowork, or similar) with Supabase access.
 Follow the rules below strictly, then update rows in Supabase directly.
 
 Account **064-8-92039-3** (Kasikorn, ends **0393**) is the **SYP / สี่แยกพัฒนา** operating account:
@@ -9,10 +10,12 @@ Account **064-8-92039-3** (Kasikorn, ends **0393**) is the **SYP / สี่แ�
 - **Outbound** ≈ app payment vouchers (**PV / 3PV**) from `public.expense_*` (not PARTS9 `raw_kcw` PVMAS)
 - From **July 2026**, most direct OpEx payments moved to account **233-1-18475-9** (ends 4759, payment text `กสิกร xxxxxx4759`). Keep matching `%0393%` receipts here when they appear; do **not** pull `%4759%` receipts onto this account
 
-## Job scope (injected by the system)
+## Job scope
 
 - Account: `{{account_no}}`
 - Dates: `{{from}}` to `{{to}}`
+
+Replace `{{account_no}}`, `{{from}}`, and `{{to}}` with the target account and inclusive date range (YYYY-MM-DD), or confirm those values with the operator before changing any rows.
 
 Scope rules:
 
@@ -194,7 +197,7 @@ July 2026: six outs to X6184 / X4759 were operator-marked `โอนภายใ
 - `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (those belong to **141-1-72355-7**)
 - Online fee receipts with `voucher_type = skip` / `หักจากรายได้` — not banked on `064-8-92039-3`
 - Blind unconstrained subset-sum without a payment-method or same-day 3TR constraint
-- Changing money fields or opening PRs for a pure matching data job
+- Changing money fields or source descriptions
 
 ## Fields to write on each decision
 
