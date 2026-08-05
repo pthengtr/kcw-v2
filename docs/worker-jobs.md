@@ -134,6 +134,14 @@ New features almost never need new queue tables — only new `job_type` values a
 - Data dictionary: [bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md](./bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md).
 - Legacy service-role RPCs `fn_bank_find_inflight_import` / `fn_bank_enqueue_import` remain for LINE/compat — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql) — but the kcw-v2 web button no longer uses them.
 
+### Bank statement monthly report from `/bank-statement-sync` (kcw-v2) — **not** a PC worker job
+
+- UI **สร้างรายงาน** → browser calls Supabase Edge Function `generate-bank-statement-report` with JSON `{ year, month }` (default = Bangkok today − 10 days).
+- Builds the VAT-style multi-account Excel (one sheet per account, live `match_status` / reason columns) and uploads to Storage `bank-statements/reports/{year}/{mm}/…`; returns a signed download URL. **No Google Drive.**
+- Source: [`supabase/functions/generate-bank-statement-report/`](../supabase/functions/generate-bank-statement-report/). Layout parity with kcw-analytics `bank_statement_report.py` / `run_bank_statement_report.bat` (Drive path optional/legacy).
+- Auth: same `kcw_admin` gate as import. Client helper: `src/lib/bank/statement-report.ts` + `StatementReportDialog`.
+- Docs: [bank-statement-upload.md](./bank-statement-upload.md).
+
 ### Inventory sync from `/po` (kcw-v2)
 
 - Job: `sync_inventory` — **one button** enqueues **two rows** (HQ-PC + SYP-PC) with shared `batch_id`.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Loader2, RefreshCcw, Upload } from "lucide-react";
+import { FileSpreadsheet, Loader2, RefreshCcw, Upload } from "lucide-react";
 
 import PermissionGate from "@/components/auth/PermissionGate";
 import BackButton from "@/components/common/BackButton";
@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ImportFilesTab from "@/components/bank/ImportFilesTab";
 import StatementLinesTab from "@/components/bank/StatementLinesTab";
+import StatementReportDialog from "@/components/bank/StatementReportDialog";
 import StatementUploadDialog from "@/components/bank/StatementUploadDialog";
+import { formatBankStatementReportMessage } from "@/lib/bank/statement-report";
 import { formatBankStatementImportMessage } from "@/lib/bank/statement-upload";
 
 export default function BankStatementSyncPage() {
@@ -21,6 +23,7 @@ export default function BankStatementSyncPage() {
   const [refreshToken, setRefreshToken] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -53,7 +56,8 @@ export default function BankStatementSyncPage() {
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
             <p className="text-sm text-muted-foreground">
-              อัปโหลด Excel statement (KBANK / KTB) แล้วจับคู่รายการ
+              อัปโหลด Excel statement (KBANK / KTB) แล้วจับคู่รายการ ·
+              สร้างรายงานเดินบัญชีจาก Storage
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -64,6 +68,14 @@ export default function BankStatementSyncPage() {
             >
               <Upload className="mr-1 h-4 w-4" />
               อัปโหลด Statement
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReportOpen(true)}
+            >
+              <FileSpreadsheet className="mr-1 h-4 w-4" />
+              สร้างรายงาน
             </Button>
             <Button
               variant="outline"
@@ -109,6 +121,13 @@ export default function BankStatementSyncPage() {
           if (result.status === "imported") {
             setTab("import-files");
           }
+        }}
+      />
+      <StatementReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        onGenerated={(result) => {
+          setUploadMessage(formatBankStatementReportMessage(result));
         }}
       />
     </PermissionGate>
