@@ -412,7 +412,7 @@ export default function StatementLinesTab({
     const controller = new AbortController();
     fetchRows(controller.signal);
     return () => controller.abort();
-  }, [fetchRows, refreshToken, reloadToken]);
+  }, [fetchRows, refreshToken]);
 
   useEffect(() => {
     if (!canFetch) {
@@ -817,8 +817,6 @@ export default function StatementLinesTab({
               onValueChange={(v) => {
                 setOffset(0);
                 setAccountNo(v);
-                setMatchMessage(null);
-                setMatchAgentUrl(null);
               }}
               disabled={accountsLoading || accounts.length === 0}
             >
