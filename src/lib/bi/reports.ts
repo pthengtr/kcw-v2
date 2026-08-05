@@ -50,4 +50,11 @@ export const BI_REPORTS: BiReportNavItem[] = [
     description: "บริษัท + ทั่วไป · รายเดือน–YTD",
     available: true,
   },
+  {
+    id: "vat",
+    href: "/bi/vat",
+    label: "ภาษีขาย / ภาษีซื้อ",
+    description: "รายงาน VAT + พยากรณ์สิ้นงวด",
+    available: true,
+  },
 ];

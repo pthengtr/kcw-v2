@@ -55,7 +55,8 @@ export type BiReportId =
   | "products"
   | "product-movement"
   | "expenses"
-  | "income";
+  | "income"
+  | "vat";
 
 export type BiReportNavItem = {
   id: BiReportId;
