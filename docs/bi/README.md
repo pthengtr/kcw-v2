@@ -13,6 +13,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md) | AR/AP masters (ARMAS/APMAS); **`MOBILE` = tax id** |
 | [kcw-expense-data-dictionary.md](./kcw-expense-data-dictionary.md) | App expense tables + amount rules (company + general) |
 | [kcw-income-data-dictionary.md](./kcw-income-data-dictionary.md) | Gross / net income (sales margin − app opex) |
+| [kcw-vat-data-dictionary.md](./kcw-vat-data-dictionary.md) | VAT sales/purchase tax books + mid-period forecast |
 | [kcw-purchase-data-dictionary.md](./kcw-purchase-data-dictionary.md) | HQ PIDET purchase **invoice** lines (JOURMODE / BILLTYPE) |
 | [kcw-po-data-dictionary.md](./kcw-po-data-dictionary.md) | Purchase **orders** in `raw_kcw` (HQ+SYP); PO id = `DOCNO`; SYP prepare = `po_syp_prepare` |
 | [kcw-iclow-pending-receive-data-dictionary.md](./kcw-iclow-pending-receive-data-dictionary.md) | PARTS9 **ค้างรับ** = `ICLOW` (`ORDERED`/`RECEIVED`/`CANCELED`) |
@@ -34,12 +35,13 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_bi_expense_overview.sql](./sql/fn_bi_expense_overview.sql) | RPC used by `/bi/expenses` |
 | [sql/fn_bi_income_overview.sql](./sql/fn_bi_income_overview.sql) | RPC used by `/bi/income` |
 | [sql/fn_bi_income_blank_costs.sql](./sql/fn_bi_income_blank_costs.sql) | Blank-cost line drilldown for `/bi/income` |
+| [sql/fn_bi_vat_overview.sql](./sql/fn_bi_vat_overview.sql) | RPC used by `/bi/vat` (ภาษีขาย/ซื้อ + พยากรณ์) |
 
 ## App entry
 
 - UI: `/po` — HQ/SYP purchase-order status; pending receive (ค้างรับ) = `ICLOW` — see [ICLOW dictionary](./kcw-iclow-pending-receive-data-dictionary.md)
 - UI: `/bank-statement-sync` — upload Excel via `import-bank-statement` Edge Function + match; daily HQ BAT can still refresh Drive Excel + BRDET/BPDET — see [cheque/transfer dictionary](./kcw-brdet-bpdet-cheque-transfers-data-dictionary.md)
-- UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/income`
+- UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/income`, `/bi/vat`
 - API: `GET /api/bi/sales/overview?from=&to=&branch=`
 - API: `GET /api/bi/sales/compare?mode=years|months&years=&periods=&branch=`
 - API: `GET /api/bi/products/overview?from=&to=&branch=&limit=`
@@ -48,6 +50,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 - API: `GET /api/bi/expenses/overview?from=&to=&branch=&source=&limit=`
 - API: `GET /api/bi/income/overview?from=&to=&branch=`
 - API: `GET /api/bi/income/blank-costs?from=&to=&branch=&limit=`
+- API: `GET /api/bi/vat/overview?from=&to=&branch=`
 - Auth: admin-only (`requireAdmin` + service role RPC)
 
 ### Sales comparison note

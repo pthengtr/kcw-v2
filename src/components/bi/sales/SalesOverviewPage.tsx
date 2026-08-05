@@ -38,6 +38,7 @@ import type {
 } from "@/lib/bi/sales-types";
 import { cn } from "@/lib/utils";
 import BiHighlightsCard from "@/components/bi/BiHighlightsCard";
+import BiLoadingBody from "@/components/bi/BiLoadingBody";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -337,7 +338,7 @@ export default function SalesOverviewPage() {
       ) : null}
 
       {overview ? (
-        <>
+        <BiLoadingBody loading={loading}>
           <section
             className={cn(
               "grid grid-cols-1 gap-3 sm:grid-cols-2",
@@ -448,7 +449,7 @@ export default function SalesOverviewPage() {
           <section>
             <BiHighlightsCard lines={highlightLines} />
           </section>
-        </>
+        </BiLoadingBody>
       ) : null}
     </div>
   );

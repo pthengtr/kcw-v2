@@ -6,12 +6,14 @@ import {
   buildIncomeHighlights,
   buildProductHighlights,
   buildSalesHighlights,
+  buildVatHighlights,
 } from "./highlights";
 import type { BiCustomerOverview } from "./customer-types";
 import type { BiExpenseOverview } from "./expense-types";
 import type { BiIncomeOverview } from "./income-types";
 import type { BiProductOverview } from "./product-types";
 import type { BiSalesOverview } from "./sales-types";
+import type { BiVatOverview } from "./vat-types";
 
 const salesBase: BiSalesOverview = {
   from: "2026-07-01",
@@ -338,5 +340,77 @@ describe("BI highlight builders", () => {
     expect(lines.some((l) => l.includes("ตัดออกจากคำนวณ") || l.includes("ไม่มีต้นทุน"))).toBe(
       true
     );
+  });
+});
+
+describe("buildVatHighlights", () => {
+  it("summarizes net VAT and forecast when enabled", () => {
+    const vatBase: BiVatOverview = {
+      from: "2026-08-01",
+      to: "2026-08-31",
+      branch: null,
+      previous_from: "2026-07-01",
+      previous_to: "2026-07-31",
+      as_of: "2026-08-05",
+      summary: {
+        sales_before: 1_000_000,
+        sales_vat: 70_000,
+        sales_bill_count: 100,
+        purchase_before: 500_000,
+        purchase_vat: 35_000,
+        purchase_bill_count: 40,
+        expense_before: 100_000,
+        expense_vat: 7_000,
+        expense_bill_count: 10,
+        net_vat: 28_000,
+      },
+      previous_summary: {
+        sales_before: 900_000,
+        sales_vat: 63_000,
+        sales_bill_count: 90,
+        purchase_before: 480_000,
+        purchase_vat: 33_600,
+        purchase_bill_count: 38,
+        expense_before: 90_000,
+        expense_vat: 6_300,
+        expense_bill_count: 9,
+        net_vat: 23_100,
+      },
+      forecast: {
+        enabled: true,
+        as_of: "2026-08-05",
+        days_elapsed: 5,
+        days_in_range: 31,
+        factor: 6.2,
+        sales_vat: 434_000,
+        purchase_vat: 217_000,
+        expense_vat: 43_400,
+        net_vat: 173_600,
+        sales_before: 6_200_000,
+        purchase_before: 3_100_000,
+        expense_before: 620_000,
+      },
+      by_sales_doc: [
+        {
+          key: "TAR",
+          branch: "HQ",
+          bill_count: 50,
+          beforetax: 600_000,
+          tax: 42_000,
+          aftertax: 642_000,
+        },
+      ],
+      by_purchase_book: [],
+      by_expense_doc: [],
+      by_branch: [],
+      trend_daily: [],
+      trend_monthly: [],
+    };
+
+    const lines = buildVatHighlights(vatBase);
+    expect(lines[0]).toContain("ภาษีขาย");
+    expect(lines[1]).toContain("สุทธิ");
+    expect(lines.some((l) => l.includes("พยากรณ์"))).toBe(true);
+    expect(lines.some((l) => l.includes("TAR"))).toBe(true);
   });
 });

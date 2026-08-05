@@ -32,6 +32,7 @@ import {
 import type { BiCustomDateMode, BiPeriodPreset } from "@/lib/bi/sales-types";
 import { cn } from "@/lib/utils";
 import BiHighlightsCard from "@/components/bi/BiHighlightsCard";
+import BiLoadingBody from "@/components/bi/BiLoadingBody";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -386,7 +387,7 @@ export default function ExpenseOverviewPage() {
       ) : null}
 
       {overview ? (
-        <>
+        <BiLoadingBody loading={loading}>
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <SalesKpiCard
               title="ยอดค่าใช้จ่าย"
@@ -477,7 +478,7 @@ export default function ExpenseOverviewPage() {
           <section>
             <BiHighlightsCard lines={highlightLines} />
           </section>
-        </>
+        </BiLoadingBody>
       ) : null}
     </div>
   );

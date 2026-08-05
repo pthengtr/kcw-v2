@@ -21,6 +21,7 @@ import {
 } from "@/lib/bi/sales-periods";
 import type { BiBranchFilter } from "@/lib/bi/sales-types";
 import { cn } from "@/lib/utils";
+import BiLoadingBody from "@/components/bi/BiLoadingBody";
 import SalesCompareVisual from "@/components/bi/sales/SalesCompareVisual";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import { Button } from "@/components/ui/button";
@@ -318,7 +319,7 @@ export default function SalesComparePage() {
       ) : null}
 
       {compare ? (
-        <>
+        <BiLoadingBody loading={loading}>
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {summaryCards.map((card) => (
               <SalesKpiCard
@@ -333,7 +334,7 @@ export default function SalesComparePage() {
           <section>
             <SalesCompareVisual compare={compare} viz={viz} />
           </section>
-        </>
+        </BiLoadingBody>
       ) : null}
     </div>
   );

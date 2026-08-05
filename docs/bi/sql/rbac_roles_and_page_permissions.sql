@@ -114,6 +114,7 @@ revoke execute on function public.fn_bi_product_movement(date, date, text, integ
 revoke execute on function public.fn_bi_expense_overview(date, date, uuid, text, integer, text) from authenticated, anon, public;
 revoke execute on function public.fn_bi_income_overview(date, date, text, text) from authenticated, anon, public;
 revoke execute on function public.fn_bi_income_blank_costs(date, date, text, integer) from authenticated, anon, public;
+revoke execute on function public.fn_bi_vat_overview(date, date, text, date, text) from authenticated, anon, public;
 
 grant execute on function public.fn_bi_sales_overview(date, date, text) to service_role;
 grant execute on function public.fn_bi_customer_overview(date, date, text, integer) to service_role;
@@ -122,3 +123,4 @@ grant execute on function public.fn_bi_product_movement(date, date, text, intege
 grant execute on function public.fn_bi_expense_overview(date, date, uuid, text, integer, text) to service_role;
 grant execute on function public.fn_bi_income_overview(date, date, text, text) to service_role;
 grant execute on function public.fn_bi_income_blank_costs(date, date, text, integer) to service_role;
+grant execute on function public.fn_bi_vat_overview(date, date, text, date, text) to service_role;

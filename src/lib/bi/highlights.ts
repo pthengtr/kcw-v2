@@ -2,6 +2,7 @@ import type { BiCustomerOverview } from "./customer-types";
 import type { BiExpenseOverview } from "./expense-types";
 import type { BiIncomeOverview } from "./income-types";
 import type { BiProductOverview } from "./product-types";
+import type { BiVatOverview } from "./vat-types";
 import {
   BRANCH_LABELS,
   formatBaht,
@@ -287,6 +288,42 @@ export function buildIncomeHighlights(overview: BiIncomeOverview): string[] {
   if (overview.summary.blank_cost_line_count > 0) {
     lines.push(
       `บรรทัดที่ไม่มีต้นทุนซื้อล่าสุด: ${formatCount(overview.summary.blank_cost_line_count)} แถว (ตัดออกจากคำนวณ · ดูรายการได้)`
+    );
+  }
+
+  return lines;
+}
+
+export function buildVatHighlights(overview: BiVatOverview): string[] {
+  const lines: string[] = [];
+  const netDelta = pctChange(
+    overview.summary.net_vat,
+    overview.previous_summary.net_vat
+  );
+  const salesDelta = pctChange(
+    overview.summary.sales_vat,
+    overview.previous_summary.sales_vat
+  );
+
+  lines.push(
+    `ภาษีขาย ${formatBaht(overview.summary.sales_vat)} (${formatCount(overview.summary.sales_bill_count)} บิล · ${changePhrase(salesDelta)})`
+  );
+  lines.push(
+    `ภาษีซื้อสินค้า ${formatBaht(overview.summary.purchase_vat)} + ค่าใช้จ่าย ${formatBaht(overview.summary.expense_vat)} → สุทธิ ${formatBaht(overview.summary.net_vat)} (${changePhrase(netDelta)})`
+  );
+
+  if (overview.forecast.enabled) {
+    lines.push(
+      `พยากรณ์สิ้นงวด: สุทธิ ${formatBaht(overview.forecast.net_vat)} (×${overview.forecast.factor.toFixed(2)} จาก ${overview.forecast.days_elapsed}/${overview.forecast.days_in_range} วัน)`
+    );
+  }
+
+  const topSales = [...overview.by_sales_doc].sort(
+    (a, b) => Math.abs(b.tax) - Math.abs(a.tax)
+  )[0];
+  if (topSales) {
+    lines.push(
+      `เอกสารภาษีขายนำ: ${topSales.key}${topSales.branch ? ` (${labelFor(BRANCH_LABELS, topSales.branch)})` : ""} · ${formatBaht(topSales.tax)}`
     );
   }
 
