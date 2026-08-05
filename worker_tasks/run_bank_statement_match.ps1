@@ -113,12 +113,12 @@ function Build-FilledPrompt {
     Replace("{{to}}", $To)
 
   $wrapper = @"
-You are running unattended via the local Windows worker BAT/PowerShell entrypoint.
+You are running as a chat agent (Codex) for KCW bank-statement matching.
 Execute the bank-statement match job below exactly. Do not ask clarifying questions.
 
 Hard requirements:
-1. Scope is already injected: account_no=$AccountNo, from=$From, to=$To.
-2. Follow the fetched prompt rules strictly.
+1. Scope is already filled: account_no=$AccountNo, from=$From, to=$To.
+2. Follow the prompt rules strictly.
 3. Read/write Supabase ``bank.statement_lines`` directly (prefer configured Supabase MCP / SQL tools; otherwise use project secrets/env available on this machine).
 4. Never change money/source fields. Only write match_* / matched_* fields as the prompt allows.
 5. When finished, print the end-of-run summary exactly as the prompt requests, then stop.

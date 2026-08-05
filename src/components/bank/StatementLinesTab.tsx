@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,60 +26,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import type { StatementLineRow } from "@/components/bank/types";
 import {
-  BANK_MATCH_ACCOUNT_NO,
-  BANK_MATCH_AGENT_NAME,
-  bankMatchAccountsLabel,
-  isBankMatchAccount,
-} from "@/lib/bank/match-prompt-constants";
-import {
   canOperatorEditMatchFields,
   canOperatorTransitionMatchStatus,
   BANK_MATCH_STATUSES,
   matchStatusLabelTh,
 } from "@/lib/bank/match-status";
 
+/** Preferred default account in the Statement Lines picker. */
+const PREFERRED_STATEMENT_ACCOUNT_NO = "064-8-91723-6";
+
 type BankAccountOption = {
   account_no: string;
   bank_name: string | null;
 };
-
-type ActiveMatchJob = {
-  state: "launching" | "running";
-  agentId: string | null;
-  runId: string | null;
-  agentUrl: string | null;
-  runStatus: string | null;
-  accountNo: string;
-  from: string;
-  to: string;
-  requestedAt: string;
-  updatedAt: string;
-};
-
-function isTerminalMatchStatus(status: string) {
-  return ["FINISHED", "ERROR", "CANCELLED", "EXPIRED"].includes(
-    status.toUpperCase()
-  );
-}
-
-function matchRunStatusLabel(status: string) {
-  switch (status.toUpperCase()) {
-    case "CREATING":
-      return "กำลังสร้าง agent…";
-    case "RUNNING":
-      return "agent กำลังจับคู่…";
-    case "FINISHED":
-      return "จับคู่เสร็จแล้ว";
-    case "ERROR":
-      return "agent ล้มเหลว";
-    case "CANCELLED":
-      return "ยกเลิกงานแล้ว";
-    case "EXPIRED":
-      return "งานหมดอายุ";
-    default:
-      return `สถานะ: ${status}`;
-  }
-}
 
 function prettyJson(value: unknown) {
   try {
@@ -339,24 +298,12 @@ export default function StatementLinesTab({
   const [saveMatchError, setSaveMatchError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const [matching, setMatching] = useState(false);
-  const [matchMessage, setMatchMessage] = useState<string | null>(null);
-  const [matchAgentUrl, setMatchAgentUrl] = useState<string | null>(null);
-  const [matchRunStatus, setMatchRunStatus] = useState<string | null>(null);
-  const activeMatchJobRef = useRef<ActiveMatchJob | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
-
   const selectedAccount = useMemo(
     () => accounts.find((a) => a.account_no === accountNo) ?? null,
     [accounts, accountNo]
   );
 
   const canFetch = Boolean(accountNo && month);
-  const matchRunning =
-    matching ||
-    (!!matchRunStatus && !isTerminalMatchStatus(matchRunStatus));
-  const canMatch =
-    canFetch && isBankMatchAccount(accountNo) && !matchRunning;
 
   const loadAccounts = useCallback(async (signal?: AbortSignal) => {
     setAccountsLoading(true);
@@ -387,7 +334,7 @@ export default function StatementLinesTab({
       setAccountNo((prev) => {
         if (prev && list.some((a) => a.account_no === prev)) return prev;
         const preferred = list.find(
-          (a) => a.account_no === BANK_MATCH_ACCOUNT_NO
+          (a) => a.account_no === PREFERRED_STATEMENT_ACCOUNT_NO
         );
         return preferred?.account_no ?? list[0]?.account_no ?? "";
       });
@@ -532,75 +479,8 @@ export default function StatementLinesTab({
 
     void run();
     return () => controller.abort();
-    // Also refresh when the page refresh button fires (`refreshToken`)
-    // or when a match agent finishes (`reloadToken`).
-  }, [canFetch, accountNo, month, direction, refreshToken, reloadToken]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const pollOnce = async () => {
-      try {
-        const res = await fetch("/api/bank/match/status", {
-          cache: "no-store",
-        });
-        const body = await res.json().catch(() => ({}));
-        if (cancelled) return;
-
-        if (!res.ok) {
-          setMatchMessage(
-            body?.error ??
-              body?.details ??
-              `เช็คสถานะไม่สำเร็จ (${res.status})`
-          );
-          return;
-        }
-
-        const job = body?.job as ActiveMatchJob | undefined;
-        if (body?.active && job) {
-          const status = String(
-            body?.run?.status ?? job.runStatus ?? "CREATING"
-          );
-          activeMatchJobRef.current = job;
-          setMatchAgentUrl(job.agentUrl ?? null);
-          setMatchRunStatus(status);
-          setMatchMessage(matchRunStatusLabel(status));
-          setMatching(false);
-          return;
-        }
-
-        const previousJob = activeMatchJobRef.current;
-        if (previousJob || body?.terminal) {
-          const status = String(
-            body?.run?.status ?? previousJob?.runStatus ?? "FINISHED"
-          );
-          activeMatchJobRef.current = null;
-          setMatching(false);
-          setMatchRunStatus(status);
-          if (body?.agentUrl) setMatchAgentUrl(String(body.agentUrl));
-          if (status.toUpperCase() === "FINISHED") {
-            setMatchMessage("จับคู่เสร็จแล้ว — รีเฟรชรายการแล้ว");
-          } else {
-            setMatchMessage(matchRunStatusLabel(status));
-          }
-          setReloadToken((n) => n + 1);
-        }
-      } catch (e) {
-        if (cancelled) return;
-        setMatchMessage(e instanceof Error ? e.message : String(e));
-      }
-    };
-
-    void pollOnce();
-    const timer = setInterval(() => {
-      void pollOnce();
-    }, 3000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, []);
+    // Also refresh when the page refresh button fires (`refreshToken`).
+  }, [canFetch, accountNo, month, direction, refreshToken]);
 
   async function openRaw(row: StatementLineRow) {
     setSelected(row);
@@ -770,64 +650,6 @@ export default function StatementLinesTab({
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setExporting(false);
-    }
-  }
-
-  async function handleMatch() {
-    const range = monthToRange(month);
-    if (!range || !isBankMatchAccount(accountNo)) return;
-
-    setMatching(true);
-    setMatchMessage("กำลังเริ่ม agent…");
-    setMatchAgentUrl(null);
-    setMatchRunStatus("CREATING");
-    try {
-      const res = await fetch("/api/bank/match", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          account_no: accountNo,
-          from: range.from,
-          to: range.to,
-        }),
-      });
-      const body = await res.json().catch(() => ({}));
-      const activeJob = body?.activeJob as ActiveMatchJob | undefined;
-      if (!res.ok) {
-        if (res.status === 409 && activeJob) {
-          const status = activeJob.runStatus ?? "CREATING";
-          activeMatchJobRef.current = activeJob;
-          setMatchAgentUrl(activeJob.agentUrl);
-          setMatchRunStatus(status);
-          setMatchMessage(
-            body?.error ?? "มี agent จับคู่รายการเดินบัญชีกำลังทำงานอยู่"
-          );
-          return;
-        }
-        const err = String(body?.error ?? `Match failed (${res.status})`);
-        const details = body?.details ? String(body.details) : "";
-        throw new Error(details ? `${err} — ${details}` : err);
-      }
-
-      if (
-        !activeJob?.agentId ||
-        !activeJob.runId ||
-        !activeJob.agentUrl
-      ) {
-        throw new Error("API ไม่ส่งข้อมูลงาน agent กลับมา");
-      }
-
-      const status = String(activeJob.runStatus ?? "CREATING");
-      activeMatchJobRef.current = activeJob;
-      setMatchAgentUrl(activeJob.agentUrl);
-      setMatchRunStatus(status);
-      setMatchMessage(matchRunStatusLabel(status));
-    } catch (e) {
-      setMatchMessage(e instanceof Error ? e.message : String(e));
-      setMatchRunStatus(null);
-      setMatching(false);
-    } finally {
-      setMatching(false);
     }
   }
 
@@ -1060,28 +882,6 @@ export default function StatementLinesTab({
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <div className="text-xs text-muted-foreground">จับคู่อัตโนมัติ</div>
-            <Button
-              type="button"
-              onClick={handleMatch}
-              disabled={!canMatch}
-              title={
-                matchRunning
-                  ? "agent กำลังจับคู่ — รอให้เสร็จก่อน"
-                  : accountNo && !isBankMatchAccount(accountNo)
-                    ? `ตอนนี้รองรับเฉพาะบัญชี ${bankMatchAccountsLabel()}`
-                    : `${BANK_MATCH_AGENT_NAME} — จับคู่ตามกฎใน prompts/`
-              }
-            >
-              {matchRunning ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-              {matchRunning ? "agent กำลังจับคู่…" : BANK_MATCH_AGENT_NAME}
-            </Button>
-          </div>
         </div>
 
         {selectedAccount && month && (
@@ -1114,44 +914,6 @@ export default function StatementLinesTab({
               <span className="text-xs text-red-600">{statusSummaryError}</span>
             ) : null}
           </div>
-        ) : null}
-
-        {accountNo && !isBankMatchAccount(accountNo) ? (
-          <p className="text-sm text-amber-800">
-            {BANK_MATCH_AGENT_NAME} ใช้ได้เฉพาะบัญชี {bankMatchAccountsLabel()}
-          </p>
-        ) : null}
-        {matchRunning || matchMessage ? (
-          <p
-            className={
-              matchRunning
-                ? "text-sm text-sky-800 flex flex-wrap items-center gap-x-1 gap-y-1"
-                : "text-sm text-muted-foreground"
-            }
-            role="status"
-            aria-live="polite"
-          >
-            {matchRunning ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-            ) : null}
-            <span>
-              {matchMessage ?? matchRunStatusLabel(matchRunStatus ?? "RUNNING")}
-            </span>
-            {matchAgentUrl ? (
-              <>
-                {" "}
-                —{" "}
-                <a
-                  href={matchAgentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline underline-offset-2"
-                >
-                  เปิดดูงาน agent
-                </a>
-              </>
-            ) : null}
-          </p>
         ) : null}
 
         <div className="flex flex-wrap items-end gap-3 pt-1 border-t border-slate-200">
@@ -1388,7 +1150,7 @@ export default function StatementLinesTab({
                         disabled={savingMatch}
                         onClick={() => void saveMatchUpdate("pending")}
                       >
-                        ส่งกลับรอจับคู่ (AI)
+                        ส่งกลับรอจับคู่
                       </Button>
                     ) : null}
                   </div>

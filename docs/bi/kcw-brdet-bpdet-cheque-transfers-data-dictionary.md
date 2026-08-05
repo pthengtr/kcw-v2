@@ -156,7 +156,7 @@ Focused cheque-only BAT (no statement Excel): `run_hq_brdet_bpdet_sync.bat` (not
 
 | Consumer | Status |
 |----------|--------|
-| `/bank-statement-sync` statement lines / match agents | Use `bank.statement_*`; match prompts may later join BRDET/BPDET for cheque clears |
+| `/bank-statement-sync` statement lines + chat-agent match prompts | Use `bank.statement_*`; match prompts may later join BRDET/BPDET for cheque clears |
 | BI dashboards | No dedicated BRDET/BPDET report yet |
 | Expense / payroll match (account 6184) | Currently prefers `PIMAS` / PVMAS paths — BRDET/BPDET are the PARTS9 register grain for the same instruments |
 
