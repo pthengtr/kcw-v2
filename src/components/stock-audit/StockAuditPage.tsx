@@ -24,7 +24,7 @@ import {
   type StockAuditLookup,
   type StockAuditOverview,
 } from "@/lib/stock-audit/types";
-import { STOCK_AUDIT_DAILY_TARGET } from "@/lib/home/workspace-todos";
+import { STOCK_AUDIT_DAILY_TARGET } from "@/lib/stock-audit/daily-target";
 import { cn } from "@/lib/utils";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import StockAuditDailyChart from "@/components/stock-audit/StockAuditDailyChart";
