@@ -51,6 +51,13 @@ export const BI_REPORTS: BiReportNavItem[] = [
     available: true,
   },
   {
+    id: "cash-flow",
+    href: "/bi/cash-flow",
+    label: "กระแสเงินสด (ธนาคาร)",
+    description: "เงินเข้า–ออกจาก statement · ตามบัญชี",
+    available: true,
+  },
+  {
     id: "vat",
     href: "/bi/vat",
     label: "ภาษีขาย / ภาษีซื้อ",

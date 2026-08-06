@@ -1,3 +1,4 @@
+import type { BiCashflowOverview } from "./cashflow-types";
 import type { BiCustomerOverview } from "./customer-types";
 import type { BiExpenseOverview } from "./expense-types";
 import type { BiIncomeOverview } from "./income-types";
@@ -288,6 +289,60 @@ export function buildIncomeHighlights(overview: BiIncomeOverview): string[] {
   if (overview.summary.blank_cost_line_count > 0) {
     lines.push(
       `บรรทัดที่ไม่มีต้นทุนซื้อล่าสุด: ${formatCount(overview.summary.blank_cost_line_count)} แถว (ตัดออกจากคำนวณ · ดูรายการได้)`
+    );
+  }
+
+  return lines;
+}
+
+export function buildCashflowHighlights(overview: BiCashflowOverview): string[] {
+  const lines: string[] = [];
+  const netDelta = pctChange(
+    overview.summary.net,
+    overview.previous_summary.net
+  );
+  const inflowDelta = pctChange(
+    overview.summary.inflow,
+    overview.previous_summary.inflow
+  );
+
+  lines.push(
+    `เงินเข้า ${formatBaht(overview.summary.inflow)} · เงินออก ${formatBaht(overview.summary.outflow)} → สุทธิ ${formatBaht(overview.summary.net)} (${changePhrase(netDelta)})`
+  );
+  lines.push(
+    `คงเหลือรวม ณ สิ้นช่วง ${formatBaht(overview.summary.ending_balance)} (เปิดช่วง ${formatBaht(overview.summary.opening_balance)}) · ${formatCount(overview.summary.account_count)} บัญชี`
+  );
+
+  if (
+    overview.summary.internal_in > 0 ||
+    overview.summary.internal_out > 0
+  ) {
+    lines.push(
+      `สุทธิไม่รวมโอนระหว่างบัญชี ${formatBaht(overview.summary.net_ex_internal)} · โอนใน เข้า ${formatBaht(overview.summary.internal_in)} / ออก ${formatBaht(overview.summary.internal_out)}`
+    );
+  }
+
+  const topIn = [...overview.by_category]
+    .filter((r) => r.inflow > 0)
+    .sort((a, b) => b.inflow - a.inflow)[0];
+  if (topIn) {
+    lines.push(
+      `หมวดรับนำ: ${topIn.label} · ${formatBaht(topIn.inflow)} · ${shareOf(topIn.inflow, overview.summary.inflow).toFixed(0)}% ของเงินเข้า (${changePhrase(inflowDelta)})`
+    );
+  }
+
+  const topOut = [...overview.by_category]
+    .filter((r) => r.outflow > 0)
+    .sort((a, b) => b.outflow - a.outflow)[0];
+  if (topOut) {
+    lines.push(
+      `หมวดจ่ายนำ: ${topOut.label} · ${formatBaht(topOut.outflow)} · ${shareOf(topOut.outflow, overview.summary.outflow).toFixed(0)}% ของเงินออก`
+    );
+  }
+
+  if (overview.summary.unclassified_count > 0) {
+    lines.push(
+      `ยังไม่จับคู่หมวด ${formatCount(overview.summary.unclassified_count)} รายการ — ดูสถานะจับคู่ที่หน้า Bank Statement`
     );
   }
 

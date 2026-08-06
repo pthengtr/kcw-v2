@@ -43,6 +43,7 @@ const PAGE_KEY_LABELS: Record<string, string> = {
   bi_products: "BI: อันดับสินค้า",
   bi_product_movement: "BI: การเคลื่อนไหวสินค้า",
   bi_expenses: "BI: ภาพรวมค่าใช้จ่าย",
+  bi_cashflow: "BI: กระแสเงินสด (ธนาคาร)",
   bi_vat: "BI: ภาษีขาย / ภาษีซื้อ",
   bank_tiger_pay: "Bank: TigerPay",
   bank_statement_sync: "Bank: Statement Upload",

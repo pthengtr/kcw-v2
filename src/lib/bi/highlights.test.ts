@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildCashflowHighlights,
   buildCustomerHighlights,
   buildExpenseHighlights,
   buildIncomeHighlights,
@@ -8,6 +9,7 @@ import {
   buildSalesHighlights,
   buildVatHighlights,
 } from "./highlights";
+import type { BiCashflowOverview } from "./cashflow-types";
 import type { BiCustomerOverview } from "./customer-types";
 import type { BiExpenseOverview } from "./expense-types";
 import type { BiIncomeOverview } from "./income-types";
@@ -412,5 +414,75 @@ describe("buildVatHighlights", () => {
     expect(lines[1]).toContain("สุทธิ");
     expect(lines.some((l) => l.includes("พยากรณ์"))).toBe(true);
     expect(lines.some((l) => l.includes("TAR"))).toBe(true);
+  });
+});
+
+describe("buildCashflowHighlights", () => {
+  it("builds cashflow highlight lines from bank statement overview", () => {
+    const cashflowBase: BiCashflowOverview = {
+      from: "2026-07-01",
+      to: "2026-07-31",
+      account_no: null,
+      include_ignored: false,
+      limit: 30,
+      previous_from: "2026-06-01",
+      previous_to: "2026-06-30",
+      summary: {
+        inflow: 1_000_000,
+        outflow: 800_000,
+        net: 200_000,
+        line_count: 120,
+        inflow_count: 50,
+        outflow_count: 70,
+        internal_in: 100_000,
+        internal_out: 90_000,
+        net_ex_internal: 190_000,
+        unclassified_count: 12,
+        opening_balance: 500_000,
+        ending_balance: 700_000,
+        account_count: 6,
+      },
+      previous_summary: {
+        inflow: 900_000,
+        outflow: 850_000,
+        net: 50_000,
+        line_count: 100,
+        net_ex_internal: 40_000,
+      },
+      by_account: [],
+      by_category: [
+        {
+          key: "tar_cntar_net",
+          label: "รับชำระลูกหนี้",
+          inflow: 600_000,
+          outflow: 0,
+          net: 600_000,
+          line_count: 10,
+        },
+        {
+          key: "pvmas",
+          label: "จ่ายเจ้าหนี้ (PVMAS)",
+          inflow: 0,
+          outflow: 400_000,
+          net: -400_000,
+          line_count: 20,
+        },
+      ],
+      by_match_status: [],
+      trend_daily: [],
+      trend_monthly: [],
+      top_inflows: [],
+      top_outflows: [],
+      accounts: [],
+    };
+
+    const lines = buildCashflowHighlights(cashflowBase);
+    expect(lines[0]).toContain("เงินเข้า");
+    expect(lines[0]).toContain("สุทธิ");
+    expect(lines.some((l) => l.includes("คงเหลือรวม"))).toBe(true);
+    expect(lines.some((l) => l.includes("โอนระหว่างบัญชี"))).toBe(true);
+    expect(lines.some((l) => l.includes("รับชำระลูกหนี้"))).toBe(true);
+    expect(lines.some((l) => l.includes("จ่ายเจ้าหนี้"))).toBe(true);
+    expect(lines.some((l) => l.includes("ยังไม่จับคู่หมวด"))).toBe(true);
   });
 });
