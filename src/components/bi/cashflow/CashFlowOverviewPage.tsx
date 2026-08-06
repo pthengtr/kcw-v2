@@ -159,7 +159,7 @@ export default function CashFlowOverviewPage() {
               กระแสเงินสด (ธนาคาร)
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              จาก bank statement ที่นำเข้า · เงินเข้า–ออกจริง (ไม่ใช่กำไรขาดทุน)
+              จาก bank statement ที่นำเข้า · นับทุกรายการเงินเข้า–ออกจริง (รวมที่ละเว้นจับคู่)
             </p>
             <p className="mt-2 text-xs text-slate-600 sm:text-sm">
               ช่วง{" "}

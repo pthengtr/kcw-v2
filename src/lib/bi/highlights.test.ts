@@ -423,7 +423,7 @@ describe("buildCashflowHighlights", () => {
       from: "2026-07-01",
       to: "2026-07-31",
       account_no: null,
-      include_ignored: false,
+      include_ignored: true,
       limit: 30,
       previous_from: "2026-06-01",
       previous_to: "2026-06-30",

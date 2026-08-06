@@ -52,7 +52,7 @@ export async function GET(req: Request) {
       from: parsed.data.from,
       to: parsed.data.to,
       accountNo: parsed.data.account ?? null,
-      includeIgnored: parsed.data.include_ignored ?? false,
+      includeIgnored: parsed.data.include_ignored ?? true,
       limit: parsed.data.limit ?? 30,
     });
     return NextResponse.json({ overview });
