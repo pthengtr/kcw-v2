@@ -33,6 +33,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_bi_product_movement.sql](./sql/fn_bi_product_movement.sql) | RPC used by `/bi/product-movement` |
 | [sql/fn_bi_customer_overview.sql](./sql/fn_bi_customer_overview.sql) | RPC used by `/bi/customers` |
 | [sql/fn_bi_expense_overview.sql](./sql/fn_bi_expense_overview.sql) | RPC used by `/bi/expenses` |
+| [sql/fn_bi_cashflow_overview.sql](./sql/fn_bi_cashflow_overview.sql) | RPC used by `/bi/cash-flow` (bank statements) |
 | [sql/fn_bi_income_overview.sql](./sql/fn_bi_income_overview.sql) | RPC used by `/bi/income` |
 | [sql/fn_bi_income_blank_costs.sql](./sql/fn_bi_income_blank_costs.sql) | Blank-cost line drilldown for `/bi/income` |
 | [sql/fn_bi_vat_overview.sql](./sql/fn_bi_vat_overview.sql) | RPC used by `/bi/vat` (ภาษีขาย/ซื้อ + พยากรณ์) |
@@ -41,13 +42,14 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 
 - UI: `/po` — HQ/SYP purchase-order status; pending receive (ค้างรับ) = `ICLOW` — see [ICLOW dictionary](./kcw-iclow-pending-receive-data-dictionary.md)
 - UI: `/bank-statement-sync` — upload Excel via `import-bank-statement` Edge Function + match; daily HQ BAT can still refresh Drive Excel + BRDET/BPDET — see [cheque/transfer dictionary](./kcw-brdet-bpdet-cheque-transfers-data-dictionary.md)
-- UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/income`, `/bi/vat`
+- UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/cash-flow`, `/bi/income`, `/bi/vat`
 - API: `GET /api/bi/sales/overview?from=&to=&branch=`
 - API: `GET /api/bi/sales/compare?mode=years|months&years=&periods=&branch=`
 - API: `GET /api/bi/products/overview?from=&to=&branch=&limit=`
 - API: `GET /api/bi/products/movement?from=&to=&branch=&stock_limit=&dead_limit=`
 - API: `GET /api/bi/customers/overview?from=&to=&branch=&limit=`
 - API: `GET /api/bi/expenses/overview?from=&to=&branch=&source=&limit=`
+- API: `GET /api/bi/cashflow/overview?from=&to=&account=&limit=`
 - API: `GET /api/bi/income/overview?from=&to=&branch=`
 - API: `GET /api/bi/income/blank-costs?from=&to=&branch=&limit=`
 - API: `GET /api/bi/vat/overview?from=&to=&branch=`

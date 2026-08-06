@@ -28,6 +28,7 @@ const REPORT_PAGE_KEYS: Record<string, string> = {
   products: BI_PAGE_KEYS.products,
   "product-movement": BI_PAGE_KEYS.productMovement,
   expenses: BI_PAGE_KEYS.expenses,
+  "cash-flow": BI_PAGE_KEYS.cashflow,
   vat: BI_PAGE_KEYS.vat,
 };
 

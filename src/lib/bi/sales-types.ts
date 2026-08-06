@@ -55,6 +55,7 @@ export type BiReportId =
   | "products"
   | "product-movement"
   | "expenses"
+  | "cash-flow"
   | "income"
   | "vat";
 
