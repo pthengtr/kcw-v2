@@ -357,52 +357,124 @@ BEGIN
     FROM classified
     WHERE is_unclassified
   ),
-  bank_recon_accounts AS (
-    SELECT
-      s.account_no AS key,
-      COALESCE(a.account_code, right(replace(s.account_no, '-', ''), 4)) AS account_code,
-      COALESCE(a.account_name, COALESCE(NULLIF(btrim(MAX(s.bank_name)), ''), '—') || ' · ' || s.account_no) AS account_name,
-      COALESCE((
-        SELECT b.balance_after
-        FROM bank.statement_lines b
-        WHERE b.account_no = s.account_no
-          AND b.txn_date < v_year_start
-          AND b.balance_after IS NOT NULL
-        ORDER BY b.txn_date DESC, b.source_row_number DESC NULLS LAST, b.created_at DESC
-        LIMIT 1
-      ), 0)::double precision AS opening_balance,
-      COALESCE(SUM(s.amount) FILTER (
-        WHERE s.txn_date >= v_year_start AND s.txn_date <= v_as_of AND s.direction = 'in'
-      ), 0)::double precision AS cash_in,
-      COALESCE(SUM(s.amount) FILTER (
-        WHERE s.txn_date >= v_year_start AND s.txn_date <= v_as_of AND s.direction = 'out'
-      ), 0)::double precision AS cash_out,
-      COALESCE((
-        SELECT b.balance_after
-        FROM bank.statement_lines b
-        WHERE b.account_no = s.account_no
-          AND b.txn_date <= v_as_of
-          AND b.balance_after IS NOT NULL
-        ORDER BY b.txn_date DESC, b.source_row_number DESC NULLS LAST, b.created_at DESC
-        LIMIT 1
-      ), 0)::double precision AS actual_balance
+  -- Per-account roll-forward for operator completeness checks.
+  -- Opening = last balance_after before the year, else inferred from the first
+  -- line in-range (balance_after ∓ that line's amount) so variance ≈ 0 when the
+  -- imported series is contiguous.
+  account_keys AS (
+    SELECT DISTINCT s.account_no
     FROM bank.statement_lines s
-    LEFT JOIN public.cashflow_bank_accounts a ON a.account_no = s.account_no
     WHERE s.txn_date <= v_as_of
-    GROUP BY s.account_no, a.account_code, a.account_name
+  ),
+  account_prior_open AS (
+    SELECT DISTINCT ON (s.account_no)
+      s.account_no,
+      s.balance_after::double precision AS opening_balance,
+      s.txn_date AS opening_as_of
+    FROM bank.statement_lines s
+    WHERE s.txn_date < v_year_start
+      AND s.balance_after IS NOT NULL
+    ORDER BY s.account_no, s.txn_date DESC, s.source_row_number DESC NULLS LAST, s.created_at DESC
+  ),
+  account_first_in_range AS (
+    SELECT DISTINCT ON (s.account_no)
+      s.account_no,
+      s.txn_date AS first_txn_date,
+      s.direction AS first_direction,
+      s.amount::double precision AS first_amount,
+      s.balance_after::double precision AS first_balance_after
+    FROM bank.statement_lines s
+    WHERE s.txn_date >= v_year_start
+      AND s.txn_date <= v_as_of
+      AND s.balance_after IS NOT NULL
+    ORDER BY s.account_no, s.txn_date ASC, s.source_row_number ASC NULLS LAST, s.created_at ASC
+  ),
+  account_last_in_range AS (
+    SELECT DISTINCT ON (s.account_no)
+      s.account_no,
+      s.txn_date AS last_txn_date,
+      s.balance_after::double precision AS actual_balance
+    FROM bank.statement_lines s
+    WHERE s.txn_date >= v_year_start
+      AND s.txn_date <= v_as_of
+      AND s.balance_after IS NOT NULL
+    ORDER BY s.account_no, s.txn_date DESC, s.source_row_number DESC NULLS LAST, s.created_at DESC
+  ),
+  account_period_sums AS (
+    SELECT
+      s.account_no,
+      COALESCE(SUM(s.amount) FILTER (WHERE s.direction = 'in'), 0)::double precision AS cash_in,
+      COALESCE(SUM(s.amount) FILTER (WHERE s.direction = 'out'), 0)::double precision AS cash_out,
+      COUNT(*)::int AS line_count,
+      MIN(s.txn_date) AS first_txn_date,
+      MAX(s.txn_date) AS last_txn_date,
+      MAX(NULLIF(btrim(s.bank_name), '')) AS bank_name
+    FROM bank.statement_lines s
+    WHERE s.txn_date >= v_year_start
+      AND s.txn_date <= v_as_of
+    GROUP BY s.account_no
   ),
   bank_recon AS (
     SELECT
-      key,
-      account_code,
-      account_name,
-      opening_balance,
-      cash_in,
-      cash_out,
-      (opening_balance + cash_in - cash_out) AS calculated_closing,
-      actual_balance,
-      (actual_balance - (opening_balance + cash_in - cash_out)) AS variance
-    FROM bank_recon_accounts
+      k.account_no AS key,
+      COALESCE(a.account_code, right(replace(k.account_no, '-', ''), 4)) AS account_code,
+      COALESCE(
+        a.account_name,
+        COALESCE(NULLIF(btrim(ps.bank_name), ''), '—') || ' · ' || k.account_no
+      ) AS account_name,
+      CASE
+        WHEN po.opening_balance IS NOT NULL THEN po.opening_balance
+        WHEN fi.first_balance_after IS NOT NULL AND fi.first_direction = 'in'
+          THEN fi.first_balance_after - fi.first_amount
+        WHEN fi.first_balance_after IS NOT NULL AND fi.first_direction = 'out'
+          THEN fi.first_balance_after + fi.first_amount
+        ELSE 0::double precision
+      END AS opening_balance,
+      CASE
+        WHEN po.opening_balance IS NOT NULL THEN 'prior_statement'
+        WHEN fi.first_balance_after IS NOT NULL THEN 'inferred'
+        ELSE 'none'
+      END AS opening_source,
+      COALESCE(ps.cash_in, 0) AS cash_in,
+      COALESCE(ps.cash_out, 0) AS cash_out,
+      COALESCE(ps.line_count, 0) AS line_count,
+      COALESCE(ps.first_txn_date, fi.first_txn_date) AS first_txn_date,
+      COALESCE(ps.last_txn_date, la.last_txn_date) AS last_txn_date,
+      (
+        CASE
+          WHEN po.opening_balance IS NOT NULL THEN po.opening_balance
+          WHEN fi.first_balance_after IS NOT NULL AND fi.first_direction = 'in'
+            THEN fi.first_balance_after - fi.first_amount
+          WHEN fi.first_balance_after IS NOT NULL AND fi.first_direction = 'out'
+            THEN fi.first_balance_after + fi.first_amount
+          ELSE 0::double precision
+        END
+        + COALESCE(ps.cash_in, 0)
+        - COALESCE(ps.cash_out, 0)
+      ) AS calculated_closing,
+      COALESCE(la.actual_balance, 0)::double precision AS actual_balance,
+      (
+        COALESCE(la.actual_balance, 0)
+        - (
+          CASE
+            WHEN po.opening_balance IS NOT NULL THEN po.opening_balance
+            WHEN fi.first_balance_after IS NOT NULL AND fi.first_direction = 'in'
+              THEN fi.first_balance_after - fi.first_amount
+            WHEN fi.first_balance_after IS NOT NULL AND fi.first_direction = 'out'
+              THEN fi.first_balance_after + fi.first_amount
+            ELSE 0::double precision
+          END
+          + COALESCE(ps.cash_in, 0)
+          - COALESCE(ps.cash_out, 0)
+        )
+      ) AS variance
+    FROM account_keys k
+    LEFT JOIN public.cashflow_bank_accounts a ON a.account_no = k.account_no
+    LEFT JOIN account_prior_open po ON po.account_no = k.account_no
+    LEFT JOIN account_first_in_range fi ON fi.account_no = k.account_no
+    LEFT JOIN account_last_in_range la ON la.account_no = k.account_no
+    LEFT JOIN account_period_sums ps ON ps.account_no = k.account_no
+    WHERE COALESCE(ps.line_count, 0) > 0
   ),
   opening_ytd AS (
     SELECT opening AS opening_cash FROM bal_open_year
@@ -541,18 +613,32 @@ BEGIN
         'total_actual_balance', COALESCE((SELECT SUM(actual_balance) FROM bank_recon), 0),
         'total_calculated_balance', COALESCE((SELECT SUM(calculated_closing) FROM bank_recon), 0),
         'difference', COALESCE((SELECT SUM(actual_balance) - SUM(calculated_closing) FROM bank_recon), 0),
+        'accounts_ok', COALESCE((
+          SELECT COUNT(*)::int FROM bank_recon WHERE ABS(variance) < 0.01
+        ), 0),
+        'accounts_gap', COALESCE((
+          SELECT COUNT(*)::int FROM bank_recon WHERE ABS(variance) >= 0.01
+        ), 0),
         'accounts', COALESCE((
           SELECT jsonb_agg(jsonb_build_object(
             'key', key,
             'account_code', account_code,
             'account_name', account_name,
             'opening_balance', opening_balance,
+            'opening_source', opening_source,
             'cash_in', cash_in,
             'cash_out', cash_out,
+            'line_count', line_count,
+            'first_txn_date', first_txn_date,
+            'last_txn_date', last_txn_date,
             'calculated_closing', calculated_closing,
             'actual_balance', actual_balance,
-            'variance', variance
-          ) ORDER BY account_code, account_name)
+            'variance', variance,
+            'is_complete', ABS(variance) < 0.01
+          ) ORDER BY
+            CASE WHEN ABS(variance) >= 0.01 THEN 0 ELSE 1 END,
+            account_code,
+            account_name)
           FROM bank_recon
         ), '[]'::jsonb)
       )

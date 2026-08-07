@@ -69,6 +69,24 @@ ending_cash = opening_cash + net_cash_change   -- SCF identity
 Bank ending balance (sum of latest `balance_after` per account) may differ from
 SCF ending when unclassified or timing gaps exist — shown in Bank Reconciliation.
 
+### Bank reconciliation (per account completeness)
+
+For each account in the selected year window:
+
+```
+opening =
+  last balance_after before Jan 1
+  OR (if none) first_in_range.balance_after ∓ first_in_range.amount  -- inferred
+calculated_close = opening + cash_in − cash_out
+actual = last balance_after in window
+variance = actual − calculated_close
+is_complete = abs(variance) < 0.01
+```
+
+Operators use per-account **ครบ / ขาดช่วง** to verify import completeness.
+A non-zero variance after inferred opening means gaps or inconsistent
+`balance_after` in the imported series — not a missing “opening = 0” artifact.
+
 ## RPC
 
 - `public.fn_bi_cashflow_dashboard(p_year, p_through_month)` — dashboard payload

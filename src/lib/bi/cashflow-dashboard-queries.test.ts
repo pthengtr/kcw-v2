@@ -90,17 +90,24 @@ describe("normalizeCashflowDashboard", () => {
         total_actual_balance: 2_000_000,
         total_calculated_balance: 1_999_000,
         difference: 1_000,
+        accounts_ok: 1,
+        accounts_gap: 0,
         accounts: [
           {
             key: "064-8-91723-6",
             account_code: "7236",
             account_name: "KBANK 7236",
             opening_balance: 100_000,
+            opening_source: "inferred",
             cash_in: 500_000,
             cash_out: 200_000,
+            line_count: 40,
+            first_txn_date: "2026-05-01",
+            last_txn_date: "2026-07-31",
             calculated_closing: 400_000,
             actual_balance: 400_000,
             variance: 0,
+            is_complete: true,
           },
         ],
       },
@@ -113,6 +120,10 @@ describe("normalizeCashflowDashboard", () => {
     expect(dash.statement_rows[1]?.ytd).toBe(5_000_000);
     expect(dash.operating_breakdown[0]?.share_of_sales).toBe(0.4);
     expect(dash.bank_reconciliation.difference).toBe(1_000);
+    expect(dash.bank_reconciliation.accounts[0]?.is_complete).toBe(true);
+    expect(dash.bank_reconciliation.accounts[0]?.opening_source).toBe(
+      "inferred"
+    );
   });
 });
 

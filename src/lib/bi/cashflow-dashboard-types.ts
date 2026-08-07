@@ -63,22 +63,34 @@ export type BiCashflowOperatingBreakdown = {
   share_of_sales: number | null;
 };
 
+export type BiCashflowOpeningSource =
+  | "prior_statement"
+  | "inferred"
+  | "none";
+
 export type BiCashflowBankReconAccount = {
   key: string;
   account_code: string;
   account_name: string;
   opening_balance: number;
+  opening_source: BiCashflowOpeningSource;
   cash_in: number;
   cash_out: number;
+  line_count: number;
+  first_txn_date: string | null;
+  last_txn_date: string | null;
   calculated_closing: number;
   actual_balance: number;
   variance: number;
+  is_complete: boolean;
 };
 
 export type BiCashflowBankReconciliation = {
   total_actual_balance: number;
   total_calculated_balance: number;
   difference: number;
+  accounts_ok: number;
+  accounts_gap: number;
   accounts: BiCashflowBankReconAccount[];
 };
 

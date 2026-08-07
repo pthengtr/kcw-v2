@@ -8,6 +8,7 @@ import type {
   BiCashflowDrilldown,
   BiCashflowDrilldownLine,
   BiCashflowMonthMovement,
+  BiCashflowOpeningSource,
   BiCashflowOperatingBreakdown,
   BiCashflowStatementRow,
   BiCashflowStatementRowKind,
@@ -126,31 +127,49 @@ function parseBreakdown(value: unknown): BiCashflowOperatingBreakdown[] {
   });
 }
 
+function parseOpeningSource(value: unknown): BiCashflowOpeningSource {
+  const s = asString(value);
+  if (s === "prior_statement" || s === "inferred" || s === "none") return s;
+  return "none";
+}
+
 function parseReconAccounts(value: unknown): BiCashflowBankReconAccount[] {
   if (!Array.isArray(value)) return [];
   return value.map((row) => {
     const r = (row ?? {}) as Record<string, unknown>;
+    const variance = asNumber(r.variance);
     return {
       key: asString(r.key),
       account_code: asString(r.account_code),
       account_name: asString(r.account_name),
       opening_balance: asNumber(r.opening_balance),
+      opening_source: parseOpeningSource(r.opening_source),
       cash_in: asNumber(r.cash_in),
       cash_out: asNumber(r.cash_out),
+      line_count: asNumber(r.line_count),
+      first_txn_date: asNullableString(r.first_txn_date),
+      last_txn_date: asNullableString(r.last_txn_date),
       calculated_closing: asNumber(r.calculated_closing),
       actual_balance: asNumber(r.actual_balance),
-      variance: asNumber(r.variance),
+      variance,
+      is_complete:
+        r.is_complete === true ||
+        (r.is_complete == null && Math.abs(variance) < 0.01),
     };
   });
 }
 
 function parseReconciliation(value: unknown): BiCashflowBankReconciliation {
   const r = (value ?? {}) as Record<string, unknown>;
+  const accounts = parseReconAccounts(r.accounts);
   return {
     total_actual_balance: asNumber(r.total_actual_balance),
     total_calculated_balance: asNumber(r.total_calculated_balance),
     difference: asNumber(r.difference),
-    accounts: parseReconAccounts(r.accounts),
+    accounts_ok: asNumber(r.accounts_ok) || accounts.filter((a) => a.is_complete).length,
+    accounts_gap:
+      asNumber(r.accounts_gap) || accounts.filter((a) => !a.is_complete).length,
+    accounts,
   };
 }
 
