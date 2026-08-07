@@ -1,10 +1,20 @@
 /**
  * Port of notebooks/02_bank_statement_import_test.ipynb + src/kcw/bank_statement.py
- * parser_version: auto_v1 (same fingerprints / column heuristics as the Python importer)
+ * parser_version: auto_v2 (canonical transaction fingerprints; display description excluded)
  */
 import * as XLSX from "npm:xlsx@0.18.5";
+import {
+  buildTransactionFingerprint,
+  extractTransactionDetailFromRaw,
+  normMoney,
+  normText,
+  sha256HexAsync,
+  TRANSACTION_DETAIL_COL_PATTERNS,
+} from "./fingerprint.ts";
 
-export const PARSER_VERSION = "auto_v1";
+export const PARSER_VERSION = "auto_v2";
+
+export { sha256HexAsync } from "./fingerprint.ts";
 
 const ACCOUNT_METADATA_LABELS = new Set([
   "ACCOUNT NO.",
@@ -48,49 +58,6 @@ function isBlank(v: unknown): boolean {
   if (typeof v === "number" && Number.isNaN(v)) return true;
   if (typeof v === "string" && v.trim() === "") return true;
   return false;
-}
-
-export async function sha256HexAsync(
-  data: ArrayBuffer | Uint8Array | string,
-): Promise<string> {
-  let bytes: Uint8Array;
-  if (typeof data === "string") {
-    bytes = new TextEncoder().encode(data);
-  } else if (data instanceof Uint8Array) {
-    bytes = data;
-  } else {
-    bytes = new Uint8Array(data);
-  }
-  const hash = await crypto.subtle.digest("SHA-256", bytes as BufferSource);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function normText(x: unknown): string {
-  if (isBlank(x)) return "";
-  let s = String(x);
-  s = s.replace(/\u00A0/g, " ");
-  s = s.trim().toUpperCase();
-  s = s.replace(/\s+/g, " ");
-  return s;
-}
-
-function normMoney(x: unknown): string {
-  if (isBlank(x)) return "";
-  const cleaned = String(x).replace(/,/g, "").trim();
-  if (!cleaned) return "";
-  const n = Number(cleaned);
-  if (!Number.isFinite(n)) return "";
-  const sign = n < 0 ? -1 : 1;
-  const abs = Math.abs(n);
-  const scaled = abs * 100;
-  const whole = Math.floor(scaled + 1e-9);
-  const frac = scaled - whole;
-  let cents = frac >= 0.5 - 1e-12 ? whole + 1 : whole;
-  if (Math.abs(frac - 0.5) < 1e-9) cents = whole + 1;
-  const out = (sign * cents) / 100;
-  return out.toFixed(2);
 }
 
 function parseDayFirstDate(value: unknown): string | null {
@@ -331,6 +298,7 @@ export async function parseStatementBytes(
     const colDate = pickCol(cols, ["^DATE$", "TXN.*DATE", "TRAN.*DATE", "วันที่"]);
     const colValueDate = pickCol(cols, ["VALUE.*DATE", "VAL.*DATE", "วันที่.*เงิน"]);
     const colDesc = pickCol(cols, ["DESC", "DETAIL", "PARTICULAR", "รายการ", "รายละเอียด"]);
+    const colTxnDetail = pickCol(cols, TRANSACTION_DETAIL_COL_PATTERNS);
     const colDebit = pickCol(cols, ["DEBIT", "WITHDRAW", "DR", "ถอน", "เดบิต"]);
     const colCredit = pickCol(cols, ["CREDIT", "DEPOSIT", "CR", "ฝาก", "เครดิต"]);
     const colAmount = pickCol(cols, ["^AMOUNT$", "^จำนวนเงิน$"]);
@@ -348,6 +316,7 @@ export async function parseStatementBytes(
     const iAmount = idx(colAmount);
     const iBalance = idx(colBalance);
     const iRef = idx(colRef);
+    const iTxnDetail = idx(colTxnDetail);
 
     const baseRowNum = headerRow + 2;
 
@@ -400,16 +369,24 @@ export async function parseStatementBytes(
         valueDate = parseDayFirstDate(row[iValueDate]);
       }
 
-      const fpInput = [
-        normText(resolvedAccount),
-        txnDate,
-        normMoney(amount),
-        normText(direction),
-        normText(description),
-        normText(bankReference),
-        colBalance ? normMoney(bal) : "",
-      ].join("|");
-      const fp = await sha256HexAsync(fpInput);
+      let transactionDetail: string | null = null;
+      if (iTxnDetail >= 0) {
+        const detailRaw = row[iTxnDetail];
+        transactionDetail = isBlank(detailRaw) ? null : String(detailRaw);
+      }
+      if (!transactionDetail) {
+        transactionDetail = extractTransactionDetailFromRaw(raw);
+      }
+
+      const fp = await buildTransactionFingerprint({
+        account_no: resolvedAccount,
+        txn_date: txnDate,
+        direction,
+        amount: Number(normMoney(amount)),
+        balance_after: bal === null ? null : Number(normMoney(bal)),
+        bank_reference: bankReference,
+        transaction_detail: transactionDetail,
+      });
 
       lines.push({
         account_no: resolvedAccount,
