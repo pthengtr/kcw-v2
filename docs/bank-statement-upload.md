@@ -10,7 +10,7 @@ Report layout parity: [kcw-analytics `src/kcw/bank_statement_report.py`](https:/
 - Page: `/bank-statement-sync` (`BankStatementSyncPage`)
 - Upload dialog: `StatementUploadDialog` → `invokeBankStatementImport` in `src/lib/bank/statement-upload.ts`
 - Report dialog: `StatementReportDialog` → `invokeBankStatementReport` in `src/lib/bank/statement-report.ts`
-- Auth: signed-in user; both Edge Functions require email in `public.kcw_admin`
+- Auth: signed-in user with RBAC page `bank_statement_sync` (or `admin` role)
 - RBAC page key: `bank_statement_sync` (unchanged)
 
 ### Upload
