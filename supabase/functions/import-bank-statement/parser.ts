@@ -1,15 +1,23 @@
 /**
  * Port of notebooks/02_bank_statement_import_test.ipynb + src/kcw/bank_statement.py
  * parser_version: auto_v2 (canonical transaction fingerprints; display description excluded)
+ *
+ * Supports KBANK Thai exports and both KTB layouts:
+ * - DownLoadService (English: Date / Description / Amount)
+ * - Account_Statement_Report_TH_XLS (Thai: วันที่/เวลา / รายละเอียด / ถอนเงิน/ฝากเงิน)
  */
 import * as XLSX from "npm:xlsx@0.18.5";
+import {
+  columnsAreUsable,
+  normCols,
+  resolveStatementColumns,
+} from "./columns.ts";
 import {
   buildTransactionFingerprint,
   extractTransactionDetailFromRaw,
   normMoney,
   normText,
   sha256HexAsync,
-  TRANSACTION_DETAIL_COL_PATTERNS,
 } from "./fingerprint.ts";
 
 export const PARSER_VERSION = "auto_v2";
@@ -141,7 +149,7 @@ function findHeaderRow(grid: unknown[][]): number | null {
     }
     if (joined.includes("DEBIT") || joined.includes("WITHDRAW")) hits += 1;
     if (joined.includes("CREDIT") || joined.includes("DEPOSIT")) hits += 1;
-    if (/\bAMOUNT\b/.test(joined)) hits += 1;
+    if (/\bamount\b/.test(joined)) hits += 1;
     if (joined.includes("BAL") || joined.includes("BALANCE")) hits += 1;
     if (joinedRaw.includes("วันที่")) hits += 1;
     if (joinedRaw.includes("รายการ") || joinedRaw.includes("รายละเอียด")) hits += 1;
@@ -149,29 +157,6 @@ function findHeaderRow(grid: unknown[][]): number | null {
     if (joinedRaw.includes("เครดิต") || joinedRaw.includes("ฝาก")) hits += 1;
     if (joinedRaw.includes("คงเหลือ") || joinedRaw.includes("ยอดคงเหลือ")) hits += 1;
     if (hits >= 3) return i;
-  }
-  return null;
-}
-
-function normCols(cols: unknown[]): string[] {
-  const out = cols.map((c) => normText(c));
-  const seen: Record<string, number> = {};
-  return out.map((c) => {
-    if (!(c in seen)) {
-      seen[c] = 0;
-      return c;
-    }
-    seen[c] += 1;
-    return `${c}_${seen[c]}`;
-  });
-}
-
-function pickCol(cols: string[], patterns: string[]): string | null {
-  for (const p of patterns) {
-    const rx = new RegExp(p);
-    for (const c of cols) {
-      if (rx.test(c)) return c;
-    }
   }
   return null;
 }
@@ -259,6 +244,7 @@ export async function parseStatementBytes(
     filename: string;
     bankName: string;
     accountNo?: string | null;
+    source?: string;
   },
 ): Promise<ParseResult> {
   const bankName = opts.bankName;
@@ -274,7 +260,7 @@ export async function parseStatementBytes(
     sheet_names: wb.SheetNames,
     parser_version: PARSER_VERSION,
     bank_name: bankName,
-    source: "edge_upload",
+    source: opts.source ?? "edge_upload",
   };
 
   const lines: ParsedLine[] = [];
@@ -293,21 +279,25 @@ export async function parseStatementBytes(
     if (metaAccount) resolvedAccount = metaAccount;
 
     const headerCells = grid[headerRow] ?? [];
-    const cols = normCols(headerCells);
+    const resolved = resolveStatementColumns(headerCells);
+    if (!columnsAreUsable(resolved)) continue;
 
-    const colDate = pickCol(cols, ["^DATE$", "TXN.*DATE", "TRAN.*DATE", "วันที่"]);
-    const colValueDate = pickCol(cols, ["VALUE.*DATE", "VAL.*DATE", "วันที่.*เงิน"]);
-    const colDesc = pickCol(cols, ["DESC", "DETAIL", "PARTICULAR", "รายการ", "รายละเอียด"]);
-    const colTxnDetail = pickCol(cols, TRANSACTION_DETAIL_COL_PATTERNS);
-    const colDebit = pickCol(cols, ["DEBIT", "WITHDRAW", "DR", "ถอน", "เดบิต"]);
-    const colCredit = pickCol(cols, ["CREDIT", "DEPOSIT", "CR", "ฝาก", "เครดิต"]);
-    const colAmount = pickCol(cols, ["^AMOUNT$", "^จำนวนเงิน$"]);
-    const colBalance = pickCol(cols, ["BAL", "BALANCE", "คงเหลือ", "ยอดคงเหลือ"]);
-    const colRef = pickCol(cols, ["REF", "REFERENCE", "CHEQUE", "CHQ", "เลขที่", "อ้างอิง", "^CHEQUE NO"]);
+    const {
+      colDate,
+      colValueDate,
+      colDesc,
+      colTxnDetail,
+      colDebit,
+      colCredit,
+      colAmount,
+      colBalance,
+      colRef,
+    } = resolved;
 
-    if (!colDate || (!colDebit && !colCredit && !colAmount)) continue;
+    // Reconstruct normalized unique colnames for raw_json keys (same as resolveStatementColumns).
+    const uniqueCols = normCols(headerCells);
 
-    const idx = (name: string | null) => (name ? cols.indexOf(name) : -1);
+    const idx = (name: string | null) => (name ? uniqueCols.indexOf(name) : -1);
     const iDate = idx(colDate);
     const iValueDate = idx(colValueDate);
     const iDesc = idx(colDesc);
@@ -322,7 +312,7 @@ export async function parseStatementBytes(
 
     for (let r = headerRow + 1; r < grid.length; r++) {
       const row = grid[r] ?? [];
-      const raw = rowToObject(cols, row);
+      const raw = rowToObject(uniqueCols, row);
 
       const txnDate = parseDayFirstDate(row[iDate]);
       if (!txnDate) continue;

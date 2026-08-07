@@ -1,0 +1,8 @@
+﻿# Minimal config for remote functions deploy (hosted project; no local stack).
+project_id = "jdzitzsucntqbjvwiwxm"
+
+[api]
+enabled = true
+
+[functions.import-bank-statement]
+verify_jwt = true
