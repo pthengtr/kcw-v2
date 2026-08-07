@@ -53,8 +53,8 @@ export const BI_REPORTS: BiReportNavItem[] = [
   {
     id: "cash-flow",
     href: "/bi/cash-flow",
-    label: "กระแสเงินสด (ธนาคาร)",
-    description: "เงินเข้า–ออกจาก statement · ตามบัญชี",
+    label: "Cash Flow Dashboard",
+    description: "งบกระแสเงินสด · Operating / Investing / Financing",
     available: true,
   },
   {

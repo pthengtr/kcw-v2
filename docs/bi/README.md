@@ -33,7 +33,9 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_bi_product_movement.sql](./sql/fn_bi_product_movement.sql) | RPC used by `/bi/product-movement` |
 | [sql/fn_bi_customer_overview.sql](./sql/fn_bi_customer_overview.sql) | RPC used by `/bi/customers` |
 | [sql/fn_bi_expense_overview.sql](./sql/fn_bi_expense_overview.sql) | RPC used by `/bi/expenses` |
-| [sql/fn_bi_cashflow_overview.sql](./sql/fn_bi_cashflow_overview.sql) | RPC used by `/bi/cash-flow` (bank statements) |
+| [kcw-cashflow-data-dictionary.md](./kcw-cashflow-data-dictionary.md) | Cash-flow codes 1001–3002 + bank→code map |
+| [sql/fn_bi_cashflow_overview.sql](./sql/fn_bi_cashflow_overview.sql) | Legacy bank movement RPC |
+| [sql/fn_bi_cashflow_dashboard.sql](./sql/fn_bi_cashflow_dashboard.sql) | RPC + catalog for `/bi/cash-flow` dashboard |
 | [sql/fn_bi_income_overview.sql](./sql/fn_bi_income_overview.sql) | RPC used by `/bi/income` |
 | [sql/fn_bi_income_blank_costs.sql](./sql/fn_bi_income_blank_costs.sql) | Blank-cost line drilldown for `/bi/income` |
 | [sql/fn_bi_vat_overview.sql](./sql/fn_bi_vat_overview.sql) | RPC used by `/bi/vat` (ภาษีขาย/ซื้อ + พยากรณ์) |
@@ -49,7 +51,9 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 - API: `GET /api/bi/products/movement?from=&to=&branch=&stock_limit=&dead_limit=`
 - API: `GET /api/bi/customers/overview?from=&to=&branch=&limit=`
 - API: `GET /api/bi/expenses/overview?from=&to=&branch=&source=&limit=`
-- API: `GET /api/bi/cashflow/overview?from=&to=&account=&limit=`
+- API: `GET /api/bi/cashflow/dashboard?year=&through_month=`
+- API: `GET /api/bi/cashflow/drilldown?year=&month=&code=`
+- API: `GET /api/bi/cashflow/overview?from=&to=&account=&limit=` (legacy movement)
 - API: `GET /api/bi/income/overview?from=&to=&branch=`
 - API: `GET /api/bi/income/blank-costs?from=&to=&branch=&limit=`
 - API: `GET /api/bi/vat/overview?from=&to=&branch=`
