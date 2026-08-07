@@ -2,7 +2,10 @@
 
 Thin UI for KBANK / KTB Excel statements and the monthly match report. Privileged `bank.*` / Storage work lives in Supabase Edge Functions — do not reimplement parsers or Excel layout here.
 
-Upstream import contract: [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md).  
+**Import Edge Function (source of truth in this repo):** [`supabase/functions/import-bank-statement/`](../supabase/functions/import-bank-statement/) — `parser_version: auto_v2` (fingerprint = account + date + amount + direction + stable detail + bank_reference + balance_after; display description excluded). Auth: RBAC page `bank_statement_sync` (or `admin`).
+
+Upstream notes / Drive BAT: [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md). The HQ Drive notebook path in kcw-analytics is still **`auto_v1`** until that repo is updated to the same fingerprint identity — overlapping monthly/cumulative Excel files can still double-insert via BAT even though web upload is `auto_v2`.
+
 Report layout parity: [kcw-analytics `src/kcw/bank_statement_report.py`](https://github.com/pthengtr/kcw-analytics/blob/main/src/kcw/bank_statement_report.py).
 
 ## UI

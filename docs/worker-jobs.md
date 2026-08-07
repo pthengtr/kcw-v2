@@ -128,9 +128,9 @@ New features almost never need new queue tables — only new `job_type` values a
 ### Bank statement upload from `/bank-statement-sync` (kcw-v2) — **not** a PC worker job
 
 - UI **อัปโหลด Statement** → browser calls Supabase Edge Function `import-bank-statement` with `FormData` (`file` + `bank_name` = `KBANK`|`KTB`).
-- Parse + insert into `bank.statement_*` and Storage `bank-statements` live in **kcw-analytics** (same `auto_v1` heuristics as the Drive notebook). Contract: [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md).
-- Caller must be signed in with RBAC page `bank_statement_sync` (or `admin` role); kcw-v2 only provides the upload UI (`StatementUploadDialog`).
-- Daily HQ BAT [`run_bank_statement_import.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_bank_statement_import.bat) can still run offline Drive drops + BRDET/BPDET; web uploads no longer enqueue `ops.job_queue`.
+- Parse + insert into `bank.statement_*` and Storage `bank-statements` live in this repo: [`supabase/functions/import-bank-statement/`](../supabase/functions/import-bank-statement/) (`parser_version: auto_v2` — canonical fingerprint uses stable bank detail, not display description). Upstream contract notes: [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md).
+- Caller must be signed in with RBAC page `bank_statement_sync` (or `admin` role); kcw-v2 provides the upload UI (`StatementUploadDialog`) and the deployed Edge Function.
+- Daily HQ BAT [`run_bank_statement_import.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_bank_statement_import.bat) can still run offline Drive drops + BRDET/BPDET via notebook `02_bank_statement_import_test.ipynb`. That notebook is still on **`auto_v1`** (description-based fingerprints) and can re-insert overlapping rows until kcw-analytics is updated to share the same `auto_v2` identity as this Edge Function. Web uploads no longer enqueue `ops.job_queue`.
 - Data dictionary: [bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md](./bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md).
 - Legacy service-role RPCs `fn_bank_find_inflight_import` / `fn_bank_enqueue_import` remain for LINE/compat — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql) — but the kcw-v2 web button no longer uses them.
 
