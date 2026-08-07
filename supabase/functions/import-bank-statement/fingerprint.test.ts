@@ -103,4 +103,39 @@ describe("buildTransactionFingerprint", () => {
     expect(hash1).toBe(hash2);
     expect(hash1).not.toBe(await sha256HexAsync(new TextEncoder().encode("other-bytes")));
   });
+
+  it("Test 5 — 3557 monthly re-import matches earlier April file on stable detail", async () => {
+    // 04_3557.xlsx vs 3557 ด.4.xlsx: same bank txn; display รายการ may be
+    // "โอนเงิน" in one export and a time string in another. Identity uses
+    // รายละเอียด + balance_after, not the display label.
+    const fromAprilFile = await buildTransactionFingerprint({
+      account_no: "141-1-72355-7",
+      txn_date: "2026-04-01",
+      direction: "out",
+      amount: 3866,
+      balance_after: 130186.73,
+      bank_reference: null,
+      transaction_detail: "โอนไป SCB X7654 บริษัท  คูโบต้า ก.++",
+    });
+    const fromMonth4Reupload = await buildTransactionFingerprint({
+      account_no: "141-1-72355-7",
+      txn_date: "2026-04-01",
+      direction: "out",
+      amount: 3866,
+      balance_after: 130186.73,
+      bank_reference: null,
+      transaction_detail: "โอนไป SCB X7654 บริษัท  คูโบต้า ก.++",
+    });
+    expect(fromAprilFile).toBe(fromMonth4Reupload);
+
+    // auto_v1 wrongly hashed description ("โอนเงิน" vs "08:31:00") → miss
+    const v1LikeDifferentDescriptions = [
+      "141-1-72355-7|2026-04-01|3866.00|OUT|โอนเงิน||130186.73",
+      "141-1-72355-7|2026-04-01|3866.00|OUT|08:31:00||130186.73",
+    ];
+    const v1Hashes = await Promise.all(
+      v1LikeDifferentDescriptions.map((s) => sha256HexAsync(s)),
+    );
+    expect(v1Hashes[0]).not.toBe(v1Hashes[1]);
+  });
 });
