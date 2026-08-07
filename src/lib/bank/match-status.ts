@@ -23,11 +23,11 @@ export const AGENT_INPUT_MATCH_STATUSES = [
  */
 export const AGENT_WRITABLE_MATCH_STATUS: BankMatchStatus = "pending";
 
+/** Agents may set these; `ignored` is operator-only (exclude from monthly report). */
 export const AGENT_OUTPUT_MATCH_STATUSES = [
   "matched",
   "review",
   "unmatched",
-  "ignored",
 ] as const satisfies readonly BankMatchStatus[];
 
 const STATUS_SET = new Set<string>(BANK_MATCH_STATUSES);

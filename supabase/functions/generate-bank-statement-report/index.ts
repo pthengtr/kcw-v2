@@ -130,7 +130,29 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const enriched = enrichStatementRows(lines);
+    // Operator `ignored` = exclude from Excel (e.g. confirmed cross-format duplicates).
+    const ignoredSkipped = lines.filter(
+      (r) => (r.match_status ?? "").trim() === "ignored",
+    ).length;
+    const reportLines = lines.filter(
+      (r) => (r.match_status ?? "").trim() !== "ignored",
+    );
+
+    if (reportLines.length === 0) {
+      return jsonResponse(
+        {
+          status: "failed" satisfies ReportStatus,
+          error: `All statement lines for ${year}-${String(month).padStart(2, "0")} are ignored.`,
+          year,
+          month,
+          row_count: 0,
+          ignored_skipped: ignoredSkipped,
+        },
+        404,
+      );
+    }
+
+    const enriched = enrichStatementRows(reportLines);
     const sheets = buildAccountSheets(enriched);
     const counts = matchStatusCounts(enriched);
     const bytes = await buildWorkbookBuffer(sheets, year, month);
@@ -188,7 +210,8 @@ Deno.serve(async (req: Request) => {
       storage_path: storagePath,
       signed_url: signed.signedUrl,
       signed_url_expires_in: SIGNED_URL_SECONDS,
-      row_count: lines.length,
+      row_count: reportLines.length,
+      ignored_skipped: ignoredSkipped,
       sheet_names: [...sheets.keys()],
       match_status_counts: counts,
       generated_by: email,

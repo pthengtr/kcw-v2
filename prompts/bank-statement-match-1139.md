@@ -18,13 +18,13 @@ Scope rules:
 1. Only account **248-0-42113-9**
 2. If `{{account_no}}` is not `248-0-42113-9`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Primary target: `direction = 'in'` and `match_status` in (`pending`, `unmatched`, `ignored`)
-5. Also clear outbound (`direction = 'out'`) rows with `match_status` in (`pending`, `unmatched`, `ignored`) using the internal-transfer rule below
+4. Primary target: `direction = 'in'` and `match_status` in (`pending`, `unmatched`)
+5. Also clear outbound (`direction = 'out'`) rows with `match_status` in (`pending`, `unmatched`) using the internal-transfer rule below
 6. **Re-match `unmatched` every run** — a prior `unmatched` is not final. RVI vouchers often post after the bank settlement; when a unique RVI now exists, overwrite the old unmatched decision with `matched` / `review`. Never skip `unmatched` rows. **Do not** “finish” an inflow by writing only a channel label (Shopee/Lazada/TikTok) without an RVI `matched_ref_id` — leave it `unmatched` so the next run can attach the voucher.
-7. **Re-process `ignored` every run** — upgrade `internal_transfer` rows to `match_status = matched`. Re-match rows that were `ignored` only because an RVI was missing or only a channel label was written. Never skip `ignored` rows.
+7. **Never write `match_status = ignored`** — operator-only (exclude from monthly Excel). Interest / bank credits → `matched` with `interest_income`. Possible duplicate rows → `review` (`possible_duplicate`); ask the operator to set `ignored` manually if confirmed.
 8. Never change amount / description / source_* / any money fields
 9. Write only `match_*` and `matched_*` fields
-10. **Never** update rows in `matched` / `review` / `resolved` / `manual` — those belong to finished agent work or operators
+10. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
 ## Date window policy
 
@@ -120,9 +120,9 @@ Rare tiny inflows with null/empty description (e.g. **11.57**) and no RVI candid
 
 | Kind | `match_status` | `matched_ref_type` | `match_reason` (Thai) |
 |---|---|---|---|
-| Likely interest / bank credit | `ignored` | `interest_income` | `ดอกเบี้ยเงินฝาก` |
+| Likely interest / bank credit | `matched` | `interest_income` | `ดอกเบี้ยเงินฝาก` |
 
-Only when amount is tiny and no RVI exists nearby. Otherwise leave `unmatched`.
+Only when amount is tiny and no RVI exists nearby. Otherwise leave `unmatched`. **Do not** use `ignored` for interest.
 
 ## Expected coverage (probe, May+June 2026 inbound)
 
@@ -134,14 +134,23 @@ Approximate unique candidates observed in analysis (sanity check only — do not
 
 If your run lands far below that for the same months, re-check date parsing (ISO vs `YYYYMMDD`) and amount casts before inventing new rules.
 
+## Possible duplicate statement rows (operator `ignored`)
+
+Same economic movement can appear twice after overlapping KTB exports with different detail text (different fingerprints): same `account_no` + `txn_date` + `amount` + `direction` + `balance_after`, different `description` / fingerprint (e.g. `BSD14` vs `AirPay…`).
+
+1. Keep the clearer / more detailed row on its normal match path.
+2. Set the other row to `review` with `matched_ref_type = possible_duplicate`, `match_reason = อาจเป็นแถวซ้ำ — รอผู้ใช้ตั้งเป็นไม่ใช้`, and Thai notes naming the twin + asking the operator to set `ignored` (ไม่ใช้) if confirmed.
+3. **Never** set `ignored` yourself — the monthly report skips operator-`ignored` rows only.
+
 ## Fields to write on each decision
 
 Always set:
 
-- `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending`, `unmatched`, or `ignored` only; never write back to `pending`
-  - Internal transfers among the six KCW accounts → `matched` (not `ignored`)
-  - Operators own `resolved` / `manual` — do not touch those rows
+- `match_status`: `matched` | `review` | `unmatched` if still unknown after this pass
+  - Start from `pending` or `unmatched` only; never write back to `pending`
+  - **Never** write `ignored` (operator-only exclude-from-report)
+  - Internal transfers among the six KCW accounts → `matched`
+  - Operators own `resolved` / `manual` / `ignored` — do not touch those rows
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
 - `matched_ref_type` / `matched_ref_id`
@@ -175,8 +184,9 @@ Do not use cryptic codes like `rvi:` or `T+0=` as the main `match_notes` text.
 
 Report briefly in English:
 
-- Counts of `matched` / `review` / `ignored` / `unmatched`
+- Counts of `matched` / `review` / `unmatched`
 - Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
-- Breakdown by source: RVI / internal sweep / interest
+- Breakdown by source: RVI / internal sweep / interest (`matched`)
 - Any ±0.01 rounding pairs
+- `possible_duplicate` reviews for the operator to set `ignored`
 - Rows that need human review (missing vouchers, collisions)

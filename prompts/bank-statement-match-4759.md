@@ -25,14 +25,14 @@ Scope rules:
 1. Only account **233-1-18475-9**
 2. If `{{account_no}}` is not `233-1-18475-9`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Touch both directions while `match_status` in (`pending`, `unmatched`, `ignored`):
+4. Touch both directions while `match_status` in (`pending`, `unmatched`):
    - `direction = 'out'` → expense PV sources first, then residual outflows
    - `direction = 'in'` → internal funding only (no sales)
 5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. `expense_receipt` rows often appear after the bank feed; when a unique PV now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
-6. **Re-process `ignored` every run** — upgrade `internal_transfer` rows to `match_status = matched`. Re-match rows misclassified as `ignored` when a better expense PV hit now exists. Never skip `ignored` rows.
+6. **Never write `match_status = ignored`** — operator-only (exclude from monthly Excel). Possible duplicate rows → `review` (`possible_duplicate`); ask the operator to set `ignored` manually if confirmed.
 7. Never change amount / description / source_* / any money fields
 8. Write only `match_*` and `matched_*` fields
-9. **Never** update rows in `matched` / `review` / `resolved` / `manual` — those belong to finished agent work or operators
+9. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 10. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
 
 ## Date window policy
@@ -129,14 +129,23 @@ July 2026 inflows observed were funding sweeps from **X0393** and **X7236** only
 - Blind unconstrained subset-sum without a payment-method constraint
 - Changing money fields or source descriptions
 
+## Possible duplicate statement rows (operator `ignored`)
+
+Same economic movement can appear twice after overlapping exports with different detail text (different fingerprints): same `account_no` + `txn_date` + `amount` + `direction` + `balance_after`, different `description` / fingerprint.
+
+1. Keep the clearer / more detailed row on its normal match path.
+2. Set the other row to `review` with `matched_ref_type = possible_duplicate`, `match_reason = อาจเป็นแถวซ้ำ — รอผู้ใช้ตั้งเป็นไม่ใช้`, and Thai notes naming the twin + asking the operator to set `ignored` (ไม่ใช้) if confirmed.
+3. **Never** set `ignored` yourself — the monthly report skips operator-`ignored` rows only.
+
 ## Fields to write on each decision
 
 Always set:
 
-- `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending`, `unmatched`, or `ignored` only; never write back to `pending`
-  - Internal transfers among the six KCW accounts → `matched` (not `ignored`)
-  - Operators own `resolved` / `manual` — do not touch those rows
+- `match_status`: `matched` | `review` | `unmatched` if still unknown after this pass
+  - Start from `pending` or `unmatched` only; never write back to `pending`
+  - **Never** write `ignored` (operator-only exclude-from-report)
+  - Internal transfers among the six KCW accounts → `matched`
+  - Operators own `resolved` / `manual` / `ignored` — do not touch those rows
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
 - `matched_ref_type` / `matched_ref_id`
@@ -179,7 +188,8 @@ If your run lands far below that for the same month, re-check filters (`total_ne
 
 Report briefly in English:
 
-- Counts of `matched` / `review` / `ignored` / `unmatched` (split by `in` / `out` if useful)
+- Counts of `matched` / `review` / `unmatched` (split by `in` / `out` if useful)
 - Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
 - Breakdown by source: expense_pv / internal / other
+- `possible_duplicate` reviews for the operator to set `ignored`
 - Rows that need human review

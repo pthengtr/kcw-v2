@@ -38,7 +38,11 @@ describe("bank match status workflow", () => {
   it("lists agent input statuses as pending + unmatched", async () => {
     const mod = await import("@/lib/bank/match-status");
     expect(mod.AGENT_INPUT_MATCH_STATUSES).toEqual(["pending", "unmatched"]);
-    expect(mod.AGENT_OUTPUT_MATCH_STATUSES).toContain("unmatched");
+    expect(mod.AGENT_OUTPUT_MATCH_STATUSES).toEqual([
+      "matched",
+      "review",
+      "unmatched",
+    ]);
     expect(mod.AGENT_WRITABLE_MATCH_STATUS).toBe("pending");
   });
 
