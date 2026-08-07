@@ -7,7 +7,7 @@
  *   - bank_name: KBANK | KTB (required)
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { requireBankStatementSyncPermission } from "../_shared/rbac-auth.ts";
+import { requireBankStatementSyncPermission } from "./rbac-auth.ts";
 import { corsHeaders } from "./cors.ts";
 import {
   inferAccountFromFilename,

@@ -13,7 +13,7 @@
  * Layout parity: kcw-analytics `src/kcw/bank_statement_report.py`.
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { requireBankStatementSyncPermission } from "../_shared/rbac-auth.ts";
+import { requireBankStatementSyncPermission } from "./rbac-auth.ts";
 import { corsHeaders } from "./cors.ts";
 import {
   buildAccountSheets,
