@@ -7,6 +7,9 @@ import type {
   BiCashflowLineRow,
   BiCashflowMatchStatusRow,
   BiCashflowOverview,
+  BiCashflowReport,
+  BiCashflowReportLine,
+  BiCashflowReportLineKind,
   BiCashflowTrendRow,
 } from "./cashflow-types";
 
@@ -123,6 +126,80 @@ function parseAccounts(value: unknown): BiCashflowAccountOption[] {
   });
 }
 
+function parseReportLines(value: unknown): BiCashflowReportLine[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    const kindRaw = asString(r.kind);
+    const kind: BiCashflowReportLineKind =
+      kindRaw === "in" ||
+      kindRaw === "out" ||
+      kindRaw === "forecast" ||
+      kindRaw === "balance"
+        ? kindRaw
+        : "balance";
+    return {
+      key: asString(r.key),
+      label: asString(r.label),
+      amount: asNumber(r.amount),
+      kind,
+      line_count:
+        r.line_count == null ? null : asNumber(r.line_count),
+    };
+  });
+}
+
+function parseReport(value: unknown, summary: Record<string, unknown>): BiCashflowReport {
+  const r = (value ?? {}) as Record<string, unknown>;
+  const lines = parseReportLines(r.lines);
+  if (lines.length > 0) {
+    return {
+      opening_cash: asNumber(r.opening_cash),
+      sales_in: asNumber(r.sales_in),
+      ar_in: asNumber(r.ar_in),
+      supplier_out: asNumber(r.supplier_out),
+      payroll_out: asNumber(r.payroll_out),
+      opex_out: asNumber(r.opex_out),
+      ending_cash: asNumber(r.ending_cash),
+      forecast_30d: asNumber(r.forecast_30d),
+      forecast_daily_net: asNumber(r.forecast_daily_net),
+      other_in: asNumber(r.other_in),
+      other_out: asNumber(r.other_out),
+      other_count: asNumber(r.other_count),
+      lines,
+    };
+  }
+
+  // Fallback if RPC not yet upgraded
+  const opening = asNumber(summary.opening_balance);
+  const ending = asNumber(summary.ending_balance);
+  const netEx = asNumber(summary.net_ex_internal);
+  return {
+    opening_cash: opening,
+    sales_in: 0,
+    ar_in: 0,
+    supplier_out: 0,
+    payroll_out: 0,
+    opex_out: 0,
+    ending_cash: ending,
+    forecast_30d: ending,
+    forecast_daily_net: netEx,
+    other_in: 0,
+    other_out: 0,
+    other_count: 0,
+    lines: [
+      { key: "opening_cash", label: "เงินสดต้นงวด", amount: opening, kind: "balance", line_count: null },
+      { key: "sales_in", label: "รับจากยอดขาย", amount: 0, kind: "in", line_count: 0 },
+      { key: "ar_in", label: "รับเงินจากลูกหนี้", amount: 0, kind: "in", line_count: 0 },
+      { key: "supplier_out", label: "จ่าย Supplier", amount: 0, kind: "out", line_count: 0 },
+      { key: "payroll_out", label: "เงินเดือน", amount: 0, kind: "out", line_count: 0 },
+      { key: "opex_out", label: "ค่าใช้จ่ายดำเนินงาน", amount: 0, kind: "out", line_count: 0 },
+      { key: "ending_cash", label: "เงินสดคงเหลือ", amount: ending, kind: "balance", line_count: null },
+      { key: "forecast_30d", label: "คาดการณ์เงินสด 30 วันข้างหน้า", amount: ending, kind: "forecast", line_count: null },
+    ],
+  };
+}
+
 export function normalizeCashflowOverview(raw: unknown): BiCashflowOverview {
   const data = (raw ?? {}) as Record<string, unknown>;
   const summary = (data.summary ?? {}) as Record<string, unknown>;
@@ -158,6 +235,7 @@ export function normalizeCashflowOverview(raw: unknown): BiCashflowOverview {
       line_count: asNumber(previous.line_count),
       net_ex_internal: asNumber(previous.net_ex_internal),
     },
+    report: parseReport(data.report, summary),
     by_account: parseAccountRows(data.by_account),
     by_category: parseCategoryRows(data.by_category),
     by_match_status: parseMatchStatusRows(data.by_match_status),

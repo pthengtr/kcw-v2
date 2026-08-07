@@ -62,6 +62,24 @@ BEGIN
         ELSE false
       END AS is_internal_transfer,
       CASE
+        WHEN lower(btrim(COALESCE(s.matched_ref_type, ''))) = 'internal_transfer'
+          THEN 'internal'
+        WHEN lower(btrim(COALESCE(s.matched_ref_type, ''))) IN (
+          'tr_bill', 'tr_bundle', 'tr_remainder', '3tr_bill', 'rvmas', 'rvi'
+        ) AND s.direction = 'in' THEN 'sales_in'
+        WHEN lower(btrim(COALESCE(s.matched_ref_type, ''))) = 'tar_cntar_net'
+          AND s.direction = 'in' THEN 'ar_in'
+        WHEN lower(btrim(COALESCE(s.matched_ref_type, ''))) IN (
+          'pvmas', 'pimas', 'pimas_possible_bundle', 'bank_cheque'
+        ) AND s.direction = 'out' THEN 'supplier_out'
+        WHEN lower(btrim(COALESCE(s.matched_ref_type, ''))) = 'expense_payroll'
+          AND s.direction = 'out' THEN 'payroll_out'
+        WHEN lower(btrim(COALESCE(s.matched_ref_type, ''))) IN (
+          'expense_pv', 'employee_advance', 'withholding_tax'
+        ) AND s.direction = 'out' THEN 'opex_out'
+        ELSE 'other'
+      END AS report_group,
+      CASE
         WHEN s.match_status = 'ignored' THEN 'ignored'
         WHEN s.matched_ref_type IS NULL OR btrim(s.matched_ref_type) = '' THEN
           CASE s.match_status
@@ -311,6 +329,23 @@ BEGIN
       COALESCE(NULLIF(btrim(s.bank_name), ''), '—') AS bank_name
     FROM bank.statement_lines s
     ORDER BY s.account_no, s.txn_date DESC
+  ),
+  report_amounts AS (
+    SELECT
+      COALESCE(SUM(amount) FILTER (WHERE report_group = 'sales_in' AND direction = 'in'), 0) AS sales_in,
+      COALESCE(SUM(amount) FILTER (WHERE report_group = 'ar_in' AND direction = 'in'), 0) AS ar_in,
+      COALESCE(SUM(amount) FILTER (WHERE report_group = 'supplier_out' AND direction = 'out'), 0) AS supplier_out,
+      COALESCE(SUM(amount) FILTER (WHERE report_group = 'payroll_out' AND direction = 'out'), 0) AS payroll_out,
+      COALESCE(SUM(amount) FILTER (WHERE report_group = 'opex_out' AND direction = 'out'), 0) AS opex_out,
+      COALESCE(SUM(amount) FILTER (WHERE report_group = 'other' AND direction = 'in'), 0) AS other_in,
+      COALESCE(SUM(amount) FILTER (WHERE report_group = 'other' AND direction = 'out'), 0) AS other_out,
+      COUNT(*) FILTER (WHERE report_group = 'other')::int AS other_count,
+      COUNT(*) FILTER (WHERE report_group = 'sales_in')::int AS sales_in_count,
+      COUNT(*) FILTER (WHERE report_group = 'ar_in')::int AS ar_in_count,
+      COUNT(*) FILTER (WHERE report_group = 'supplier_out')::int AS supplier_out_count,
+      COUNT(*) FILTER (WHERE report_group = 'payroll_out')::int AS payroll_out_count,
+      COUNT(*) FILTER (WHERE report_group = 'opex_out')::int AS opex_out_count
+    FROM base
   )
   SELECT jsonb_build_object(
     'from', p_from,
@@ -348,6 +383,44 @@ BEGIN
         'net_ex_internal', net_ex_internal
       )
       FROM prev_summary
+    ),
+    'report', (
+      SELECT jsonb_build_object(
+        'opening_cash', bs.opening_balance,
+        'sales_in', ra.sales_in,
+        'ar_in', ra.ar_in,
+        'supplier_out', ra.supplier_out,
+        'payroll_out', ra.payroll_out,
+        'opex_out', ra.opex_out,
+        'ending_cash', bs.ending_balance,
+        'forecast_30d',
+          bs.ending_balance
+          + ((s.net_ex_internal / GREATEST(1, (p_to - p_from) + 1)) * 30.0),
+        'forecast_daily_net',
+          s.net_ex_internal / GREATEST(1, (p_to - p_from) + 1),
+        'other_in', ra.other_in,
+        'other_out', ra.other_out,
+        'other_count', ra.other_count,
+        'lines', jsonb_build_array(
+          jsonb_build_object('key', 'opening_cash', 'label', 'เงินสดต้นงวด', 'amount', bs.opening_balance, 'kind', 'balance', 'line_count', NULL),
+          jsonb_build_object('key', 'sales_in', 'label', 'รับจากยอดขาย', 'amount', ra.sales_in, 'kind', 'in', 'line_count', ra.sales_in_count),
+          jsonb_build_object('key', 'ar_in', 'label', 'รับเงินจากลูกหนี้', 'amount', ra.ar_in, 'kind', 'in', 'line_count', ra.ar_in_count),
+          jsonb_build_object('key', 'supplier_out', 'label', 'จ่าย Supplier', 'amount', ra.supplier_out, 'kind', 'out', 'line_count', ra.supplier_out_count),
+          jsonb_build_object('key', 'payroll_out', 'label', 'เงินเดือน', 'amount', ra.payroll_out, 'kind', 'out', 'line_count', ra.payroll_out_count),
+          jsonb_build_object('key', 'opex_out', 'label', 'ค่าใช้จ่ายดำเนินงาน', 'amount', ra.opex_out, 'kind', 'out', 'line_count', ra.opex_out_count),
+          jsonb_build_object('key', 'ending_cash', 'label', 'เงินสดคงเหลือ', 'amount', bs.ending_balance, 'kind', 'balance', 'line_count', NULL),
+          jsonb_build_object(
+            'key', 'forecast_30d',
+            'label', 'คาดการณ์เงินสด 30 วันข้างหน้า',
+            'amount', bs.ending_balance + ((s.net_ex_internal / GREATEST(1, (p_to - p_from) + 1)) * 30.0),
+            'kind', 'forecast',
+            'line_count', NULL
+          )
+        )
+      )
+      FROM report_amounts ra
+      CROSS JOIN balance_summary bs
+      CROSS JOIN summary s
     ),
     'by_account', COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
@@ -402,32 +475,8 @@ BEGIN
       ) ORDER BY period)
       FROM trend_monthly
     ), '[]'::jsonb),
-    'top_inflows', COALESCE((
-      SELECT jsonb_agg(jsonb_build_object(
-        'key', key,
-        'label', label,
-        'account_no', account_no,
-        'txn_date', txn_date,
-        'category_key', category_key,
-        'category_label', category_label,
-        'amount', inflow,
-        'match_status', match_status
-      ))
-      FROM top_inflows
-    ), '[]'::jsonb),
-    'top_outflows', COALESCE((
-      SELECT jsonb_agg(jsonb_build_object(
-        'key', key,
-        'label', label,
-        'account_no', account_no,
-        'txn_date', txn_date,
-        'category_key', category_key,
-        'category_label', category_label,
-        'amount', outflow,
-        'match_status', match_status
-      ))
-      FROM top_outflows
-    ), '[]'::jsonb),
+    'top_inflows', '[]'::jsonb,
+    'top_outflows', '[]'::jsonb,
     'accounts', COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
         'key', key,
