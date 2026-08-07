@@ -183,23 +183,32 @@ Deno.serve(async (req: Request) => {
       if (bumpErr) throw bumpErr;
 
       if (existing.status === "imported") {
-        return jsonResponse({
-          status: "skipped" satisfies ImportStatus,
-          file_id: fileId,
-          file_hash: fileHash,
-          bank_name: bankName,
-          account_no: resolvedAccount,
-          original_filename: originalFilename,
-          source_path: sourcePath,
-          row_count: existing.row_count ?? lines.length,
-          inserted_count: existing.inserted_count ?? 0,
-          duplicate_count: existing.duplicate_count ?? 0,
-          storage_error: storageError,
-          message: "File already imported (same file_hash)",
-        });
+        // Skip only when prior import already captured at least as many rows as
+        // this parse. Reprocess 0-row / truncated-!ref undercounts.
+        const priorRows = existing.row_count ?? 0;
+        if (priorRows > 0 && lines.length <= priorRows) {
+          return jsonResponse({
+            status: "skipped" satisfies ImportStatus,
+            file_id: fileId,
+            file_hash: fileHash,
+            bank_name: bankName,
+            account_no: resolvedAccount,
+            original_filename: originalFilename,
+            source_path: sourcePath,
+            row_count: priorRows,
+            inserted_count: existing.inserted_count ?? 0,
+            duplicate_count: existing.duplicate_count ?? 0,
+            storage_error: storageError,
+            message: "File already imported (same file_hash)",
+          });
+        }
       }
 
-      if (existing.status === "duplicate" && (existing.row_count ?? 0) > 0) {
+      if (
+        existing.status === "duplicate" &&
+        (existing.row_count ?? 0) > 0 &&
+        lines.length <= (existing.row_count ?? 0)
+      ) {
         return jsonResponse({
           status: "skipped" satisfies ImportStatus,
           file_id: fileId,

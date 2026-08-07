@@ -19,6 +19,7 @@ import {
   normText,
   sha256HexAsync,
 } from "./fingerprint.ts";
+import { expandSheetRef } from "./sheet-range.ts";
 
 export const PARSER_VERSION = "auto_v2";
 
@@ -228,6 +229,9 @@ function rowToObject(cols: string[], row: unknown[]): Record<string, unknown> {
 }
 
 function sheetToGrid(sheet: XLSX.WorkSheet): unknown[][] {
+  // KTB DownLoadService .xls (OOXML misnamed) often stores a truncated !ref
+  // (e.g. A1:I12) while the rest of the statement cells still exist.
+  expandSheetRef(sheet as unknown as Record<string, unknown>);
   const ref = sheet["!ref"];
   if (!ref) return [];
   return XLSX.utils.sheet_to_json(sheet, {
