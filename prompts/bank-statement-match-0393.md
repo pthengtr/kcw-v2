@@ -22,14 +22,15 @@ Scope rules:
 1. Only account **064-8-92039-3**
 2. If `{{account_no}}` is not `064-8-92039-3`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Touch both directions while `match_status` in (`pending`, `unmatched`):
+4. Touch both directions while `match_status` in (`pending`, `unmatched`, `ignored`):
    - `direction = 'in'` → sales sources first, then non-sales inflows
    - `direction = 'out'` → expense PV sources, then non-expense outflows
 5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. 3TR / 3TAR / expense_receipt often land after the bank feed; when a unique candidate now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
-6. Never change amount / description / source_* / any money fields
-7. Write only `match_*` and `matched_*` fields
-8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
-9. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
+6. **Re-process `ignored` every run** — a prior `ignored` is not final when a better classification exists. Upgrade `internal_transfer` rows to `match_status = matched` (see internal-transfer rule). Re-match rows that were `ignored` only because source data was missing. Never skip `ignored` rows.
+7. Never change amount / description / source_* / any money fields
+8. Write only `match_*` and `matched_*` fields
+9. **Never** update rows in `matched` / `review` / `resolved` / `manual` — those belong to finished agent work or operators
+10. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
 
 ## Date window policy
 
@@ -126,7 +127,7 @@ Matching to inbound deposits:
 
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
-| Internal transfer in | `internal_transfer` | `ignored` | From another KCW account (e.g. X3557 / company name) | `โอนภายใน` |
+| Internal transfer in | `internal_transfer` | `matched` | From another KCW account among the six company accounts (e.g. X3557 / company name) | `โอนภายใน` |
 | Vendor rebate / misc | `vendor_rebate` | `matched` or `review` | No internal bill — match by description; confidence ~0.85–0.90 | `เงินคืนจากผู้ขาย` |
 | Bank interest / WHT | `interest_income` / `withholding_tax` | `ignored` | Same pattern as `064-8-91723-6` if present | `ดอกเบี้ยเงินฝาก` / `ภาษีหัก ณ ที่จ่ายดอกเบี้ย` |
 
@@ -185,12 +186,12 @@ Notes from May/June probe:
 
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
-| Internal sweep out | `internal_transfer` | `ignored` | **Always classify** large transfers to X6184 / X4759 / X7236 / other KCW accounts when counterpart is clear from `raw_json` or same-day sister-account inflow — do not leave `pending`/`unmatched` | `โอนภายใน` |
+| Internal sweep out | `internal_transfer` | `matched` | **Always classify** large transfers to X6184 / X4759 / X7236 / other KCW accounts when counterpart is clear from `raw_json` or same-day sister-account inflow — do not leave `pending`/`unmatched`/`ignored` | `โอนภายใน` |
 | Director parts reimbursement | `expense_pv` or best available | `matched` / `review` | Transfers to Narumon X2446 that settle branch parts paid via `3RV…` (not always a same-day `%0393%` PV) — populate refs when unique; else `review` with Thai note | `คืนเงินอะไหล่สาขา (กรรมการ)` |
 | 3CTAR / sales adjustment refund | — | `review` / `ignored` | Small transfer to X2446 that exactly equals a same-day 3TAR shortfall / 3CTAR adjustment — explain both legs in `match_notes` | `โอนคืนปรับปรุงยอดขาย` |
 | No unique expense | — | `unmatched` / `review` | Do not invent blind subset-sums across many receipts | `ยังไม่พบใบสำคัญจ่าย` |
 
-July 2026: six outs to X6184 / X4759 were operator-marked `โอนภายใน` — the agent must finish those as `ignored` + `internal_transfer` on every run.
+July 2026: six outs to X6184 / X4759 were operator-marked `โอนภายใน` — the agent must finish those as `matched` + `internal_transfer` on every run (including rows still marked `ignored` from older runs).
 ## Exclusions (do not use)
 
 - HQ `TR%` / `billgen.fin_tar_lines` / `fin_cntar_lines` (those belong to **064-8-91723-6**)
@@ -204,7 +205,8 @@ July 2026: six outs to X6184 / X4759 were operator-marked `โอนภายใ
 Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` or `unmatched` only; never write back to `pending`
+  - Start from `pending`, `unmatched`, or `ignored` only; never write back to `pending`
+  - Internal transfers among the six KCW accounts → `matched` (not `ignored`)
   - Operators own `resolved` / `manual` — do not touch those rows
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
@@ -219,7 +221,7 @@ Confidence guide:
 - 3TR bundle / QR remainder / 3TAR T+2–T+3 / expense near-day ≈ **0.85–0.90**
 - Expense multi-receipt bundle ≈ **0.80–0.90** (use `review` if unsure)
 - Ambiguous → `review` and confidence ≤ **0.55**
-- Ignored internal transfers: confidence **1.0** when counterpart account is clear
+- Matched internal transfers: confidence **1.0** when counterpart account is clear
 
 ## Thai note style (required for operator UI)
 
@@ -240,7 +242,7 @@ Approximate unique candidates observed (do not force these numbers; use as sanit
 
 - Inbound: most large transfers are 3TAR T+1; most QR / small transfers are 3TR
 - Outbound: expense `total_net` vs `%0393%` + director-reimbursement receipts ≈ **88%** 1:1
-- Remaining large outflows are usually internal sweeps to X6184 → `ignored`
+- Remaining large outflows are usually internal sweeps to X6184 → `matched`
 
 If your run lands far below that for the same months, re-check filters (`CANCELED`, 3TR prefix, `total_net` VAT/WHT formula, payment_method text) before inventing new rules.
 

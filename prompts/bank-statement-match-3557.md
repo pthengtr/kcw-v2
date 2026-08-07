@@ -18,12 +18,13 @@ Scope rules:
 1. Only account **141-1-72355-7**
 2. If `{{account_no}}` is not `141-1-72355-7`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Primary target: `direction = 'out'` and `match_status` in (`pending`, `unmatched`)
-5. Also clear inbound (`direction = 'in'`) rows still `pending` / `unmatched` using the internal-transfer rule below — these are funding sweeps from **064-8-91723-6** (X7236), not PVMAS/PIMAS
+4. Primary target: `direction = 'out'` and `match_status` in (`pending`, `unmatched`, `ignored`)
+5. Also clear inbound (`direction = 'in'`) rows still `pending` / `unmatched` / `ignored` using the internal-transfer rule below — these are funding sweeps from **064-8-91723-6** (X7236), not PVMAS/PIMAS
 6. **Re-match `unmatched` every run** — a prior `unmatched` is not final. PVMAS / PIMAS often sync after the bank feed; when a unique voucher or bill now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
-7. Never change amount / description / source_* / any money fields
-8. Write only `match_*` and `matched_*` fields
-9. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+7. **Re-process `ignored` every run** — upgrade `internal_transfer` rows to `match_status = matched`. Re-match rows misclassified as `ignored` when a better PVMAS/PIMAS hit now exists. Never skip `ignored` rows.
+8. Never change amount / description / source_* / any money fields
+9. Write only `match_*` and `matched_*` fields
+10. **Never** update rows in `matched` / `review` / `resolved` / `manual` — those belong to finished agent work or operators
 
 ## Date window policy
 
@@ -129,11 +130,11 @@ How to detect (any one is enough):
 
 | Kind | `matched_ref_type` | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
-| Internal transfer in | `internal_transfer` | `ignored` | `โอนภายใน` |
+| Internal transfer in | `internal_transfer` | `matched` | `โอนภายใน` |
 
 `matched_ref_id` = `064-8-91723-6` (or other clear counterpart). Confidence **1.0** when counterpart is clear.
 
-July 2026: four inflows totaling 3,500,000 from X7236 were operator-marked `โอนภายใน` — the agent should finish the same pattern as `ignored` + `internal_transfer`.
+July 2026: four inflows totaling 3,500,000 from X7236 were operator-marked `โอนภายใน` — the agent should finish the same pattern as `matched` + `internal_transfer` (including rows still marked `ignored` from older runs).
 
 Thai note example:
 
@@ -153,7 +154,8 @@ Unclear inflows with no KCW counterpart → `review` with a Thai note (still nev
 Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` or `unmatched` only; never write back to `pending`
+  - Start from `pending`, `unmatched`, or `ignored` only; never write back to `pending`
+  - Internal transfers among the six KCW accounts → `matched` (not `ignored`)
   - Operators own `resolved` / `manual` — do not touch those rows
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
@@ -181,7 +183,7 @@ Approximate unique candidates observed in analysis (do not force these numbers; 
 - PVMAS same-day unique ≈ **64%** of outflows
 - Plus unique PIMAS leftovers ≈ **+22 pts** → combined ≈ **86%**
 - Remaining large/ambiguous outflows stay open
-- Inflows (July): funding from X7236 → **`ignored` internal_transfer**
+- Inflows (July): funding from X7236 → **`matched` internal_transfer**
 
 If your run lands far below that for the same months, re-check filters (`CANCELED`, amount casts, date parsing) before inventing new rules.
 
