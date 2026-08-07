@@ -8,7 +8,7 @@ Account **248-6-00618-4** (Krungthai, ends with **6184**) is the **payroll + OpE
 
 - **Outbound** ≈ app expenses / payment vouchers (**PV / 3PV**) and **payroll** from `public.expense_*`
 - Payments clear as bank cheques (`SBK… ICAS…`, `CHEQUE NO.` in `raw_json`) or as payroll / utility transfers
-- **Inbound** ≈ funding sweeps from sister KCW accounts — mark as **internal transfers** (`ignored`); do **not** run sales matching here
+- **Inbound** ≈ funding sweeps from sister KCW accounts — mark as **internal transfers** (`matched`); do **not** run sales matching here
 
 Known inbound counterparts (July 2026 ground truth):
 
@@ -32,14 +32,15 @@ Scope rules:
 1. Only account **248-6-00618-4**
 2. If `{{account_no}}` is not `248-6-00618-4`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Touch both directions while `match_status` in (`pending`, `unmatched`):
+4. Touch both directions while `match_status` in (`pending`, `unmatched`, `ignored`):
    - `direction = 'out'` → payroll / expense PV / PIMAS cheque sources first
    - `direction = 'in'` → **internal funding only** (no sales / RVMAS matching)
 5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. Payroll / expense_receipt / PIMAS often lag the bank clear; when a unique candidate now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
-6. Never change amount / description / source_* / any money fields
-7. Write only `match_*` and `matched_*` fields
-8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
-9. Cheque number lives in `bank_reference` and/or `raw_json->>'CHEQUE NO.'` for ICAS clears (`TRANSACTION CODE` often `CBCA`)
+6. **Re-process `ignored` every run** — upgrade `internal_transfer` rows to `match_status = matched`. Re-match rows misclassified as `ignored` when payroll / expense / PIMAS data now exists. Never skip `ignored` rows.
+7. Never change amount / description / source_* / any money fields
+8. Write only `match_*` and `matched_*` fields
+9. **Never** update rows in `matched` / `review` / `resolved` / `manual` — those belong to finished agent work or operators
+10. Cheque number lives in `bank_reference` and/or `raw_json->>'CHEQUE NO.'` for ICAS clears (`TRANSACTION CODE` often `CBCA`)
 
 ## Date window policy
 
@@ -242,9 +243,9 @@ No sales / RVMAS / TAR matching on this account. **Always classify clear funding
 
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
-| Internal transfer in from 1139 | `internal_transfer` | `ignored` | `TR fr 2480421139…` / `248-0-42113-9` | `โอนภายใน` |
-| Internal transfer in from 0393 | `internal_transfer` | `ignored` | `004-0648920393` / `064-8-92039-3` | `โอนภายใน` |
-| Internal transfer in from 7236 | `internal_transfer` | `ignored` | HQ operating funding when description names X7236 / `064-8-91723-6` | `โอนภายใน` |
+| Internal transfer in from 1139 | `internal_transfer` | `matched` | `TR fr 2480421139…` / `248-0-42113-9` | `โอนภายใน` |
+| Internal transfer in from 0393 | `internal_transfer` | `matched` | `004-0648920393` / `064-8-92039-3` | `โอนภายใน` |
+| Internal transfer in from 7236 | `internal_transfer` | `matched` | HQ operating funding when description names X7236 / `064-8-91723-6` | `โอนภายใน` |
 | Other / unclear inflow | — | `review` / `unmatched` | Do not invent sales matches | `รายรับรอตรวจ` |
 
 `matched_ref_id` = counterpart full account no. when known.  
@@ -255,7 +256,7 @@ Thai note examples:
 - `โอนภายในจากบัญชี 248-0-42113-9 (X1139) จำนวน 86,000.00 บาท วันที่ 01/07/2026 — เติมเงินบัญชีเช็ค/เงินเดือน`
 - `โอนภายในจากบัญชี 064-8-92039-3 (X0393) จำนวน 200,000.00 บาท วันที่ 10/07/2026 — เติมเงินบัญชีเช็ค/เงินเดือน`
 
-July 2026: every observed inflow was one of the two patterns above (1139 sweep or 0393 funding). Operators previously marked these manually as `โยกเงินภายในบริษัท` — the agent should finish them as `ignored` + `internal_transfer` instead.
+July 2026: every observed inflow was one of the two patterns above (1139 sweep or 0393 funding). Operators previously marked these manually as `โยกเงินภายในบริษัท` — the agent should finish them as `matched` + `internal_transfer` instead (including rows still marked `ignored` from older runs).
 
 ## Exclusions (do not use)
 
@@ -271,9 +272,9 @@ July 2026: every observed inflow was one of the two patterns above (1139 sweep o
 Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` or `unmatched` only; never write back to `pending`
+  - Start from `pending`, `unmatched`, or `ignored` only; never write back to `pending`
   - Operators own `resolved` / `manual` — do not touch those rows
-  - Inbound internal funding → `ignored` (finished classification)
+  - Internal transfers among the six KCW accounts → `matched` (not `ignored`)
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
 - `matched_ref_type` / `matched_ref_id`
@@ -300,7 +301,7 @@ Approximate (do not force these numbers; sanity check only):
 - Utility / direct 6184 expense PV ≈ **4** outs (electricity)
 - Payroll bundle ≈ **2** outs in June (PAY1 + residual); May salary may be absent from the window
 - ICAS cheque clears ≈ **25** outs → ~18 match PIMAS ศรีสยาม bundles (0.90–0.95); leftovers try paid-unlinked fallback (`pimas_possible_bundle` / `review`) before plain `bank_cheque` review
-- Inflows (July): all `TR fr 2480421139…` and `004-0648920393` → **`ignored` internal_transfer** (do not leave pending)
+- Inflows (July): all `TR fr 2480421139…` and `004-0648920393` → **`matched` internal_transfer** (do not leave pending)
 
 If utility + payroll coverage collapses for the same months, re-check `total_net` VAT/WHT formula and payment_method text before inventing new rules.
 
@@ -310,6 +311,6 @@ Report briefly in English:
 
 - Counts of `matched` / `review` / `ignored` / `unmatched` (split by `in` / `out` if useful)
 - Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
-- Confirm inbound funding sweeps were classified as `ignored` + `internal_transfer`
+- Confirm inbound funding sweeps were classified as `matched` + `internal_transfer`
 - Breakdown: payroll / expense_pv / pimas / pimas_possible_bundle review / bank_cheque review / **inbound internal_transfer** / other
 - Rows that need human review (especially ICAS cheques and paid-unlinked PIMAS candidates)

@@ -25,14 +25,15 @@ Scope rules:
 1. Only account **233-1-18475-9**
 2. If `{{account_no}}` is not `233-1-18475-9`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Touch both directions while `match_status` in (`pending`, `unmatched`):
+4. Touch both directions while `match_status` in (`pending`, `unmatched`, `ignored`):
    - `direction = 'out'` → expense PV sources first, then residual outflows
    - `direction = 'in'` → internal funding only (no sales)
 5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. `expense_receipt` rows often appear after the bank feed; when a unique PV now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
-6. Never change amount / description / source_* / any money fields
-7. Write only `match_*` and `matched_*` fields
-8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
-9. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
+6. **Re-process `ignored` every run** — upgrade `internal_transfer` rows to `match_status = matched`. Re-match rows misclassified as `ignored` when a better expense PV hit now exists. Never skip `ignored` rows.
+7. Never change amount / description / source_* / any money fields
+8. Write only `match_*` and `matched_*` fields
+9. **Never** update rows in `matched` / `review` / `resolved` / `manual` — those belong to finished agent work or operators
+10. Bank narrative text lives in `raw_json` (Thai keys `รายการ`, `รายละเอียด`, `ช่องทาง`). The `description` column is often just a time — use `raw_json` when classifying
 
 ## Date window policy
 
@@ -104,7 +105,7 @@ Notes from July 2026 probe:
 
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
-| Internal sweep out | `internal_transfer` | `ignored` | Large transfers to other KCW accounts when counterpart is clear | `โอนภายใน` |
+| Internal sweep out | `internal_transfer` | `matched` | Large transfers to other KCW accounts when counterpart is clear | `โอนภายใน` |
 | No unique expense | — | `unmatched` / `review` | Do not invent blind subset-sums across many receipts | `ยังไม่พบใบสำคัญจ่าย` |
 
 ## Match sources — INBOUND
@@ -113,7 +114,7 @@ No sales matching on this account.
 
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
-| Internal transfer in | `internal_transfer` | `ignored` | Funding from X0393 / X7236 / other KCW accounts (`รับโอนเงิน` + company name) | `โอนภายใน` |
+| Internal transfer in | `internal_transfer` | `matched` | Funding from X0393 / X7236 / other KCW accounts (`รับโอนเงิน` + company name) | `โอนภายใน` |
 | Other / unclear inflow | — | `review` / `unmatched` | Do not treat as 3TR / 3TAR | `รายรับรอตรวจ` |
 
 July 2026 inflows observed were funding sweeps from **X0393** and **X7236** only.
@@ -133,7 +134,8 @@ July 2026 inflows observed were funding sweeps from **X0393** and **X7236** only
 Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` or `unmatched` only; never write back to `pending`
+  - Start from `pending`, `unmatched`, or `ignored` only; never write back to `pending`
+  - Internal transfers among the six KCW accounts → `matched` (not `ignored`)
   - Operators own `resolved` / `manual` — do not touch those rows
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
@@ -148,7 +150,7 @@ Confidence guide:
 - Expense near-day ≈ **0.85–0.90**
 - Expense multi-receipt bundle ≈ **0.80–0.90** (use `review` if unsure)
 - Ambiguous → `review` and confidence ≤ **0.55**
-- Ignored internal transfers: confidence **1.0** when counterpart account is clear
+- Matched internal transfers: confidence **1.0** when counterpart account is clear
 
 ## Thai note style (required for operator UI)
 
@@ -169,7 +171,7 @@ Approximate unique candidates observed (do not force these numbers; use as sanit
 - Outbound: most tax / SSO / supplier / X2446 reimbursements 1:1 via `total_net` against `%4759%` + `คืนเงินสำรอง`
 - Duplicate same-day amounts (e.g. twin 2C2P / phone nets) stay in `review`
 - Late-month outs without a receipt yet → `unmatched` / `review`
-- Inbound: funding from X0393 / X7236 → `ignored` internal transfers
+- Inbound: funding from X0393 / X7236 → `matched` internal transfers
 
 If your run lands far below that for the same month, re-check filters (`total_net` VAT/WHT formula, payment_method text `%4759%` / `คืนเงินสำรอง`) before inventing new rules.
 

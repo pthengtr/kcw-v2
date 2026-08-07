@@ -18,12 +18,13 @@ Scope rules:
 1. Only account **248-0-42113-9**
 2. If `{{account_no}}` is not `248-0-42113-9`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Primary target: `direction = 'in'` and `match_status` in (`pending`, `unmatched`)
-5. Also clear outbound (`direction = 'out'`) rows with `match_status` in (`pending`, `unmatched`) using the internal-transfer rule below
+4. Primary target: `direction = 'in'` and `match_status` in (`pending`, `unmatched`, `ignored`)
+5. Also clear outbound (`direction = 'out'`) rows with `match_status` in (`pending`, `unmatched`, `ignored`) using the internal-transfer rule below
 6. **Re-match `unmatched` every run** — a prior `unmatched` is not final. RVI vouchers often post after the bank settlement; when a unique RVI now exists, overwrite the old unmatched decision with `matched` / `review`. Never skip `unmatched` rows. **Do not** “finish” an inflow by writing only a channel label (Shopee/Lazada/TikTok) without an RVI `matched_ref_id` — leave it `unmatched` so the next run can attach the voucher.
-7. Never change amount / description / source_* / any money fields
-8. Write only `match_*` and `matched_*` fields
-9. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+7. **Re-process `ignored` every run** — upgrade `internal_transfer` rows to `match_status = matched`. Re-match rows that were `ignored` only because an RVI was missing or only a channel label was written. Never skip `ignored` rows.
+8. Never change amount / description / source_* / any money fields
+9. Write only `match_*` and `matched_*` fields
+10. **Never** update rows in `matched` / `review` / `resolved` / `manual` — those belong to finished agent work or operators
 
 ## Date window policy
 
@@ -108,7 +109,7 @@ All observed outflows are transfers to the sister KTB account:
 
 | Kind | `match_status` | `matched_ref_type` | `match_reason` (Thai) |
 |---|---|---|---|
-| Internal sweep | `ignored` | `internal_transfer` | `โอนภายใน` |
+| Internal sweep | `matched` | `internal_transfer` | `โอนภายใน` |
 
 `matched_ref_id = 248-6-00618-4` (or the digits from the description)  
 Confidence: **1.0** when description clearly names that counterpart
@@ -138,7 +139,8 @@ If your run lands far below that for the same months, re-check date parsing (ISO
 Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` or `unmatched` only; never write back to `pending`
+  - Start from `pending`, `unmatched`, or `ignored` only; never write back to `pending`
+  - Internal transfers among the six KCW accounts → `matched` (not `ignored`)
   - Operators own `resolved` / `manual` — do not touch those rows
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1

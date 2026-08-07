@@ -23,13 +23,14 @@ Scope rules:
 1. Only account **064-8-91723-6**
 2. If `{{account_no}}` is not `064-8-91723-6`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Touch both directions while `match_status` in (`pending`, `unmatched`):
+4. Touch both directions while `match_status` in (`pending`, `unmatched`, `ignored`):
    - `direction = 'in'` → sales sources first, then non-sales categories
    - `direction = 'out'` → **internal sweeps only** (no expense / PVMAS matching)
 5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. Bills / RVMAS / TAR often land after the bank feed; when a unique candidate now exists, overwrite the old unmatched decision with `matched` / `review` / `ignored`. Never skip `unmatched` rows.
-6. Never change amount / description / source_* / any money fields
-7. Write only `match_*` and `matched_*` fields
-8. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
+6. **Re-process `ignored` every run** — upgrade `internal_transfer` rows to `match_status = matched`. Re-match rows that were `ignored` only because source data was missing or because internal transfers were misclassified under the old rule. Never skip `ignored` rows.
+7. Never change amount / description / source_* / any money fields
+8. Write only `match_*` and `matched_*` fields
+9. **Never** update rows in `matched` / `review` / `resolved` / `manual` — those belong to finished agent work or operators
 
 ## Date window policy
 
@@ -175,7 +176,7 @@ Confirmed from June/July ground truth (may not appear every month). Handle these
 | Director refund | `director_refund` | `ignored` | Corrects a duplicate transfer | `คืนเงินกรรมการ` |
 | Credit note refund | `credit_note_refund` | `matched` | VAT cash-sale reversal, CN-prefixed; confidence **1.0** | `คืนเงินใบลดหนี้` |
 | Vendor rebate | `vendor_rebate` | `matched` | No internal source table — match by description; confidence ~**0.9** | `เงินคืนจากผู้ขาย` |
-| Internal transfer in | `internal_transfer` | `ignored` | Funding / return from another KCW account (rare on this account) | `โอนภายใน` |
+| Internal transfer in | `internal_transfer` | `matched` | Funding / return from another KCW account among the six company accounts (rare on this account) | `โอนภายใน` |
 
 For these categories set:
 
@@ -194,7 +195,7 @@ How to detect (any one is enough):
 
 | Kind | `matched_ref_type` | `match_status` | `match_reason` (Thai) |
 |---|---|---|---|
-| Internal sweep out | `internal_transfer` | `ignored` | `โอนภายใน` |
+| Internal sweep out | `internal_transfer` | `matched` | `โอนภายใน` |
 
 `matched_ref_id` = counterpart full account no. when known (e.g. `141-1-72355-7`), else the `X####` from `รายละเอียด`.  
 Confidence: **1.0** when counterpart account is clear from `raw_json` or same-day sister-account inflow.
@@ -225,9 +226,9 @@ If an outbound row is clearly **not** an internal sweep (unknown counterpart, pe
 Always set:
 
 - `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending` or `unmatched` only; never write back to `pending`
+  - Start from `pending`, `unmatched`, or `ignored` only; never write back to `pending`
   - Operators own `resolved` / `manual` — do not touch those rows
-  - Outbound internal sweeps → `ignored` (finished classification; operators treat them as done)
+  - Internal transfers among the six KCW accounts → `matched` (not `ignored`)
 - `match_reason`: short Thai text from the tables above (shown in the Thai UI)
 - `match_confidence`: 0 to 1
 - `matched_ref_type` / `matched_ref_id`
@@ -240,7 +241,7 @@ Confidence guide:
 - Clear 1:1 sales / CN refund ≥ 0.95 (CN refund = 1.0)
 - TR bundle / remainder / TAR T+2 / vendor rebate ≈ 0.85–0.90
 - Ambiguous → `review` and confidence ≤ 0.55
-- Ignored non-sales categories / internal transfers: confidence **1.0** when counterpart or interest/WHT pair is clear
+- Matched internal transfers: confidence **1.0** when counterpart or interest/WHT pair is clear
 
 ## Thai note style (required for operator UI)
 
