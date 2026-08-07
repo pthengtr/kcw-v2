@@ -1,7 +1,9 @@
 /**
  * Import a bank statement Excel file (KBANK / KTB) into bank.statement_*.
  *
- * Auth: signed-in user with RBAC page `bank_statement_sync` (or admin role).
+ * Auth:
+ *   - signed-in user with RBAC page `bank_statement_sync` (or admin role), or
+ *   - service-role bearer (HQ Drive bulk uploader only).
  * Body: multipart/form-data with fields:
  *   - file: .xlsx / .xls / .xlsm
  *   - bank_name: KBANK | KTB (required)
@@ -66,17 +68,25 @@ Deno.serve(async (req: Request) => {
     const admin = createClient(supabaseUrl, serviceKey);
 
     const token = authHeader.replace(/^Bearer\s+/i, "");
-    const {
-      data: { user },
-      error: userErr,
-    } = await userClient.auth.getUser(token);
-    if (userErr || !user) {
-      return jsonResponse({ error: "Invalid or expired session" }, 401);
-    }
+    // HQ Drive bulk uploader may call with the service-role key (no user JWT).
+    const isServiceRole = Boolean(serviceKey) && token === serviceKey;
+    let importSource = "edge_upload";
 
-    const perm = await requireBankStatementSyncPermission(admin, user.id);
-    if (!perm.ok) {
-      return jsonResponse({ error: perm.message }, perm.status);
+    if (!isServiceRole) {
+      const {
+        data: { user },
+        error: userErr,
+      } = await userClient.auth.getUser(token);
+      if (userErr || !user) {
+        return jsonResponse({ error: "Invalid or expired session" }, 401);
+      }
+
+      const perm = await requireBankStatementSyncPermission(admin, user.id);
+      if (!perm.ok) {
+        return jsonResponse({ error: perm.message }, perm.status);
+      }
+    } else {
+      importSource = "edge_drive_bulk";
     }
 
     const contentType = req.headers.get("content-type") ?? "";
@@ -122,6 +132,7 @@ Deno.serve(async (req: Request) => {
       filename: originalFilename,
       bankName,
       accountNo: accountGuess,
+      source: importSource,
     });
     const resolvedAccount = String(meta.account_no ?? accountGuess ?? "") || null;
 

@@ -31,6 +31,28 @@ export function normText(x: unknown): string {
   return s;
 }
 
+/**
+ * Normalize stable bank detail so KTB old DownLoadService and Thai Corporate Online
+ * exports hash to the same auto_v2 fingerprint for the same real transaction.
+ * Applied only for fingerprint identity — stored description/raw_json stay raw.
+ */
+export function normalizeStableTransactionDetail(
+  detail: string | null | undefined,
+): string | null {
+  if (detail === null || detail === undefined) return null;
+  let s = String(detail).replace(/\u00A0/g, " ").trim();
+  if (!s) return null;
+
+  s = s.replace(/~/g, " ");
+  s = s.replace(/\bTran:\s*\w+/gi, " ");
+  // Trailing Krungthai online transfer ids (typically 17–20 digits).
+  s = s.replace(/\s+\d{14,}\s*$/g, "");
+  s = s.replace(/Future Amount:\s*([\d.]+)\s*T\b/gi, "Future Amount: $1");
+  s = s.replace(/Future Amount:\s*([\d.]+)\s*$/gi, "Future Amount: $1");
+  s = s.replace(/\s+/g, " ").trim();
+  return s || null;
+}
+
 export function normMoney(x: unknown): string {
   if (isBlank(x)) return "";
   const cleaned = String(x).replace(/,/g, "").trim();
@@ -95,12 +117,13 @@ const RAW_DETAIL_KEY_PATTERNS = [
 export async function buildTransactionFingerprint(
   input: TransactionFingerprintInput,
 ): Promise<string> {
+  const stableDetail = normalizeStableTransactionDetail(input.transaction_detail);
   const fpInput = [
     normText(input.account_no),
     input.txn_date,
     normMoney(input.amount),
     normText(input.direction),
-    normText(input.transaction_detail),
+    normText(stableDetail),
     normText(input.bank_reference),
     input.balance_after === null || input.balance_after === undefined
       ? ""
