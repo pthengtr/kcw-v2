@@ -29,8 +29,13 @@ import {
   canOperatorEditMatchFields,
   canOperatorTransitionMatchStatus,
   BANK_MATCH_STATUSES,
+  BANK_MATCHED_REF_TYPE_OPTIONS,
   matchStatusLabelTh,
+  matchedRefTypeLabelTh,
+  normalizeBankMatchedRefType,
 } from "@/lib/bank/match-status";
+
+const REF_TYPE_NONE = "__none__";
 
 /** Preferred default account in the Statement Lines picker. */
 const PREFERRED_STATEMENT_ACCOUNT_NO = "064-8-91723-6";
@@ -487,7 +492,11 @@ export default function StatementLinesTab({
     setSelectedRawJson(null);
     setEditReason(row.match_reason ?? "");
     setEditNotes(row.match_notes ?? "");
-    setEditRefType(row.matched_ref_type ?? "");
+    setEditRefType(
+      normalizeBankMatchedRefType(row.matched_ref_type) ??
+        row.matched_ref_type ??
+        ""
+    );
     setEditRefId(row.matched_ref_id ?? "");
     setSaveMatchError(null);
     setOpen(true);
@@ -1062,14 +1071,53 @@ export default function StatementLinesTab({
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">
-                          ชนิดอ้างอิง
+                          ประเภทการจับคู่
                         </div>
-                        <Input
-                          value={editRefType}
-                          onChange={(e) => setEditRefType(e.target.value)}
-                          placeholder="pvmas / pimas / …"
+                        <Select
+                          value={editRefType || REF_TYPE_NONE}
+                          onValueChange={(v) =>
+                            setEditRefType(v === REF_TYPE_NONE ? "" : v)
+                          }
                           disabled={savingMatch}
-                        />
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="เลือกประเภท" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={REF_TYPE_NONE}>
+                              — ไม่ระบุ —
+                            </SelectItem>
+                            {editRefType &&
+                            !BANK_MATCHED_REF_TYPE_OPTIONS.some(
+                              (o) => o.value === editRefType
+                            ) ? (
+                              <SelectItem value={editRefType}>
+                                {matchedRefTypeLabelTh(editRefType)} (เดิม)
+                              </SelectItem>
+                            ) : null}
+                            {BANK_MATCHED_REF_TYPE_OPTIONS.filter(
+                              (o) => o.group === "in"
+                            ).map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                            {BANK_MATCHED_REF_TYPE_OPTIONS.filter(
+                              (o) => o.group === "out"
+                            ).map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                            {BANK_MATCHED_REF_TYPE_OPTIONS.filter(
+                              (o) => o.group === "other"
+                            ).map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">
