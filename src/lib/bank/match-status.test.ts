@@ -49,4 +49,16 @@ describe("bank match status workflow", () => {
   it("formats operator matched_by", () => {
     expect(operatorMatchBy("ada@example.com")).toBe("operator:ada@example.com");
   });
+
+  it("lists matched ref types with Thai labels", async () => {
+    const mod = await import("@/lib/bank/match-status");
+    expect(mod.isBankMatchedRefType("rvi")).toBe(true);
+    expect(mod.isBankMatchedRefType("PIMAS")).toBe(false);
+    expect(mod.normalizeBankMatchedRefType("PIMAS")).toBe("pimas");
+    expect(mod.normalizeBankMatchedRefType("")).toBeNull();
+    expect(mod.matchedRefTypeLabelTh("internal_transfer")).toContain("โอน");
+    expect(mod.BANK_MATCHED_REF_TYPE_OPTIONS.length).toBe(
+      mod.BANK_MATCHED_REF_TYPES.length
+    );
+  });
 });

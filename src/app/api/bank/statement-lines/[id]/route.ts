@@ -8,6 +8,8 @@ import {
   BANK_MATCH_STATUSES,
   canOperatorEditMatchFields,
   canOperatorTransitionMatchStatus,
+  isBankMatchedRefType,
+  normalizeBankMatchedRefType,
   operatorMatchBy,
 } from "@/lib/bank/match-status";
 
@@ -53,7 +55,20 @@ const PatchBodySchema = z
     match_status: z.enum(BANK_MATCH_STATUSES).optional(),
     match_reason: z.string().trim().max(500).nullable().optional(),
     match_notes: z.string().trim().max(4000).nullable().optional(),
-    matched_ref_type: z.string().trim().max(100).nullable().optional(),
+    matched_ref_type: z
+      .string()
+      .trim()
+      .max(100)
+      .nullable()
+      .optional()
+      .transform((v) => {
+        if (v == null || v === "") return v;
+        return normalizeBankMatchedRefType(v) ?? v.toLowerCase();
+      })
+      .refine(
+        (v) => v == null || v === "" || isBankMatchedRefType(v),
+        { message: "Unknown matched_ref_type" }
+      ),
     matched_ref_id: z.string().trim().max(200).nullable().optional(),
   })
   .refine(
@@ -154,7 +169,9 @@ export async function PATCH(
     patch.match_notes = parsed.data.match_notes;
   }
   if (parsed.data.matched_ref_type !== undefined && !requeueForAgent) {
-    patch.matched_ref_type = parsed.data.matched_ref_type;
+    const refType = parsed.data.matched_ref_type;
+    patch.matched_ref_type =
+      typeof refType === "string" && refType.trim() ? refType.trim() : null;
   }
   if (parsed.data.matched_ref_id !== undefined && !requeueForAgent) {
     patch.matched_ref_id = parsed.data.matched_ref_id;
