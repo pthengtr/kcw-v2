@@ -449,6 +449,21 @@ describe("buildCashflowHighlights", () => {
         line_count: 100,
         net_ex_internal: 40_000,
       },
+      report: {
+        opening_cash: 500_000,
+        sales_in: 300_000,
+        ar_in: 600_000,
+        supplier_out: 400_000,
+        payroll_out: 0,
+        opex_out: 0,
+        ending_cash: 700_000,
+        forecast_30d: 720_000,
+        forecast_daily_net: 666,
+        other_in: 0,
+        other_out: 0,
+        other_count: 12,
+        lines: [],
+      },
       by_account: [],
       by_category: [
         {

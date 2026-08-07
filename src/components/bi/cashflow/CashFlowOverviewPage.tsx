@@ -3,18 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownLeft,
-  ArrowUpRight,
-  Landmark,
   Loader2,
   RefreshCcw,
-  Scale,
+  TrendingUp,
   Wallet,
 } from "lucide-react";
 
-import { buildCashflowHighlights } from "@/lib/bi/highlights";
 import type { BiCashflowOverview } from "@/lib/bi/cashflow-types";
 import {
-  formatBaht,
   formatBahtCompact,
   formatCount,
   pctChange,
@@ -28,7 +24,6 @@ import {
 } from "@/lib/bi/sales-periods";
 import type { BiCustomDateMode, BiPeriodPreset } from "@/lib/bi/sales-types";
 import { cn } from "@/lib/utils";
-import BiHighlightsCard from "@/components/bi/BiHighlightsCard";
 import BiLoadingBody from "@/components/bi/BiLoadingBody";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import { Button } from "@/components/ui/button";
@@ -43,8 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 import CashFlowAccountTable from "./CashFlowAccountTable";
-import CashFlowCategoryChart from "./CashFlowCategoryChart";
-import CashFlowLineTable from "./CashFlowLineTable";
+import CashFlowReportList from "./CashFlowReportList";
 import CashFlowTrendChart from "./CashFlowTrendChart";
 
 const PERIODS: BiPeriodPreset[] = ["month", "ytd", "custom"];
@@ -54,6 +48,13 @@ function bangkokYearOptions(now = new Date()): number[] {
   const start = 2023;
   const end = Math.max(current, start);
   return Array.from({ length: end - start + 1 }, (_, i) => end - i);
+}
+
+function inclusiveDaySpan(from: string, to: string): number {
+  const a = Date.parse(`${from}T00:00:00+07:00`);
+  const b = Date.parse(`${to}T00:00:00+07:00`);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return 0;
+  return Math.floor((b - a) / 86_400_000) + 1;
 }
 
 export default function CashFlowOverviewPage() {
@@ -102,12 +103,8 @@ export default function CashFlowOverviewPage() {
         overview?: BiCashflowOverview;
         error?: string;
       };
-      if (!res.ok) {
-        throw new Error(json.error || "โหลดข้อมูลไม่สำเร็จ");
-      }
-      if (!json.overview) {
-        throw new Error("ไม่มีข้อมูล");
-      }
+      if (!res.ok) throw new Error(json.error || "โหลดข้อมูลไม่สำเร็จ");
+      if (!json.overview) throw new Error("ไม่มีข้อมูล");
       setOverview(json.overview);
     } catch (err) {
       setOverview(null);
@@ -130,19 +127,11 @@ export default function CashFlowOverviewPage() {
   }, [preset]);
 
   const netDelta = overview
-    ? pctChange(overview.summary.net, overview.previous_summary.net)
+    ? pctChange(
+        overview.summary.net_ex_internal,
+        overview.previous_summary.net_ex_internal
+      )
     : null;
-  const inflowDelta = overview
-    ? pctChange(overview.summary.inflow, overview.previous_summary.inflow)
-    : null;
-  const outflowDelta = overview
-    ? pctChange(overview.summary.outflow, overview.previous_summary.outflow)
-    : null;
-
-  const highlightLines = useMemo(
-    () => (overview ? buildCashflowHighlights(overview) : []),
-    [overview]
-  );
 
   const accountOptions = overview?.accounts ?? [];
   const useDailyTrend =
@@ -159,7 +148,8 @@ export default function CashFlowOverviewPage() {
               กระแสเงินสด (ธนาคาร)
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              จาก bank statement ที่นำเข้า · นับทุกรายการเงินเข้า–ออกจริง (รวมที่ละเว้นจับคู่)
+              สรุปจาก statement ที่จับคู่แล้ว · รับขาย / ลูกหนี้ / Supplier /
+              เงินเดือน / ค่าใช้จ่าย
             </p>
             <p className="mt-2 text-xs text-slate-600 sm:text-sm">
               ช่วง{" "}
@@ -334,8 +324,8 @@ export default function CashFlowOverviewPage() {
       ) : null}
 
       {loading && !overview ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
@@ -343,63 +333,36 @@ export default function CashFlowOverviewPage() {
 
       {overview ? (
         <BiLoadingBody loading={loading}>
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <SalesKpiCard
-              title="เงินเข้า"
-              value={formatBahtCompact(overview.summary.inflow)}
-              deltaPct={inflowDelta}
-              hint={`${formatCount(overview.summary.inflow_count)} รายการ`}
+              title="เงินสดต้นงวด"
+              value={formatBahtCompact(overview.report.opening_cash)}
+              hint={`${formatCount(overview.summary.account_count)} บัญชี`}
+              icon={<Wallet className="h-4 w-4" />}
+            />
+            <SalesKpiCard
+              title="เงินสดคงเหลือ"
+              value={formatBahtCompact(overview.report.ending_cash)}
+              deltaPct={netDelta}
+              hint={`รับขาย+ลูกหนี้ ${formatBahtCompact(overview.report.sales_in + overview.report.ar_in)}`}
               icon={<ArrowDownLeft className="h-4 w-4" />}
             />
             <SalesKpiCard
-              title="เงินออก"
-              value={formatBahtCompact(overview.summary.outflow)}
-              deltaPct={outflowDelta}
-              hint={`${formatCount(overview.summary.outflow_count)} รายการ`}
-              icon={<ArrowUpRight className="h-4 w-4" />}
-            />
-            <SalesKpiCard
-              title="สุทธิ"
-              value={formatBahtCompact(overview.summary.net)}
-              deltaPct={netDelta}
-              hint={`ไม่รวมโอนใน: ${formatBahtCompact(overview.summary.net_ex_internal)}`}
-              icon={<Scale className="h-4 w-4" />}
-            />
-            <SalesKpiCard
-              title="คงเหลือรวม"
-              value={formatBahtCompact(overview.summary.ending_balance)}
-              hint={`เปิดช่วง ${formatBahtCompact(overview.summary.opening_balance)} · ${formatCount(overview.summary.account_count)} บัญชี`}
-              icon={<Wallet className="h-4 w-4" />}
+              title="คาดการณ์ 30 วัน"
+              value={formatBahtCompact(overview.report.forecast_30d)}
+              hint={`สุทธิเฉลี่ย/วัน ${formatBahtCompact(overview.report.forecast_daily_net)}`}
+              icon={<TrendingUp className="h-4 w-4" />}
             />
           </section>
 
-          {overview.summary.internal_in > 0 ||
-          overview.summary.internal_out > 0 ||
-          overview.summary.unclassified_count > 0 ? (
-            <section className="rounded-xl border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
-              <div className="flex items-start gap-2">
-                <Landmark className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
-                <div className="space-y-1">
-                  {overview.summary.internal_in > 0 ||
-                  overview.summary.internal_out > 0 ? (
-                    <p>
-                      โอนระหว่างบัญชีในช่วงนี้: เข้า{" "}
-                      {formatBaht(overview.summary.internal_in)} · ออก{" "}
-                      {formatBaht(overview.summary.internal_out)} (หักออกจาก
-                      “สุทธิไม่รวมโอนใน”)
-                    </p>
-                  ) : null}
-                  {overview.summary.unclassified_count > 0 ? (
-                    <p>
-                      ยังไม่จับคู่หมวด:{" "}
-                      {formatCount(overview.summary.unclassified_count)} รายการ
-                      — ยอดเงินยังนับในกระแสเงินสด แต่หมวดอาจไม่ครบ
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            </section>
-          ) : null}
+          <section>
+            <CashFlowReportList
+              lines={overview.report.lines}
+              otherCount={overview.report.other_count}
+              otherIn={overview.report.other_in}
+              otherOut={overview.report.other_out}
+            />
+          </section>
 
           <section>
             <CashFlowTrendChart
@@ -413,48 +376,11 @@ export default function CashFlowOverviewPage() {
             />
           </section>
 
-          <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <CashFlowCategoryChart
-              title="หมวดเงินเข้า"
-              rows={overview.by_category}
-              direction="inflow"
-            />
-            <CashFlowCategoryChart
-              title="หมวดเงินออก"
-              rows={overview.by_category}
-              direction="outflow"
-            />
-          </section>
-
           <section>
             <CashFlowAccountTable rows={overview.by_account} />
-          </section>
-
-          <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <CashFlowLineTable
-              title="เงินเข้าสูงสุด"
-              rows={overview.top_inflows}
-              tone="in"
-            />
-            <CashFlowLineTable
-              title="เงินออกสูงสุด"
-              rows={overview.top_outflows}
-              tone="out"
-            />
-          </section>
-
-          <section>
-            <BiHighlightsCard lines={highlightLines} />
           </section>
         </BiLoadingBody>
       ) : null}
     </div>
   );
-}
-
-function inclusiveDaySpan(from: string, to: string): number {
-  const a = Date.parse(`${from}T00:00:00+07:00`);
-  const b = Date.parse(`${to}T00:00:00+07:00`);
-  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return 0;
-  return Math.floor((b - a) / 86_400_000) + 1;
 }

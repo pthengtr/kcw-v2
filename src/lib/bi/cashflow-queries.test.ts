@@ -34,6 +34,30 @@ describe("normalizeCashflowOverview", () => {
         line_count: 100,
         net_ex_internal: 40_000,
       },
+      report: {
+        opening_cash: 500_000,
+        sales_in: 300_000,
+        ar_in: 200_000,
+        supplier_out: 150_000,
+        payroll_out: 50_000,
+        opex_out: 80_000,
+        ending_cash: 700_000,
+        forecast_30d: 720_000,
+        forecast_daily_net: 666,
+        other_in: 10_000,
+        other_out: 20_000,
+        other_count: 5,
+        lines: [
+          { key: "opening_cash", label: "เงินสดต้นงวด", amount: 500_000, kind: "balance", line_count: null },
+          { key: "sales_in", label: "รับจากยอดขาย", amount: 300_000, kind: "in", line_count: 10 },
+          { key: "ar_in", label: "รับเงินจากลูกหนี้", amount: 200_000, kind: "in", line_count: 8 },
+          { key: "supplier_out", label: "จ่าย Supplier", amount: 150_000, kind: "out", line_count: 12 },
+          { key: "payroll_out", label: "เงินเดือน", amount: 50_000, kind: "out", line_count: 1 },
+          { key: "opex_out", label: "ค่าใช้จ่ายดำเนินงาน", amount: 80_000, kind: "out", line_count: 4 },
+          { key: "ending_cash", label: "เงินสดคงเหลือ", amount: 700_000, kind: "balance", line_count: null },
+          { key: "forecast_30d", label: "คาดการณ์เงินสด 30 วันข้างหน้า", amount: 720_000, kind: "forecast", line_count: null },
+        ],
+      },
       by_account: [
         {
           key: "064-8-91723-6",
@@ -112,10 +136,12 @@ describe("normalizeCashflowOverview", () => {
 
     expect(overview.summary.net).toBe(200_000);
     expect(overview.summary.net_ex_internal).toBe(200_000);
+    expect(overview.report.lines).toHaveLength(8);
+    expect(overview.report.lines.some((l) => l.key === "loan_out")).toBe(false);
+    expect(overview.report.sales_in).toBe(300_000);
     expect(overview.by_account[0]?.ending_balance).toBe(200_000);
     expect(overview.by_category[0]?.label).toBe("รับชำระลูกหนี้");
     expect(overview.trend_monthly[0]?.inflow).toBe(1_000_000);
-    expect(overview.top_outflows[0]?.amount).toBe(40_000);
     expect(overview.accounts).toHaveLength(1);
   });
 
@@ -123,12 +149,19 @@ describe("normalizeCashflowOverview", () => {
     const overview = normalizeCashflowOverview({
       from: "2026-07-01",
       to: "2026-07-31",
-      summary: { inflow: "100", outflow: "40", net: "60" },
+      summary: {
+        inflow: "100",
+        outflow: "40",
+        net: "60",
+        opening_balance: 10,
+        ending_balance: 20,
+      },
       previous_summary: {},
     });
     expect(overview.summary.inflow).toBe(100);
     expect(overview.summary.outflow).toBe(40);
     expect(overview.by_account).toEqual([]);
-    expect(overview.top_inflows).toEqual([]);
+    expect(overview.report.lines[0]?.label).toBe("เงินสดต้นงวด");
+    expect(overview.report.lines.some((l) => l.key === "loan_out")).toBe(false);
   });
 });
