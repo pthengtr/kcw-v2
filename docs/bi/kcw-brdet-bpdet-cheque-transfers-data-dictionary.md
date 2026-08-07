@@ -146,7 +146,7 @@ python -m src.kcw.pipeline upload-brdet-bpdet
 1. HQ BRDET/BPDET → Drive + `raw_kcw` (via `run_hq_brdet_bpdet_sync.bat`)
 2. Drive `01_raw/statement` Excel (KBANK + KTB) → `bank.statement_*`
 
-kcw-v2 **อัปโหลด Statement** calls Edge Function `import-bank-statement` (no `ops.job_queue`); the daily HQ BAT can still refresh BRDET/BPDET + Drive Excel — see [worker-jobs](../worker-jobs.md#bank-statement-upload-from-bank-statement-sync-kcw-v2--not-a-pc-worker-job).
+kcw-v2 **อัปโหลด Statement** calls Edge Function `import-bank-statement` in this repo (`auto_v2` fingerprints, RBAC `bank_statement_sync`; no `ops.job_queue`). The daily HQ BAT can still refresh BRDET/BPDET + Drive Excel, but the Drive notebook path in kcw-analytics is still **`auto_v1`** until updated — see [worker-jobs](../worker-jobs.md#bank-statement-upload-from-bank-statement-sync-kcw-v2--not-a-pc-worker-job).
 
 Focused cheque-only BAT (no statement Excel): `run_hq_brdet_bpdet_sync.bat` (not exposed as a separate web button yet).
 
