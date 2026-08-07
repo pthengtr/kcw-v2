@@ -175,7 +175,8 @@ New features almost never need new queue tables — only new `job_type` values a
 - Agent updates `bank.statement_lines` match_* fields only, and **only** rows with `match_status` in (`pending`, `unmatched`). Re-run rematches prior `unmatched` when source data catches up. Agents may write `matched` / `review` / `unmatched` — **never** `ignored`.
 - `ignored` (UI: ไม่ใช้) is **operator-only**: exclude a row from the monthly Excel report (e.g. confirmed cross-format duplicate). Agents flag possible duplicates as `review` and ask the operator to set `ignored`.
 - Monthly report Edge Function **skips** `match_status = ignored` rows.
-- Operator workflow in `/bank-statement-sync` Statement Lines: review results, edit reason/notes; `review` → `resolved` or `ignored`; leftovers → `manual`; CSV export from filters.
+- Cashflow BI (`fn_bi_cashflow_overview`) also **excludes** `ignored` by default (`p_include_ignored` / `?include_ignored=true` to include).
+- Operator workflow in `/bank-statement-sync` Statement Lines: review results, edit reason/notes; `review` → `resolved` or `ignored`; leftovers → `manual` (requires `matched_ref_type` for BI bucketing); CSV export from filters.
 - Status SQL: [`bi/sql/alter_bank_statement_lines_match_workflow.sql`](./bi/sql/alter_bank_statement_lines_match_workflow.sql).
 
 ### Do / don’t

@@ -175,6 +175,27 @@ export async function PATCH(
     );
   }
 
+  // Cashflow BI buckets by matched_ref_type — require it for finished operator rows.
+  if (
+    (nextStatus === "resolved" || nextStatus === "manual") &&
+    !requeueForAgent &&
+    !(
+      (typeof patch.matched_ref_type === "string" &&
+        patch.matched_ref_type.trim()) ||
+      (parsed.data.matched_ref_type === undefined &&
+        typeof existing.matched_ref_type === "string" &&
+        existing.matched_ref_type.trim())
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "กรุณาระบุประเภทการจับคู่ (matched_ref_type) ก่อนบันทึกเป็นตรวจแล้ว/จับคู่ด้วยมือ",
+      },
+      { status: 400 }
+    );
+  }
+
   const { data, error } = await supabase
     .schema("bank")
     .from("statement_lines")

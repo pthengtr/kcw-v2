@@ -536,6 +536,16 @@ export default function StatementLinesTab({
     setSavingMatch(true);
     setSaveMatchError(null);
     try {
+      if (
+        (status === "resolved" || status === "manual") &&
+        !editRefType.trim()
+      ) {
+        setSaveMatchError(
+          "กรุณาระบุประเภทการจับคู่ (matched_ref_type) ก่อนบันทึกเป็นตรวจแล้ว/จับคู่ด้วยมือ"
+        );
+        setSavingMatch(false);
+        return;
+      }
       const res = await fetch(`/api/bank/statement-lines/${selected.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

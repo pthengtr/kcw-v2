@@ -261,7 +261,7 @@ export async function fetchCashflowOverview(
     p_from: params.from,
     p_to: params.to,
     p_account_no: params.accountNo ?? null,
-    p_include_ignored: params.includeIgnored ?? true,
+    p_include_ignored: params.includeIgnored ?? false,
     p_limit: params.limit ?? 30,
   });
 

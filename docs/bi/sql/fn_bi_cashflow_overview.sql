@@ -1,6 +1,7 @@
 -- Cash-flow BI overview from bank.statement_lines (imported bank statements).
--- Amounts are actual bank cash movements (not P&L). All statement lines count,
--- including match_status = ignored — ignore is a matching workflow flag only.
+-- Amounts are actual bank cash movements (not P&L).
+-- match_status = ignored means operator exclude-from-report (e.g. cross-format
+-- duplicates); excluded by default. Pass p_include_ignored := true to include.
 -- Internal transfers are included in gross inflow/outflow but also reported separately
 -- so the UI can show net cash excluding cross-account transfers.
 
@@ -8,7 +9,7 @@ CREATE OR REPLACE FUNCTION public.fn_bi_cashflow_overview(
   p_from date,
   p_to date,
   p_account_no text DEFAULT NULL,
-  p_include_ignored boolean DEFAULT true,
+  p_include_ignored boolean DEFAULT false,
   p_limit integer DEFAULT 30
 )
 RETURNS jsonb
@@ -94,6 +95,7 @@ BEGIN
     WHERE s.txn_date >= p_from
       AND s.txn_date <= p_to
       AND (v_account IS NULL OR s.account_no = v_account)
+      AND (COALESCE(p_include_ignored, false) OR s.match_status IS DISTINCT FROM 'ignored')
   ),
   prev_base AS (
     SELECT
@@ -118,6 +120,7 @@ BEGIN
     WHERE s.txn_date >= v_prev_from
       AND s.txn_date <= v_prev_to
       AND (v_account IS NULL OR s.account_no = v_account)
+      AND (COALESCE(p_include_ignored, false) OR s.match_status IS DISTINCT FROM 'ignored')
   ),
   category_label AS (
     SELECT *
@@ -141,6 +144,8 @@ BEGIN
         ('employee_advance', 'เบิกล่วงหน้า'),
         ('bank_cheque', 'เช็ค'),
         ('vendor_rebate', 'ส่วนลดผู้ขาย'),
+        ('sales_adjustment', 'ปรับปรุงยอดขาย'),
+        ('possible_duplicate', 'อาจเป็นแถวซ้ำ'),
         ('unclassified_inflow', 'รับเข้าไม่ระบุ'),
         ('unclassified_pending', 'ยังไม่จับคู่ (รอ agent)'),
         ('unclassified_unmatched', 'ยังไม่จับคู่'),
@@ -351,7 +356,7 @@ BEGIN
     'from', p_from,
     'to', p_to,
     'account_no', v_account,
-    'include_ignored', COALESCE(p_include_ignored, true),
+    'include_ignored', COALESCE(p_include_ignored, false),
     'limit', v_limit,
     'previous_from', v_prev_from,
     'previous_to', v_prev_to,
@@ -492,7 +497,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fn_bi_cashflow_overview(date, date, text, boolean, integer) IS
-  'Cash-flow BI from bank.statement_lines (all lines incl. ignored match status): inflow/outflow/net, by account/category, balances.';
+  'Cash-flow BI from bank.statement_lines: inflow/outflow/net, by account/category, balances. Excludes match_status=ignored by default (p_include_ignored).';
 
 REVOKE ALL ON FUNCTION public.fn_bi_cashflow_overview(date, date, text, boolean, integer)
   FROM PUBLIC, anon, authenticated;
