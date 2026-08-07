@@ -47,4 +47,4 @@ create index if not exists statement_lines_resolved_manual_idx
   where match_status in ('resolved', 'manual');
 
 comment on column bank.statement_lines.match_status is
-  'pending=awaiting agent; matched/review/unmatched/ignored=agent; resolved/manual=operator';
+  'pending=awaiting agent; matched/review/unmatched=agent; ignored=operator exclude-from-report; resolved/manual=operator';

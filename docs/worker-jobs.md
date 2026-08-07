@@ -172,8 +172,10 @@ New features almost never need new queue tables — only new `job_type` values a
   - `248-0-42113-9` (KTB / ends 1139) marketplace RVI: [`prompts/bank-statement-match-1139.md`](../prompts/bank-statement-match-1139.md)
   - `248-6-00618-4` payroll / expense cheques + inbound internal funding: [`prompts/bank-statement-match-6184.md`](../prompts/bank-statement-match-6184.md)
 - Before running, fill placeholders `{{account_no}}` / `{{from}}` / `{{to}}` (or tell the chat agent the account + date range). Optional local Codex wrapper: [`worker_tasks/run_bank_statement_match.bat`](../worker_tasks/run_bank_statement_match.bat).
-- Agent updates `bank.statement_lines` match_* fields only, and **only** rows with `match_status` in (`pending`, `unmatched`, `ignored`). Re-run rematches prior `unmatched` / `ignored` rows when source data catches up or when internal transfers should be upgraded to `matched`.
-- Operator workflow in `/bank-statement-sync` Statement Lines: review results, edit reason/notes; `review` → `resolved`, leftovers → `manual`; CSV export from filters.
+- Agent updates `bank.statement_lines` match_* fields only, and **only** rows with `match_status` in (`pending`, `unmatched`). Re-run rematches prior `unmatched` when source data catches up. Agents may write `matched` / `review` / `unmatched` — **never** `ignored`.
+- `ignored` (UI: ไม่ใช้) is **operator-only**: exclude a row from the monthly Excel report (e.g. confirmed cross-format duplicate). Agents flag possible duplicates as `review` and ask the operator to set `ignored`.
+- Monthly report Edge Function **skips** `match_status = ignored` rows.
+- Operator workflow in `/bank-statement-sync` Statement Lines: review results, edit reason/notes; `review` → `resolved` or `ignored`; leftovers → `manual`; CSV export from filters.
 - Status SQL: [`bi/sql/alter_bank_statement_lines_match_workflow.sql`](./bi/sql/alter_bank_statement_lines_match_workflow.sql).
 
 ### Do / don’t

@@ -23,14 +23,14 @@ Scope rules:
 1. Only account **064-8-91723-6**
 2. If `{{account_no}}` is not `064-8-91723-6`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Touch both directions while `match_status` in (`pending`, `unmatched`, `ignored`):
+4. Touch both directions while `match_status` in (`pending`, `unmatched`):
    - `direction = 'in'` → sales sources first, then non-sales categories
    - `direction = 'out'` → **internal sweeps only** (no expense / PVMAS matching)
-5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. Bills / RVMAS / TAR often land after the bank feed; when a unique candidate now exists, overwrite the old unmatched decision with `matched` / `review` / `ignored`. Never skip `unmatched` rows.
-6. **Re-process `ignored` every run** — upgrade `internal_transfer` rows to `match_status = matched`. Re-match rows that were `ignored` only because source data was missing or because internal transfers were misclassified under the old rule. Never skip `ignored` rows.
+5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. Bills / RVMAS / TAR often land after the bank feed; when a unique candidate now exists, overwrite the old unmatched decision with `matched` / `review`. Never skip `unmatched` rows.
+6. **Never write `match_status = ignored`** — that status is **operator-only** (exclude from the monthly Excel report). Interest / WHT / other classified non-sales → `matched` with the proper `matched_ref_type`. Possible duplicate statement rows → `review` (see below); ask the operator to set `ignored` manually if confirmed.
 7. Never change amount / description / source_* / any money fields
 8. Write only `match_*` and `matched_*` fields
-9. **Never** update rows in `matched` / `review` / `resolved` / `manual` — those belong to finished agent work or operators
+9. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 
 ## Date window policy
 
@@ -171,9 +171,9 @@ Confirmed from June/July ground truth (may not appear every month). Handle these
 
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
-| Bank interest | `interest_income` | `ignored` | Pair with the withholding-tax line same day | `ดอกเบี้ยเงินฝาก` |
-| Withholding tax on interest | `withholding_tax` | `ignored` | Same reference code as the interest line | `ภาษีหัก ณ ที่จ่ายดอกเบี้ย` |
-| Director refund | `director_refund` | `ignored` | Corrects a duplicate transfer | `คืนเงินกรรมการ` |
+| Bank interest | `interest_income` | `matched` | Pair with the withholding-tax line same day — classified, not report-excluded | `ดอกเบี้ยเงินฝาก` |
+| Withholding tax on interest | `withholding_tax` | `matched` | Same reference code as the interest line — **do not** use `ignored` | `ภาษีหัก ณ ที่จ่ายดอกเบี้ย` |
+| Director refund | `director_refund` | `matched` | Corrects a prior transfer; if a twin statement row looks like a cross-format duplicate, put **that twin** on `review` for operator `ignored` | `คืนเงินกรรมการ` |
 | Credit note refund | `credit_note_refund` | `matched` | VAT cash-sale reversal, CN-prefixed; confidence **1.0** | `คืนเงินใบลดหนี้` |
 | Vendor rebate | `vendor_rebate` | `matched` | No internal source table — match by description; confidence ~**0.9** | `เงินคืนจากผู้ขาย` |
 | Internal transfer in | `internal_transfer` | `matched` | Funding / return from another KCW account among the six company accounts (rare on this account) | `โอนภายใน` |
@@ -221,14 +221,23 @@ If an outbound row is clearly **not** an internal sweep (unknown counterpart, pe
 - **PVMAS / PIMAS / expense_receipt** on this account’s outflows — those belong to **141-1-72355-7** / **248-6-00618-4** / **233-1-18475-9**
 - Leaving outbound internal sweeps as `pending` / `unmatched` when `raw_json` or counterpart clearly names another KCW account
 
+## Possible duplicate statement rows (operator `ignored`)
+
+Same economic movement can appear twice after overlapping KTB/KBANK exports with different detail text (different fingerprints): same `account_no` + `txn_date` + `amount` + `direction` + `balance_after`, different `description` / fingerprint.
+
+1. Keep the clearer / more detailed row on its normal match path (`matched` / `review` / `unmatched`).
+2. Set the other row to `review` with `matched_ref_type = possible_duplicate`, `match_reason = อาจเป็นแถวซ้ำ — รอผู้ใช้ตั้งเป็นไม่ใช้`, and Thai `match_notes` naming the twin row (`id`, short description) and asking the operator to set `ignored` (ไม่ใช้) if confirmed.
+3. **Never** set `ignored` yourself — the monthly report skips operator-`ignored` rows only.
+
 ## Fields to write on each decision
 
 Always set:
 
-- `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending`, `unmatched`, or `ignored` only; never write back to `pending`
-  - Operators own `resolved` / `manual` — do not touch those rows
-  - Internal transfers among the six KCW accounts → `matched` (not `ignored`)
+- `match_status`: `matched` | `review` | `unmatched` if still unknown after this pass
+  - Start from `pending` or `unmatched` only; never write back to `pending`
+  - **Never** write `ignored` (operator-only exclude-from-report)
+  - Operators own `resolved` / `manual` / `ignored` — do not touch those rows
+  - Internal transfers among the six KCW accounts → `matched`
 - `match_reason`: short Thai text from the tables above (shown in the Thai UI)
 - `match_confidence`: 0 to 1
 - `matched_ref_type` / `matched_ref_id`
@@ -242,6 +251,7 @@ Confidence guide:
 - TR bundle / remainder / TAR T+2 / vendor rebate ≈ 0.85–0.90
 - Ambiguous → `review` and confidence ≤ 0.55
 - Matched internal transfers: confidence **1.0** when counterpart or interest/WHT pair is clear
+- Possible-duplicate `review` → confidence ≤ **0.55**
 
 ## Thai note style (required for operator UI)
 
@@ -266,13 +276,15 @@ Do not use cryptic codes like `tr_remainder:` or `T+1 net=` as the main `match_n
 - Force auto-`matched` outside strict date windows — use relaxed `review` with matched info + warning instead
 - Leave `unmatched` when a plausible relaxed-window candidate exists — use `review` with matched refs
 - Leave outbound internal sweeps `pending` when `raw_json` names X3557 / X4759 / other KCW accounts
+- Write `match_status = ignored` (operator-only) or classify interest/WHT as ignored
 
 ## End-of-run summary
 
 Report briefly in English:
 
-- Counts of `matched` / `review` / `ignored` / `unmatched` (split by `in` / `out` if useful)
+- Counts of `matched` / `review` / `unmatched` (split by `in` / `out` if useful)
 - Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
-- Breakdown by source: TR / TAR / RVMAS / non-sales inbound / **outbound internal_transfer**
+- Breakdown by source: TR / TAR / RVMAS / non-sales inbound (`matched` interest/WHT/etc.) / **outbound internal_transfer**
 - Any TAR shortfall catch-up pairs found
+- `possible_duplicate` reviews for the operator to set `ignored`
 - Rows that need human review

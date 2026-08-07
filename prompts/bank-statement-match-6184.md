@@ -32,14 +32,14 @@ Scope rules:
 1. Only account **248-6-00618-4**
 2. If `{{account_no}}` is not `248-6-00618-4`, stop immediately and do not change any rows
 3. Only work on `txn_date` within `{{from}}`..`{{to}}`
-4. Touch both directions while `match_status` in (`pending`, `unmatched`, `ignored`):
+4. Touch both directions while `match_status` in (`pending`, `unmatched`):
    - `direction = 'out'` → payroll / expense PV / PIMAS cheque sources first
    - `direction = 'in'` → **internal funding only** (no sales / RVMAS matching)
 5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. Payroll / expense_receipt / PIMAS often lag the bank clear; when a unique candidate now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
-6. **Re-process `ignored` every run** — upgrade `internal_transfer` rows to `match_status = matched`. Re-match rows misclassified as `ignored` when payroll / expense / PIMAS data now exists. Never skip `ignored` rows.
+6. **Never write `match_status = ignored`** — operator-only (exclude from monthly Excel). Possible duplicate rows → `review` (`possible_duplicate`); ask the operator to set `ignored` manually if confirmed.
 7. Never change amount / description / source_* / any money fields
 8. Write only `match_*` and `matched_*` fields
-9. **Never** update rows in `matched` / `review` / `resolved` / `manual` — those belong to finished agent work or operators
+9. **Never** update rows in `matched` / `review` / `resolved` / `manual` / `ignored` — those belong to finished agent work or operators
 10. Cheque number lives in `bank_reference` and/or `raw_json->>'CHEQUE NO.'` for ICAS clears (`TRANSACTION CODE` often `CBCA`)
 
 ## Date window policy
@@ -256,7 +256,7 @@ Thai note examples:
 - `โอนภายในจากบัญชี 248-0-42113-9 (X1139) จำนวน 86,000.00 บาท วันที่ 01/07/2026 — เติมเงินบัญชีเช็ค/เงินเดือน`
 - `โอนภายในจากบัญชี 064-8-92039-3 (X0393) จำนวน 200,000.00 บาท วันที่ 10/07/2026 — เติมเงินบัญชีเช็ค/เงินเดือน`
 
-July 2026: every observed inflow was one of the two patterns above (1139 sweep or 0393 funding). Operators previously marked these manually as `โยกเงินภายในบริษัท` — the agent should finish them as `matched` + `internal_transfer` instead (including rows still marked `ignored` from older runs).
+July 2026: every observed inflow was one of the two patterns above (1139 sweep or 0393 funding). Operators previously marked these manually as `โยกเงินภายในบริษัท` — the agent should finish them as `matched` + `internal_transfer` instead (including rows still `pending` / `unmatched` from older runs).
 
 ## Exclusions (do not use)
 
@@ -267,14 +267,23 @@ July 2026: every observed inflow was one of the two patterns above (1139 sweep o
 - Leaving clear inbound funding sweeps as `pending`
 - Changing money fields or source descriptions
 
+## Possible duplicate statement rows (operator `ignored`)
+
+Same economic movement can appear twice after overlapping KTB exports with different detail text (different fingerprints): same `account_no` + `txn_date` + `amount` + `direction` + `balance_after`, different `description` / fingerprint (e.g. short code vs full narrative).
+
+1. Keep the clearer / more detailed row on its normal match path.
+2. Set the other row to `review` with `matched_ref_type = possible_duplicate`, `match_reason = อาจเป็นแถวซ้ำ — รอผู้ใช้ตั้งเป็นไม่ใช้`, and Thai notes naming the twin + asking the operator to set `ignored` (ไม่ใช้) if confirmed.
+3. **Never** set `ignored` yourself — the monthly report skips operator-`ignored` rows only.
+
 ## Fields to write on each decision
 
 Always set:
 
-- `match_status`: `matched` | `review` | `ignored` | `unmatched` if still unknown after this pass
-  - Start from `pending`, `unmatched`, or `ignored` only; never write back to `pending`
-  - Operators own `resolved` / `manual` — do not touch those rows
-  - Internal transfers among the six KCW accounts → `matched` (not `ignored`)
+- `match_status`: `matched` | `review` | `unmatched` if still unknown after this pass
+  - Start from `pending` or `unmatched` only; never write back to `pending`
+  - **Never** write `ignored` (operator-only exclude-from-report)
+  - Operators own `resolved` / `manual` / `ignored` — do not touch those rows
+  - Internal transfers among the six KCW accounts → `matched`
 - `match_reason`: short Thai text from the tables above
 - `match_confidence`: 0 to 1
 - `matched_ref_type` / `matched_ref_id`
@@ -309,8 +318,9 @@ If utility + payroll coverage collapses for the same months, re-check `total_net
 
 Report briefly in English:
 
-- Counts of `matched` / `review` / `ignored` / `unmatched` (split by `in` / `out` if useful)
+- Counts of `matched` / `review` / `unmatched` (split by `in` / `out` if useful)
 - Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
 - Confirm inbound funding sweeps were classified as `matched` + `internal_transfer`
+- `possible_duplicate` reviews for the operator to set `ignored`
 - Breakdown: payroll / expense_pv / pimas / pimas_possible_bundle review / bank_cheque review / **inbound internal_transfer** / other
 - Rows that need human review (especially ICAS cheques and paid-unlinked PIMAS candidates)
