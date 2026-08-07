@@ -129,7 +129,7 @@ New features almost never need new queue tables — only new `job_type` values a
 
 - UI **อัปโหลด Statement** → browser calls Supabase Edge Function `import-bank-statement` with `FormData` (`file` + `bank_name` = `KBANK`|`KTB`).
 - Parse + insert into `bank.statement_*` and Storage `bank-statements` live in **kcw-analytics** (same `auto_v1` heuristics as the Drive notebook). Contract: [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md).
-- Caller must be signed in with email in `public.kcw_admin`; kcw-v2 only provides the upload UI (`StatementUploadDialog`).
+- Caller must be signed in with RBAC page `bank_statement_sync` (or `admin` role); kcw-v2 only provides the upload UI (`StatementUploadDialog`).
 - Daily HQ BAT [`run_bank_statement_import.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_bank_statement_import.bat) can still run offline Drive drops + BRDET/BPDET; web uploads no longer enqueue `ops.job_queue`.
 - Data dictionary: [bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md](./bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md).
 - Legacy service-role RPCs `fn_bank_find_inflight_import` / `fn_bank_enqueue_import` remain for LINE/compat — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql) — but the kcw-v2 web button no longer uses them.
@@ -139,7 +139,7 @@ New features almost never need new queue tables — only new `job_type` values a
 - UI **สร้างรายงาน** → browser calls Supabase Edge Function `generate-bank-statement-report` with JSON `{ year, month }` (default = Bangkok today − 10 days).
 - Builds the VAT-style multi-account Excel (one sheet per account, live `match_status` / reason columns) and uploads to Storage `bank-statements/reports/{year}/{mm}/…`; returns a signed download URL. **No Google Drive.**
 - Source: [`supabase/functions/generate-bank-statement-report/`](../supabase/functions/generate-bank-statement-report/). Layout parity with kcw-analytics `bank_statement_report.py` / `run_bank_statement_report.bat` (Drive path optional/legacy).
-- Auth: same `kcw_admin` gate as import. Client helper: `src/lib/bank/statement-report.ts` + `StatementReportDialog`.
+- Auth: same RBAC gate as import (`bank_statement_sync` or `admin`). Client helper: `src/lib/bank/statement-report.ts` + `StatementReportDialog`.
 - Docs: [bank-statement-upload.md](./bank-statement-upload.md).
 
 ### Inventory sync from `/po` (kcw-v2)

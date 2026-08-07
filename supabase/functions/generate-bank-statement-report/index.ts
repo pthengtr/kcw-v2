@@ -1,7 +1,7 @@
 /**
  * Generate monthly multi-account bank statement Excel report.
  *
- * Auth: caller JWT must belong to public.kcw_admin (email match on user_id).
+ * Auth: signed-in user with RBAC page `bank_statement_sync` (or admin role).
  * Body JSON (optional fields):
  *   - year: number (default: Bangkok today − 10 days)
  *   - month: number 1-12
@@ -13,6 +13,7 @@
  * Layout parity: kcw-analytics `src/kcw/bank_statement_report.py`.
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireBankStatementSyncPermission } from "../_shared/rbac-auth.ts";
 import { corsHeaders } from "./cors.ts";
 import {
   buildAccountSheets,
@@ -78,17 +79,9 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "User email required" }, 403);
     }
 
-    const { data: adminRow, error: adminErr } = await admin
-      .from("kcw_admin")
-      .select("id")
-      .ilike("user_id", email)
-      .maybeSingle();
-    if (adminErr) {
-      console.error("kcw_admin lookup failed", adminErr);
-      return jsonResponse({ error: "Admin check failed" }, 500);
-    }
-    if (!adminRow) {
-      return jsonResponse({ error: "Forbidden: not a kcw_admin user" }, 403);
+    const perm = await requireBankStatementSyncPermission(admin, user.id);
+    if (!perm.ok) {
+      return jsonResponse({ error: perm.message }, perm.status);
     }
 
     let body: Record<string, unknown> = {};
