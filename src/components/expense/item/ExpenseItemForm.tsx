@@ -79,9 +79,7 @@ export default function ExpenseCategoryForm({
     // in practice, you should validate your inputs
     const expenseItemFormData = {
       item_name: (formData.get("item_name") as string).replace(/\s+$/, ""),
-      category_uuid: parseInt(
-        formData.get("category_uuid") as string
-      ) as number,
+      category_uuid: formData.get("category_uuid") as string,
     };
 
     const supabase = createClient();
