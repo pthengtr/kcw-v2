@@ -13,6 +13,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md) | AR/AP masters (ARMAS/APMAS); **`MOBILE` = tax id** |
 | [kcw-expense-data-dictionary.md](./kcw-expense-data-dictionary.md) | App expense tables + amount rules (company + general) |
 | [kcw-income-data-dictionary.md](./kcw-income-data-dictionary.md) | Gross / net income (sales margin − app opex) |
+| [kcw-income-statement-data-dictionary.md](./kcw-income-statement-data-dictionary.md) | VAT-book P&L + CIT estimate + year-end forecast |
 | [kcw-vat-data-dictionary.md](./kcw-vat-data-dictionary.md) | VAT sales/purchase tax books + mid-period forecast |
 | [kcw-purchase-data-dictionary.md](./kcw-purchase-data-dictionary.md) | HQ PIDET purchase **invoice** lines (JOURMODE / BILLTYPE) |
 | [kcw-po-data-dictionary.md](./kcw-po-data-dictionary.md) | Purchase **orders** in `raw_kcw` (HQ+SYP); PO id = `DOCNO`; SYP prepare = `po_syp_prepare` |
@@ -42,7 +43,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 
 - UI: `/po` — HQ/SYP purchase-order status; pending receive (ค้างรับ) = `ICLOW` — see [ICLOW dictionary](./kcw-iclow-pending-receive-data-dictionary.md)
 - UI: `/bank-statement-sync` — upload Excel via `import-bank-statement` Edge Function + match; daily HQ BAT can still refresh Drive Excel + BRDET/BPDET — see [cheque/transfer dictionary](./kcw-brdet-bpdet-cheque-transfers-data-dictionary.md)
-- UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/cash-flow`, `/bi/income`, `/bi/vat`
+- UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/cash-flow`, `/bi/income`, `/bi/income-statement`, `/bi/vat`
 - API: `GET /api/bi/sales/overview?from=&to=&branch=`
 - API: `GET /api/bi/sales/compare?mode=years|months&years=&periods=&branch=`
 - API: `GET /api/bi/products/overview?from=&to=&branch=&limit=`
@@ -52,6 +53,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 - API: `GET /api/bi/cashflow/overview?from=&to=&account=&limit=`
 - API: `GET /api/bi/income/overview?from=&to=&branch=`
 - API: `GET /api/bi/income/blank-costs?from=&to=&branch=&limit=`
+- API: `GET /api/bi/income-statement/overview?from=&to=&branch=`
 - API: `GET /api/bi/vat/overview?from=&to=&branch=`
 - Auth: admin-only (`requireAdmin` + service role RPC)
 

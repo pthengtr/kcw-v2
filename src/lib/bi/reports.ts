@@ -9,6 +9,13 @@ export const BI_REPORTS: BiReportNavItem[] = [
     available: true,
   },
   {
+    id: "income-statement",
+    href: "/bi/income-statement",
+    label: "งบกำไรขาดทุน (VAT)",
+    description: "รายได้·ต้นทุนจากสมุดภาษี + ภาษีเงินได้ + พยากรณ์",
+    available: true,
+  },
+  {
     id: "sales",
     href: "/bi/sales",
     label: "ภาพรวมยอดขาย",

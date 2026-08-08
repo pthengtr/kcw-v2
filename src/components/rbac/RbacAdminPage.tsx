@@ -37,6 +37,7 @@ type RoleDetail = {
 const PAGE_KEY_LABELS: Record<string, string> = {
   admin_rbac: "Admin: จัดการ RBAC",
   bi_income: "BI: รายได้/กำไรขั้นต้น-สุทธิ",
+  bi_income_statement: "BI: งบกำไรขาดทุน (VAT)",
   bi_sales: "BI: ภาพรวมยอดขาย",
   bi_sales_compare: "BI: เปรียบเทียบยอดขาย",
   bi_customers: "BI: อันดับลูกค้า",
