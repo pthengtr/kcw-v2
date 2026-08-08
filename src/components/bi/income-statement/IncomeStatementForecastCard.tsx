@@ -54,7 +54,7 @@ export default function IncomeStatementForecastCard({
       forecast: forecast.purchase_cost,
     },
     {
-      label: "ค่าใช้จ่าย (VAT)",
+      label: "ค่าใช้จ่ายบริษัท",
       actual: summary.expense,
       forecast: forecast.expense,
     },

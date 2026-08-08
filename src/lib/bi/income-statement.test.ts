@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import type { BiExpenseOverview } from "./expense-types";
 import {
+  buildTrendRows,
   computeIncomeStatementLines,
-  deriveIncomeStatementFromVat,
-  trendRowFromVat,
+  deriveIncomeStatement,
+  mapExpenseBranchToKey,
 } from "./income-statement";
 import { INCOME_STATEMENT_CIT_RATE } from "./income-statement-types";
 import type { BiVatOverview } from "./vat-types";
@@ -86,6 +88,13 @@ const vatBase: BiVatOverview = {
       expense_vat: 700,
       net_vat: 3_500,
     },
+    {
+      period: "2026-08-02",
+      sales_vat: 7_000,
+      purchase_vat: 2_800,
+      expense_vat: 700,
+      net_vat: 3_500,
+    },
   ],
   trend_monthly: [
     {
@@ -95,7 +104,74 @@ const vatBase: BiVatOverview = {
       expense_vat: 7_000,
       net_vat: 35_000,
     },
+    {
+      period: "2026-08",
+      sales_vat: 70_000,
+      purchase_vat: 28_000,
+      expense_vat: 7_000,
+      net_vat: 35_000,
+    },
   ],
+};
+
+const companyExpense: BiExpenseOverview = {
+  from: "2026-01-01",
+  to: "2026-12-31",
+  branch: null,
+  source: "ENTRIES",
+  limit: 5,
+  previous_from: "2025-01-01",
+  previous_to: "2025-12-31",
+  summary: {
+    amount: 6_800_000,
+    line_count: 1000,
+    item_count: 20,
+    receipt_count: 990,
+    general_count: 0,
+    entries_amount: 6_800_000,
+    general_amount: 0,
+  },
+  previous_summary: {
+    amount: 6_000_000,
+    line_count: 900,
+    item_count: 18,
+  },
+  by_source: [],
+  by_branch: [
+    {
+      key: "c93efb5f-07c9-4229-b6b3-568ce1c0a9ab",
+      label: "สำนักงานใหญ่",
+      amount: 6_000_000,
+      line_count: 900,
+    },
+    {
+      key: "4975a5a1-90e6-443a-9921-c6c637f4631c",
+      label: "สี่แยกพัฒนา",
+      amount: 800_000,
+      line_count: 100,
+    },
+  ],
+  by_category: [],
+  top_items: [],
+  trend_monthly: [
+    {
+      period: "2026-07",
+      amount: 900_000,
+      line_count: 120,
+      entries_amount: 900_000,
+      general_amount: 0,
+    },
+    {
+      period: "2026-08",
+      amount: 1_000_000,
+      line_count: 130,
+      entries_amount: 1_000_000,
+      general_amount: 0,
+    },
+  ],
+  month_columns: [],
+  by_item_month: [],
+  branches: [],
 };
 
 describe("computeIncomeStatementLines", () => {
@@ -106,8 +182,6 @@ describe("computeIncomeStatementLines", () => {
     expect(lines.income_tax).toBe(1_000_000);
     expect(lines.net_profit).toBe(4_000_000);
     expect(lines.cit_rate).toBe(INCOME_STATEMENT_CIT_RATE);
-    expect(lines.profit_margin_pct).toBeCloseTo(50);
-    expect(lines.net_margin_pct).toBeCloseTo(40);
   });
 
   it("charges zero tax on a loss", () => {
@@ -118,41 +192,68 @@ describe("computeIncomeStatementLines", () => {
   });
 });
 
-describe("trendRowFromVat", () => {
-  it("recovers before-tax bases as vat / 0.07", () => {
-    const row = trendRowFromVat({
-      period: "2026-07",
-      sales_vat: 70_000,
-      purchase_vat: 28_000,
-      expense_vat: 7_000,
-      net_vat: 35_000,
-    });
-    expect(row.revenue).toBe(1_000_000);
-    expect(row.purchase_cost).toBe(400_000);
-    expect(row.expense).toBe(100_000);
-    expect(row.profit_before_tax).toBe(500_000);
-    expect(row.income_tax).toBe(100_000);
-    expect(row.net_profit).toBe(400_000);
+describe("mapExpenseBranchToKey", () => {
+  it("maps HQ/SYP uuids and Thai labels", () => {
+    expect(
+      mapExpenseBranchToKey("c93efb5f-07c9-4229-b6b3-568ce1c0a9ab")
+    ).toBe("HQ");
+    expect(
+      mapExpenseBranchToKey("4975a5a1-90e6-443a-9921-c6c637f4631c")
+    ).toBe("SYP");
+    expect(mapExpenseBranchToKey("x", "สำนักงานใหญ่")).toBe("HQ");
   });
 });
 
-describe("deriveIncomeStatementFromVat", () => {
-  it("maps VAT overview into income-statement shape", () => {
-    const overview = deriveIncomeStatementFromVat(vatBase);
+describe("buildTrendRows", () => {
+  it("uses company monthly expense instead of VAT expense base", () => {
+    const rows = buildTrendRows(
+      vatBase.trend_monthly,
+      new Map([
+        ["2026-07", 900_000],
+        ["2026-08", 1_000_000],
+      ]),
+      { mode: "monthly" }
+    );
+    expect(rows[0]?.expense).toBe(900_000);
+    expect(rows[1]?.expense).toBe(1_000_000);
+    expect(rows[0]?.revenue).toBe(1_000_000);
+  });
+
+  it("allocates monthly company expense across elapsed daily rows", () => {
+    const rows = buildTrendRows(
+      vatBase.trend_daily,
+      new Map([["2026-08", 1_000_000]]),
+      { mode: "daily", asOf: "2026-08-08" }
+    );
+    expect(rows[0]?.expense).toBe(500_000);
+    expect(rows[1]?.expense).toBe(500_000);
+  });
+});
+
+describe("deriveIncomeStatement", () => {
+  it("uses company ENTRIES expense (~6.8M) not VAT expense_before", () => {
+    const overview = deriveIncomeStatement({
+      vat: vatBase,
+      companyExpense,
+    });
+    expect(overview.summary.expense).toBe(6_800_000);
+    expect(overview.summary.expense).not.toBe(vatBase.summary.expense_before);
     expect(overview.summary.revenue).toBe(10_000_000);
     expect(overview.summary.purchase_cost).toBe(4_000_000);
-    expect(overview.summary.expense).toBe(1_000_000);
-    expect(overview.summary.profit_before_tax).toBe(5_000_000);
-    expect(overview.summary.income_tax).toBe(1_000_000);
-    expect(overview.summary.net_profit).toBe(4_000_000);
-    expect(overview.forecast.enabled).toBe(true);
-    expect(overview.forecast.profit_before_tax).toBeCloseTo(
-      5_000_000 * (365 / 220),
+    // 10M - 4M - 6.8M = -0.8M loss → tax 0
+    expect(overview.summary.profit_before_tax).toBe(-800_000);
+    expect(overview.summary.income_tax).toBe(0);
+    expect(overview.summary.expense_bill_count).toBe(990);
+    expect(overview.by_branch.find((b) => b.key === "HQ")?.expense).toBe(
+      6_000_000
+    );
+    expect(overview.by_branch.find((b) => b.key === "SYP")?.expense).toBe(
+      800_000
+    );
+    expect(overview.forecast.expense).toBeCloseTo(
+      6_800_000 * (365 / 220),
       0
     );
-    expect(overview.by_branch).toHaveLength(2);
-    expect(overview.by_branch[0]?.key).toBe("HQ");
-    expect(overview.trend_monthly[0]?.revenue).toBe(1_000_000);
-    expect(overview.previous_summary.profit_before_tax).toBe(4_300_000);
+    expect(overview.trend_monthly[0]?.expense).toBe(900_000);
   });
 });

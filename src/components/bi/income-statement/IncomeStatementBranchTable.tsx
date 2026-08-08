@@ -28,7 +28,7 @@ export default function IncomeStatementBranchTable({
                 <th className="py-2 pr-3 font-medium">สาขา</th>
                 <th className="py-2 pr-3 font-medium text-right">รายได้</th>
                 <th className="py-2 pr-3 font-medium text-right">ซื้อสินค้า</th>
-                <th className="py-2 pr-3 font-medium text-right">ค่าใช้จ่าย</th>
+                <th className="py-2 pr-3 font-medium text-right">ค่าใช้จ่ายบริษัท</th>
                 <th className="py-2 pr-3 font-medium text-right">ก่อนภาษี</th>
                 <th className="py-2 pr-3 font-medium text-right">ภาษีเงินได้</th>
                 <th className="py-2 font-medium text-right">สุทธิ</th>

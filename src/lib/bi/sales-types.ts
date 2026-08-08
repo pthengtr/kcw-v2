@@ -60,10 +60,19 @@ export type BiReportId =
   | "income-statement"
   | "vat";
 
+export type BiReportGroupId = "sales" | "products" | "finance";
+
 export type BiReportNavItem = {
   id: BiReportId;
   href: string;
   label: string;
-  description: string;
+  /** Optional longer hint; sidebar shows label only. */
+  description?: string;
   available: boolean;
+};
+
+export type BiReportNavGroup = {
+  id: BiReportGroupId;
+  label: string;
+  reports: BiReportNavItem[];
 };

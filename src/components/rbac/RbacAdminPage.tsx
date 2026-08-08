@@ -36,15 +36,15 @@ type RoleDetail = {
 
 const PAGE_KEY_LABELS: Record<string, string> = {
   admin_rbac: "Admin: จัดการ RBAC",
-  bi_income: "BI: กำไรรวม (ทั้งกิจการ)",
-  bi_income_statement: "BI: งบกำไรขาดทุน (เฉพาะ VAT)",
+  bi_income: "BI: กำไรขาดทุน (ทั้งกิจการ)",
+  bi_income_statement: "BI: กำไรขาดทุน (เฉพาะส่งบัญชี)",
   bi_sales: "BI: ภาพรวมยอดขาย",
   bi_sales_compare: "BI: เปรียบเทียบยอดขาย",
   bi_customers: "BI: อันดับลูกค้า",
   bi_products: "BI: อันดับสินค้า",
   bi_product_movement: "BI: การเคลื่อนไหวสินค้า",
   bi_expenses: "BI: ภาพรวมค่าใช้จ่าย",
-  bi_cashflow: "BI: กระแสเงินสด (ธนาคาร)",
+  bi_cashflow: "BI: กระแสเงินสด",
   bi_vat: "BI: ภาษีขาย / ภาษีซื้อ",
   bank_tiger_pay: "Bank: TigerPay",
   bank_statement_sync: "Bank: Statement Upload",

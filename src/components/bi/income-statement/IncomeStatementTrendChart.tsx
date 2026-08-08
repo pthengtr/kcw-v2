@@ -46,7 +46,7 @@ export default function IncomeStatementTrendChart({
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
         <p className="text-xs text-muted-foreground">
-          แนวโน้มประมาณจากฐานภาษี (มูลค่า ≈ VAT ÷ 7%)
+          รายได้/ซื้อประมาณจากฐานภาษี · ค่าใช้จ่ายบริษัทจากแอป expense
         </p>
       </CardHeader>
       <CardContent>
