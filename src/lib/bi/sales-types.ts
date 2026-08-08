@@ -57,6 +57,7 @@ export type BiReportId =
   | "expenses"
   | "cash-flow"
   | "income"
+  | "income-statement"
   | "vat";
 
 export type BiReportNavItem = {
