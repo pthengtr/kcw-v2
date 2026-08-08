@@ -74,7 +74,7 @@ export default function IncomeStatementTable({
     <Card className="border-slate-200/80 shadow-sm">
       <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold">
-          งบกำไรขาดทุน (เฉพาะยอดมี VAT)
+          กำไรขาดทุน (เฉพาะส่งบัญชี)
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           ใช้มูลค่าก่อนภาษีจากสมุดภาษีขาย/ซื้อเท่านั้น · ไม่รวมขายไม่มี VAT ·

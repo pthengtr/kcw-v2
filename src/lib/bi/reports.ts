@@ -1,74 +1,88 @@
-import type { BiReportNavItem } from "./sales-types";
+import type { BiReportNavGroup, BiReportNavItem } from "./sales-types";
 
-export const BI_REPORTS: BiReportNavItem[] = [
-  {
-    id: "income",
-    href: "/bi/income",
-    label: "กำไรรวม (ทั้งกิจการ)",
-    description: "VAT + ไม่มี VAT · ยอดขาย − ต้นทุน − ค่าใช้จ่าย",
-    available: true,
-  },
-  {
-    id: "income-statement",
-    href: "/bi/income-statement",
-    label: "งบกำไรขาดทุน (เฉพาะ VAT)",
-    description: "เฉพาะยอดมีภาษี · ภาษีเงินได้ + พยากรณ์สิ้นปี",
-    available: true,
-  },
+/** Grouped BI sidebar: ยอดขาย · สินค้า · การเงิน */
+export const BI_REPORT_GROUPS: BiReportNavGroup[] = [
   {
     id: "sales",
-    href: "/bi/sales",
-    label: "ภาพรวมยอดขาย",
-    description: "VAT / สาขา / ออนไลน์ · รายวัน–YTD",
-    available: true,
-  },
-  {
-    id: "sales-compare",
-    href: "/bi/sales-compare",
-    label: "เปรียบเทียบยอดขาย",
-    description: "เทียบปี / เดือน · ตาราง แท่ง เส้น",
-    available: true,
-  },
-  {
-    id: "customers",
-    href: "/bi/customers",
-    label: "อันดับลูกค้า",
-    description: "จัดอันดับยอดซื้อตามลูกค้า",
-    available: true,
+    label: "ยอดขาย",
+    reports: [
+      {
+        id: "sales",
+        href: "/bi/sales",
+        label: "ภาพรวมยอดขาย",
+        available: true,
+      },
+      {
+        id: "sales-compare",
+        href: "/bi/sales-compare",
+        label: "เปรียบเทียบยอดขาย",
+        available: true,
+      },
+      {
+        id: "customers",
+        href: "/bi/customers",
+        label: "อันดับลูกค้า",
+        available: true,
+      },
+      {
+        id: "products",
+        href: "/bi/products",
+        label: "อันดับสินค้า",
+        available: true,
+      },
+    ],
   },
   {
     id: "products",
-    href: "/bi/products",
-    label: "อันดับสินค้า",
-    description: "จัดอันดับยอดขายตามสินค้า",
-    available: true,
+    label: "สินค้า",
+    reports: [
+      {
+        id: "product-movement",
+        href: "/bi/product-movement",
+        label: "การเคลื่อนไหวสินค้า",
+        available: true,
+      },
+    ],
   },
   {
-    id: "product-movement",
-    href: "/bi/product-movement",
-    label: "การเคลื่อนไหวสินค้า",
-    description: "ขายออกบ่อย / สต็อกค้างตามอายุซื้อ",
-    available: true,
-  },
-  {
-    id: "expenses",
-    href: "/bi/expenses",
-    label: "ภาพรวมค่าใช้จ่าย",
-    description: "บริษัท + ทั่วไป · รายเดือน–YTD",
-    available: true,
-  },
-  {
-    id: "cash-flow",
-    href: "/bi/cash-flow",
-    label: "กระแสเงินสด (ธนาคาร)",
-    description: "เงินเข้า–ออกจาก statement · ตามบัญชี",
-    available: true,
-  },
-  {
-    id: "vat",
-    href: "/bi/vat",
-    label: "ภาษีขาย / ภาษีซื้อ",
-    description: "รายงาน VAT + พยากรณ์สิ้นงวด",
-    available: true,
+    id: "finance",
+    label: "การเงิน",
+    reports: [
+      {
+        id: "income",
+        href: "/bi/income",
+        label: "กำไรขาดทุน (ทั้งกิจการ)",
+        available: true,
+      },
+      {
+        id: "income-statement",
+        href: "/bi/income-statement",
+        label: "กำไรขาดทุน (เฉพาะส่งบัญชี)",
+        available: true,
+      },
+      {
+        id: "cash-flow",
+        href: "/bi/cash-flow",
+        label: "กระแสเงินสด",
+        available: true,
+      },
+      {
+        id: "vat",
+        href: "/bi/vat",
+        label: "ภาษีขาย / ภาษีซื้อ",
+        available: true,
+      },
+      {
+        id: "expenses",
+        href: "/bi/expenses",
+        label: "ภาพรวมค่าใช้จ่าย",
+        available: true,
+      },
+    ],
   },
 ];
+
+/** Flat list (permissions, active-route lookup). */
+export const BI_REPORTS: BiReportNavItem[] = BI_REPORT_GROUPS.flatMap(
+  (group) => group.reports
+);

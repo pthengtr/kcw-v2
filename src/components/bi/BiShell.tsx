@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, Menu, PanelLeft } from "lucide-react";
 
-import { BI_REPORTS } from "@/lib/bi/reports";
+import { BI_REPORT_GROUPS } from "@/lib/bi/reports";
+import type { BiReportNavGroup, BiReportNavItem } from "@/lib/bi/sales-types";
 import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { canAccessPage } from "@/lib/auth/client-permissions";
 import { cn } from "@/lib/utils";
@@ -33,65 +34,86 @@ const REPORT_PAGE_KEYS: Record<string, string> = {
   vat: BI_PAGE_KEYS.vat,
 };
 
+function ReportLink({
+  report,
+  pathname,
+  onNavigate,
+}: {
+  report: BiReportNavItem;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  const active =
+    pathname === report.href || pathname.startsWith(`${report.href}/`);
+
+  const label = (
+    <span className="flex w-full items-center gap-2 text-left">
+      <span className="truncate">{report.label}</span>
+      {!report.available ? (
+        <Badge variant="secondary" className="shrink-0 text-[10px]">
+          เร็วๆ นี้
+        </Badge>
+      ) : null}
+    </span>
+  );
+
+  if (!report.available) {
+    return (
+      <div
+        className="rounded-md px-3 py-1.5 text-sm text-muted-foreground opacity-70"
+        aria-disabled
+      >
+        {label}
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      variant={active ? "secondary" : "ghost"}
+      size="sm"
+      className={cn(
+        "h-8 w-full justify-start px-3 font-normal",
+        active && "bg-slate-200/80 font-medium"
+      )}
+      asChild
+      onClick={onNavigate}
+    >
+      <Link href={report.href}>{label}</Link>
+    </Button>
+  );
+}
+
 function ReportNav({
   pathname,
-  reports,
+  groups,
   onNavigate,
   className,
 }: {
   pathname: string;
-  reports: typeof BI_REPORTS;
+  groups: BiReportNavGroup[];
   onNavigate?: () => void;
   className?: string;
 }) {
   return (
-    <nav className={cn("flex flex-col gap-1", className)} aria-label="รายงาน BI">
-      {reports.map((report) => {
-        const active =
-          pathname === report.href || pathname.startsWith(`${report.href}/`);
-        const content = (
-          <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
-            <span className="flex w-full items-center gap-2">
-              <span className="truncate font-medium">{report.label}</span>
-              {!report.available ? (
-                <Badge variant="secondary" className="shrink-0 text-[10px]">
-                  เร็วๆ นี้
-                </Badge>
-              ) : null}
-            </span>
-            <span className="text-xs font-normal text-muted-foreground">
-              {report.description}
-            </span>
-          </span>
-        );
-
-        if (!report.available) {
-          return (
-            <div
-              key={report.id}
-              className="rounded-md px-3 py-2.5 text-muted-foreground opacity-70"
-              aria-disabled
-            >
-              {content}
-            </div>
-          );
-        }
-
-        return (
-          <Button
-            key={report.id}
-            variant={active ? "secondary" : "ghost"}
-            className={cn(
-              "h-auto justify-start whitespace-normal px-3 py-2.5",
-              active && "bg-slate-200/80"
-            )}
-            asChild
-            onClick={onNavigate}
-          >
-            <Link href={report.href}>{content}</Link>
-          </Button>
-        );
-      })}
+    <nav className={cn("flex flex-col gap-4", className)} aria-label="รายงาน BI">
+      {groups.map((group) => (
+        <div key={group.id}>
+          <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            {group.label}
+          </p>
+          <div className="flex flex-col gap-0.5">
+            {group.reports.map((report) => (
+              <ReportLink
+                key={report.id}
+                report={report}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
     </nav>
   );
 }
@@ -117,14 +139,22 @@ export default function BiShell({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const visibleReports = useMemo(() => {
+  const visibleGroups = useMemo(() => {
     if (pageKeys == null) return [];
-    return BI_REPORTS.filter((report) => {
-      const pageKey = REPORT_PAGE_KEYS[report.id];
-      if (!pageKey) return false;
-      return canAccessPage(pageKeys, pageKey);
-    });
+    return BI_REPORT_GROUPS.map((group) => ({
+      ...group,
+      reports: group.reports.filter((report) => {
+        const pageKey = REPORT_PAGE_KEYS[report.id];
+        if (!pageKey) return false;
+        return canAccessPage(pageKeys, pageKey);
+      }),
+    })).filter((group) => group.reports.length > 0);
   }, [pageKeys]);
+
+  const visibleReports = useMemo(
+    () => visibleGroups.flatMap((g) => g.reports),
+    [visibleGroups]
+  );
 
   const activeReport =
     visibleReports.find(
@@ -134,9 +164,9 @@ export default function BiShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-gradient-to-b from-slate-100 via-slate-50 to-white">
       <div className="mx-auto flex w-full max-w-7xl gap-0 md:gap-6 md:px-4 md:py-4 lg:px-6">
-        <aside className="hidden w-64 shrink-0 md:block">
-          <div className="sticky top-4 rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-sm backdrop-blur">
-            <div className="mb-4 flex items-start gap-2 px-1">
+        <aside className="hidden w-56 shrink-0 md:block">
+          <div className="sticky top-4 rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm backdrop-blur">
+            <div className="mb-3 flex items-start gap-2 px-1">
               <BackButton href="/home" className="shrink-0" />
               <div className="flex min-w-0 items-center gap-2">
                 <PanelLeft className="h-5 w-5 shrink-0 text-slate-700" aria-hidden />
@@ -148,12 +178,12 @@ export default function BiShell({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </div>
-            {visibleReports.length === 0 ? (
+            {visibleGroups.length === 0 ? (
               <p className="px-1 text-xs text-muted-foreground">
                 ไม่มีรายงานที่คุณมีสิทธิ์เข้าถึง
               </p>
             ) : (
-              <ReportNav pathname={pathname} reports={visibleReports} />
+              <ReportNav pathname={pathname} groups={visibleGroups} />
             )}
           </div>
         </aside>
@@ -183,7 +213,7 @@ export default function BiShell({ children }: { children: ReactNode }) {
                 </SheetHeader>
                 <ReportNav
                   pathname={pathname}
-                  reports={visibleReports}
+                  groups={visibleGroups}
                   className="mt-6"
                   onNavigate={() => setOpen(false)}
                 />

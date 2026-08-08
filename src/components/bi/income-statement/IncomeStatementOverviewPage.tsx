@@ -215,12 +215,12 @@ export default function IncomeStatementOverviewPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-              งบกำไรขาดทุน (เฉพาะ VAT)
+              กำไรขาดทุน (เฉพาะส่งบัญชี)
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               เฉพาะยอดจากสมุดภาษีขาย/ซื้อ (ไม่รวมขายไม่มี VAT) · ประมาณการภาษีเงินได้{" "}
               {(overview?.cit_rate ?? 0.2) * 100}% · พยากรณ์สิ้นงวด/สิ้นปี ·
-              ภาพรวมทั้งกิจการอยู่ที่ กำไรรวม
+              ภาพรวมทั้งกิจการอยู่ที่ กำไรขาดทุน (ทั้งกิจการ)
             </p>
             <p className="mt-2 text-xs text-slate-600 sm:text-sm">
               ช่วง{" "}
