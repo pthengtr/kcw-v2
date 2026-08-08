@@ -63,7 +63,7 @@ BEGIN
     FROM curated_kcw.fact_sales_bills_all b
     WHERE b."CANCELED" = 'N'
       AND b."JOURMODE" <> '0'
-      AND COALESCE(b."BILLTYPE_STD", '') NOT IN ('TF', 'TFV', 'TAR')
+      AND NOT public.fn_bi_sales_bill_excluded_from_revenue(b."BILLNO", b."BILLTYPE_STD")
       AND b."BILLDATE" >= p_from::text
       AND b."BILLDATE" < (p_to + 1)::text
   ),
@@ -84,7 +84,7 @@ BEGIN
     FROM curated_kcw.fact_sales_bills_all b
     WHERE b."CANCELED" = 'N'
       AND b."JOURMODE" <> '0'
-      AND COALESCE(b."BILLTYPE_STD", '') NOT IN ('TF', 'TFV', 'TAR')
+      AND NOT public.fn_bi_sales_bill_excluded_from_revenue(b."BILLNO", b."BILLTYPE_STD")
       AND b."BILLDATE" >= v_prev_from::text
       AND b."BILLDATE" < (v_prev_to + 1)::text
   ),
