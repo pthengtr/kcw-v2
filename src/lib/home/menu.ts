@@ -145,12 +145,13 @@ export const HOME_MENU_ITEMS = {
 
 export const HOME_MENU_KEYS = Object.keys(HOME_MENU_ITEMS) as HomeMenuKey[];
 
+export const MAX_FAVORITE_COUNT = 4;
+
 export const DEFAULT_FAVORITE_KEYS: HomeMenuKey[] = [
   "reminder",
   "expense",
   "po",
   "bi",
-  "bankStatement",
 ];
 
 export const HOME_MENU_GROUPS: HomeMenuGroup[] = [

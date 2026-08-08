@@ -61,7 +61,7 @@ export default function WorkspaceTodoSection({
             id="workspace-summary"
             className="text-base font-bold text-slate-900 sm:text-lg"
           >
-            ภาพรวมพื้นที่ทำงาน
+            ภาพรวมวันนี้
           </h2>
           <p className="mt-1 text-sm text-slate-500">
             สถานะงานประจำวันที่ควรติดตามวันนี้

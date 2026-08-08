@@ -162,7 +162,7 @@ export default function BiShell({ children }: { children: ReactNode }) {
     ) ?? visibleReports[0];
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-gradient-to-b from-slate-100 via-slate-50 to-white">
+    <div className="min-h-full bg-gradient-to-b from-slate-100 via-slate-50 to-white">
       <div className="mx-auto flex w-full max-w-7xl gap-0 md:gap-6 md:px-4 md:py-4 lg:px-6">
         <aside className="hidden w-56 shrink-0 md:block">
           <div className="sticky top-4 rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm backdrop-blur">
