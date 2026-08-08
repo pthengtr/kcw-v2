@@ -1,10 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { listPoHeaders } from "@/lib/po/po-queries";
+import { STOCK_AUDIT_DAILY_TARGET } from "@/lib/stock-audit/daily-target";
 import { fetchStockAuditOverview } from "@/lib/stock-audit/queries";
 
-/** Soft daily target — same as stock-audit operator page. */
-export const STOCK_AUDIT_DAILY_TARGET = 30;
+export { STOCK_AUDIT_DAILY_TARGET };
 
 export type WorkspaceTodoStatus = "ok" | "attention" | "urgent" | "unknown";
 
