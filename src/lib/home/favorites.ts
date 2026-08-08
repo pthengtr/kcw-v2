@@ -1,6 +1,7 @@
 import {
   DEFAULT_FAVORITE_KEYS,
   HOME_MENU_KEYS,
+  MAX_FAVORITE_COUNT,
   isHomeMenuKey,
   type HomeMenuKey,
 } from "./menu";
@@ -23,7 +24,8 @@ export function normalizeFavoriteKeys(
     normalized.push(key);
   }
 
-  return normalized.length > 0 ? normalized : [...DEFAULT_FAVORITE_KEYS];
+  const limited = normalized.slice(0, MAX_FAVORITE_COUNT);
+  return limited.length > 0 ? limited : [...DEFAULT_FAVORITE_KEYS];
 }
 
 export function parseFavoriteKeys(

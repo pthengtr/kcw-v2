@@ -24,6 +24,7 @@ describe("home favorites", () => {
     expect(parseFavoriteKeys("")).toEqual(DEFAULT_FAVORITE_KEYS);
     expect(parseFavoriteKeys("[]")).toEqual(DEFAULT_FAVORITE_KEYS);
     expect(FAVORITES_COOKIE_KEY).toBe("home_favorite_menus");
+    expect(DEFAULT_FAVORITE_KEYS).toHaveLength(4);
   });
 
   it("parses and normalizes favorite keys from JSON or CSV", () => {
@@ -33,6 +34,19 @@ describe("home favorites", () => {
     ]);
     expect(parseFavoriteKeys("bi,stockAudit,bi")).toEqual(["bi", "stockAudit"]);
     expect(normalizeFavoriteKeys(["faq"])).toEqual(["faq"]);
+  });
+
+  it("limits favorites to four items", () => {
+    expect(
+      normalizeFavoriteKeys([
+        "reminder",
+        "expense",
+        "po",
+        "bi",
+        "bankStatement",
+        "party",
+      ])
+    ).toEqual(["reminder", "expense", "po", "bi"]);
   });
 
   it("serializes favorites and refuses emptying via toggle", () => {
