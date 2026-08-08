@@ -22,6 +22,7 @@ import {
 
 const REPORT_PAGE_KEYS: Record<string, string> = {
   income: BI_PAGE_KEYS.income,
+  "income-statement": BI_PAGE_KEYS.incomeStatement,
   sales: BI_PAGE_KEYS.sales,
   "sales-compare": BI_PAGE_KEYS.salesCompare,
   customers: BI_PAGE_KEYS.customers,

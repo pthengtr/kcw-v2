@@ -2,6 +2,7 @@ import type { BiCashflowOverview } from "./cashflow-types";
 import type { BiCustomerOverview } from "./customer-types";
 import type { BiExpenseOverview } from "./expense-types";
 import type { BiIncomeOverview } from "./income-types";
+import type { BiIncomeStatementOverview } from "./income-statement-types";
 import type { BiProductOverview } from "./product-types";
 import type { BiVatOverview } from "./vat-types";
 import {
@@ -343,6 +344,48 @@ export function buildCashflowHighlights(overview: BiCashflowOverview): string[] 
   if (overview.summary.unclassified_count > 0) {
     lines.push(
       `ยังไม่จับคู่หมวด ${formatCount(overview.summary.unclassified_count)} รายการ — ดูสถานะจับคู่ที่หน้า Bank Statement`
+    );
+  }
+
+  return lines;
+}
+
+export function buildIncomeStatementHighlights(
+  overview: BiIncomeStatementOverview
+): string[] {
+  const lines: string[] = [];
+  const profitDelta = pctChange(
+    overview.summary.profit_before_tax,
+    overview.previous_summary.profit_before_tax
+  );
+  const taxDelta = pctChange(
+    overview.summary.income_tax,
+    overview.previous_summary.income_tax
+  );
+  const netDelta = pctChange(
+    overview.summary.net_profit,
+    overview.previous_summary.net_profit
+  );
+
+  lines.push(
+    `รายได้จากภาษีขาย ${formatBaht(overview.summary.revenue)} − ต้นทุน/ค่าใช้จ่าย ${formatBaht(overview.summary.total_cost)} → กำไรก่อนภาษี ${formatBaht(overview.summary.profit_before_tax)} (${changePhrase(profitDelta)})`
+  );
+  lines.push(
+    `ภาษีเงินได้ประมาณการ (${(overview.cit_rate * 100).toFixed(0)}%) ${formatBaht(overview.summary.income_tax)} (${changePhrase(taxDelta)}) → กำไรสุทธิ ${formatBaht(overview.summary.net_profit)} (${changePhrase(netDelta)})`
+  );
+
+  if (overview.forecast.enabled) {
+    lines.push(
+      `พยากรณ์สิ้นงวด: กำไรก่อนภาษี ${formatBaht(overview.forecast.profit_before_tax)} · ภาษีเงินได้ ${formatBaht(overview.forecast.income_tax)} · สุทธิ ${formatBaht(overview.forecast.net_profit)} (×${overview.forecast.factor.toFixed(2)} จาก ${overview.forecast.days_elapsed}/${overview.forecast.days_in_range} วัน)`
+    );
+  }
+
+  const topBranch = [...overview.by_branch].sort(
+    (a, b) => b.profit_before_tax - a.profit_before_tax
+  )[0];
+  if (topBranch) {
+    lines.push(
+      `สาขานำด้านกำไร: ${labelFor(BRANCH_LABELS, topBranch.key)} · ก่อนภาษี ${formatBaht(topBranch.profit_before_tax)}`
     );
   }
 

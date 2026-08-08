@@ -5,6 +5,7 @@ import {
   buildCustomerHighlights,
   buildExpenseHighlights,
   buildIncomeHighlights,
+  buildIncomeStatementHighlights,
   buildProductHighlights,
   buildSalesHighlights,
   buildVatHighlights,
@@ -13,6 +14,7 @@ import type { BiCashflowOverview } from "./cashflow-types";
 import type { BiCustomerOverview } from "./customer-types";
 import type { BiExpenseOverview } from "./expense-types";
 import type { BiIncomeOverview } from "./income-types";
+import type { BiIncomeStatementOverview } from "./income-statement-types";
 import type { BiProductOverview } from "./product-types";
 import type { BiSalesOverview } from "./sales-types";
 import type { BiVatOverview } from "./vat-types";
@@ -340,6 +342,86 @@ describe("BI highlight builders", () => {
     expect(lines[1]).toContain("กำไรสุทธิ");
     expect(lines.some((l) => l.includes("HQ"))).toBe(true);
     expect(lines.some((l) => l.includes("ตัดออกจากคำนวณ") || l.includes("ไม่มีต้นทุน"))).toBe(
+      true
+    );
+  });
+});
+
+describe("buildIncomeStatementHighlights", () => {
+  it("summarizes profit, CIT, and forecast", () => {
+    const base: BiIncomeStatementOverview = {
+      from: "2026-01-01",
+      to: "2026-12-31",
+      branch: null,
+      previous_from: "2025-01-01",
+      previous_to: "2025-12-31",
+      as_of: "2026-08-08",
+      cit_rate: 0.2,
+      summary: {
+        revenue: 10_000_000,
+        purchase_cost: 4_000_000,
+        expense: 1_000_000,
+        total_cost: 5_000_000,
+        profit_before_tax: 5_000_000,
+        profit_margin_pct: 50,
+        income_tax: 1_000_000,
+        cit_rate: 0.2,
+        net_profit: 4_000_000,
+        net_margin_pct: 40,
+        sales_bill_count: 100,
+        purchase_bill_count: 40,
+        expense_bill_count: 10,
+      },
+      previous_summary: {
+        revenue: 9_000_000,
+        purchase_cost: 3_800_000,
+        expense: 900_000,
+        total_cost: 4_700_000,
+        profit_before_tax: 4_300_000,
+        profit_margin_pct: 47.8,
+        income_tax: 860_000,
+        cit_rate: 0.2,
+        net_profit: 3_440_000,
+        net_margin_pct: 38.2,
+        sales_bill_count: 90,
+        purchase_bill_count: 38,
+        expense_bill_count: 9,
+      },
+      forecast: {
+        enabled: true,
+        as_of: "2026-08-08",
+        days_elapsed: 220,
+        days_in_range: 365,
+        factor: 1.66,
+        revenue: 16_600_000,
+        purchase_cost: 6_640_000,
+        expense: 1_660_000,
+        total_cost: 8_300_000,
+        profit_before_tax: 8_300_000,
+        income_tax: 1_660_000,
+        net_profit: 6_640_000,
+      },
+      by_branch: [
+        {
+          key: "HQ",
+          revenue: 7_000_000,
+          purchase_cost: 4_000_000,
+          expense: 700_000,
+          total_cost: 4_700_000,
+          profit_before_tax: 2_300_000,
+          income_tax: 460_000,
+          net_profit: 1_840_000,
+        },
+      ],
+      trend_daily: [],
+      trend_monthly: [],
+    };
+
+    const lines = buildIncomeStatementHighlights(base);
+    expect(lines[0]).toContain("กำไรก่อนภาษี");
+    expect(lines[1]).toContain("ภาษีเงินได้");
+    expect(lines.some((l) => l.includes("พยากรณ์"))).toBe(true);
+    expect(lines.some((l) => l.includes("HQ") || l.includes("สำนักงาน"))).toBe(
       true
     );
   });

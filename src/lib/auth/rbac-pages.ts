@@ -6,6 +6,7 @@ export const ROLE_ADMIN = "admin";
 
 export const BI_PAGE_KEYS = {
   income: "bi_income",
+  incomeStatement: "bi_income_statement",
   sales: "bi_sales",
   salesCompare: "bi_sales_compare",
   customers: "bi_customers",
@@ -31,6 +32,7 @@ export const STOCK_AUDIT_PAGE_KEY: RbacPageKey = "stock_audit";
 export const RBAC_PROTECTED_PAGE_KEYS: RbacPageKey[] = [
   ADMIN_RBAC_PAGE,
   BI_PAGE_KEYS.income,
+  BI_PAGE_KEYS.incomeStatement,
   BI_PAGE_KEYS.sales,
   BI_PAGE_KEYS.salesCompare,
   BI_PAGE_KEYS.customers,
