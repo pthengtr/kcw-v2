@@ -8,7 +8,7 @@ export type BiIncomeStatementSummary = {
   revenue: number;
   /** VAT purchase goods base */
   purchase_cost: number;
-  /** VAT expense (app) base */
+  /** Company (ENTRIES) expense — same rules as /bi/expenses source=บริษัท */
   expense: number;
   /** purchase_cost + expense */
   total_cost: number;
