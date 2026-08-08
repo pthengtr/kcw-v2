@@ -73,11 +73,12 @@ export default function IncomeStatementTable({
   return (
     <Card className="border-slate-200/80 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">
-          งบกำไรขาดทุน (จากสมุดภาษี)
+          <CardTitle className="text-base font-semibold">
+          งบกำไรขาดทุน (เฉพาะยอดมี VAT)
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          ใช้มูลค่าก่อนภาษีจากรายงาน VAT · ไม่ใช่บัญชีนิติบุคคลเต็มรูป
+          ใช้มูลค่าก่อนภาษีจากสมุดภาษีขาย/ซื้อเท่านั้น · ไม่รวมขายไม่มี VAT ·
+          ไม่ใช่บัญชีนิติบุคคลเต็มรูป
         </p>
       </CardHeader>
       <CardContent className="overflow-x-auto">

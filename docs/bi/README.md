@@ -12,8 +12,8 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [kcw-icmas-data-dictionary.md](./kcw-icmas-data-dictionary.md) | Product master (ICMAS): `BCODE`, `CODE1`, categories |
 | [kcw-ar-ap-data-dictionary.md](./kcw-ar-ap-data-dictionary.md) | AR/AP masters (ARMAS/APMAS); **`MOBILE` = tax id** |
 | [kcw-expense-data-dictionary.md](./kcw-expense-data-dictionary.md) | App expense tables + amount rules (company + general) |
-| [kcw-income-data-dictionary.md](./kcw-income-data-dictionary.md) | Gross / net income (sales margin − app opex) |
-| [kcw-income-statement-data-dictionary.md](./kcw-income-statement-data-dictionary.md) | VAT-book P&L + CIT estimate + year-end forecast |
+| [kcw-income-data-dictionary.md](./kcw-income-data-dictionary.md) | Overall gross / net (VAT + non-VAT sales − opex) |
+| [kcw-income-statement-data-dictionary.md](./kcw-income-statement-data-dictionary.md) | Taxed-only VAT-book P&L + CIT + year-end forecast |
 | [kcw-vat-data-dictionary.md](./kcw-vat-data-dictionary.md) | VAT sales/purchase tax books + mid-period forecast |
 | [kcw-purchase-data-dictionary.md](./kcw-purchase-data-dictionary.md) | HQ PIDET purchase **invoice** lines (JOURMODE / BILLTYPE) |
 | [kcw-po-data-dictionary.md](./kcw-po-data-dictionary.md) | Purchase **orders** in `raw_kcw` (HQ+SYP); PO id = `DOCNO`; SYP prepare = `po_syp_prepare` |
