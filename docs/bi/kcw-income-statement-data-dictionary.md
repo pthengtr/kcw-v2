@@ -1,8 +1,8 @@
 # KCW income statement from VAT books (งบกำไรขาดทุนจากสมุดภาษี)
 
-Source of truth for `/bi/income-statement` — a **simplified P&L** derived from the same VAT sales / purchase / expense tax books as `/bi/vat`, plus an estimated corporate income tax and mid-period run-rate forecast.
+Source of truth for `/bi/income-statement` — a **taxed-only** simplified P&L derived from the same VAT sales / purchase / expense tax books as `/bi/vat`, plus an estimated corporate income tax and mid-period run-rate forecast.
 
-Not the same as `/bi/income` (sales margin − app opex with COGS from `LAST_PURCHASE_COST`).
+**Transition note:** KCW still sells partially non-VAT. Keep `/bi/income` as the **overall** (VAT + non-VAT) margin view. This page is **VAT books only** — do not treat it as whole-business P&L.
 
 Status legend: **Confirmed** · **TBD** · **Inferred**
 
@@ -61,4 +61,5 @@ YTD preset uses `Jan 1 → Dec 31` so mid-year forecast targets year-end.
 
 | Date | Change |
 |------|--------|
+| 2026-08-08 | Clarify taxed-only vs `/bi/income` overall (VAT transition) |
 | 2026-08-08 | Initial VAT-based income statement + CIT estimate + forecast |

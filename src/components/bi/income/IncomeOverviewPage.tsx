@@ -164,11 +164,12 @@ export default function IncomeOverviewPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-              กำไรขั้นต้น / สุทธิ
+              กำไรรวม (ทั้งกิจการ)
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              ยอดขายก่อน VAT − ต้นทุนซื้อล่าสุด − ค่าใช้จ่ายแอป · ประมาณการ
-              (ไม่ใช่งบบัญชีเต็ม)
+              รวมขายมี VAT และไม่มี VAT − ต้นทุนซื้อล่าสุด − ค่าใช้จ่ายแอป ·
+              ประมาณการภาพรวมช่วงเปลี่ยนผ่าน (ไม่ใช่งบบัญชีเต็ม) · ดูเฉพาะ VAT ที่
+              งบกำไรขาดทุน (เฉพาะ VAT)
             </p>
             <p className="mt-2 text-xs text-slate-600 sm:text-sm">
               ช่วง{" "}

@@ -4,15 +4,15 @@ export const BI_REPORTS: BiReportNavItem[] = [
   {
     id: "income",
     href: "/bi/income",
-    label: "กำไรขั้นต้น / สุทธิ",
-    description: "ยอดขาย − ต้นทุน − ค่าใช้จ่าย (ประมาณการ)",
+    label: "กำไรรวม (ทั้งกิจการ)",
+    description: "VAT + ไม่มี VAT · ยอดขาย − ต้นทุน − ค่าใช้จ่าย",
     available: true,
   },
   {
     id: "income-statement",
     href: "/bi/income-statement",
-    label: "งบกำไรขาดทุน (VAT)",
-    description: "รายได้·ต้นทุนจากสมุดภาษี + ภาษีเงินได้ + พยากรณ์",
+    label: "งบกำไรขาดทุน (เฉพาะ VAT)",
+    description: "เฉพาะยอดมีภาษี · ภาษีเงินได้ + พยากรณ์สิ้นปี",
     available: true,
   },
   {

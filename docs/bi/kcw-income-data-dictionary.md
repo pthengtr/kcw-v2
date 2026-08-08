@@ -1,7 +1,9 @@
 # KCW income / margin data dictionary
 
-Source of truth for the **gross + net income** BI report (`/bi/income`).  
-Combines curated sales lines with **app operating expenses** (not a full accounting P&L).
+Source of truth for the **overall** gross + net income BI report (`/bi/income`).  
+Combines curated sales lines (**VAT + non-VAT**) with **app operating expenses** (not a full accounting P&L).
+
+During the VAT transition, use this page for whole-business margin. Taxed-only P&L + CIT estimate lives at `/bi/income-statement`.
 
 Status legend: **Confirmed** · **TBD** · **Inferred**
 
@@ -106,6 +108,7 @@ Default API limit 500 (max 2000); response includes `truncated` when capped.
 
 | Date | Change |
 |------|--------|
+| 2026-08-08 | Label as overall (VAT + non-VAT); taxed-only P&L is `/bi/income-statement` |
 | 2026-07-26 | Lock gross/net formulas; HQ category ออนไลน์ → ONLINE; ship `fn_bi_income_overview` + `/bi/income` |
 | 2026-07-26 | Blank-cost line drilldown (`fn_bi_income_blank_costs` + dialog on COGS KPI) |
 | 2026-07-26 | Blank-cost lines excluded from income totals; list retained for drilldown |
