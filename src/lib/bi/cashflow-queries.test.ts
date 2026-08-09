@@ -132,6 +132,16 @@ describe("normalizeCashflowOverview", () => {
           bank_name: "KBANK",
         },
       ],
+      month_columns: ["2026-01", "2026-02"],
+      report_by_month: [
+        {
+          key: "sales_in",
+          label: "รับจากยอดขาย",
+          kind: "in",
+          total: 300_000,
+          months: { "2026-01": 100_000, "2026-02": 200_000 },
+        },
+      ],
     });
 
     expect(overview.summary.net).toBe(200_000);
@@ -143,6 +153,8 @@ describe("normalizeCashflowOverview", () => {
     expect(overview.by_category[0]?.label).toBe("รับชำระลูกหนี้");
     expect(overview.trend_monthly[0]?.inflow).toBe(1_000_000);
     expect(overview.accounts).toHaveLength(1);
+    expect(overview.month_columns).toEqual(["2026-01", "2026-02"]);
+    expect(overview.report_by_month[0]?.months["2026-02"]).toBe(200_000);
   });
 
   it("tolerates missing arrays and coerces numeric strings", () => {
@@ -163,5 +175,7 @@ describe("normalizeCashflowOverview", () => {
     expect(overview.by_account).toEqual([]);
     expect(overview.report.lines[0]?.label).toBe("เงินสดต้นงวด");
     expect(overview.report.lines.some((l) => l.key === "loan_out")).toBe(false);
+    expect(overview.month_columns).toEqual([]);
+    expect(overview.report_by_month).toEqual([]);
   });
 });

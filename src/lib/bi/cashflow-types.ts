@@ -100,6 +100,14 @@ export type BiCashflowReport = {
   lines: BiCashflowReportLine[];
 };
 
+export type BiCashflowReportMonthRow = {
+  key: string;
+  label: string;
+  kind: BiCashflowReportLineKind;
+  total: number;
+  months: Record<string, number>;
+};
+
 export type BiCashflowOverview = {
   from: string;
   to: string;
@@ -119,4 +127,6 @@ export type BiCashflowOverview = {
   top_inflows: BiCashflowLineRow[];
   top_outflows: BiCashflowLineRow[];
   accounts: BiCashflowAccountOption[];
+  month_columns: string[];
+  report_by_month: BiCashflowReportMonthRow[];
 };

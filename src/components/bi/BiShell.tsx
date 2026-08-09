@@ -96,10 +96,10 @@ function ReportNav({
   className?: string;
 }) {
   return (
-    <nav className={cn("flex flex-col gap-4", className)} aria-label="รายงาน BI">
+    <nav className={cn("flex flex-col gap-5", className)} aria-label="รายงาน BI">
       {groups.map((group) => (
         <div key={group.id}>
-          <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <p className="mb-2 border-b border-slate-200/80 px-3 pb-1.5 text-sm font-bold tracking-wide text-slate-900">
             {group.label}
           </p>
           <div className="flex flex-col gap-0.5">
