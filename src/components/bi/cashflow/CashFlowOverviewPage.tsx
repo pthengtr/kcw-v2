@@ -38,6 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 import CashFlowAccountTable from "./CashFlowAccountTable";
+import CashFlowMonthCompareTable from "./CashFlowMonthCompareTable";
 import CashFlowReportList from "./CashFlowReportList";
 import CashFlowTrendChart from "./CashFlowTrendChart";
 
@@ -363,6 +364,15 @@ export default function CashFlowOverviewPage() {
               otherOut={overview.report.other_out}
             />
           </section>
+
+          {preset === "ytd" ? (
+            <section>
+              <CashFlowMonthCompareTable
+                monthColumns={overview.month_columns}
+                rows={overview.report_by_month}
+              />
+            </section>
+          ) : null}
 
           <section>
             <CashFlowTrendChart

@@ -10,6 +10,7 @@ import type {
   BiCashflowReport,
   BiCashflowReportLine,
   BiCashflowReportLineKind,
+  BiCashflowReportMonthRow,
   BiCashflowTrendRow,
 } from "./cashflow-types";
 
@@ -149,6 +150,45 @@ function parseReportLines(value: unknown): BiCashflowReportLine[] {
   });
 }
 
+function parseMonthColumns(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => asString(item).trim())
+    .filter((item) => /^\d{4}-\d{2}$/.test(item));
+}
+
+function parseMonthMap(value: unknown): Record<string, number> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out: Record<string, number> = {};
+  for (const [key, amount] of Object.entries(value as Record<string, unknown>)) {
+    if (!/^\d{4}-\d{2}$/.test(key)) continue;
+    out[key] = asNumber(amount);
+  }
+  return out;
+}
+
+function parseReportMonthRows(value: unknown): BiCashflowReportMonthRow[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    const kindRaw = asString(r.kind);
+    const kind: BiCashflowReportLineKind =
+      kindRaw === "in" ||
+      kindRaw === "out" ||
+      kindRaw === "forecast" ||
+      kindRaw === "balance"
+        ? kindRaw
+        : "balance";
+    return {
+      key: asString(r.key),
+      label: asString(r.label) || asString(r.key),
+      kind,
+      total: asNumber(r.total),
+      months: parseMonthMap(r.months),
+    };
+  });
+}
+
 function parseReport(value: unknown, summary: Record<string, unknown>): BiCashflowReport {
   const r = (value ?? {}) as Record<string, unknown>;
   const lines = parseReportLines(r.lines);
@@ -244,6 +284,8 @@ export function normalizeCashflowOverview(raw: unknown): BiCashflowOverview {
     top_inflows: parseLineRows(data.top_inflows),
     top_outflows: parseLineRows(data.top_outflows),
     accounts: parseAccounts(data.accounts),
+    month_columns: parseMonthColumns(data.month_columns),
+    report_by_month: parseReportMonthRows(data.report_by_month),
   };
 }
 

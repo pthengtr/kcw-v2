@@ -571,6 +571,8 @@ describe("buildCashflowHighlights", () => {
       top_inflows: [],
       top_outflows: [],
       accounts: [],
+      month_columns: [],
+      report_by_month: [],
     };
 
     const lines = buildCashflowHighlights(cashflowBase);
