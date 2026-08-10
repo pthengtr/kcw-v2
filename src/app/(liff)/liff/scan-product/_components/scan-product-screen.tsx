@@ -4,22 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Camera,
   CheckCircle2,
-  Focus,
-  Flashlight,
-  FlashlightOff,
-  Minus,
-  Plus,
+  ImageUp,
   RotateCcw,
   XCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  DEFAULT_SCAN_ZOOM,
-  SCAN_ZOOM_STEP,
-  startProductBarcodeScanner,
-  type BarcodeScannerHandle,
-} from "@/lib/liff/barcode-scanner";
+import { decodeBarcodeFromImageFile } from "@/lib/liff/barcode-scanner";
 import {
   canSendChatMessage,
   closeLiffWindow,
@@ -40,9 +31,8 @@ import { cn } from "@/lib/utils";
 type UiPhase =
   | "boot"
   | "ready"
-  | "scanning"
-  | "permission"
-  | "unsupported"
+  | "reading"
+  | "no_code"
   | "outside_line"
   | "liff_error";
 
@@ -50,139 +40,94 @@ export default function ScanProductScreen() {
   const [liffState, setLiffState] = useState<LiffInitResult | null>(null);
   const [phase, setPhase] = useState<UiPhase>("boot");
   const [detected, setDetected] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [submit, setSubmit] = useState<ScanSubmitState>({ status: "idle" });
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [torchOn, setTorchOn] = useState(false);
-  const [torchSupported, setTorchSupported] = useState(false);
-  const [focusHint, setFocusHint] = useState(false);
-  const [zoom, setZoom] = useState(DEFAULT_SCAN_ZOOM);
+  const [readError, setReadError] = useState<string | null>(null);
 
-  const hostRef = useRef<HTMLDivElement | null>(null);
-  const stageRef = useRef<HTMLDivElement | null>(null);
-  const handleRef = useRef<BarcodeScannerHandle | null>(null);
-  const startingRef = useRef(false);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const aliveRef = useRef(true);
   const submitRef = useRef(submit);
-  const onDetectedRef = useRef<(code: string) => void>(() => {});
+  const previewUrlRef = useRef<string | null>(null);
 
   submitRef.current = submit;
 
-  const stopScanner = useCallback(async () => {
-    const handle = handleRef.current;
-    handleRef.current = null;
-    setTorchOn(false);
-    setTorchSupported(false);
-    setZoom(DEFAULT_SCAN_ZOOM);
-    if (!handle) return;
+  const clearPreview = useCallback(() => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setPreviewUrl(null);
+  }, []);
+
+  const handleDecoded = useCallback(async (barcode: string) => {
+    const next = beginSubmit(submitRef.current, barcode);
+    if (!next) return;
+
+    setDetected(barcode);
+    setSubmit(next);
+    setPhase("ready");
+
+    if (!canSendChatMessage()) {
+      setSubmit(
+        markError(
+          barcode,
+          "อ่านรหัสได้แล้ว แต่ส่งกลับแชทได้เฉพาะเมื่อเปิดจาก LINE เท่านั้น"
+        )
+      );
+      setPhase("outside_line");
+      return;
+    }
+
     try {
-      await handle.stop();
-    } catch {
-      // ignore
+      const text = formatProductScanCallback(barcode);
+      await sendTextToChat(text);
+      if (!aliveRef.current) return;
+      setSubmit(markSent(barcode));
+      window.setTimeout(() => closeLiffWindow(), 400);
+    } catch (err) {
+      if (!aliveRef.current) return;
+      const message =
+        err instanceof Error ? err.message : "ส่งข้อความกลับ LINE ไม่สำเร็จ";
+      setSubmit(markError(barcode, message));
     }
   }, []);
 
-  const handleDecoded = useCallback(
-    async (barcode: string) => {
-      const next = beginSubmit(submitRef.current, barcode);
-      if (!next) return;
+  const processFile = useCallback(
+    async (file: File | null | undefined) => {
+      if (!file || !aliveRef.current) return;
 
-      setDetected(barcode);
-      setSubmit(next);
-      await stopScanner();
-      if (!aliveRef.current) return;
-      setPhase("ready");
+      setReadError(null);
+      setDetected(null);
+      setSubmit(resetSubmit());
+      setPhase("reading");
 
-      if (!canSendChatMessage()) {
-        setSubmit(
-          markError(
-            barcode,
-            "สแกนได้แล้ว แต่ส่งกลับแชทได้เฉพาะเมื่อเปิดจาก LINE เท่านั้น"
-          )
-        );
-        setPhase("outside_line");
-        return;
-      }
+      clearPreview();
+      const url = URL.createObjectURL(file);
+      previewUrlRef.current = url;
+      setPreviewUrl(url);
 
       try {
-        const text = formatProductScanCallback(barcode);
-        await sendTextToChat(text);
+        const code = await decodeBarcodeFromImageFile(file);
         if (!aliveRef.current) return;
-        setSubmit(markSent(barcode));
-        window.setTimeout(() => closeLiffWindow(), 400);
+        if (!code) {
+          setPhase("no_code");
+          setReadError(
+            "ไม่พบบาร์โค้ดในรูป ลองถ่ายใหม่ให้ชัด เส้นบาร์โค้ดอยู่กลางภาพ"
+          );
+          return;
+        }
+        await handleDecoded(code);
       } catch (err) {
         if (!aliveRef.current) return;
         const message =
-          err instanceof Error ? err.message : "ส่งข้อความกลับ LINE ไม่สำเร็จ";
-        setSubmit(markError(barcode, message));
+          err instanceof Error ? err.message : "อ่านบาร์โค้ดจากรูปไม่สำเร็จ";
+        setPhase("no_code");
+        setReadError(message);
       }
     },
-    [stopScanner]
+    [clearPreview, handleDecoded]
   );
-
-  onDetectedRef.current = (code: string) => {
-    void handleDecoded(code);
-  };
-
-  const startScanner = useCallback(async () => {
-    if (startingRef.current || !aliveRef.current) return;
-    startingRef.current = true;
-    setCameraError(null);
-    setDetected(null);
-    setSubmit(resetSubmit());
-    setTorchOn(false);
-    setTorchSupported(false);
-    setZoom(DEFAULT_SCAN_ZOOM);
-
-    try {
-      await stopScanner();
-      if (!aliveRef.current) return;
-
-      // Let layout settle so the host has a real size in LIFF.
-      await new Promise((r) => window.setTimeout(r, 40));
-      const host = hostRef.current;
-      if (!host) {
-        setPhase("unsupported");
-        setCameraError("ไม่พบพื้นที่กล้องบนหน้าจอ");
-        return;
-      }
-
-      const handle = await startProductBarcodeScanner(host, (code) => {
-        onDetectedRef.current(code);
-      });
-      if (!aliveRef.current) {
-        await handle.stop();
-        return;
-      }
-      handleRef.current = handle;
-      setTorchSupported(handle.torchSupported);
-      setZoom(handle.getZoom());
-      setPhase("scanning");
-      // Kick focus once after the preview has painted.
-      window.setTimeout(() => {
-        void handle.refocus();
-      }, 350);
-    } catch (err) {
-      if (!aliveRef.current) return;
-      const message = err instanceof Error ? err.message : String(err);
-      const denied = /NotAllowedError|Permission|denied|NotReadableError/i.test(
-        message
-      );
-      if (denied) {
-        setPhase("permission");
-        setCameraError(
-          "ไม่ได้รับอนุญาตใช้กล้อง กรุณาเปิดสิทธิ์กล้องแล้วลองใหม่"
-        );
-      } else if (/NotFoundError|no camera|DevicesNotFound/i.test(message)) {
-        setPhase("unsupported");
-        setCameraError("ไม่พบกล้องบนอุปกรณ์นี้");
-      } else {
-        setPhase("unsupported");
-        setCameraError(message || "เปิดกล้องไม่สำเร็จ");
-      }
-    } finally {
-      startingRef.current = false;
-    }
-  }, [stopScanner]);
 
   useEffect(() => {
     aliveRef.current = true;
@@ -203,163 +148,61 @@ export default function ScanProductScreen() {
       } else {
         setPhase("ready");
       }
-      await startScanner();
     })();
 
     return () => {
       cancelled = true;
       aliveRef.current = false;
-      void stopScanner();
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
     };
-    // Mount once — avoid re-init restarting the camera / re-prompting.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleRetry = () => {
     setDetected(null);
+    setReadError(null);
     setSubmit(resetSubmit());
-    void startScanner();
+    clearPreview();
+    setPhase(
+      liffState && liffState.ok && !liffState.inClient
+        ? "outside_line"
+        : "ready"
+    );
   };
 
-  const handleTapToFocus = async (
-    event: React.PointerEvent<HTMLDivElement>
-  ) => {
-    if (phase !== "scanning") return;
-    const handle = handleRef.current;
-    const stage = stageRef.current;
-    if (!handle || !stage) return;
-
-    const rect = stage.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
-
-    setFocusHint(true);
-    window.setTimeout(() => setFocusHint(false), 600);
-    await handle.refocus({ x, y });
-  };
-
-  const handleToggleTorch = async () => {
-    const handle = handleRef.current;
-    if (!handle?.torchSupported) return;
-    const next = !torchOn;
-    const ok = await handle.setTorch(next);
-    if (ok) setTorchOn(next);
-  };
-
-  const handleZoomBy = async (delta: number) => {
-    const handle = handleRef.current;
-    if (!handle) return;
-    const next = await handle.setZoom(handle.getZoom() + delta);
-    setZoom(next);
-  };
+  const busy = phase === "reading" || submit.status === "submitting";
 
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-zinc-950 text-zinc-50">
       <header className="px-4 pb-2 pt-5">
         <h1 className="text-xl font-bold tracking-tight">สแกนสินค้า</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          ซูมใกล้ด้วยปุ่ม ± แล้วถือห่างประมาณหนึ่งฝ่ามือ
-          — ไม่ต้องดึงโทรศัพท์ชิดสติ๊กเกอร์
+          ถ่ายรูปหรืออัปโหลดรูปบาร์โค้ดให้ชัด
+          — ใช้กล้องของเครื่องโฟกัสแล้วค่อยอ่านจากรูปนิ่ง
         </p>
       </header>
 
       <main className="flex flex-1 flex-col gap-4 px-4 pb-6">
-        <div
-          ref={stageRef}
-          className="relative overflow-hidden rounded-xl bg-black"
-          onPointerUp={(e) => {
-            void handleTapToFocus(e);
-          }}
-        >
-          <div
-            ref={hostRef}
-            className="min-h-[360px] w-full overflow-hidden [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
-          />
-          {phase === "scanning" && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="h-[56%] w-[94%] rounded-md border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.22)]" />
-            </div>
-          )}
-          {phase === "scanning" && focusHint && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="rounded-full border border-white/80 px-3 py-1 text-xs text-white/90">
-                กำลังโฟกัส…
+        <div className="relative overflow-hidden rounded-xl bg-zinc-900">
+          <div className="flex min-h-[280px] w-full items-center justify-center">
+            {previewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={previewUrl}
+                alt="รูปที่เลือก"
+                className="max-h-[360px] w-full object-contain"
+              />
+            ) : (
+              <div className="px-6 py-16 text-center text-sm text-zinc-400">
+                ยังไม่มีรูป — กดถ่ายหรืออัปโหลดด้านล่าง
               </div>
-            </div>
-          )}
-          {phase === "boot" && (
-            <div className="absolute inset-0 flex items-center justify-center text-sm text-zinc-400">
-              กำลังเตรียมกล้อง…
-            </div>
-          )}
-          {phase === "scanning" && (
-            <div className="absolute bottom-3 left-3 right-3 flex flex-col gap-2">
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void handleZoomBy(-SCAN_ZOOM_STEP);
-                  }}
-                >
-                  <Minus className="size-4" />
-                  ไกล
-                </Button>
-                <div className="flex h-9 min-w-16 items-center justify-center rounded-md bg-black/55 px-2 text-xs text-white">
-                  {zoom.toFixed(1)}×
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void handleZoomBy(SCAN_ZOOM_STEP);
-                  }}
-                >
-                  <Plus className="size-4" />
-                  ใกล้
-                </Button>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void handleRef.current?.refocus();
-                  }}
-                >
-                  <Focus className="size-4" />
-                  โฟกัส
-                </Button>
-                {torchSupported && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void handleToggleTorch();
-                    }}
-                  >
-                    {torchOn ? (
-                      <FlashlightOff className="size-4" />
-                    ) : (
-                      <Flashlight className="size-4" />
-                    )}
-                    {torchOn ? "ปิดไฟ" : "เปิดไฟ"}
-                  </Button>
-                )}
-              </div>
+            )}
+          </div>
+          {phase === "reading" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/45 text-sm">
+              กำลังอ่านบาร์โค้ด…
             </div>
           )}
         </div>
@@ -369,19 +212,70 @@ export default function ScanProductScreen() {
           liffState={liffState}
           detected={detected}
           submit={submit}
-          cameraError={cameraError}
+          readError={readError}
+        />
+
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            void processFile(file);
+          }}
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            void processFile(file);
+          }}
         />
 
         <div className="mt-auto flex flex-col gap-2">
-          {(phase === "permission" ||
-            phase === "unsupported" ||
-            phase === "ready" ||
-            phase === "outside_line" ||
-            phase === "scanning" ||
-            submit.status === "error") && (
-            <Button type="button" className="h-11 w-full" onClick={handleRetry}>
+          {submit.status !== "sent" && phase !== "liff_error" && (
+            <>
+              <Button
+                type="button"
+                className="h-11 w-full"
+                disabled={busy}
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                <Camera className="size-4" />
+                ถ่ายรูปบาร์โค้ด
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="h-11 w-full"
+                disabled={busy}
+                onClick={() => galleryInputRef.current?.click()}
+              >
+                <ImageUp className="size-4" />
+                อัปโหลดจากคลังรูป
+              </Button>
+            </>
+          )}
+
+          {(phase === "no_code" ||
+            submit.status === "error" ||
+            (phase === "ready" && previewUrl)) && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full"
+              disabled={busy}
+              onClick={handleRetry}
+            >
               <RotateCcw className="size-4" />
-              สแกนใหม่
+              ล้างแล้วลองใหม่
             </Button>
           )}
 
@@ -406,13 +300,13 @@ function StatusPanel({
   liffState,
   detected,
   submit,
-  cameraError,
+  readError,
 }: {
   phase: UiPhase;
   liffState: LiffInitResult | null;
   detected: string | null;
   submit: ScanSubmitState;
-  cameraError: string | null;
+  readError: string | null;
 }) {
   if (phase === "liff_error") {
     return (
@@ -422,18 +316,18 @@ function StatusPanel({
     );
   }
 
-  if (phase === "permission") {
+  if (phase === "boot") {
     return (
-      <Alert tone="error" title="ต้องการสิทธิ์กล้อง">
-        {cameraError || "กรุณาอนุญาตการใช้กล้องใน LINE แล้วกดสแกนใหม่"}
+      <Alert tone="info" title="กำลังเตรียม…">
+        รอสักครู่
       </Alert>
     );
   }
 
-  if (phase === "unsupported") {
+  if (phase === "reading") {
     return (
-      <Alert tone="error" title="ใช้กล้องไม่ได้">
-        {cameraError || "เบราว์เซอร์หรืออุปกรณ์นี้ไม่รองรับการสแกน"}
+      <Alert tone="info" title="กำลังอ่านบาร์โค้ดจากรูป…">
+        รอสักครู่
       </Alert>
     );
   }
@@ -470,10 +364,18 @@ function StatusPanel({
     );
   }
 
+  if (phase === "no_code") {
+    return (
+      <Alert tone="error" title="อ่านบาร์โค้ดไม่สำเร็จ">
+        {readError || "ไม่พบบาร์โค้ดในรูป"}
+      </Alert>
+    );
+  }
+
   if (phase === "outside_line") {
     return (
       <Alert tone="warn" title="เปิดนอก LINE">
-        สแกนทดสอบได้ แต่ส่งผลกลับแชทบอทได้เฉพาะเมื่อเปิดจากปุ่มใน LINE
+        ถ่าย/อัปโหลดทดสอบได้ แต่ส่งผลกลับแชทบอทได้เฉพาะเมื่อเปิดจากปุ่มใน LINE
         (ไม่ใช้ Push API)
       </Alert>
     );
@@ -488,11 +390,10 @@ function StatusPanel({
   }
 
   return (
-    <Alert tone="info" title="พร้อมสแกน">
+    <Alert tone="info" title="พร้อมถ่ายรูป">
       <span className="inline-flex items-center gap-1.5">
         <Camera className="size-3.5" />
-        ใช้ซูม 2× เป็นค่าเริ่มต้น ถือห่างประมาณหนึ่งฝ่ามือ
-        ให้เส้นบาร์โค้ดอยู่กลางกรอบ — ถ้ายังเล็ก กด “ใกล้”
+        ถ่ายให้เส้นบาร์โค้ดชัดและอยู่กลางภาพ แล้วระบบจะอ่านจากรูปนิ่ง
       </span>
     </Alert>
   );

@@ -6,7 +6,7 @@ Companion doc: also see **kcw-api** `docs/liff-product-scan.md`.
 
 | Layer | Who authenticates | What it protects |
 |-------|-------------------|------------------|
-| LIFF page `/liff/*` | **No Supabase login** (public path) | Camera UI only |
+| LIFF page `/liff/*` | **No Supabase login** (public path) | Photo UI only |
 | `liff.sendMessages()` | LINE LIFF in-client + `chat_message.write` | Can post into *this* chat only |
 | Product lookup / Reply | **kcw-api** webhook (`ops.line_access` + LINE signature) | Business data & permissions |
 
@@ -29,7 +29,7 @@ Browser-safe only. Never put channel secret / access token / service role keys i
 
 ## Callback contract
 
-After scan, LIFF sends the **bare product code** into the current chat (no label prefix):
+After a successful decode, LIFF sends the **bare product code** into the current chat (no label prefix):
 
 ```text
 <barcode>
@@ -38,6 +38,17 @@ After scan, LIFF sends the **bare product code** into the current chat (no label
 Example: `8851234567890`
 
 Implemented in `src/lib/liff/product-scan-contract.ts` (keep in sync with kcw-api). The bot webhook should treat a sanitized product-code message as scan/lookup input.
+
+## How scanning works (photo-only)
+
+Live WebView camera preview is **not** used (soft AF / unstable on small 1D stickers).
+
+1. User taps **ถ่ายรูปบาร์โค้ด** (`<input capture="environment">`) or **อัปโหลดจากคลังรูป**
+2. System camera / gallery returns a still image (better focus than `getUserMedia`)
+3. LIFF decodes statically via `BarcodeDetector` (full frame + center crops) with `html5-qrcode.scanFile` fallback
+4. On success, posts the bare code with `liff.sendMessages` and closes
+
+Tips: hold about a hand away, keep the barcode sharp and centered, avoid blur/glare.
 
 ## LINE Developers checklist
 
@@ -52,13 +63,5 @@ Implemented in `src/lib/liff/product-scan-contract.ts` (keep in sync with kcw-ap
 
 ## Local testing
 
-- Camera UI can be exercised in a normal mobile browser (expect “เปิดนอก LINE” warning)
+- Photo UI can be exercised in a normal mobile browser (expect “เปิดนอก LINE” warning)
 - Full send → webhook → reply requires real LINE / LIFF (use HTTPS tunnel for the endpoint if needed)
-
-### Camera permission & autofocus
-
-- **Always allow:** cannot be forced from the web app. LINE/OS shows the permission dialog; choose the lasting option if offered (e.g. Allow while using the app). After grant, same HTTPS origin usually won’t re-prompt unless the user cleared site data or denied earlier.
-- **Autofocus:** applied *after* `getUserMedia` (never in the initial constraint bag — some LINE/iOS WebViews mishandle `focusMode` there). Continuous when supported; otherwise single-shot. The UI also supports **tap-to-focus**, a Focus button, and a periodic focus nudge. iOS / many LINE WebViews still only offer system AF.
-- **Torch:** shown only when `MediaTrackCapabilities.torch` is true (mostly Android).
-- **Zoom / focal length:** default **2×**. Uses camera `zoom` when the WebView exposes it; otherwise digitally center-crops the frame for detection and CSS-scales the preview. UI: ไกล / ใกล้ (1×–3×). This keeps the phone at a focusing-friendly distance instead of macro-close to the sticker.
-- **1D tips:** hold about a hand’s width away and center the bars in the guide — do **not** fill the box. Small sticker codes like `16052911` need zoom + mid-range distance. Random wrong numbers are filtered by dropping ITF/Codabar and requiring 3 identical frame hits.
