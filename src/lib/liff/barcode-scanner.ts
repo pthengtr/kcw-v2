@@ -8,12 +8,17 @@
  *
  * Do NOT put focusMode in the initial getUserMedia constraints — some LINE/iOS WebViews
  * reject or mis-handle unknown constraint keys and fail to open the camera cleanly.
+ *
+ * Product labels often have a small Code128/EAN next to lots of printed text. ITF/Codabar
+ * are omitted because they invent "random" numbers from noise when the camera is soft or
+ * the barcode is small in-frame. Accept a code only after several identical frame hits.
  */
 
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 import { sanitizeBarcode } from "@/lib/liff/product-scan-contract";
 
+/** Formats used on KCW product stickers — avoid noisy symbologies (ITF/Codabar). */
 const NATIVE_FORMATS = [
   "code_128",
   "code_39",
@@ -21,12 +26,9 @@ const NATIVE_FORMATS = [
   "ean_8",
   "upc_a",
   "upc_e",
-  "itf",
-  "codabar",
   "qr_code",
 ] as const;
 
-/** Keep format list tight — more formats = slower ZXing fallback. */
 const ZXING_FORMATS = [
   Html5QrcodeSupportedFormats.CODE_128,
   Html5QrcodeSupportedFormats.CODE_39,
@@ -34,26 +36,32 @@ const ZXING_FORMATS = [
   Html5QrcodeSupportedFormats.EAN_8,
   Html5QrcodeSupportedFormats.UPC_A,
   Html5QrcodeSupportedFormats.UPC_E,
-  Html5QrcodeSupportedFormats.ITF,
-  Html5QrcodeSupportedFormats.CODABAR,
   Html5QrcodeSupportedFormats.QR_CODE,
 ];
 
+/** Same value must win this many consecutive frames before we accept it. */
+export const STABLE_HIT_COUNT = 3;
+
 /**
- * 720p is the practical sweet spot for 1D in WebViews:
- * enough detail for EAN/Code128, less AF hunting / motion blur than 1080p.
+ * Prefer enough pixels to resolve small sticker barcodes at arm's length.
+ * focusMode stays out of this bag (applied after open).
  */
 const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: { ideal: "environment" },
-  width: { ideal: 1280 },
-  height: { ideal: 720 },
+  width: { ideal: 1920 },
+  height: { ideal: 1080 },
   aspectRatio: { ideal: 16 / 9 },
+};
+
+type DetectedBarcode = {
+  rawValue?: string;
+  boundingBox?: { x: number; y: number; width: number; height: number };
 };
 
 type BarcodeDetectorLike = {
   detect: (
     source: HTMLVideoElement | ImageBitmap | HTMLCanvasElement
-  ) => Promise<Array<{ rawValue?: string }>>;
+  ) => Promise<DetectedBarcode[]>;
 };
 
 type BarcodeDetectorCtor = {
@@ -214,6 +222,73 @@ export function isTorchSupported(stream: MediaStream | null): boolean {
   return Boolean(readFocusCaps(track).torch);
 }
 
+/**
+ * Require the same sanitized code across consecutive frames before accepting.
+ * Filters flicker / partial misreads that show up as "random numbers".
+ */
+export function createStableCodeGate(
+  onConfirmed: (code: string) => void,
+  needed: number = STABLE_HIT_COUNT
+): (code: string | null) => void {
+  let last: string | null = null;
+  let hits = 0;
+  let done = false;
+
+  return (code: string | null) => {
+    if (done) return;
+    if (!code) {
+      last = null;
+      hits = 0;
+      return;
+    }
+    if (code === last) {
+      hits += 1;
+    } else {
+      last = code;
+      hits = 1;
+    }
+    if (hits >= needed) {
+      done = true;
+      onConfirmed(code);
+    }
+  };
+}
+
+/**
+ * When several codes appear (barcode + nearby label noise), prefer the largest
+ * detection closest to the frame center.
+ */
+export function pickBestDetectedCode(
+  codes: DetectedBarcode[],
+  frameW: number,
+  frameH: number
+): string | null {
+  const cx = frameW / 2;
+  const cy = frameH / 2;
+  let best: { code: string; score: number } | null = null;
+
+  for (const item of codes) {
+    const code = sanitizeBarcode(item.rawValue ?? null);
+    if (!code) continue;
+
+    const box = item.boundingBox;
+    let score = code.length;
+    if (box && frameW > 0 && frameH > 0) {
+      const bx = box.x + box.width / 2;
+      const by = box.y + box.height / 2;
+      const dist = Math.hypot(bx - cx, by - cy);
+      const area = Math.max(1, box.width * box.height);
+      score = area / (1 + dist);
+    }
+
+    if (!best || score > best.score) {
+      best = { code, score };
+    }
+  }
+
+  return best?.code ?? null;
+}
+
 async function canUseNativeDetector(): Promise<boolean> {
   const Ctor = (globalThis as unknown as { BarcodeDetector?: BarcodeDetectorCtor })
     .BarcodeDetector;
@@ -234,12 +309,12 @@ async function canUseNativeDetector(): Promise<boolean> {
 }
 
 /**
- * Wide horizontal band for 1D barcodes.
- * Previous 160px height cap was too shallow for soft-focus / distant EAN labels.
+ * Large scan band so a small sticker barcode fits while the phone stays at a
+ * focusing-friendly distance (~20–40cm). Users should NOT fill the guide.
  */
 function buildWideQrBox(viewW: number, viewH: number) {
-  const width = Math.max(280, Math.floor(viewW * 0.94));
-  const height = Math.max(180, Math.min(Math.floor(viewH * 0.45), 280));
+  const width = Math.max(300, Math.floor(viewW * 0.96));
+  const height = Math.max(220, Math.min(Math.floor(viewH * 0.58), 360));
   return { width, height };
 }
 
@@ -298,19 +373,25 @@ async function startNativeScanner(
   let stopped = false;
   let timer: number | undefined;
   let handling = false;
+  let lastCandidateAt = Date.now();
+  const accept = createStableCodeGate((code) => {
+    handling = true;
+    onDetected(code);
+  });
 
   const tick = async () => {
     if (stopped || handling) return;
     try {
       if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
         const codes = await detector.detect(video);
-        const raw = codes.find((c) => c.rawValue)?.rawValue;
-        const code = sanitizeBarcode(raw ?? null);
-        if (code) {
-          handling = true;
-          onDetected(code);
-          return;
-        }
+        const code = pickBestDetectedCode(
+          codes,
+          video.videoWidth || 1,
+          video.videoHeight || 1
+        );
+        if (code) lastCandidateAt = Date.now();
+        accept(code);
+        if (handling) return;
       }
     } catch {
       // transient detect errors — keep looping
@@ -322,11 +403,13 @@ async function startNativeScanner(
     }
   };
 
-  // WebViews that lock focus after open often need a periodic nudge.
+  // Only nudge AF when we have not seen any candidate lately — constant
+  // re-focus hunting makes close/macro shots worse on LINE WebViews.
   const focusTimer = window.setInterval(() => {
-    if (stopped) return;
+    if (stopped || handling) return;
+    if (Date.now() - lastCandidateAt < 4000) return;
     void triggerAutofocus(stream);
-  }, 2500);
+  }, 4000);
 
   void tick();
 
@@ -364,11 +447,18 @@ async function startHtml5QrcodeScanner(
     useBarCodeDetectorIfSupported: false,
   });
 
+  let handling = false;
+  let lastCandidateAt = Date.now();
+  const accept = createStableCodeGate((code) => {
+    handling = true;
+    onDetected(code);
+  });
+
   // Pass constraints only via videoConstraints to avoid facingMode double-config.
   await scanner.start(
     VIDEO_CONSTRAINTS,
     {
-      fps: 24,
+      fps: 20,
       qrbox: buildWideQrBox,
       // 1D codes on printed labels are upright relative to the rear camera.
       disableFlip: true,
@@ -376,11 +466,13 @@ async function startHtml5QrcodeScanner(
       videoConstraints: VIDEO_CONSTRAINTS,
     },
     (decoded) => {
+      if (handling) return;
       const code = sanitizeBarcode(decoded);
-      if (code) onDetected(code);
+      if (code) lastCandidateAt = Date.now();
+      accept(code);
     },
     () => {
-      // ignore per-frame misses
+      // ignore per-frame misses — do not reset the gate on every ZXing miss
     }
   );
 
@@ -399,9 +491,10 @@ async function startHtml5QrcodeScanner(
   let focusTimer: number | undefined;
   if (stream) {
     focusTimer = window.setInterval(() => {
-      if (!stream) return;
+      if (!stream || handling) return;
+      if (Date.now() - lastCandidateAt < 4000) return;
       void triggerAutofocus(stream);
-    }, 2500);
+    }, 4000);
   }
 
   return makeHandle({

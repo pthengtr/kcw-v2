@@ -244,7 +244,8 @@ export default function ScanProductScreen() {
       <header className="px-4 pb-2 pt-5">
         <h1 className="text-xl font-bold tracking-tight">สแกนสินค้า</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          จัดบาร์โค้ดให้อยู่ในกรอบแนวนอน แตะที่หน้าจอเพื่อโฟกัส
+          ถือห่างประมาณหนึ่งฝ่ามือ จัดเส้นบาร์โค้ดให้อยู่กลางกรอบ
+          — ไม่ต้องดึงใกล้มากจนภาพเบลอ
         </p>
       </header>
 
@@ -262,7 +263,7 @@ export default function ScanProductScreen() {
           />
           {phase === "scanning" && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="h-[42%] w-[92%] rounded-md border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.28)]" />
+              <div className="h-[56%] w-[94%] rounded-md border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.22)]" />
             </div>
           )}
           {phase === "scanning" && focusHint && (
@@ -442,8 +443,8 @@ function StatusPanel({
     <Alert tone="info" title="พร้อมสแกน">
       <span className="inline-flex items-center gap-1.5">
         <Camera className="size-3.5" />
-        ถือบาร์โค้ดให้อยู่ในกรอบแนวนอนให้เต็มความกว้าง
-        — ถ้าภาพเบลอ ให้แตะหน้าจอหรือกดโฟกัส
+        ถือห่างประมาณหนึ่งฝ่ามือ ให้เส้นบาร์โค้ดอยู่กลางกรอบ
+        (ไม่ต้องให้เต็มกรอบ) — ถ้าภาพเบลอ แตะหน้าจอหรือกดโฟกัส
       </span>
     </Alert>
   );
