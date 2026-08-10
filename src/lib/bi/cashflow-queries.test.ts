@@ -41,6 +41,7 @@ describe("normalizeCashflowOverview", () => {
         supplier_out: 150_000,
         payroll_out: 50_000,
         opex_out: 80_000,
+        net_cash: 220_000,
         ending_cash: 700_000,
         forecast_30d: 720_000,
         forecast_daily_net: 666,
@@ -54,6 +55,7 @@ describe("normalizeCashflowOverview", () => {
           { key: "supplier_out", label: "จ่าย Supplier", amount: 150_000, kind: "out", line_count: 12 },
           { key: "payroll_out", label: "เงินเดือน", amount: 50_000, kind: "out", line_count: 1 },
           { key: "opex_out", label: "ค่าใช้จ่ายดำเนินงาน", amount: 80_000, kind: "out", line_count: 4 },
+          { key: "net_cash", label: "เงินสดสุทธิ", amount: 220_000, kind: "net", line_count: null },
           { key: "ending_cash", label: "เงินสดคงเหลือ", amount: 700_000, kind: "balance", line_count: null },
           { key: "forecast_30d", label: "คาดการณ์เงินสด 30 วันข้างหน้า", amount: 720_000, kind: "forecast", line_count: null },
         ],
@@ -141,20 +143,64 @@ describe("normalizeCashflowOverview", () => {
           total: 300_000,
           months: { "2026-01": 100_000, "2026-02": 200_000 },
         },
+        {
+          key: "ar_in",
+          label: "รับเงินจากลูกหนี้",
+          kind: "in",
+          total: 50_000,
+          months: { "2026-01": 20_000, "2026-02": 30_000 },
+        },
+        {
+          key: "supplier_out",
+          label: "จ่าย Supplier",
+          kind: "out",
+          total: 80_000,
+          months: { "2026-01": 40_000, "2026-02": 40_000 },
+        },
+        {
+          key: "payroll_out",
+          label: "เงินเดือน",
+          kind: "out",
+          total: 20_000,
+          months: { "2026-01": 10_000, "2026-02": 10_000 },
+        },
+        {
+          key: "opex_out",
+          label: "ค่าใช้จ่ายดำเนินงาน",
+          kind: "out",
+          total: 10_000,
+          months: { "2026-01": 5_000, "2026-02": 5_000 },
+        },
+        {
+          key: "ending_cash",
+          label: "เงินสดคงเหลือ",
+          kind: "balance",
+          total: 700_000,
+          months: { "2026-01": 500_000, "2026-02": 700_000 },
+        },
       ],
     });
 
     expect(overview.summary.net).toBe(200_000);
     expect(overview.summary.net_ex_internal).toBe(200_000);
-    expect(overview.report.lines).toHaveLength(8);
+    expect(overview.report.lines).toHaveLength(9);
     expect(overview.report.lines.some((l) => l.key === "loan_out")).toBe(false);
     expect(overview.report.sales_in).toBe(300_000);
+    expect(overview.report.net_cash).toBe(220_000);
+    expect(overview.report.lines.find((l) => l.key === "net_cash")?.kind).toBe(
+      "net"
+    );
     expect(overview.by_account[0]?.ending_balance).toBe(200_000);
     expect(overview.by_category[0]?.label).toBe("รับชำระลูกหนี้");
     expect(overview.trend_monthly[0]?.inflow).toBe(1_000_000);
     expect(overview.accounts).toHaveLength(1);
     expect(overview.month_columns).toEqual(["2026-01", "2026-02"]);
     expect(overview.report_by_month[0]?.months["2026-02"]).toBe(200_000);
+    const netMonth = overview.report_by_month.find((r) => r.key === "net_cash");
+    expect(netMonth?.kind).toBe("net");
+    expect(netMonth?.total).toBe(240_000);
+    expect(netMonth?.months["2026-01"]).toBe(65_000);
+    expect(netMonth?.months["2026-02"]).toBe(175_000);
   });
 
   it("tolerates missing arrays and coerces numeric strings", () => {

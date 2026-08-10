@@ -538,6 +538,7 @@ describe("buildCashflowHighlights", () => {
         supplier_out: 400_000,
         payroll_out: 0,
         opex_out: 0,
+        net_cash: 500_000,
         ending_cash: 700_000,
         forecast_30d: 720_000,
         forecast_daily_net: 666,

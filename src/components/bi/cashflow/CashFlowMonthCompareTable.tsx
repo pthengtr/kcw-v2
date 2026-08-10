@@ -77,7 +77,9 @@ export default function CashFlowMonthCompareTable({
             <tbody>
               {rows.map((row) => {
                 const emphasize =
-                  row.kind === "balance" || row.kind === "forecast";
+                  row.kind === "balance" ||
+                  row.kind === "forecast" ||
+                  row.kind === "net";
                 const totalDisplay = displayAmount(row.total, row.kind);
 
                 return (
@@ -112,7 +114,8 @@ export default function CashFlowMonthCompareTable({
                             value > 0 && row.kind === "in" && "text-teal-800",
                             value > 0 &&
                               (row.kind === "balance" ||
-                                row.kind === "forecast") &&
+                                row.kind === "forecast" ||
+                                row.kind === "net") &&
                               "text-emerald-800"
                           )}
                         >
@@ -129,7 +132,8 @@ export default function CashFlowMonthCompareTable({
                           "text-teal-800",
                         totalDisplay > 0 &&
                           (row.kind === "balance" ||
-                            row.kind === "forecast") &&
+                            row.kind === "forecast" ||
+                            row.kind === "net") &&
                           "text-emerald-800"
                       )}
                     >
