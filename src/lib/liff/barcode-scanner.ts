@@ -56,9 +56,11 @@ type BarcodeDetectorCtor = {
 };
 
 type FocusCapableTrack = MediaStreamTrack & {
-  getCapabilities?: () => MediaTrackCapabilities & {
-    focusMode?: string[];
-  };
+  getCapabilities?: () => MediaTrackCapabilities;
+};
+
+type FocusCapabilities = MediaTrackCapabilities & {
+  focusMode?: string[];
 };
 
 export type BarcodeScannerHandle = {
@@ -84,10 +86,11 @@ export async function preferContinuousAutofocus(
   if (!track?.getCapabilities || !track.applyConstraints) return false;
 
   try {
-    const caps = track.getCapabilities();
+    const caps = track.getCapabilities() as FocusCapabilities;
     const modes = caps.focusMode ?? [];
     if (!modes.includes("continuous")) return false;
     await track.applyConstraints({
+      // focusMode is supported on some Android WebViews; ignored elsewhere.
       advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
     });
     return true;
