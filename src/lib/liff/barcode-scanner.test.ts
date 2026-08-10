@@ -169,3 +169,73 @@ describe("pickBestDetectedCode", () => {
     expect(code).toBe("16052911");
   });
 });
+
+describe("scan zoom helpers", () => {
+  it("clamps logical zoom into 1–3", async () => {
+    const { clampScanZoom, DEFAULT_SCAN_ZOOM } = await import(
+      "@/lib/liff/barcode-scanner"
+    );
+    expect(clampScanZoom(DEFAULT_SCAN_ZOOM)).toBe(2);
+    expect(clampScanZoom(0.2)).toBe(1);
+    expect(clampScanZoom(9)).toBe(3);
+  });
+
+  it("applies track zoom when capability exists", async () => {
+    const { preferTrackZoom } = await import("@/lib/liff/barcode-scanner");
+    const applyConstraints = vi.fn(async () => undefined);
+    const track = {
+      getCapabilities: () => ({ zoom: { min: 1, max: 5, step: 0.1 } }),
+      applyConstraints,
+    } as unknown as MediaStreamTrack;
+    const stream = {
+      getVideoTracks: () => [track],
+    } as unknown as MediaStream;
+
+    await expect(preferTrackZoom(stream, 2)).resolves.toBe(2);
+    expect(applyConstraints).toHaveBeenCalled();
+  });
+
+  it("returns null when zoom is unsupported", async () => {
+    const { preferTrackZoom } = await import("@/lib/liff/barcode-scanner");
+    const applyConstraints = vi.fn(async () => undefined);
+    const track = {
+      getCapabilities: () => ({}),
+      applyConstraints,
+    } as unknown as MediaStreamTrack;
+    const stream = {
+      getVideoTracks: () => [track],
+    } as unknown as MediaStream;
+
+    await expect(preferTrackZoom(stream, 2)).resolves.toBeNull();
+    expect(applyConstraints).not.toHaveBeenCalled();
+  });
+
+  it("center-crops the video for digital zoom", async () => {
+    const { drawCenterZoom } = await import("@/lib/liff/barcode-scanner");
+    const drawImage = vi.fn();
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: () => ({ drawImage }),
+    } as unknown as HTMLCanvasElement;
+    const video = {
+      videoWidth: 1000,
+      videoHeight: 500,
+    } as unknown as HTMLVideoElement;
+
+    expect(drawCenterZoom(video, canvas, 2)).toBe(true);
+    expect(canvas.width).toBe(500);
+    expect(canvas.height).toBe(250);
+    expect(drawImage).toHaveBeenCalledWith(
+      video,
+      250,
+      125,
+      500,
+      250,
+      0,
+      0,
+      500,
+      250
+    );
+  });
+});

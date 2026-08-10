@@ -7,12 +7,16 @@ import {
   Focus,
   Flashlight,
   FlashlightOff,
+  Minus,
+  Plus,
   RotateCcw,
   XCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
+  DEFAULT_SCAN_ZOOM,
+  SCAN_ZOOM_STEP,
   startProductBarcodeScanner,
   type BarcodeScannerHandle,
 } from "@/lib/liff/barcode-scanner";
@@ -51,6 +55,7 @@ export default function ScanProductScreen() {
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
   const [focusHint, setFocusHint] = useState(false);
+  const [zoom, setZoom] = useState(DEFAULT_SCAN_ZOOM);
 
   const hostRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -67,6 +72,7 @@ export default function ScanProductScreen() {
     handleRef.current = null;
     setTorchOn(false);
     setTorchSupported(false);
+    setZoom(DEFAULT_SCAN_ZOOM);
     if (!handle) return;
     try {
       await handle.stop();
@@ -125,6 +131,7 @@ export default function ScanProductScreen() {
     setSubmit(resetSubmit());
     setTorchOn(false);
     setTorchSupported(false);
+    setZoom(DEFAULT_SCAN_ZOOM);
 
     try {
       await stopScanner();
@@ -148,6 +155,7 @@ export default function ScanProductScreen() {
       }
       handleRef.current = handle;
       setTorchSupported(handle.torchSupported);
+      setZoom(handle.getZoom());
       setPhase("scanning");
       // Kick focus once after the preview has painted.
       window.setTimeout(() => {
@@ -239,13 +247,20 @@ export default function ScanProductScreen() {
     if (ok) setTorchOn(next);
   };
 
+  const handleZoomBy = async (delta: number) => {
+    const handle = handleRef.current;
+    if (!handle) return;
+    const next = await handle.setZoom(handle.getZoom() + delta);
+    setZoom(next);
+  };
+
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-zinc-950 text-zinc-50">
       <header className="px-4 pb-2 pt-5">
         <h1 className="text-xl font-bold tracking-tight">สแกนสินค้า</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          ถือห่างประมาณหนึ่งฝ่ามือ จัดเส้นบาร์โค้ดให้อยู่กลางกรอบ
-          — ไม่ต้องดึงใกล้มากจนภาพเบลอ
+          ซูมใกล้ด้วยปุ่ม ± แล้วถือห่างประมาณหนึ่งฝ่ามือ
+          — ไม่ต้องดึงโทรศัพท์ชิดสติ๊กเกอร์
         </p>
       </header>
 
@@ -279,21 +294,8 @@ export default function ScanProductScreen() {
             </div>
           )}
           {phase === "scanning" && (
-            <div className="absolute bottom-3 left-3 right-3 flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void handleRef.current?.refocus();
-                }}
-              >
-                <Focus className="size-4" />
-                โฟกัส
-              </Button>
-              {torchSupported && (
+            <div className="absolute bottom-3 left-3 right-3 flex flex-col gap-2">
+              <div className="flex gap-2">
                 <Button
                   type="button"
                   size="sm"
@@ -301,17 +303,63 @@ export default function ScanProductScreen() {
                   className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
                   onClick={(e) => {
                     e.stopPropagation();
-                    void handleToggleTorch();
+                    void handleZoomBy(-SCAN_ZOOM_STEP);
                   }}
                 >
-                  {torchOn ? (
-                    <FlashlightOff className="size-4" />
-                  ) : (
-                    <Flashlight className="size-4" />
-                  )}
-                  {torchOn ? "ปิดไฟ" : "เปิดไฟ"}
+                  <Minus className="size-4" />
+                  ไกล
                 </Button>
-              )}
+                <div className="flex h-9 min-w-16 items-center justify-center rounded-md bg-black/55 px-2 text-xs text-white">
+                  {zoom.toFixed(1)}×
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleZoomBy(SCAN_ZOOM_STEP);
+                  }}
+                >
+                  <Plus className="size-4" />
+                  ใกล้
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleRef.current?.refocus();
+                  }}
+                >
+                  <Focus className="size-4" />
+                  โฟกัส
+                </Button>
+                {torchSupported && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleToggleTorch();
+                    }}
+                  >
+                    {torchOn ? (
+                      <FlashlightOff className="size-4" />
+                    ) : (
+                      <Flashlight className="size-4" />
+                    )}
+                    {torchOn ? "ปิดไฟ" : "เปิดไฟ"}
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -443,8 +491,8 @@ function StatusPanel({
     <Alert tone="info" title="พร้อมสแกน">
       <span className="inline-flex items-center gap-1.5">
         <Camera className="size-3.5" />
-        ถือห่างประมาณหนึ่งฝ่ามือ ให้เส้นบาร์โค้ดอยู่กลางกรอบ
-        (ไม่ต้องให้เต็มกรอบ) — ถ้าภาพเบลอ แตะหน้าจอหรือกดโฟกัส
+        ใช้ซูม 2× เป็นค่าเริ่มต้น ถือห่างประมาณหนึ่งฝ่ามือ
+        ให้เส้นบาร์โค้ดอยู่กลางกรอบ — ถ้ายังเล็ก กด “ใกล้”
       </span>
     </Alert>
   );
