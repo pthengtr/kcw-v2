@@ -52,3 +52,8 @@ Implemented in `src/lib/liff/product-scan-contract.ts` (keep in sync with kcw-ap
 
 - Camera UI can be exercised in a normal mobile browser (expect “เปิดนอก LINE” warning)
 - Full send → webhook → reply requires real LINE / LIFF (use HTTPS tunnel for the endpoint if needed)
+
+### Camera permission & autofocus
+
+- **Always allow:** cannot be forced from the web app. LINE/OS shows the permission dialog; choose the lasting option if offered (e.g. Allow while using the app). After grant, same HTTPS origin usually won’t re-prompt unless the user cleared site data or denied earlier.
+- **Autofocus:** we request `focusMode: continuous` best-effort. Often works on Android WebView; iOS / many LINE WebViews ignore it and keep system autofocus only.

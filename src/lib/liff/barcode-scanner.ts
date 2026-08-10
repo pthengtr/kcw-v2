@@ -2,6 +2,9 @@
  * Camera barcode scanning for LIFF.
  * Prefers native BarcodeDetector (fast 1D on Android); falls back to html5-qrcode.
  * Opens the camera once — never call getCameras() first (that double-prompts).
+ *
+ * Permission "Always allow" cannot be forced from web/LIFF — the OS/LINE WebView owns that.
+ * Autofocus can only be requested best-effort (often works on Android, rarely on iOS).
  */
 
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
@@ -32,6 +35,17 @@ const ZXING_FORMATS = [
   Html5QrcodeSupportedFormats.QR_CODE,
 ];
 
+/** Shared camera prefs — focusMode is ignored where unsupported. */
+const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
+  facingMode: { ideal: "environment" },
+  width: { ideal: 1920 },
+  height: { ideal: 1080 },
+  // Non-standard in TS DOM lib; cast for Android Chrome / some WebViews.
+  ...({
+    focusMode: { ideal: "continuous" },
+  } as MediaTrackConstraints),
+};
+
 type BarcodeDetectorLike = {
   detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
 };
@@ -39,6 +53,12 @@ type BarcodeDetectorLike = {
 type BarcodeDetectorCtor = {
   new (options?: { formats?: string[] }): BarcodeDetectorLike;
   getSupportedFormats?: () => Promise<string[]>;
+};
+
+type FocusCapableTrack = MediaStreamTrack & {
+  getCapabilities?: () => MediaTrackCapabilities & {
+    focusMode?: string[];
+  };
 };
 
 export type BarcodeScannerHandle = {
@@ -53,6 +73,26 @@ function stopMediaStream(stream: MediaStream | null) {
     } catch {
       // ignore
     }
+  }
+}
+
+/** Best-effort continuous autofocus after the stream is open. */
+export async function preferContinuousAutofocus(
+  stream: MediaStream
+): Promise<boolean> {
+  const track = stream.getVideoTracks()[0] as FocusCapableTrack | undefined;
+  if (!track?.getCapabilities || !track.applyConstraints) return false;
+
+  try {
+    const caps = track.getCapabilities();
+    const modes = caps.focusMode ?? [];
+    if (!modes.includes("continuous")) return false;
+    await track.applyConstraints({
+      advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -103,12 +143,9 @@ async function startNativeScanner(
 
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
-    video: {
-      facingMode: { ideal: "environment" },
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
-    },
+    video: VIDEO_CONSTRAINTS,
   });
+  await preferContinuousAutofocus(stream);
   video.srcObject = stream;
   await video.play();
 
@@ -176,11 +213,7 @@ async function startHtml5QrcodeScanner(
       fps: 15,
       qrbox: buildWideQrBox,
       disableFlip: true,
-      videoConstraints: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-      },
+      videoConstraints: VIDEO_CONSTRAINTS,
     },
     (decoded) => {
       const code = sanitizeBarcode(decoded);
@@ -190,6 +223,17 @@ async function startHtml5QrcodeScanner(
       // ignore per-frame misses
     }
   );
+
+  // Best-effort focus after html5-qrcode opens its own stream.
+  try {
+    const video = host.querySelector("video");
+    const stream = video?.srcObject;
+    if (stream instanceof MediaStream) {
+      await preferContinuousAutofocus(stream);
+    }
+  } catch {
+    // ignore
+  }
 
   return {
     stop: async () => {
