@@ -10,7 +10,7 @@ const BARCODE_RE = /^[A-Za-z0-9\-_.]{1,64}$/;
 export function sanitizeBarcode(raw: string | null | undefined): string | null {
   if (raw == null) return null;
   // Code 39 sometimes wraps values with *; strip those only.
-  let code = String(raw).trim().replace(/^\*+|\*+$/g, "").trim();
+  const code = String(raw).trim().replace(/^\*+|\*+$/g, "").trim();
   if (!code || !BARCODE_RE.test(code)) return null;
   return code;
 }
