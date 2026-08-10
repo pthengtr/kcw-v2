@@ -20,7 +20,11 @@ import {
   filterHomeMenuItem,
   matchesMenuSearch,
 } from "@/lib/home/sidebar-menu";
-import { HOME_MENU_GROUPS, type HomeMenuItem } from "@/lib/home/menu";
+import {
+  HOME_MENU_GROUPS,
+  HOME_MENU_ITEMS,
+  type HomeMenuItem,
+} from "@/lib/home/menu";
 import { BranchType } from "@/lib/types/models";
 import { cn } from "@/lib/utils";
 
@@ -44,14 +48,12 @@ function SidebarLink({
   icon: Icon,
   active,
   onNavigate,
-  indent = false,
 }: {
   href: string;
   label: string;
   icon?: ComponentType<{ className?: string }>;
   active: boolean;
   onNavigate?: () => void;
-  indent?: boolean;
 }) {
   return (
     <Button
@@ -59,7 +61,6 @@ function SidebarLink({
       size="sm"
       className={cn(
         "h-8 w-full justify-start gap-2 px-2.5 font-normal",
-        indent && "pl-8",
         active && "bg-slate-200/80 font-medium text-slate-900"
       )}
       asChild
@@ -100,6 +101,10 @@ function MenuItemLink({
   );
 }
 
+function MenuDivider() {
+  return <div className="my-2 border-t border-slate-200" role="separator" />;
+}
+
 export function SidebarNav({
   branches,
   pageKeys,
@@ -111,6 +116,8 @@ export function SidebarNav({
   const [expenseOpen, setExpenseOpen] = useState(
     () => pathname === "/expense" || pathname.startsWith("/expense/")
   );
+  const ExpenseIcon = HOME_MENU_ITEMS.expense.icon;
+  const searching = Boolean(query.trim());
 
   const expenseLinks = useMemo(
     () => expenseMobileLinks(branches),
@@ -124,7 +131,6 @@ export function SidebarNav({
       ...group,
       items: group.items.filter((item) => {
         if (!filterHomeMenuItem(item, pageKeys)) return false;
-        if (item.key === "expense") return false;
         return matchesMenuSearch(item, query);
       }),
     })).filter((group) => group.items.length > 0);
@@ -141,13 +147,19 @@ export function SidebarNav({
   const showExpenseSection =
     pageKeys != null &&
     (filteredExpenseLinks.length > 0 ||
-      (!query.trim() && matchesMenuSearch(
-        { label: "ค่าใช้จ่าย", description: "บันทึกและตรวจสอบค่าใช้จ่าย" },
-        query
-      )));
+      (!searching &&
+        matchesMenuSearch(
+          {
+            label: HOME_MENU_ITEMS.expense.label,
+            description: HOME_MENU_ITEMS.expense.description,
+          },
+          query
+        )));
 
   const showAdminRbac = pageKeys ? canAccessAdminRbac(pageKeys) : false;
   const homeActive = pathname === "/home";
+  const expenseActive =
+    pathname === "/expense" || pathname.startsWith("/expense/");
 
   return (
     <div className={cn("flex h-full flex-col", className)}>
@@ -198,94 +210,96 @@ export function SidebarNav({
         className="flex-1 overflow-y-auto px-2 py-3"
         aria-label="เมนูหลัก"
       >
-        {!query.trim() ? (
-          <SidebarLink
-            href="/home"
-            label="หน้าแรก"
-            icon={Home}
-            active={homeActive}
-            onNavigate={onNavigate}
-          />
-        ) : null}
-
-        {showExpenseSection ? (
-          <div className="mt-2">
-            {!query.trim() ? (
-              <p className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                ค่าใช้จ่าย
-              </p>
-            ) : null}
-            {!query.trim() ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 w-full justify-between px-2.5 font-normal"
-                onClick={() => setExpenseOpen((open) => !open)}
-                aria-expanded={expenseOpen}
-              >
-                <span className="truncate text-sm">ค่าใช้จ่าย</span>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 shrink-0 text-slate-400 transition-transform",
-                    expenseOpen && "rotate-180"
-                  )}
-                  aria-hidden
-                />
-              </Button>
-            ) : null}
-            {(query.trim() || expenseOpen) &&
-              filteredExpenseLinks.map((link) => (
-                <SidebarLink
-                  key={link.href}
-                  href={link.href}
-                  label={link.label}
-                  active={isPathActive(pathname, link.href)}
-                  onNavigate={onNavigate}
-                  indent={!query.trim()}
-                />
-              ))}
-          </div>
-        ) : null}
-
-        {filteredGroups.map((group) => (
-          <div key={group.title} className="mt-3">
-            {!query.trim() ? (
-              <p className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                {group.title}
-              </p>
-            ) : null}
-            <div className="flex flex-col gap-0.5">
-              {group.items.map((item) => (
-                <MenuItemLink
-                  key={item.key}
-                  item={item}
-                  pathname={pathname}
-                  onNavigate={onNavigate}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-
-        {showAdminRbac ? (
-          <div className="mt-3 border-t border-slate-200 pt-3">
-            {!query.trim() ? (
-              <p className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                ผู้ดูแลระบบ
-              </p>
-            ) : null}
+        <div className="flex flex-col gap-0.5">
+          {!searching ? (
             <SidebarLink
-              href="/admin/rbac"
-              label="RBAC"
-              icon={ShieldCheck}
-              active={pathname === "/admin/rbac"}
+              href="/home"
+              label="หน้าแรก"
+              icon={Home}
+              active={homeActive}
               onNavigate={onNavigate}
             />
-          </div>
-        ) : null}
+          ) : null}
 
-        {query.trim() &&
+          {showExpenseSection ? (
+            <>
+              {!searching ? (
+                <Button
+                  type="button"
+                  variant={expenseActive ? "secondary" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "h-8 w-full justify-between gap-2 px-2.5 font-normal",
+                    expenseActive && "bg-slate-200/80 font-medium text-slate-900"
+                  )}
+                  onClick={() => setExpenseOpen((open) => !open)}
+                  aria-expanded={expenseOpen}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <ExpenseIcon
+                      className="h-4 w-4 shrink-0 opacity-80"
+                      aria-hidden
+                    />
+                    <span className="truncate text-sm">
+                      {HOME_MENU_ITEMS.expense.label}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-slate-400 transition-transform",
+                      expenseOpen && "rotate-180"
+                    )}
+                    aria-hidden
+                  />
+                </Button>
+              ) : null}
+              {(searching || expenseOpen) &&
+                filteredExpenseLinks.map((link) => (
+                  <SidebarLink
+                    key={link.href}
+                    href={link.href}
+                    label={link.label}
+                    active={isPathActive(pathname, link.href)}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+            </>
+          ) : null}
+
+          {filteredGroups.map((group) => {
+            const originalIndex = HOME_MENU_GROUPS.findIndex(
+              (candidate) => candidate.title === group.title
+            );
+            return (
+              <div key={group.title} className="contents">
+                {!searching && originalIndex > 0 ? <MenuDivider /> : null}
+                {group.items.map((item) => (
+                  <MenuItemLink
+                    key={item.key}
+                    item={item}
+                    pathname={pathname}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </div>
+            );
+          })}
+
+          {showAdminRbac ? (
+            <>
+              {!searching ? <MenuDivider /> : null}
+              <SidebarLink
+                href="/admin/rbac"
+                label="RBAC"
+                icon={ShieldCheck}
+                active={pathname === "/admin/rbac"}
+                onNavigate={onNavigate}
+              />
+            </>
+          ) : null}
+        </div>
+
+        {searching &&
         filteredGroups.every((group) => group.items.length === 0) &&
         filteredExpenseLinks.length === 0 ? (
           <p className="px-2.5 py-4 text-center text-sm text-slate-400">

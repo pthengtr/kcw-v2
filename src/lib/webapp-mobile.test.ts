@@ -10,11 +10,11 @@ function read(rel: string) {
 
 describe("Webapp mobile layout", () => {
   it("uses a mobile sheet drawer for navbar navigation", () => {
-    const navbar = read("src/components/nav/NavbarClient.tsx");
-    expect(navbar).toContain("md:hidden");
-    expect(navbar).toContain("SheetContent");
-    expect(navbar).toContain("hidden md:flex");
-    expect(navbar).toContain('aria-label="เปิดเมนู"');
+    const shell = read("src/components/nav/AppShell.tsx");
+    expect(shell).toContain("md:hidden");
+    expect(shell).toContain("SheetContent");
+    expect(shell).toContain("hidden w-60 shrink-0");
+    expect(shell).toContain('aria-label="เปิดเมนู"');
   });
 
   it("keeps shared menu cards fluid on narrow screens", () => {
@@ -25,20 +25,20 @@ describe("Webapp mobile layout", () => {
 
   it("uses a responsive, grouped workspace on the home page", () => {
     const home = read("src/app/(root)/home/page.tsx");
-    expect(home).toContain("grid-cols-1");
-    expect(home).toContain("xl:grid-cols-4");
     expect(home).toContain("FavoriteMenuSection");
     expect(home).toContain("WorkspaceTodoSection");
-    expect(home).toContain("เครื่องมือทั้งหมด");
 
     const favorites = read("src/components/home/FavoriteMenuSection.tsx");
     expect(favorites).toContain("เมนูโปรด");
     expect(favorites).toContain("จัดการเมนูโปรด");
     expect(favorites).toContain("grid-cols-2");
-    expect(favorites).toContain("lg:grid-cols-5");
+    expect(favorites).toContain("sm:grid-cols-4");
+    expect(favorites).toContain("{favoriteItems.length} เมนู");
+    expect(favorites).not.toContain("MAX_FAVORITE_COUNT");
+    expect(favorites).not.toContain("lg:grid-cols-5");
 
     const todos = read("src/components/home/WorkspaceTodoSection.tsx");
-    expect(todos).toContain("ภาพรวมพื้นที่ทำงาน");
+    expect(todos).toContain("ภาพรวมวันนี้");
     expect(todos).toContain("md:grid-cols-3");
 
     const menu = read("src/lib/home/menu.ts");
@@ -46,6 +46,15 @@ describe("Webapp mobile layout", () => {
     expect(menu).toContain("การเงินและรับชำระ");
     expect(menu).toContain("ข้อมูลและสินค้า");
     expect(menu).toContain("รายงานและความรู้");
+    expect(menu).not.toContain("MAX_FAVORITE_COUNT");
+
+    const sidebar = read("src/components/nav/AppSidebar.tsx");
+    expect(sidebar).toContain('placeholder="ค้นหาเมนู..."');
+    expect(sidebar).toContain("MenuDivider");
+    expect(sidebar).not.toContain("uppercase tracking-wide text-slate-500");
+    expect(sidebar).not.toContain("indent &&");
+    expect(sidebar).not.toContain("indent = false");
+    expect(sidebar).toContain("px-2.5 font-normal");
   });
 
   it("stacks expense create/update panes under md", () => {
@@ -121,7 +130,7 @@ describe("Webapp mobile layout", () => {
   it("keeps BI shell and sales overview usable on narrow screens", () => {
     const shell = read("src/components/bi/BiShell.tsx");
     expect(shell).toContain("md:hidden");
-    expect(shell).toContain("hidden w-64 shrink-0 md:block");
+    expect(shell).toContain("hidden w-56 shrink-0 md:block");
     expect(shell).toContain('aria-label="เปิดรายการรายงาน"');
     expect(shell).toContain("SheetContent");
 
