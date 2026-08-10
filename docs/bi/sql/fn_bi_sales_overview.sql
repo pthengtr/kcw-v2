@@ -64,6 +64,7 @@ BEGIN
     WHERE b."CANCELED" = 'N'
       AND b."JOURMODE" <> '0'
       AND COALESCE(b."BILLTYPE_STD", '') NOT IN ('TF', 'TFV', 'TAR')
+      AND upper(btrim(b."BILLNO")) !~ '^(3)?SA'
       AND b."BILLDATE" >= p_from::text
       AND b."BILLDATE" < (p_to + 1)::text
   ),
@@ -85,6 +86,7 @@ BEGIN
     WHERE b."CANCELED" = 'N'
       AND b."JOURMODE" <> '0'
       AND COALESCE(b."BILLTYPE_STD", '') NOT IN ('TF', 'TFV', 'TAR')
+      AND upper(btrim(b."BILLNO")) !~ '^(3)?SA'
       AND b."BILLDATE" >= v_prev_from::text
       AND b."BILLDATE" < (v_prev_to + 1)::text
   ),

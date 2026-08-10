@@ -30,6 +30,12 @@ export type StockAuditDailyMark = {
   count: number;
 };
 
+export type StockAuditOperatorMark = {
+  name: string;
+  today_count: number;
+  week_count: number;
+};
+
 export type StockAuditRow = {
   bcode: string;
   descr: string;
@@ -64,6 +70,7 @@ export type StockAuditOverview = {
   sales_to: string | null;
   summary: StockAuditSummary;
   daily_marks: StockAuditDailyMark[];
+  operator_marks: StockAuditOperatorMark[];
   open_batches: StockAuditOpenBatchSummary[];
   rows: StockAuditRow[];
   row_total: number;
@@ -130,7 +137,7 @@ export const STOCK_AUDIT_BUCKETS: {
   {
     key: "never",
     label: "ยังไม่เคยตรวจ",
-    hint: "ยังไม่เคยกดบันทึกในแอป",
+    hint: "ยังไม่เคยมีบันทึกตรวจในระบบ",
     tone: "border-l-slate-400 bg-slate-50/90",
     chip: "bg-slate-200 text-slate-800",
   },

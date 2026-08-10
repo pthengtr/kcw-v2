@@ -10,6 +10,7 @@ import type {
   StockAuditLookup,
   StockAuditMarkSource,
   StockAuditOpenBatchSummary,
+  StockAuditOperatorMark,
   StockAuditOverview,
   StockAuditRow,
   StockAuditSummary,
@@ -167,6 +168,15 @@ function parseDailyMark(value: unknown): StockAuditDailyMark {
   };
 }
 
+function parseOperatorMark(value: unknown): StockAuditOperatorMark {
+  const r = (value ?? {}) as Record<string, unknown>;
+  return {
+    name: asString(r.name) || "unknown",
+    today_count: asNumber(r.today_count),
+    week_count: asNumber(r.week_count),
+  };
+}
+
 function parseOverview(value: unknown): StockAuditOverview {
   const r = (value ?? {}) as Record<string, unknown>;
   const bucketRaw = asNullableString(r.bucket);
@@ -179,6 +189,9 @@ function parseOverview(value: unknown): StockAuditOverview {
     summary: parseSummary(r.summary),
     daily_marks: Array.isArray(r.daily_marks)
       ? r.daily_marks.map(parseDailyMark)
+      : [],
+    operator_marks: Array.isArray(r.operator_marks)
+      ? r.operator_marks.map(parseOperatorMark)
       : [],
     open_batches: Array.isArray(r.open_batches)
       ? r.open_batches.map(parseOpenBatch)

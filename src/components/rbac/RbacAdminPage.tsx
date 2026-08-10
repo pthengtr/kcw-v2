@@ -49,7 +49,7 @@ const PAGE_KEY_LABELS: Record<string, string> = {
   bank_tiger_pay: "Bank: TigerPay",
   bank_statement_sync: "Bank: Statement Upload",
   po_status: "PO: สถานะใบสั่งซื้อ",
-  stock_audit: "ตรวจนับสต็อก (Date Audit)",
+  stock_audit: "สถานะตรวจนับ (Stock Audit)",
 };
 
 const DEFAULT_ROLE_EMAILS: Record<string, string[]> = {
