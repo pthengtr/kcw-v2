@@ -234,7 +234,8 @@ Do **not** treat `QTYOH2` as a large-unit count, and do **not** divide by `MTP2`
 Notes:
 
 - Stock is per ICMAS branch master: HQ rows → HQ on-hand; SYP rows → SYP on-hand. Do not mix without labeling branch.
-- Related unused/TBD qty family: `QTYBEG*`, `QTYMIN`, `QTYMAX`, `QTYGET`, `QTYPUT`.
+- Related qty family: `QTYBEG*`, **`QTYMIN`**, `QTYMAX`, `QTYGET`, `QTYPUT`.
+  - **`QTYMIN < 0` (usually `-1`)** — Confirmed operational convention: **do not restock / do not ICLOW**. Stock-check Take N excludes these from routine pools; risk pools may still include them. Not the same as `QTYOH2 < 0` (on-hand anomaly).
 
 ---
 
