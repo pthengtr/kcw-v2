@@ -118,3 +118,54 @@ describe("setTorchEnabled", () => {
     expect(applyConstraints).toHaveBeenCalled();
   });
 });
+
+describe("createStableCodeGate", () => {
+  it("confirms only after repeated identical hits", async () => {
+    const { createStableCodeGate } = await import("@/lib/liff/barcode-scanner");
+    const onConfirmed = vi.fn();
+    const accept = createStableCodeGate(onConfirmed, 3);
+
+    accept("16052911");
+    accept("16052911");
+    expect(onConfirmed).not.toHaveBeenCalled();
+    accept("16052911");
+    expect(onConfirmed).toHaveBeenCalledWith("16052911");
+  });
+
+  it("resets when the value changes or clears", async () => {
+    const { createStableCodeGate } = await import("@/lib/liff/barcode-scanner");
+    const onConfirmed = vi.fn();
+    const accept = createStableCodeGate(onConfirmed, 3);
+
+    accept("111");
+    accept("222");
+    accept("222");
+    accept(null);
+    accept("222");
+    accept("222");
+    expect(onConfirmed).not.toHaveBeenCalled();
+    accept("222");
+    expect(onConfirmed).toHaveBeenCalledWith("222");
+  });
+});
+
+describe("pickBestDetectedCode", () => {
+  it("prefers the larger centered barcode", async () => {
+    const { pickBestDetectedCode } = await import("@/lib/liff/barcode-scanner");
+    const code = pickBestDetectedCode(
+      [
+        {
+          rawValue: "999",
+          boundingBox: { x: 0, y: 0, width: 20, height: 10 },
+        },
+        {
+          rawValue: "16052911",
+          boundingBox: { x: 400, y: 200, width: 240, height: 60 },
+        },
+      ],
+      1000,
+      500
+    );
+    expect(code).toBe("16052911");
+  });
+});
