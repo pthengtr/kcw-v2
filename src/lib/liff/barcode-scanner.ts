@@ -4,7 +4,10 @@
  * Opens the camera once — never call getCameras() first (that double-prompts).
  *
  * Permission "Always allow" cannot be forced from web/LIFF — the OS/LINE WebView owns that.
- * Autofocus can only be requested best-effort (often works on Android, rarely on iOS).
+ * Autofocus is best-effort: continuous when supported, plus tap-to-focus / periodic nudge.
+ *
+ * Do NOT put focusMode in the initial getUserMedia constraints — some LINE/iOS WebViews
+ * reject or mis-handle unknown constraint keys and fail to open the camera cleanly.
  */
 
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
@@ -32,22 +35,25 @@ const ZXING_FORMATS = [
   Html5QrcodeSupportedFormats.UPC_A,
   Html5QrcodeSupportedFormats.UPC_E,
   Html5QrcodeSupportedFormats.ITF,
+  Html5QrcodeSupportedFormats.CODABAR,
   Html5QrcodeSupportedFormats.QR_CODE,
 ];
 
-/** Shared camera prefs — focusMode is ignored where unsupported. */
+/**
+ * 720p is the practical sweet spot for 1D in WebViews:
+ * enough detail for EAN/Code128, less AF hunting / motion blur than 1080p.
+ */
 const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: { ideal: "environment" },
-  width: { ideal: 1920 },
-  height: { ideal: 1080 },
-  // Non-standard in TS DOM lib; cast for Android Chrome / some WebViews.
-  ...({
-    focusMode: { ideal: "continuous" },
-  } as MediaTrackConstraints),
+  width: { ideal: 1280 },
+  height: { ideal: 720 },
+  aspectRatio: { ideal: 16 / 9 },
 };
 
 type BarcodeDetectorLike = {
-  detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
+  detect: (
+    source: HTMLVideoElement | ImageBitmap | HTMLCanvasElement
+  ) => Promise<Array<{ rawValue?: string }>>;
 };
 
 type BarcodeDetectorCtor = {
@@ -61,10 +67,24 @@ type FocusCapableTrack = MediaStreamTrack & {
 
 type FocusCapabilities = MediaTrackCapabilities & {
   focusMode?: string[];
+  torch?: boolean;
+  pointsOfInterest?: boolean;
+};
+
+type FocusConstraintSet = MediaTrackConstraintSet & {
+  focusMode?: string;
+  torch?: boolean;
+  pointsOfInterest?: Array<{ x: number; y: number }>;
 };
 
 export type BarcodeScannerHandle = {
   stop: () => Promise<void>;
+  /** Best-effort tap / button refocus. Returns true if a focus constraint was applied. */
+  refocus: (point?: { x: number; y: number }) => Promise<boolean>;
+  /** Toggle torch when the track supports it. */
+  setTorch: (on: boolean) => Promise<boolean>;
+  /** Whether torch appears available (capability probe after start). */
+  torchSupported: boolean;
 };
 
 function stopMediaStream(stream: MediaStream | null) {
@@ -78,25 +98,120 @@ function stopMediaStream(stream: MediaStream | null) {
   }
 }
 
+function getFocusTrack(stream: MediaStream | null): FocusCapableTrack | null {
+  const track = stream?.getVideoTracks()?.[0] as FocusCapableTrack | undefined;
+  return track ?? null;
+}
+
+function readFocusCaps(track: FocusCapableTrack): FocusCapabilities {
+  try {
+    return (track.getCapabilities?.() ?? {}) as FocusCapabilities;
+  } catch {
+    return {};
+  }
+}
+
+async function applyFocusConstraint(
+  track: FocusCapableTrack,
+  constraint: FocusConstraintSet
+): Promise<boolean> {
+  if (!track.applyConstraints) return false;
+  try {
+    await track.applyConstraints({
+      advanced: [constraint as MediaTrackConstraintSet],
+    });
+    return true;
+  } catch {
+    try {
+      await track.applyConstraints(constraint as MediaTrackConstraintSet);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
 /** Best-effort continuous autofocus after the stream is open. */
 export async function preferContinuousAutofocus(
   stream: MediaStream
 ): Promise<boolean> {
-  const track = stream.getVideoTracks()[0] as FocusCapableTrack | undefined;
-  if (!track?.getCapabilities || !track.applyConstraints) return false;
+  const track = getFocusTrack(stream);
+  if (!track) return false;
 
-  try {
-    const caps = track.getCapabilities() as FocusCapabilities;
-    const modes = caps.focusMode ?? [];
-    if (!modes.includes("continuous")) return false;
-    await track.applyConstraints({
-      // focusMode is supported on some Android WebViews; ignored elsewhere.
-      advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
-    });
-    return true;
-  } catch {
-    return false;
+  const caps = readFocusCaps(track);
+  const modes = caps.focusMode ?? [];
+
+  if (modes.includes("continuous")) {
+    if (await applyFocusConstraint(track, { focusMode: "continuous" })) {
+      return true;
+    }
   }
+
+  // Some Android WebViews only expose single-shot; fire once at start.
+  if (modes.includes("single-shot")) {
+    return applyFocusConstraint(track, { focusMode: "single-shot" });
+  }
+
+  return false;
+}
+
+/**
+ * Tap-to-focus / manual refocus.
+ * Uses pointsOfInterest when available; otherwise re-triggers continuous/single-shot.
+ */
+export async function triggerAutofocus(
+  stream: MediaStream,
+  point?: { x: number; y: number }
+): Promise<boolean> {
+  const track = getFocusTrack(stream);
+  if (!track) return false;
+
+  const caps = readFocusCaps(track);
+  const modes = caps.focusMode ?? [];
+  let applied = false;
+
+  if (
+    point &&
+    caps.pointsOfInterest &&
+    Number.isFinite(point.x) &&
+    Number.isFinite(point.y)
+  ) {
+    const x = Math.min(1, Math.max(0, point.x));
+    const y = Math.min(1, Math.max(0, point.y));
+    applied =
+      (await applyFocusConstraint(track, {
+        pointsOfInterest: [{ x, y }],
+      })) || applied;
+  }
+
+  if (modes.includes("single-shot")) {
+    applied =
+      (await applyFocusConstraint(track, { focusMode: "single-shot" })) ||
+      applied;
+  } else if (modes.includes("continuous")) {
+    applied =
+      (await applyFocusConstraint(track, { focusMode: "continuous" })) ||
+      applied;
+  }
+
+  return applied;
+}
+
+export async function setTorchEnabled(
+  stream: MediaStream,
+  on: boolean
+): Promise<boolean> {
+  const track = getFocusTrack(stream);
+  if (!track) return false;
+  const caps = readFocusCaps(track);
+  if (!caps.torch) return false;
+  return applyFocusConstraint(track, { torch: on });
+}
+
+export function isTorchSupported(stream: MediaStream | null): boolean {
+  const track = getFocusTrack(stream);
+  if (!track) return false;
+  return Boolean(readFocusCaps(track).torch);
 }
 
 async function canUseNativeDetector(): Promise<boolean> {
@@ -118,20 +233,17 @@ async function canUseNativeDetector(): Promise<boolean> {
   }
 }
 
+/**
+ * Wide horizontal band for 1D barcodes.
+ * Previous 160px height cap was too shallow for soft-focus / distant EAN labels.
+ */
 function buildWideQrBox(viewW: number, viewH: number) {
-  const width = Math.max(260, Math.floor(viewW * 0.92));
-  const height = Math.max(110, Math.min(Math.floor(viewH * 0.34), 160));
+  const width = Math.max(280, Math.floor(viewW * 0.94));
+  const height = Math.max(180, Math.min(Math.floor(viewH * 0.45), 280));
   return { width, height };
 }
 
-async function startNativeScanner(
-  container: HTMLElement,
-  onDetected: (code: string) => void
-): Promise<BarcodeScannerHandle> {
-  const Ctor = (globalThis as unknown as { BarcodeDetector: BarcodeDetectorCtor })
-    .BarcodeDetector;
-  const detector = new Ctor({ formats: [...NATIVE_FORMATS] });
-
+function attachVideoEl(container: HTMLElement): HTMLVideoElement {
   container.replaceChildren();
   const video = document.createElement("video");
   video.setAttribute("playsinline", "true");
@@ -143,6 +255,37 @@ async function startNativeScanner(
   video.style.height = "100%";
   video.style.objectFit = "cover";
   container.appendChild(video);
+  return video;
+}
+
+function makeHandle(opts: {
+  stream: MediaStream | null;
+  torchSupported: boolean;
+  stop: () => Promise<void>;
+}): BarcodeScannerHandle {
+  return {
+    torchSupported: opts.torchSupported,
+    stop: opts.stop,
+    refocus: async (point) => {
+      if (!opts.stream) return false;
+      return triggerAutofocus(opts.stream, point);
+    },
+    setTorch: async (on) => {
+      if (!opts.stream) return false;
+      return setTorchEnabled(opts.stream, on);
+    },
+  };
+}
+
+async function startNativeScanner(
+  container: HTMLElement,
+  onDetected: (code: string) => void
+): Promise<BarcodeScannerHandle> {
+  const Ctor = (globalThis as unknown as { BarcodeDetector: BarcodeDetectorCtor })
+    .BarcodeDetector;
+  const detector = new Ctor({ formats: [...NATIVE_FORMATS] });
+
+  const video = attachVideoEl(container);
 
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
@@ -175,21 +318,30 @@ async function startNativeScanner(
     if (!stopped) {
       timer = window.setTimeout(() => {
         void tick();
-      }, 70);
+      }, 50);
     }
   };
 
+  // WebViews that lock focus after open often need a periodic nudge.
+  const focusTimer = window.setInterval(() => {
+    if (stopped) return;
+    void triggerAutofocus(stream);
+  }, 2500);
+
   void tick();
 
-  return {
+  return makeHandle({
+    stream,
+    torchSupported: isTorchSupported(stream),
     stop: async () => {
       stopped = true;
       if (timer != null) window.clearTimeout(timer);
+      if (focusTimer != null) window.clearInterval(focusTimer);
       stopMediaStream(stream);
       video.srcObject = null;
       container.replaceChildren();
     },
-  };
+  });
 }
 
 async function startHtml5QrcodeScanner(
@@ -207,15 +359,20 @@ async function startHtml5QrcodeScanner(
   const scanner = new Html5Qrcode(host.id, {
     formatsToSupport: ZXING_FORMATS,
     verbose: false,
-    useBarCodeDetectorIfSupported: true,
+    // Prefer this library's own pipeline when we already know native start failed
+    // or is unavailable — avoids a second weak BarcodeDetector attempt.
+    useBarCodeDetectorIfSupported: false,
   });
 
+  // Pass constraints only via videoConstraints to avoid facingMode double-config.
   await scanner.start(
-    { facingMode: "environment" },
+    VIDEO_CONSTRAINTS,
     {
-      fps: 15,
+      fps: 24,
       qrbox: buildWideQrBox,
+      // 1D codes on printed labels are upright relative to the rear camera.
       disableFlip: true,
+      aspectRatio: 16 / 9,
       videoConstraints: VIDEO_CONSTRAINTS,
     },
     (decoded) => {
@@ -227,19 +384,31 @@ async function startHtml5QrcodeScanner(
     }
   );
 
-  // Best-effort focus after html5-qrcode opens its own stream.
+  let stream: MediaStream | null = null;
   try {
     const video = host.querySelector("video");
-    const stream = video?.srcObject;
-    if (stream instanceof MediaStream) {
+    const src = video?.srcObject;
+    if (src instanceof MediaStream) {
+      stream = src;
       await preferContinuousAutofocus(stream);
     }
   } catch {
     // ignore
   }
 
-  return {
+  let focusTimer: number | undefined;
+  if (stream) {
+    focusTimer = window.setInterval(() => {
+      if (!stream) return;
+      void triggerAutofocus(stream);
+    }, 2500);
+  }
+
+  return makeHandle({
+    stream,
+    torchSupported: isTorchSupported(stream),
     stop: async () => {
+      if (focusTimer != null) window.clearInterval(focusTimer);
       try {
         if (scanner.isScanning) await scanner.stop();
       } catch {
@@ -252,7 +421,7 @@ async function startHtml5QrcodeScanner(
       }
       container.replaceChildren();
     },
-  };
+  });
 }
 
 /**

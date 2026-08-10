@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CheckCircle2, RotateCcw, XCircle } from "lucide-react";
+import {
+  Camera,
+  CheckCircle2,
+  Focus,
+  Flashlight,
+  FlashlightOff,
+  RotateCcw,
+  XCircle,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,8 +48,12 @@ export default function ScanProductScreen() {
   const [detected, setDetected] = useState<string | null>(null);
   const [submit, setSubmit] = useState<ScanSubmitState>({ status: "idle" });
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [focusHint, setFocusHint] = useState(false);
 
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const handleRef = useRef<BarcodeScannerHandle | null>(null);
   const startingRef = useRef(false);
   const aliveRef = useRef(true);
@@ -53,6 +65,8 @@ export default function ScanProductScreen() {
   const stopScanner = useCallback(async () => {
     const handle = handleRef.current;
     handleRef.current = null;
+    setTorchOn(false);
+    setTorchSupported(false);
     if (!handle) return;
     try {
       await handle.stop();
@@ -109,6 +123,8 @@ export default function ScanProductScreen() {
     setCameraError(null);
     setDetected(null);
     setSubmit(resetSubmit());
+    setTorchOn(false);
+    setTorchSupported(false);
 
     try {
       await stopScanner();
@@ -131,7 +147,12 @@ export default function ScanProductScreen() {
         return;
       }
       handleRef.current = handle;
+      setTorchSupported(handle.torchSupported);
       setPhase("scanning");
+      // Kick focus once after the preview has painted.
+      window.setTimeout(() => {
+        void handle.refocus();
+      }, 350);
     } catch (err) {
       if (!aliveRef.current) return;
       const message = err instanceof Error ? err.message : String(err);
@@ -192,29 +213,104 @@ export default function ScanProductScreen() {
     void startScanner();
   };
 
+  const handleTapToFocus = async (
+    event: React.PointerEvent<HTMLDivElement>
+  ) => {
+    if (phase !== "scanning") return;
+    const handle = handleRef.current;
+    const stage = stageRef.current;
+    if (!handle || !stage) return;
+
+    const rect = stage.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+
+    setFocusHint(true);
+    window.setTimeout(() => setFocusHint(false), 600);
+    await handle.refocus({ x, y });
+  };
+
+  const handleToggleTorch = async () => {
+    const handle = handleRef.current;
+    if (!handle?.torchSupported) return;
+    const next = !torchOn;
+    const ok = await handle.setTorch(next);
+    if (ok) setTorchOn(next);
+  };
+
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-zinc-950 text-zinc-50">
       <header className="px-4 pb-2 pt-5">
         <h1 className="text-xl font-bold tracking-tight">สแกนสินค้า</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          จัดบาร์โค้ดให้อยู่ในกรอบแนวนอน แล้วรอระบบอ่านอัตโนมัติ
+          จัดบาร์โค้ดให้อยู่ในกรอบแนวนอน แตะที่หน้าจอเพื่อโฟกัส
         </p>
       </header>
 
       <main className="flex flex-1 flex-col gap-4 px-4 pb-6">
-        <div className="relative overflow-hidden rounded-xl bg-black">
+        <div
+          ref={stageRef}
+          className="relative overflow-hidden rounded-xl bg-black"
+          onPointerUp={(e) => {
+            void handleTapToFocus(e);
+          }}
+        >
           <div
             ref={hostRef}
-            className="min-h-[320px] w-full overflow-hidden [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
+            className="min-h-[360px] w-full overflow-hidden [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
           />
           {phase === "scanning" && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="h-[30%] w-[90%] rounded-md border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.28)]" />
+              <div className="h-[42%] w-[92%] rounded-md border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.28)]" />
+            </div>
+          )}
+          {phase === "scanning" && focusHint && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="rounded-full border border-white/80 px-3 py-1 text-xs text-white/90">
+                กำลังโฟกัส…
+              </div>
             </div>
           )}
           {phase === "boot" && (
             <div className="absolute inset-0 flex items-center justify-center text-sm text-zinc-400">
               กำลังเตรียมกล้อง…
+            </div>
+          )}
+          {phase === "scanning" && (
+            <div className="absolute bottom-3 left-3 right-3 flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleRef.current?.refocus();
+                }}
+              >
+                <Focus className="size-4" />
+                โฟกัส
+              </Button>
+              {torchSupported && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-9 flex-1 bg-black/55 text-white hover:bg-black/70"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleToggleTorch();
+                  }}
+                >
+                  {torchOn ? (
+                    <FlashlightOff className="size-4" />
+                  ) : (
+                    <Flashlight className="size-4" />
+                  )}
+                  {torchOn ? "ปิดไฟ" : "เปิดไฟ"}
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -347,6 +443,7 @@ function StatusPanel({
       <span className="inline-flex items-center gap-1.5">
         <Camera className="size-3.5" />
         ถือบาร์โค้ดให้อยู่ในกรอบแนวนอนให้เต็มความกว้าง
+        — ถ้าภาพเบลอ ให้แตะหน้าจอหรือกดโฟกัส
       </span>
     </Alert>
   );
