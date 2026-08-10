@@ -126,7 +126,7 @@ function stockAuditTodo(markedToday: number): WorkspaceTodoItem {
   return {
     id: "stock-audit-daily",
     title: "เป้าหมายตรวจนับรายวัน",
-    description: `เป้า ${STOCK_AUDIT_DAILY_TARGET} รายการ/วัน (HQ)`,
+    description: `เป้าสาขา ${STOCK_AUDIT_DAILY_TARGET} รายการ/วัน (HQ · นับผ่าน LINE)`,
     href: "/stock-audit",
     status,
     primaryValue: `${markedToday.toLocaleString("th-TH")}/${STOCK_AUDIT_DAILY_TARGET}`,
@@ -224,7 +224,7 @@ export async function fetchWorkspaceTodos(params: {
           "stock-audit-daily",
           "เป้าหมายตรวจนับรายวัน",
           "/stock-audit",
-          `เป้า ${STOCK_AUDIT_DAILY_TARGET} รายการ/วัน (HQ)`
+          `เป้าสาขา ${STOCK_AUDIT_DAILY_TARGET} รายการ/วัน (HQ · นับผ่าน LINE)`
         ),
   ];
 }

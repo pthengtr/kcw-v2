@@ -72,8 +72,8 @@ export const HOME_MENU_ITEMS = {
   stockAudit: {
     key: "stockAudit",
     href: "/stock-audit",
-    label: "ตรวจนับสต็อก",
-    description: "ติดตามความครบถ้วนของการตรวจนับ",
+    label: "สถานะตรวจนับ",
+    description: "KPI และความครบถ้วนจากการนับที่สาขา",
     icon: Boxes,
     iconClassName: "text-sky-600",
     iconSurfaceClassName: "bg-sky-50 ring-sky-100",
