@@ -10,145 +10,6 @@ describe("sanitizeBarcode used by scanner", () => {
   });
 });
 
-describe("preferContinuousAutofocus", () => {
-  it("returns false when track has no focus capability", async () => {
-    const { preferContinuousAutofocus } = await import(
-      "@/lib/liff/barcode-scanner"
-    );
-    const track = {
-      applyConstraints: vi.fn(),
-    } as unknown as MediaStreamTrack;
-    const stream = {
-      getVideoTracks: () => [track],
-    } as unknown as MediaStream;
-
-    await expect(preferContinuousAutofocus(stream)).resolves.toBe(false);
-    expect(track.applyConstraints).not.toHaveBeenCalled();
-  });
-
-  it("applies continuous focus when capability exists", async () => {
-    const { preferContinuousAutofocus } = await import(
-      "@/lib/liff/barcode-scanner"
-    );
-    const applyConstraints = vi.fn(async () => undefined);
-    const track = {
-      getCapabilities: () => ({ focusMode: ["continuous", "manual"] }),
-      applyConstraints,
-    } as unknown as MediaStreamTrack;
-    const stream = {
-      getVideoTracks: () => [track],
-    } as unknown as MediaStream;
-
-    await expect(preferContinuousAutofocus(stream)).resolves.toBe(true);
-    expect(applyConstraints).toHaveBeenCalled();
-  });
-
-  it("falls back to single-shot when continuous is unavailable", async () => {
-    const { preferContinuousAutofocus } = await import(
-      "@/lib/liff/barcode-scanner"
-    );
-    const applyConstraints = vi.fn(async () => undefined);
-    const track = {
-      getCapabilities: () => ({ focusMode: ["single-shot", "manual"] }),
-      applyConstraints,
-    } as unknown as MediaStreamTrack;
-    const stream = {
-      getVideoTracks: () => [track],
-    } as unknown as MediaStream;
-
-    await expect(preferContinuousAutofocus(stream)).resolves.toBe(true);
-    expect(applyConstraints).toHaveBeenCalledWith(
-      expect.objectContaining({
-        advanced: [expect.objectContaining({ focusMode: "single-shot" })],
-      })
-    );
-  });
-});
-
-describe("triggerAutofocus", () => {
-  it("applies pointsOfInterest when supported", async () => {
-    const { triggerAutofocus } = await import("@/lib/liff/barcode-scanner");
-    const applyConstraints = vi.fn(async () => undefined);
-    const track = {
-      getCapabilities: () => ({
-        focusMode: ["continuous"],
-        pointsOfInterest: true,
-      }),
-      applyConstraints,
-    } as unknown as MediaStreamTrack;
-    const stream = {
-      getVideoTracks: () => [track],
-    } as unknown as MediaStream;
-
-    await expect(
-      triggerAutofocus(stream, { x: 0.5, y: 0.4 })
-    ).resolves.toBe(true);
-    expect(applyConstraints).toHaveBeenCalled();
-  });
-});
-
-describe("setTorchEnabled", () => {
-  it("returns false without torch capability", async () => {
-    const { setTorchEnabled } = await import("@/lib/liff/barcode-scanner");
-    const applyConstraints = vi.fn(async () => undefined);
-    const track = {
-      getCapabilities: () => ({}),
-      applyConstraints,
-    } as unknown as MediaStreamTrack;
-    const stream = {
-      getVideoTracks: () => [track],
-    } as unknown as MediaStream;
-
-    await expect(setTorchEnabled(stream, true)).resolves.toBe(false);
-    expect(applyConstraints).not.toHaveBeenCalled();
-  });
-
-  it("enables torch when supported", async () => {
-    const { setTorchEnabled } = await import("@/lib/liff/barcode-scanner");
-    const applyConstraints = vi.fn(async () => undefined);
-    const track = {
-      getCapabilities: () => ({ torch: true }),
-      applyConstraints,
-    } as unknown as MediaStreamTrack;
-    const stream = {
-      getVideoTracks: () => [track],
-    } as unknown as MediaStream;
-
-    await expect(setTorchEnabled(stream, true)).resolves.toBe(true);
-    expect(applyConstraints).toHaveBeenCalled();
-  });
-});
-
-describe("createStableCodeGate", () => {
-  it("confirms only after repeated identical hits", async () => {
-    const { createStableCodeGate } = await import("@/lib/liff/barcode-scanner");
-    const onConfirmed = vi.fn();
-    const accept = createStableCodeGate(onConfirmed, 3);
-
-    accept("16052911");
-    accept("16052911");
-    expect(onConfirmed).not.toHaveBeenCalled();
-    accept("16052911");
-    expect(onConfirmed).toHaveBeenCalledWith("16052911");
-  });
-
-  it("resets when the value changes or clears", async () => {
-    const { createStableCodeGate } = await import("@/lib/liff/barcode-scanner");
-    const onConfirmed = vi.fn();
-    const accept = createStableCodeGate(onConfirmed, 3);
-
-    accept("111");
-    accept("222");
-    accept("222");
-    accept(null);
-    accept("222");
-    accept("222");
-    expect(onConfirmed).not.toHaveBeenCalled();
-    accept("222");
-    expect(onConfirmed).toHaveBeenCalledWith("222");
-  });
-});
-
 describe("pickBestDetectedCode", () => {
   it("prefers the larger centered barcode", async () => {
     const { pickBestDetectedCode } = await import("@/lib/liff/barcode-scanner");
@@ -170,64 +31,27 @@ describe("pickBestDetectedCode", () => {
   });
 });
 
-describe("scan zoom helpers", () => {
-  it("clamps logical zoom into 1–3", async () => {
-    const { clampScanZoom, DEFAULT_SCAN_ZOOM } = await import(
-      "@/lib/liff/barcode-scanner"
-    );
-    expect(clampScanZoom(DEFAULT_SCAN_ZOOM)).toBe(2);
-    expect(clampScanZoom(0.2)).toBe(1);
-    expect(clampScanZoom(9)).toBe(3);
-  });
-
-  it("applies track zoom when capability exists", async () => {
-    const { preferTrackZoom } = await import("@/lib/liff/barcode-scanner");
-    const applyConstraints = vi.fn(async () => undefined);
-    const track = {
-      getCapabilities: () => ({ zoom: { min: 1, max: 5, step: 0.1 } }),
-      applyConstraints,
-    } as unknown as MediaStreamTrack;
-    const stream = {
-      getVideoTracks: () => [track],
-    } as unknown as MediaStream;
-
-    await expect(preferTrackZoom(stream, 2)).resolves.toBe(2);
-    expect(applyConstraints).toHaveBeenCalled();
-  });
-
-  it("returns null when zoom is unsupported", async () => {
-    const { preferTrackZoom } = await import("@/lib/liff/barcode-scanner");
-    const applyConstraints = vi.fn(async () => undefined);
-    const track = {
-      getCapabilities: () => ({}),
-      applyConstraints,
-    } as unknown as MediaStreamTrack;
-    const stream = {
-      getVideoTracks: () => [track],
-    } as unknown as MediaStream;
-
-    await expect(preferTrackZoom(stream, 2)).resolves.toBeNull();
-    expect(applyConstraints).not.toHaveBeenCalled();
-  });
-
-  it("center-crops the video for digital zoom", async () => {
-    const { drawCenterZoom } = await import("@/lib/liff/barcode-scanner");
+describe("drawImageCenterCrop", () => {
+  it("center-crops the image for zoomed decode passes", async () => {
+    const { drawImageCenterCrop } = await import("@/lib/liff/barcode-scanner");
     const drawImage = vi.fn();
     const canvas = {
       width: 0,
       height: 0,
       getContext: () => ({ drawImage }),
     } as unknown as HTMLCanvasElement;
-    const video = {
-      videoWidth: 1000,
-      videoHeight: 500,
-    } as unknown as HTMLVideoElement;
+    const img = {
+      naturalWidth: 1000,
+      naturalHeight: 500,
+      width: 1000,
+      height: 500,
+    } as unknown as HTMLImageElement;
 
-    expect(drawCenterZoom(video, canvas, 2)).toBe(true);
+    expect(drawImageCenterCrop(img, canvas, 2)).toBe(true);
     expect(canvas.width).toBe(500);
     expect(canvas.height).toBe(250);
     expect(drawImage).toHaveBeenCalledWith(
-      video,
+      img,
       250,
       125,
       500,
@@ -236,6 +60,18 @@ describe("scan zoom helpers", () => {
       0,
       500,
       250
+    );
+  });
+});
+
+describe("decodeBarcodeFromImageFile", () => {
+  it("rejects non-image files", async () => {
+    const { decodeBarcodeFromImageFile } = await import(
+      "@/lib/liff/barcode-scanner"
+    );
+    const file = new File(["x"], "note.txt", { type: "text/plain" });
+    await expect(decodeBarcodeFromImageFile(file)).rejects.toThrow(
+      /รูปภาพ/
     );
   });
 });
