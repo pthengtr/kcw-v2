@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { sanitizeBarcode } from "@/lib/liff/product-scan-contract";
 
@@ -10,15 +10,36 @@ describe("sanitizeBarcode used by scanner", () => {
   });
 });
 
-describe("native detector capability gate", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.resetModules();
+describe("preferContinuousAutofocus", () => {
+  it("returns false when track has no focus capability", async () => {
+    const { preferContinuousAutofocus } = await import(
+      "@/lib/liff/barcode-scanner"
+    );
+    const track = {
+      applyConstraints: vi.fn(),
+    } as unknown as MediaStreamTrack;
+    const stream = {
+      getVideoTracks: () => [track],
+    } as unknown as MediaStream;
+
+    await expect(preferContinuousAutofocus(stream)).resolves.toBe(false);
+    expect(track.applyConstraints).not.toHaveBeenCalled();
   });
 
-  it("startProductBarcodeScanner uses getUserMedia once path without getCameras", async () => {
-    // Ensure module import does not require DOM camera APIs at load time.
-    const mod = await import("@/lib/liff/barcode-scanner");
-    expect(typeof mod.startProductBarcodeScanner).toBe("function");
+  it("applies continuous focus when capability exists", async () => {
+    const { preferContinuousAutofocus } = await import(
+      "@/lib/liff/barcode-scanner"
+    );
+    const applyConstraints = vi.fn(async () => undefined);
+    const track = {
+      getCapabilities: () => ({ focusMode: ["continuous", "manual"] }),
+      applyConstraints,
+    } as unknown as MediaStreamTrack;
+    const stream = {
+      getVideoTracks: () => [track],
+    } as unknown as MediaStream;
+
+    await expect(preferContinuousAutofocus(stream)).resolves.toBe(true);
+    expect(applyConstraints).toHaveBeenCalled();
   });
 });
