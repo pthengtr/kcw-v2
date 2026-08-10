@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATH_PREFIXES = ["/login", "/auth", "/error", "/no-access"];
+// /liff is LINE WebView only (no Supabase login). Trust boundary stays in kcw-api webhook.
+const PUBLIC_PATH_PREFIXES = ["/login", "/auth", "/error", "/no-access", "/liff"];
 const PUBLIC_EXACT_PATHS = new Set(["/manifest.webmanifest", "/sw.js"]);
 
 function isPublicPath(pathname: string) {
