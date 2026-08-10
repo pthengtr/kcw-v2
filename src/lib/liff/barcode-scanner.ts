@@ -6,12 +6,12 @@
  * Permission "Always allow" cannot be forced from web/LIFF — the OS/LINE WebView owns that.
  * Autofocus is best-effort: continuous when supported, plus tap-to-focus / periodic nudge.
  *
- * Do NOT put focusMode in the initial getUserMedia constraints — some LINE/iOS WebViews
- * reject or mis-handle unknown constraint keys and fail to open the camera cleanly.
+ * Do NOT put focusMode / zoom in the initial getUserMedia constraints — some LINE/iOS
+ * WebViews reject unknown keys. Apply them after the stream is open.
  *
- * Product labels often have a small Code128/EAN next to lots of printed text. ITF/Codabar
- * are omitted because they invent "random" numbers from noise when the camera is soft or
- * the barcode is small in-frame. Accept a code only after several identical frame hits.
+ * Small sticker barcodes need a longer effective focal length: default ~2× zoom so the
+ * phone can stay at a focusing-friendly distance. Prefer track zoom when available;
+ * otherwise digitally crop the center for detection + CSS-scale the preview.
  */
 
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
@@ -42,9 +42,15 @@ const ZXING_FORMATS = [
 /** Same value must win this many consecutive frames before we accept it. */
 export const STABLE_HIT_COUNT = 3;
 
+/** Logical zoom — longer effective focal length for small sticker barcodes. */
+export const MIN_SCAN_ZOOM = 1;
+export const MAX_SCAN_ZOOM = 3;
+export const DEFAULT_SCAN_ZOOM = 2;
+export const SCAN_ZOOM_STEP = 0.5;
+
 /**
  * Prefer enough pixels to resolve small sticker barcodes at arm's length.
- * focusMode stays out of this bag (applied after open).
+ * focusMode/zoom stay out of this bag (applied after open).
  */
 const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: { ideal: "environment" },
@@ -71,17 +77,20 @@ type BarcodeDetectorCtor = {
 
 type FocusCapableTrack = MediaStreamTrack & {
   getCapabilities?: () => MediaTrackCapabilities;
+  getSettings?: () => MediaTrackSettings;
 };
 
 type FocusCapabilities = MediaTrackCapabilities & {
   focusMode?: string[];
   torch?: boolean;
   pointsOfInterest?: boolean;
+  zoom?: number | { min: number; max: number; step?: number };
 };
 
 type FocusConstraintSet = MediaTrackConstraintSet & {
   focusMode?: string;
   torch?: boolean;
+  zoom?: number;
   pointsOfInterest?: Array<{ x: number; y: number }>;
 };
 
@@ -93,7 +102,18 @@ export type BarcodeScannerHandle = {
   setTorch: (on: boolean) => Promise<boolean>;
   /** Whether torch appears available (capability probe after start). */
   torchSupported: boolean;
+  /** Current logical zoom factor. */
+  getZoom: () => number;
+  /** Set logical zoom (hardware when possible, else digital crop/CSS). */
+  setZoom: (zoom: number) => Promise<number>;
+  zoomRange: { min: number; max: number };
 };
+
+export function clampScanZoom(zoom: number): number {
+  if (!Number.isFinite(zoom)) return DEFAULT_SCAN_ZOOM;
+  const stepped = Math.round(zoom * 10) / 10;
+  return Math.min(MAX_SCAN_ZOOM, Math.max(MIN_SCAN_ZOOM, stepped));
+}
 
 function stopMediaStream(stream: MediaStream | null) {
   if (!stream) return;
@@ -222,6 +242,84 @@ export function isTorchSupported(stream: MediaStream | null): boolean {
   return Boolean(readFocusCaps(track).torch);
 }
 
+/** Read camera zoom capability range when the WebView exposes it. */
+export function getTrackZoomRange(
+  stream: MediaStream | null
+): { min: number; max: number } | null {
+  const track = getFocusTrack(stream);
+  if (!track) return null;
+  const zoom = readFocusCaps(track).zoom;
+  if (zoom == null) return null;
+  if (typeof zoom === "number") {
+    if (!(zoom > 1)) return null;
+    return { min: 1, max: zoom };
+  }
+  if (
+    typeof zoom === "object" &&
+    Number.isFinite(zoom.min) &&
+    Number.isFinite(zoom.max) &&
+    zoom.max > zoom.min
+  ) {
+    return { min: zoom.min, max: zoom.max };
+  }
+  return null;
+}
+
+/**
+ * Apply camera zoom (optical/hybrid when the device supports MediaTrack zoom).
+ * Returns the zoom value that was requested/clamped, or null if unsupported.
+ */
+export async function preferTrackZoom(
+  stream: MediaStream,
+  zoom: number
+): Promise<number | null> {
+  const track = getFocusTrack(stream);
+  if (!track) return null;
+  const range = getTrackZoomRange(stream);
+  if (!range) return null;
+
+  const target = Math.min(range.max, Math.max(range.min, zoom));
+  const ok = await applyFocusConstraint(track, { zoom: target });
+  return ok ? target : null;
+}
+
+/**
+ * Center-crop the video frame by `zoom` for barcode detection.
+ * This is the software stand-in for a longer focal length when track zoom is missing.
+ */
+export function drawCenterZoom(
+  video: HTMLVideoElement,
+  canvas: HTMLCanvasElement,
+  zoom: number
+): boolean {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh) return false;
+
+  const z = Math.max(1, zoom);
+  const cropW = Math.max(2, Math.floor(vw / z));
+  const cropH = Math.max(2, Math.floor(vh / z));
+  const sx = Math.floor((vw - cropW) / 2);
+  const sy = Math.floor((vh - cropH) / 2);
+
+  canvas.width = cropW;
+  canvas.height = cropH;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return false;
+  ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, cropW, cropH);
+  return true;
+}
+
+function applyPreviewCssZoom(video: HTMLVideoElement, zoom: number) {
+  const z = Math.max(1, zoom);
+  if (z <= 1.01) {
+    video.style.transform = "";
+    return;
+  }
+  video.style.transformOrigin = "center center";
+  video.style.transform = `scale(${z})`;
+}
+
 /**
  * Require the same sanitized code across consecutive frames before accepting.
  * Filters flicker / partial misreads that show up as "random numbers".
@@ -320,6 +418,7 @@ function buildWideQrBox(viewW: number, viewH: number) {
 
 function attachVideoEl(container: HTMLElement): HTMLVideoElement {
   container.replaceChildren();
+  container.style.overflow = "hidden";
   const video = document.createElement("video");
   video.setAttribute("playsinline", "true");
   video.setAttribute("muted", "true");
@@ -333,13 +432,61 @@ function attachVideoEl(container: HTMLElement): HTMLVideoElement {
   return video;
 }
 
+type ZoomController = {
+  getZoom: () => number;
+  setZoom: (zoom: number) => Promise<number>;
+  /** Crop factor for software detection (1 when hardware zoom already applied). */
+  getDetectZoom: () => number;
+};
+
+function createZoomController(opts: {
+  stream: MediaStream | null;
+  video: HTMLVideoElement | null;
+  initialZoom?: number;
+}): ZoomController {
+  let logicalZoom = clampScanZoom(opts.initialZoom ?? DEFAULT_SCAN_ZOOM);
+  let detectZoom = logicalZoom;
+  let hardwareActive = false;
+
+  const sync = async (next: number): Promise<number> => {
+    logicalZoom = clampScanZoom(next);
+    hardwareActive = false;
+    detectZoom = logicalZoom;
+
+    if (opts.stream) {
+      const applied = await preferTrackZoom(opts.stream, logicalZoom);
+      if (applied != null && applied > 1.01) {
+        hardwareActive = true;
+        // Stream is already magnified — don't crop/CSS-scale on top of it.
+        detectZoom = 1;
+      }
+    }
+
+    if (opts.video) {
+      applyPreviewCssZoom(opts.video, hardwareActive ? 1 : logicalZoom);
+    }
+
+    return logicalZoom;
+  };
+
+  return {
+    getZoom: () => logicalZoom,
+    getDetectZoom: () => detectZoom,
+    setZoom: sync,
+  };
+}
+
 function makeHandle(opts: {
   stream: MediaStream | null;
   torchSupported: boolean;
+  zoom: ZoomController;
   stop: () => Promise<void>;
 }): BarcodeScannerHandle {
   return {
     torchSupported: opts.torchSupported,
+    zoomRange: { min: MIN_SCAN_ZOOM, max: MAX_SCAN_ZOOM },
+    getZoom: () => opts.zoom.getZoom(),
+    setZoom: (z) => opts.zoom.setZoom(z),
     stop: opts.stop,
     refocus: async (point) => {
       if (!opts.stream) return false;
@@ -361,6 +508,7 @@ async function startNativeScanner(
   const detector = new Ctor({ formats: [...NATIVE_FORMATS] });
 
   const video = attachVideoEl(container);
+  const canvas = document.createElement("canvas");
 
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
@@ -369,6 +517,9 @@ async function startNativeScanner(
   await preferContinuousAutofocus(stream);
   video.srcObject = stream;
   await video.play();
+
+  const zoom = createZoomController({ stream, video });
+  await zoom.setZoom(DEFAULT_SCAN_ZOOM);
 
   let stopped = false;
   let timer: number | undefined;
@@ -383,12 +534,20 @@ async function startNativeScanner(
     if (stopped || handling) return;
     try {
       if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-        const codes = await detector.detect(video);
-        const code = pickBestDetectedCode(
-          codes,
-          video.videoWidth || 1,
-          video.videoHeight || 1
-        );
+        const z = zoom.getDetectZoom();
+        let codes: DetectedBarcode[] = [];
+        let frameW = video.videoWidth || 1;
+        let frameH = video.videoHeight || 1;
+
+        if (z > 1.05 && drawCenterZoom(video, canvas, z)) {
+          codes = await detector.detect(canvas);
+          frameW = canvas.width || 1;
+          frameH = canvas.height || 1;
+        } else {
+          codes = await detector.detect(video);
+        }
+
+        const code = pickBestDetectedCode(codes, frameW, frameH);
         if (code) lastCandidateAt = Date.now();
         accept(code);
         if (handling) return;
@@ -416,6 +575,7 @@ async function startNativeScanner(
   return makeHandle({
     stream,
     torchSupported: isTorchSupported(stream),
+    zoom,
     stop: async () => {
       stopped = true;
       if (timer != null) window.clearTimeout(timer);
@@ -433,10 +593,12 @@ async function startHtml5QrcodeScanner(
 ): Promise<BarcodeScannerHandle> {
   // html5-qrcode owns this element id; ensure a dedicated child host.
   container.replaceChildren();
+  container.style.overflow = "hidden";
   const host = document.createElement("div");
   host.id = `kcw-html5-qr-${Math.random().toString(36).slice(2, 9)}`;
   host.style.width = "100%";
   host.style.minHeight = "320px";
+  host.style.overflow = "hidden";
   container.appendChild(host);
 
   const scanner = new Html5Qrcode(host.id, {
@@ -477,8 +639,9 @@ async function startHtml5QrcodeScanner(
   );
 
   let stream: MediaStream | null = null;
+  let video: HTMLVideoElement | null = null;
   try {
-    const video = host.querySelector("video");
+    video = host.querySelector("video");
     const src = video?.srcObject;
     if (src instanceof MediaStream) {
       stream = src;
@@ -487,6 +650,9 @@ async function startHtml5QrcodeScanner(
   } catch {
     // ignore
   }
+
+  const zoom = createZoomController({ stream, video });
+  await zoom.setZoom(DEFAULT_SCAN_ZOOM);
 
   let focusTimer: number | undefined;
   if (stream) {
@@ -500,6 +666,7 @@ async function startHtml5QrcodeScanner(
   return makeHandle({
     stream,
     torchSupported: isTorchSupported(stream),
+    zoom,
     stop: async () => {
       if (focusTimer != null) window.clearInterval(focusTimer);
       try {
