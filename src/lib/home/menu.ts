@@ -145,8 +145,6 @@ export const HOME_MENU_ITEMS = {
 
 export const HOME_MENU_KEYS = Object.keys(HOME_MENU_ITEMS) as HomeMenuKey[];
 
-export const MAX_FAVORITE_COUNT = 4;
-
 export const DEFAULT_FAVORITE_KEYS: HomeMenuKey[] = [
   "reminder",
   "expense",
@@ -154,13 +152,23 @@ export const DEFAULT_FAVORITE_KEYS: HomeMenuKey[] = [
   "bi",
 ];
 
+/**
+ * Sidebar / catalog groups. Section titles are kept for catalog identity but
+ * the Home sidebar renders groups with dividers only (no visible titles).
+ *
+ * Order mirrors the Home sidebar:
+ * 1. daily ops (reminder / PO / stock audit) — expense is rendered separately
+ * 2. finance
+ * 3. master data / products
+ * 4. reports / knowledge
+ */
 export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
   {
     title: "งานประจำวัน",
     items: [
       HOME_MENU_ITEMS.reminder,
-      HOME_MENU_ITEMS.expense,
       HOME_MENU_ITEMS.po,
+      HOME_MENU_ITEMS.stockAudit,
     ],
   },
   {
@@ -173,7 +181,6 @@ export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
       HOME_MENU_ITEMS.party,
       HOME_MENU_ITEMS.relatedProducts,
       HOME_MENU_ITEMS.productImages,
-      HOME_MENU_ITEMS.stockAudit,
     ],
   },
   {

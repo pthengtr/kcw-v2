@@ -12,7 +12,6 @@ import {
   DEFAULT_FAVORITE_KEYS,
   HOME_MENU_ITEMS,
   HOME_MENU_KEYS,
-  MAX_FAVORITE_COUNT,
   resolveFavoriteItems,
   type HomeMenuItem,
   type HomeMenuKey,
@@ -73,10 +72,6 @@ export default function FavoriteMenuSection({
   function toggleKey(key: HomeMenuKey, checked: boolean) {
     setDraftKeys((current) => {
       if (checked) {
-        if (current.length >= MAX_FAVORITE_COUNT) {
-          toast.message(`เลือกได้สูงสุด ${MAX_FAVORITE_COUNT} เมนู`);
-          return current;
-        }
         return normalizeFavoriteKeys([...current, key]);
       }
       const next = current.filter((item) => item !== key);
@@ -113,7 +108,7 @@ export default function FavoriteMenuSection({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-slate-400">
-            {favoriteItems.length}/{MAX_FAVORITE_COUNT} เมนู
+            {favoriteItems.length} เมนู
           </span>
           <Dialog open={open} onOpenChange={(next) => {
             if (next) {
@@ -136,7 +131,7 @@ export default function FavoriteMenuSection({
               <DialogHeader>
                 <DialogTitle>จัดการเมนูโปรด</DialogTitle>
                 <DialogDescription>
-                  เลือกเมนูสูงสุด {MAX_FAVORITE_COUNT} รายการเพื่อแสดงบนหน้าแรก
+                  เลือกหรือยกเลิกเมนูโปรดเพื่อแสดงบนหน้าแรกได้ตามต้องการ
                 </DialogDescription>
               </DialogHeader>
 
@@ -146,8 +141,6 @@ export default function FavoriteMenuSection({
                   const Icon = item.icon;
                   const checked = draftKeys.includes(key);
                   const disableUncheck = checked && draftKeys.length === 1;
-                  const disableCheck =
-                    !checked && draftKeys.length >= MAX_FAVORITE_COUNT;
 
                   return (
                     <Label
@@ -158,7 +151,7 @@ export default function FavoriteMenuSection({
                       <Checkbox
                         id={`favorite-${key}`}
                         checked={checked}
-                        disabled={disableUncheck || disableCheck || isPending}
+                        disabled={disableUncheck || isPending}
                         onCheckedChange={(value) =>
                           toggleKey(key, value === true)
                         }

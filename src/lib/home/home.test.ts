@@ -36,7 +36,7 @@ describe("home favorites", () => {
     expect(normalizeFavoriteKeys(["faq"])).toEqual(["faq"]);
   });
 
-  it("limits favorites to four items", () => {
+  it("allows more than four favorite menus", () => {
     expect(
       normalizeFavoriteKeys([
         "reminder",
@@ -46,7 +46,14 @@ describe("home favorites", () => {
         "bankStatement",
         "party",
       ])
-    ).toEqual(["reminder", "expense", "po", "bi"]);
+    ).toEqual([
+      "reminder",
+      "expense",
+      "po",
+      "bi",
+      "bankStatement",
+      "party",
+    ]);
   });
 
   it("serializes favorites and refuses emptying via toggle", () => {
@@ -61,6 +68,11 @@ describe("home favorites", () => {
     expect(items.map((item) => item.href)).toEqual(["/reminder", "/bi/income"]);
     expect(Object.keys(HOME_MENU_ITEMS).length).toBeGreaterThanOrEqual(10);
     expect(HOME_MENU_GROUPS).toHaveLength(4);
+    expect(HOME_MENU_GROUPS[0].items.map((item) => item.key)).toEqual([
+      "reminder",
+      "po",
+      "stockAudit",
+    ]);
   });
 });
 
