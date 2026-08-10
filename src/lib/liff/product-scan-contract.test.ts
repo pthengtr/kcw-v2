@@ -25,7 +25,8 @@ describe("product-scan-contract", () => {
       "22010585"
     );
     expect(parseProductScanCallback("สแกนสินค้า: ABC-1")).toBe("ABC-1");
-    expect(parseProductScanCallback("hello")).toBeNull();
+    expect(parseProductScanCallback("hello world")).toBeNull();
+    expect(parseProductScanCallback("")).toBeNull();
   });
 
   it("sanitizes barcodes", () => {
