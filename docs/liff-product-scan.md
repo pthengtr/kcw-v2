@@ -29,13 +29,15 @@ Browser-safe only. Never put channel secret / access token / service role keys i
 
 ## Callback contract
 
-After scan, LIFF sends this text into the current chat:
+After scan, LIFF sends the **bare product code** into the current chat (no label prefix):
 
 ```text
-📦 สแกนสินค้า: <barcode>
+<barcode>
 ```
 
-Implemented in `src/lib/liff/product-scan-contract.ts` (keep in sync with kcw-api).
+Example: `8851234567890`
+
+Implemented in `src/lib/liff/product-scan-contract.ts` (keep in sync with kcw-api). The bot webhook should treat a sanitized product-code message as scan/lookup input.
 
 ## LINE Developers checklist
 

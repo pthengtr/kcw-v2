@@ -1,8 +1,12 @@
 /**
  * Deterministic LINE text contract for product-scan LIFF → kcw-api.
  * Must stay in sync with kcw-api `src/liff/product_scan_contract.py`.
+ *
+ * LIFF posts the bare barcode into chat (no label prefix). The bot webhook
+ * treats a sanitized product-code message as a scan/lookup input.
  */
 
+/** @deprecated Kept for parsing older chat messages that used a label prefix. */
 export const PRODUCT_SCAN_CALLBACK_PREFIX = "📦 สแกนสินค้า:";
 
 const BARCODE_RE = /^[A-Za-z0-9\-_.]{1,64}$/;
@@ -15,14 +19,19 @@ export function sanitizeBarcode(raw: string | null | undefined): string | null {
   return code;
 }
 
+/** Text posted back to LINE chat after a successful scan — bare product code only. */
 export function formatProductScanCallback(barcode: string): string {
   const code = sanitizeBarcode(barcode);
   if (!code) {
     throw new Error("Invalid barcode for product scan callback");
   }
-  return `${PRODUCT_SCAN_CALLBACK_PREFIX} ${code}`;
+  return code;
 }
 
+/**
+ * Extract a product code from an inbound chat message.
+ * Accepts bare codes and legacy prefixed messages.
+ */
 export function parseProductScanCallback(text: string | null | undefined): string | null {
   const t = (text || "").trim();
   const prefixes = [PRODUCT_SCAN_CALLBACK_PREFIX, "สแกนสินค้า:"];
@@ -31,5 +40,5 @@ export function parseProductScanCallback(text: string | null | undefined): strin
       return sanitizeBarcode(t.slice(prefix.length));
     }
   }
-  return null;
+  return sanitizeBarcode(t);
 }
