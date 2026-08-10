@@ -7,10 +7,10 @@ Branch operators count stock on the **LAN stock-check app** (LINE → `/stock-ch
 | Object | Location |
 |--------|----------|
 | Tables | `stock.audit_status`, `stock.audit_event`, `stock.audit_batch`, `stock.audit_batch_item` |
-| RPCs | `public.fn_stock_audit_*` (service_role SECURITY DEFINER) |
+| RPCs | `fn_stock_audit_overview`, `fn_stock_audit_lookup` (service_role) |
 
 SQL: `docs/bi/sql/fn_stock_audit_ops.sql`  
-Migrations: `supabase/migrations/20260804180000_stock_audit_ops.sql`, `20260804193000_stock_audit_overview_charts.sql`, `20260810192359_stock_audit_operator_marks.sql`
+Migrations: `supabase/migrations/20260804180000_stock_audit_ops.sql`, `20260804193000_stock_audit_overview_charts.sql`, `20260810192359_stock_audit_operator_marks.sql`, `20260811043000_drop_obsolete_stock_audit_workbench_rpcs.sql`
 
 ## What counts as “last audited”?
 
@@ -26,7 +26,7 @@ POS ICMAS `DATEAUDIT` is **reference only** — not used for buckets or priority
 2. **ค้นหารหัส** — read-only BCODE lookup (no mark)
 3. Soft daily target of 30 (`STOCK_AUDIT_DAILY_TARGET`) for HQ progress on home
 
-Workbench create-batch / mark / skip UI was removed. Write RPCs remain for compatibility but are unused by this page.
+Workbench create-batch / mark / skip UI and RPCs were removed. Daily pick lives in **kcw-api** stock-check (`src/stock_check/daily_pick.py`).
 
 ## Access
 
