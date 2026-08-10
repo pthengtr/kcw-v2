@@ -56,4 +56,6 @@ Implemented in `src/lib/liff/product-scan-contract.ts` (keep in sync with kcw-ap
 ### Camera permission & autofocus
 
 - **Always allow:** cannot be forced from the web app. LINE/OS shows the permission dialog; choose the lasting option if offered (e.g. Allow while using the app). After grant, same HTTPS origin usually won’t re-prompt unless the user cleared site data or denied earlier.
-- **Autofocus:** we request `focusMode: continuous` best-effort. Often works on Android WebView; iOS / many LINE WebViews ignore it and keep system autofocus only.
+- **Autofocus:** applied *after* `getUserMedia` (never in the initial constraint bag — some LINE/iOS WebViews mishandle `focusMode` there). Continuous when supported; otherwise single-shot. The UI also supports **tap-to-focus**, a Focus button, and a periodic focus nudge. iOS / many LINE WebViews still only offer system AF.
+- **Torch:** shown only when `MediaTrackCapabilities.torch` is true (mostly Android).
+- **1D tips:** hold the barcode inside the wide horizontal band, fill most of the width, and tap the preview if the image looks soft.

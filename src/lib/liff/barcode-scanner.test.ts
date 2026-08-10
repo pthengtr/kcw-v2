@@ -42,4 +42,79 @@ describe("preferContinuousAutofocus", () => {
     await expect(preferContinuousAutofocus(stream)).resolves.toBe(true);
     expect(applyConstraints).toHaveBeenCalled();
   });
+
+  it("falls back to single-shot when continuous is unavailable", async () => {
+    const { preferContinuousAutofocus } = await import(
+      "@/lib/liff/barcode-scanner"
+    );
+    const applyConstraints = vi.fn(async () => undefined);
+    const track = {
+      getCapabilities: () => ({ focusMode: ["single-shot", "manual"] }),
+      applyConstraints,
+    } as unknown as MediaStreamTrack;
+    const stream = {
+      getVideoTracks: () => [track],
+    } as unknown as MediaStream;
+
+    await expect(preferContinuousAutofocus(stream)).resolves.toBe(true);
+    expect(applyConstraints).toHaveBeenCalledWith(
+      expect.objectContaining({
+        advanced: [expect.objectContaining({ focusMode: "single-shot" })],
+      })
+    );
+  });
+});
+
+describe("triggerAutofocus", () => {
+  it("applies pointsOfInterest when supported", async () => {
+    const { triggerAutofocus } = await import("@/lib/liff/barcode-scanner");
+    const applyConstraints = vi.fn(async () => undefined);
+    const track = {
+      getCapabilities: () => ({
+        focusMode: ["continuous"],
+        pointsOfInterest: true,
+      }),
+      applyConstraints,
+    } as unknown as MediaStreamTrack;
+    const stream = {
+      getVideoTracks: () => [track],
+    } as unknown as MediaStream;
+
+    await expect(
+      triggerAutofocus(stream, { x: 0.5, y: 0.4 })
+    ).resolves.toBe(true);
+    expect(applyConstraints).toHaveBeenCalled();
+  });
+});
+
+describe("setTorchEnabled", () => {
+  it("returns false without torch capability", async () => {
+    const { setTorchEnabled } = await import("@/lib/liff/barcode-scanner");
+    const applyConstraints = vi.fn(async () => undefined);
+    const track = {
+      getCapabilities: () => ({}),
+      applyConstraints,
+    } as unknown as MediaStreamTrack;
+    const stream = {
+      getVideoTracks: () => [track],
+    } as unknown as MediaStream;
+
+    await expect(setTorchEnabled(stream, true)).resolves.toBe(false);
+    expect(applyConstraints).not.toHaveBeenCalled();
+  });
+
+  it("enables torch when supported", async () => {
+    const { setTorchEnabled } = await import("@/lib/liff/barcode-scanner");
+    const applyConstraints = vi.fn(async () => undefined);
+    const track = {
+      getCapabilities: () => ({ torch: true }),
+      applyConstraints,
+    } as unknown as MediaStreamTrack;
+    const stream = {
+      getVideoTracks: () => [track],
+    } as unknown as MediaStream;
+
+    await expect(setTorchEnabled(stream, true)).resolves.toBe(true);
+    expect(applyConstraints).toHaveBeenCalled();
+  });
 });
