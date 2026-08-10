@@ -33,7 +33,9 @@ export default function CashFlowReportList({
         <ul className="divide-y divide-slate-100">
           {lines.map((line) => {
             const emphasize =
-              line.kind === "balance" || line.kind === "forecast";
+              line.kind === "balance" ||
+              line.kind === "forecast" ||
+              line.kind === "net";
             const out = line.kind === "out";
             const displayAmount =
               out && line.amount !== 0 ? -Math.abs(line.amount) : line.amount;
@@ -59,6 +61,10 @@ export default function CashFlowReportList({
                     <p className="text-xs text-muted-foreground">
                       {formatCount(line.line_count)} รายการ
                     </p>
+                  ) : line.kind === "net" ? (
+                    <p className="text-xs text-muted-foreground">
+                      รับทั้งหมด − จ่ายทั้งหมด
+                    </p>
                   ) : line.kind === "forecast" ? (
                     <p className="text-xs text-muted-foreground">
                       ประมาณการจากเงินสดคงเหลือ + สุทธิเฉลี่ยต่อวัน × 30
@@ -72,7 +78,9 @@ export default function CashFlowReportList({
                     displayAmount < 0 && "text-rose-700",
                     displayAmount > 0 && line.kind === "in" && "text-teal-800",
                     displayAmount > 0 &&
-                      (line.kind === "balance" || line.kind === "forecast") &&
+                      (line.kind === "balance" ||
+                        line.kind === "forecast" ||
+                        line.kind === "net") &&
                       "text-emerald-800"
                   )}
                 >

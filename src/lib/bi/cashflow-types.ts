@@ -74,7 +74,12 @@ export type BiCashflowAccountOption = {
   bank_name: string;
 };
 
-export type BiCashflowReportLineKind = "balance" | "in" | "out" | "forecast";
+export type BiCashflowReportLineKind =
+  | "balance"
+  | "in"
+  | "out"
+  | "net"
+  | "forecast";
 
 export type BiCashflowReportLine = {
   key: string;
@@ -91,6 +96,7 @@ export type BiCashflowReport = {
   supplier_out: number;
   payroll_out: number;
   opex_out: number;
+  net_cash: number;
   ending_cash: number;
   forecast_30d: number;
   forecast_daily_net: number;

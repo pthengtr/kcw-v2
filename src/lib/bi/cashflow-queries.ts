@@ -127,23 +127,68 @@ function parseAccounts(value: unknown): BiCashflowAccountOption[] {
   });
 }
 
+function parseLineKind(value: unknown): BiCashflowReportLineKind {
+  const kindRaw = asString(value);
+  if (
+    kindRaw === "in" ||
+    kindRaw === "out" ||
+    kindRaw === "net" ||
+    kindRaw === "forecast" ||
+    kindRaw === "balance"
+  ) {
+    return kindRaw;
+  }
+  return "balance";
+}
+
+function computeNetCash(parts: {
+  sales_in: number;
+  ar_in: number;
+  supplier_out: number;
+  payroll_out: number;
+  opex_out: number;
+}): number {
+  return (
+    parts.sales_in +
+    parts.ar_in -
+    parts.supplier_out -
+    parts.payroll_out -
+    parts.opex_out
+  );
+}
+
+function ensureNetCashLine(
+  lines: BiCashflowReportLine[],
+  netCash: number
+): BiCashflowReportLine[] {
+  if (lines.some((line) => line.key === "net_cash")) return lines;
+  const netLine: BiCashflowReportLine = {
+    key: "net_cash",
+    label: "เงินสดสุทธิ",
+    amount: netCash,
+    kind: "net",
+    line_count: null,
+  };
+  const endingIdx = lines.findIndex((line) => line.key === "ending_cash");
+  if (endingIdx >= 0) {
+    return [
+      ...lines.slice(0, endingIdx),
+      netLine,
+      ...lines.slice(endingIdx),
+    ];
+  }
+  return [...lines, netLine];
+}
+
 function parseReportLines(value: unknown): BiCashflowReportLine[] {
   if (!Array.isArray(value)) return [];
   return value.map((row) => {
     const r = (row ?? {}) as Record<string, unknown>;
-    const kindRaw = asString(r.kind);
-    const kind: BiCashflowReportLineKind =
-      kindRaw === "in" ||
-      kindRaw === "out" ||
-      kindRaw === "forecast" ||
-      kindRaw === "balance"
-        ? kindRaw
-        : "balance";
     return {
       key: asString(r.key),
       label: asString(r.label),
       amount: asNumber(r.amount),
-      kind,
+      kind: parseLineKind(r.kind),
       line_count:
         r.line_count == null ? null : asNumber(r.line_count),
     };
@@ -167,46 +212,106 @@ function parseMonthMap(value: unknown): Record<string, number> {
   return out;
 }
 
+function ensureNetCashMonthRow(
+  rows: BiCashflowReportMonthRow[]
+): BiCashflowReportMonthRow[] {
+  if (rows.some((row) => row.key === "net_cash")) return rows;
+
+  const byKey = new Map(rows.map((row) => [row.key, row]));
+  const periods = new Set<string>();
+  for (const key of [
+    "sales_in",
+    "ar_in",
+    "supplier_out",
+    "payroll_out",
+    "opex_out",
+  ]) {
+    const row = byKey.get(key);
+    if (!row) continue;
+    for (const period of Object.keys(row.months)) periods.add(period);
+  }
+
+  const months: Record<string, number> = {};
+  for (const period of periods) {
+    months[period] = computeNetCash({
+      sales_in: byKey.get("sales_in")?.months[period] ?? 0,
+      ar_in: byKey.get("ar_in")?.months[period] ?? 0,
+      supplier_out: byKey.get("supplier_out")?.months[period] ?? 0,
+      payroll_out: byKey.get("payroll_out")?.months[period] ?? 0,
+      opex_out: byKey.get("opex_out")?.months[period] ?? 0,
+    });
+  }
+
+  const netRow: BiCashflowReportMonthRow = {
+    key: "net_cash",
+    label: "เงินสดสุทธิ",
+    kind: "net",
+    total: computeNetCash({
+      sales_in: byKey.get("sales_in")?.total ?? 0,
+      ar_in: byKey.get("ar_in")?.total ?? 0,
+      supplier_out: byKey.get("supplier_out")?.total ?? 0,
+      payroll_out: byKey.get("payroll_out")?.total ?? 0,
+      opex_out: byKey.get("opex_out")?.total ?? 0,
+    }),
+    months,
+  };
+
+  const endingIdx = rows.findIndex((row) => row.key === "ending_cash");
+  if (endingIdx >= 0) {
+    return [...rows.slice(0, endingIdx), netRow, ...rows.slice(endingIdx)];
+  }
+  return [...rows, netRow];
+}
+
 function parseReportMonthRows(value: unknown): BiCashflowReportMonthRow[] {
   if (!Array.isArray(value)) return [];
-  return value.map((row) => {
+  const rows = value.map((row) => {
     const r = (row ?? {}) as Record<string, unknown>;
-    const kindRaw = asString(r.kind);
-    const kind: BiCashflowReportLineKind =
-      kindRaw === "in" ||
-      kindRaw === "out" ||
-      kindRaw === "forecast" ||
-      kindRaw === "balance"
-        ? kindRaw
-        : "balance";
     return {
       key: asString(r.key),
       label: asString(r.label) || asString(r.key),
-      kind,
+      kind: parseLineKind(r.kind),
       total: asNumber(r.total),
       months: parseMonthMap(r.months),
     };
   });
+  return ensureNetCashMonthRow(rows);
 }
 
 function parseReport(value: unknown, summary: Record<string, unknown>): BiCashflowReport {
   const r = (value ?? {}) as Record<string, unknown>;
   const lines = parseReportLines(r.lines);
   if (lines.length > 0) {
+    const sales_in = asNumber(r.sales_in);
+    const ar_in = asNumber(r.ar_in);
+    const supplier_out = asNumber(r.supplier_out);
+    const payroll_out = asNumber(r.payroll_out);
+    const opex_out = asNumber(r.opex_out);
+    const net_cash =
+      r.net_cash == null
+        ? computeNetCash({
+            sales_in,
+            ar_in,
+            supplier_out,
+            payroll_out,
+            opex_out,
+          })
+        : asNumber(r.net_cash);
     return {
       opening_cash: asNumber(r.opening_cash),
-      sales_in: asNumber(r.sales_in),
-      ar_in: asNumber(r.ar_in),
-      supplier_out: asNumber(r.supplier_out),
-      payroll_out: asNumber(r.payroll_out),
-      opex_out: asNumber(r.opex_out),
+      sales_in,
+      ar_in,
+      supplier_out,
+      payroll_out,
+      opex_out,
+      net_cash,
       ending_cash: asNumber(r.ending_cash),
       forecast_30d: asNumber(r.forecast_30d),
       forecast_daily_net: asNumber(r.forecast_daily_net),
       other_in: asNumber(r.other_in),
       other_out: asNumber(r.other_out),
       other_count: asNumber(r.other_count),
-      lines,
+      lines: ensureNetCashLine(lines, net_cash),
     };
   }
 
@@ -221,6 +326,7 @@ function parseReport(value: unknown, summary: Record<string, unknown>): BiCashfl
     supplier_out: 0,
     payroll_out: 0,
     opex_out: 0,
+    net_cash: 0,
     ending_cash: ending,
     forecast_30d: ending,
     forecast_daily_net: netEx,
@@ -234,6 +340,7 @@ function parseReport(value: unknown, summary: Record<string, unknown>): BiCashfl
       { key: "supplier_out", label: "จ่าย Supplier", amount: 0, kind: "out", line_count: 0 },
       { key: "payroll_out", label: "เงินเดือน", amount: 0, kind: "out", line_count: 0 },
       { key: "opex_out", label: "ค่าใช้จ่ายดำเนินงาน", amount: 0, kind: "out", line_count: 0 },
+      { key: "net_cash", label: "เงินสดสุทธิ", amount: 0, kind: "net", line_count: null },
       { key: "ending_cash", label: "เงินสดคงเหลือ", amount: ending, kind: "balance", line_count: null },
       { key: "forecast_30d", label: "คาดการณ์เงินสด 30 วันข้างหน้า", amount: ending, kind: "forecast", line_count: null },
     ],
