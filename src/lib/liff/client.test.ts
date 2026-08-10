@@ -54,7 +54,7 @@ describe("liff client helper", () => {
     await initProductScannerLiff();
 
     expect(canSendChatMessage()).toBe(false);
-    await expect(sendTextToChat("📦 สแกนสินค้า: 1")).rejects.toThrow(
+    await expect(sendTextToChat("8851234567890")).rejects.toThrow(
       /เปิดจาก LINE/
     );
     expect(liff.sendMessages).not.toHaveBeenCalled();

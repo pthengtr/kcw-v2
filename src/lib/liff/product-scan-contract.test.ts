@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   formatProductScanCallback,
   parseProductScanCallback,
-  PRODUCT_SCAN_CALLBACK_PREFIX,
   sanitizeBarcode,
 } from "@/lib/liff/product-scan-contract";
 import {
@@ -15,19 +14,19 @@ import {
 } from "@/lib/liff/scan-submit";
 
 describe("product-scan-contract", () => {
-  it("formats the LINE callback message", () => {
-    expect(formatProductScanCallback("8851234567890")).toBe(
-      "📦 สแกนสินค้า: 8851234567890"
-    );
-    expect(PRODUCT_SCAN_CALLBACK_PREFIX).toBe("📦 สแกนสินค้า:");
+  it("formats the LINE callback as a bare barcode", () => {
+    expect(formatProductScanCallback("8851234567890")).toBe("8851234567890");
+    expect(formatProductScanCallback(" 22010585 ")).toBe("22010585");
   });
 
-  it("parses callback messages", () => {
+  it("parses bare barcodes and legacy prefixed messages", () => {
+    expect(parseProductScanCallback("22010585")).toBe("22010585");
     expect(parseProductScanCallback("📦 สแกนสินค้า: 22010585")).toBe(
       "22010585"
     );
     expect(parseProductScanCallback("สแกนสินค้า: ABC-1")).toBe("ABC-1");
-    expect(parseProductScanCallback("hello")).toBeNull();
+    expect(parseProductScanCallback("hello world")).toBeNull();
+    expect(parseProductScanCallback("")).toBeNull();
   });
 
   it("sanitizes barcodes", () => {
