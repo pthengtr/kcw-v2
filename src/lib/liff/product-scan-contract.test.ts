@@ -32,6 +32,7 @@ describe("product-scan-contract", () => {
 
   it("sanitizes barcodes", () => {
     expect(sanitizeBarcode(" 22010585 ")).toBe("22010585");
+    expect(sanitizeBarcode("*22010585*")).toBe("22010585");
     expect(sanitizeBarcode("bad code")).toBeNull();
     expect(sanitizeBarcode("")).toBeNull();
   });
