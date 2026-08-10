@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Camera, CheckCircle2, RotateCcw, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  startProductBarcodeScanner,
+  type BarcodeScannerHandle,
+} from "@/lib/liff/barcode-scanner";
 import {
   canSendChatMessage,
   closeLiffWindow,
@@ -12,10 +15,7 @@ import {
   sendTextToChat,
   type LiffInitResult,
 } from "@/lib/liff/client";
-import {
-  formatProductScanCallback,
-  sanitizeBarcode,
-} from "@/lib/liff/product-scan-contract";
+import { formatProductScanCallback } from "@/lib/liff/product-scan-contract";
 import {
   beginSubmit,
   markError,
@@ -24,23 +24,6 @@ import {
   type ScanSubmitState,
 } from "@/lib/liff/scan-submit";
 import { cn } from "@/lib/utils";
-
-const SCANNER_ELEMENT_ID = "kcw-liff-product-scanner";
-
-/** Prefer common retail + industrial 1D formats; QR as secondary. */
-const FORMATS = [
-  Html5QrcodeSupportedFormats.CODE_128,
-  Html5QrcodeSupportedFormats.CODE_39,
-  Html5QrcodeSupportedFormats.CODE_93,
-  Html5QrcodeSupportedFormats.EAN_13,
-  Html5QrcodeSupportedFormats.EAN_8,
-  Html5QrcodeSupportedFormats.UPC_A,
-  Html5QrcodeSupportedFormats.UPC_E,
-  Html5QrcodeSupportedFormats.ITF,
-  Html5QrcodeSupportedFormats.CODABAR,
-  Html5QrcodeSupportedFormats.QR_CODE,
-  Html5QrcodeSupportedFormats.DATA_MATRIX,
-];
 
 type UiPhase =
   | "boot"
@@ -51,13 +34,6 @@ type UiPhase =
   | "outside_line"
   | "liff_error";
 
-function buildQrBox(viewW: number, viewH: number) {
-  const width = Math.max(240, Math.floor(viewW * 0.88));
-  // Wide short box works much better for 1D barcodes than a square.
-  const height = Math.max(90, Math.min(Math.floor(viewH * 0.28), 140));
-  return { width, height };
-}
-
 export default function ScanProductScreen() {
   const [liffState, setLiffState] = useState<LiffInitResult | null>(null);
   const [phase, setPhase] = useState<UiPhase>("boot");
@@ -65,27 +41,21 @@ export default function ScanProductScreen() {
   const [submit, setSubmit] = useState<ScanSubmitState>({ status: "idle" });
   const [cameraError, setCameraError] = useState<string | null>(null);
 
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const handleRef = useRef<BarcodeScannerHandle | null>(null);
   const startingRef = useRef(false);
   const aliveRef = useRef(true);
   const submitRef = useRef(submit);
-  const handleDecodedRef = useRef<(code: string) => void>(() => {});
+  const onDetectedRef = useRef<(code: string) => void>(() => {});
 
   submitRef.current = submit;
 
   const stopScanner = useCallback(async () => {
-    const scanner = scannerRef.current;
-    scannerRef.current = null;
-    if (!scanner) return;
+    const handle = handleRef.current;
+    handleRef.current = null;
+    if (!handle) return;
     try {
-      if (scanner.isScanning) {
-        await scanner.stop();
-      }
-    } catch {
-      // already stopped
-    }
-    try {
-      scanner.clear();
+      await handle.stop();
     } catch {
       // ignore
     }
@@ -129,7 +99,7 @@ export default function ScanProductScreen() {
     [stopScanner]
   );
 
-  handleDecodedRef.current = (code: string) => {
+  onDetectedRef.current = (code: string) => {
     void handleDecoded(code);
   };
 
@@ -144,63 +114,23 @@ export default function ScanProductScreen() {
       await stopScanner();
       if (!aliveRef.current) return;
 
-      if (
-        typeof window === "undefined" ||
-        !navigator?.mediaDevices?.getUserMedia
-      ) {
-        setPhase("unsupported");
-        setCameraError("เบราว์เซอร์นี้ไม่รองรับกล้อง");
-        return;
-      }
-
-      // Wait a tick so the scanner host has layout size (important in LIFF).
-      await new Promise((r) => window.setTimeout(r, 50));
-      const host = document.getElementById(SCANNER_ELEMENT_ID);
+      // Let layout settle so the host has a real size in LIFF.
+      await new Promise((r) => window.setTimeout(r, 40));
+      const host = hostRef.current;
       if (!host) {
         setPhase("unsupported");
         setCameraError("ไม่พบพื้นที่กล้องบนหน้าจอ");
         return;
       }
 
-      const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID, {
-        formatsToSupport: FORMATS,
-        verbose: false,
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true,
-        },
+      const handle = await startProductBarcodeScanner(host, (code) => {
+        onDetectedRef.current(code);
       });
-      scannerRef.current = scanner;
-
-      const cameras = await Html5Qrcode.getCameras().catch(() => []);
-      const rear = cameras.find((c) =>
-        /back|rear|environment|หลัง|world/i.test(c.label || "")
-      );
-      const cameraConfig = rear?.id
-        ? rear.id
-        : { facingMode: "environment" as const };
-
-      await scanner.start(
-        cameraConfig,
-        {
-          fps: 12,
-          qrbox: buildQrBox,
-          // Avoid aspectRatio — it often crops badly in LINE WebView.
-          disableFlip: false,
-        },
-        (decoded) => {
-          const code = sanitizeBarcode(decoded);
-          if (!code) return;
-          handleDecodedRef.current(code);
-        },
-        () => {
-          // frame miss — ignore
-        }
-      );
-
       if (!aliveRef.current) {
-        await stopScanner();
+        await handle.stop();
         return;
       }
+      handleRef.current = handle;
       setPhase("scanning");
     } catch (err) {
       if (!aliveRef.current) return;
@@ -252,7 +182,7 @@ export default function ScanProductScreen() {
       aliveRef.current = false;
       void stopScanner();
     };
-    // Intentionally once on mount — startScanner/stopScanner are stable enough via refs.
+    // Mount once — avoid re-init restarting the camera / re-prompting.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -274,12 +204,12 @@ export default function ScanProductScreen() {
       <main className="flex flex-1 flex-col gap-4 px-4 pb-6">
         <div className="relative overflow-hidden rounded-xl bg-black">
           <div
-            id={SCANNER_ELEMENT_ID}
+            ref={hostRef}
             className="min-h-[320px] w-full overflow-hidden [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
           />
           {phase === "scanning" && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="h-[26%] w-[86%] rounded-md border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.28)]" />
+              <div className="h-[30%] w-[90%] rounded-md border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.28)]" />
             </div>
           )}
           {phase === "boot" && (
@@ -416,7 +346,7 @@ function StatusPanel({
     <Alert tone="info" title="พร้อมสแกน">
       <span className="inline-flex items-center gap-1.5">
         <Camera className="size-3.5" />
-        รองรับบาร์โค้ดแนวยาว (Code 128 / EAN / UPC) และ QR
+        ถือบาร์โค้ดให้อยู่ในกรอบแนวนอนให้เต็มความกว้าง
       </span>
     </Alert>
   );
