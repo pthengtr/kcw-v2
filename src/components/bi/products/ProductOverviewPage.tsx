@@ -19,6 +19,7 @@ import {
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
+  bangkokYearOptions,
   formatThaiDateRange,
   periodLabel,
   resolvePeriodRange,
@@ -31,6 +32,7 @@ import type {
 import { cn } from "@/lib/utils";
 import BiHighlightsCard from "@/components/bi/BiHighlightsCard";
 import BiLoadingBody from "@/components/bi/BiLoadingBody";
+import RankMonthCompareTable from "@/components/bi/RankMonthCompareTable";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -51,6 +53,9 @@ const PERIODS: BiPeriodPreset[] = ["month", "ytd", "custom"];
 
 export default function ProductOverviewPage() {
   const [preset, setPreset] = useState<BiPeriodPreset>("month");
+  const [ytdYear, setYtdYear] = useState(() =>
+    Number(bangkokTodayIso().slice(0, 4))
+  );
   const [branch, setBranch] = useState<BiBranchFilter>("ALL");
   const [customMode, setCustomMode] = useState<BiCustomDateMode>("single");
   const [customFrom, setCustomFrom] = useState("");
@@ -60,6 +65,8 @@ export default function ProductOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const yearOptions = useMemo(() => bangkokYearOptions(), []);
+
   const range = useMemo(
     () =>
       resolvePeriodRange(
@@ -68,9 +75,10 @@ export default function ProductOverviewPage() {
         customTo,
         new Date(),
         customMode,
-        customMonth
+        customMonth,
+        ytdYear
       ),
-    [preset, customFrom, customTo, customMode, customMonth]
+    [preset, customFrom, customTo, customMode, customMonth, ytdYear]
   );
 
   const load = useCallback(async () => {
@@ -199,6 +207,27 @@ export default function ProductOverviewPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {preset === "ytd" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="bi-product-year">ปี</Label>
+                <Select
+                  value={String(ytdYear)}
+                  onValueChange={(v) => setYtdYear(Number(v))}
+                >
+                  <SelectTrigger id="bi-product-year" className="w-full">
+                    <SelectValue placeholder="ปี" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={String(year)}>
+                        {year + 543} ({year})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
             <div className="space-y-1.5">
               <Label htmlFor="bi-product-branch">สาขา</Label>
               <Select
@@ -348,6 +377,19 @@ export default function ProductOverviewPage() {
               title="แยกตามชนิดชิ้นส่วน (CODE1)"
             />
           </section>
+
+          {preset === "ytd" ? (
+            <section>
+              <RankMonthCompareTable
+                title="เปรียบเทียบรายเดือน (สินค้าอันดับต้น)"
+                description="แถว = สินค้าในอันดับต้น · คอลัมน์ = เดือน (ตั้งแต่ต้นปี)"
+                rowHeader="สินค้า"
+                searchPlaceholder="ค้นหา BCODE / ชื่อ / หมวด…"
+                monthColumns={overview.month_columns}
+                rows={overview.by_product_month}
+              />
+            </section>
+          ) : null}
 
           <section>
             <ProductRankTable

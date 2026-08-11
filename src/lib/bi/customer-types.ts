@@ -1,4 +1,5 @@
 import type { BiSplitRow } from "./sales-types";
+import type { BiMonthCompareRow } from "./month-compare";
 
 export type BiCustomerSummary = {
   revenue_net: number;
@@ -53,4 +54,6 @@ export type BiCustomerOverview = {
   by_branch: BiSplitRow[];
   top_customers: BiCustomerRankRow[];
   unmatched_customers: BiCustomerRankRow[];
+  month_columns: string[];
+  by_customer_month: BiMonthCompareRow[];
 };

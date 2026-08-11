@@ -129,6 +129,8 @@ const productBase: BiProductOverview = {
       brand: "FB",
     },
   ],
+  month_columns: [],
+  by_product_month: [],
 };
 
 describe("BI highlight builders", () => {
@@ -217,6 +219,8 @@ describe("BI highlight builders", () => {
         },
       ],
       unmatched_customers: [],
+      month_columns: [],
+      by_customer_month: [],
     };
 
     const lines = buildCustomerHighlights(customerBase);
