@@ -21,6 +21,14 @@ export function bangkokCurrentMonthIso(now = new Date()): string {
   return bangkokTodayIso(now).slice(0, 7);
 }
 
+/** Calendar years from 2023 through current Bangkok year (descending). */
+export function bangkokYearOptions(now = new Date()): number[] {
+  const current = Number(bangkokTodayIso(now).slice(0, 4));
+  const start = 2023;
+  const end = Math.max(current, start);
+  return Array.from({ length: end - start + 1 }, (_, i) => end - i);
+}
+
 /** Inclusive end date for YYYY-MM, capped at Bangkok today for the current month. */
 export function monthRange(monthIso: string, now = new Date()): DateRange {
   const match = /^(\d{4})-(\d{2})$/.exec(monthIso.trim());

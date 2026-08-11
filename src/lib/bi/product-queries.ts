@@ -5,6 +5,10 @@ import type {
   BiProductOverview,
   BiProductRankRow,
 } from "./product-types";
+import {
+  parseMonthColumns,
+  parseMonthCompareRows,
+} from "./month-compare";
 import type { BiSplitRow } from "./sales-types";
 
 function asNumber(value: unknown): number {
@@ -108,6 +112,8 @@ export function normalizeProductOverview(raw: unknown): BiProductOverview {
     by_code1: parseGroupRows(data.by_code1),
     by_branch: parseSplitRows(data.by_branch),
     top_products: parseProductRows(data.top_products),
+    month_columns: parseMonthColumns(data.month_columns),
+    by_product_month: parseMonthCompareRows(data.by_product_month),
   };
 }
 

@@ -194,6 +194,38 @@ BEGIN
     FROM enriched
     WHERE NOT in_party
     ORDER BY revenue_net DESC, bill_count DESC, acctno
+  ),
+  month_columns AS (
+    SELECT to_char(d::date, 'YYYY-MM') AS period
+    FROM generate_series(
+      date_trunc('month', p_from::timestamp)::date,
+      date_trunc('month', p_to::timestamp)::date,
+      interval '1 month'
+    ) AS d
+  ),
+  customer_month AS (
+    SELECT
+      acctno,
+      to_char(bill_date, 'YYYY-MM') AS period,
+      sum(revenue_net) AS revenue_net
+    FROM ranked
+    GROUP BY acctno, to_char(bill_date, 'YYYY-MM')
+  ),
+  by_customer_month AS (
+    SELECT
+      tc.acctno::text AS key,
+      COALESCE(tc.customer_name, tc.acctno) AS label,
+      tc.acctno AS sublabel,
+      tc.revenue_net AS total,
+      COALESCE(
+        (
+          SELECT jsonb_object_agg(cm.period, cm.revenue_net)
+          FROM customer_month cm
+          WHERE cm.acctno = tc.acctno
+        ),
+        '{}'::jsonb
+      ) AS months
+    FROM top_customers tc
   )
   SELECT jsonb_build_object(
     'from', p_from,
@@ -268,6 +300,20 @@ BEGIN
         'online_revenue_net', online_revenue_net
       ) ORDER BY revenue_net DESC, bill_count DESC, acctno)
       FROM unmatched_customers
+    ), '[]'::jsonb),
+    'month_columns', COALESCE((
+      SELECT jsonb_agg(period ORDER BY period)
+      FROM month_columns
+    ), '[]'::jsonb),
+    'by_customer_month', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'key', key,
+        'label', label,
+        'sublabel', sublabel,
+        'total', total,
+        'months', months
+      ) ORDER BY total DESC, label)
+      FROM by_customer_month
     ), '[]'::jsonb)
   ) INTO v_result;
 
