@@ -6,15 +6,15 @@
  *   - year: number (default: Bangkok today − 10 days)
  *   - month: number 1-12
  *
- * Reads bank.statement_lines (live match_* fields), builds VAT-style workbook
- * (one sheet per account), uploads to Storage bucket `bank-statements` under
- * `reports/{year}/{mm}/…`, returns a signed download URL. No Google Drive.
- *
- * Layout parity: kcw-analytics `src/kcw/bank_statement_report.py`.
+ * Reads bank.statement_lines (live match_* fields), resolves party/bill labels
+ * for the simplified operator workbook (one sheet per account), uploads to
+ * Storage bucket `bank-statements` under `reports/{year}/{mm}/…`, returns a
+ * signed download URL. No Google Drive. Matching logic is unchanged.
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireBankStatementSyncPermission } from "../_shared/rbac-auth.ts";
 import { corsHeaders } from "./cors.ts";
+import { attachMatchedPartyAndBills } from "./party-lookup.ts";
 import {
   buildAccountSheets,
   buildWorkbookBuffer,
@@ -152,7 +152,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const enriched = enrichStatementRows(reportLines);
+    const withParties = await attachMatchedPartyAndBills(admin, reportLines);
+    const enriched = enrichStatementRows(withParties);
     const sheets = buildAccountSheets(enriched);
     const counts = matchStatusCounts(enriched);
     const bytes = await buildWorkbookBuffer(sheets, year, month);

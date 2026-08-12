@@ -103,8 +103,9 @@ export default function StatementReportDialog({
         <DialogHeader>
           <DialogTitle>สร้างรายงานเดินบัญชี</DialogTitle>
           <DialogDescription>
-            สร้างไฟล์ Excel หลายชีต (บัญชีละชีต) จาก statement +
-            สถานะจับคู่ แล้วดาวน์โหลดจาก Storage — ไม่ใช้ Google Drive
+            สร้างไฟล์ Excel หลายชีต (บัญชีละชีต) คอลัมน์แบบรายงานเดินบัญชี
+            (วันที่ / ชื่อบริษัท / เลขที่บิล / ถอน–ฝาก / ยอดคงเหลือ / หมายเหตุ)
+            แล้วดาวน์โหลดจาก Storage — ไม่ใช้ Google Drive
           </DialogDescription>
         </DialogHeader>
 
