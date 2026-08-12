@@ -319,6 +319,80 @@ export function formatBillNumbers(row: StatementLineRow): string {
   return fromRef;
 }
 
+/** Parse sales/bill date from tar_cntar_net matched_ref_id (ISO or DD/MM/YYYY). */
+export function parseSalesDateFromRefId(
+  refId: string | null | undefined,
+): Date | null {
+  const token = splitRefIds(refId)[0] ?? "";
+  if (!token) return null;
+
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(token);
+  if (iso) {
+    const d = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3], 12));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  const dmy = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(token);
+  if (dmy) {
+    const d = new Date(Date.UTC(+dmy[3], +dmy[2] - 1, +dmy[1], 12));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  return null;
+}
+
+export function formatDateDdMmYyyy(d: Date): string {
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const yyyy = String(d.getUTCFullYear());
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+/** True when the match is SYP daily net (3TAR−3CNTAR), not HQ TAR−CNTAR. */
+export function isDailyNet3Tar(row: StatementLineRow): boolean {
+  const reason = row.match_reason ?? "";
+  const notes = row.match_notes ?? "";
+  if (/3TAR/i.test(reason) || /3TAR/i.test(notes) || /3CNTAR/i.test(notes)) {
+    return true;
+  }
+  if (
+    /ยอดขายสุทธิ\s*TAR\b/u.test(reason) ||
+    /TAR\s*[−\-–]?\s*CNTAR/i.test(notes) ||
+    /TAR\s*หัก\s*CNTAR/u.test(notes)
+  ) {
+    return false;
+  }
+  const digits = String(row.account_no ?? "").replace(/\D/g, "");
+  if (digits.endsWith("0393")) return true;
+  if (digits.endsWith("7236")) return false;
+  return false;
+}
+
+/**
+ * Operator label for matched daily net sales (TAR / 3TAR).
+ * Uses sales date from matched_ref_id, not the bank txn date.
+ */
+export function formatDailyNetSalesDescription(
+  row: StatementLineRow,
+): string | null {
+  const refType = (row.matched_ref_type ?? "").trim().toLowerCase();
+  if (refType !== "tar_cntar_net") return null;
+
+  const status = normalizeMatchStatus(row.match_status);
+  if (status === "pending" || status === "unmatched" || status === "ignored") {
+    return null;
+  }
+
+  const salesDate = parseSalesDateFromRefId(row.matched_ref_id);
+  if (!salesDate) return null;
+
+  const dateLabel = formatDateDdMmYyyy(salesDate);
+  if (isDailyNet3Tar(row)) {
+    return `ยอดขายสุทธิรายวัน (3TAR หัก 3CNTAR) ของวันที่ ${dateLabel}`;
+  }
+  return `ยอดขายสุทธิรายวัน (TAR หัก CNTAR) ของวันที่ ${dateLabel}`;
+}
+
 export function shortenMatchReason(reason: string | null | undefined): string {
   if (!reason) return "";
   let text = reason.trim();
@@ -350,6 +424,9 @@ export function formatReportRemark(row: StatementLineRow): string {
 }
 
 export function resolveDescriptionColumn(row: StatementLineRow): string {
+  const dailyNet = formatDailyNetSalesDescription(row);
+  if (dailyNet) return dailyNet;
+
   const fromLookup = normalizePartyDisplayName(
     (row.matched_party_name ?? "").trim(),
   );
