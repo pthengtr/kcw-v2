@@ -26,7 +26,7 @@ Display description is excluded. KTB detail is normalized (strip trailing online
 
 Upstream Drive BAT (thin uploader → this Edge Function): [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md).
 
-Report Excel columns (operator-facing): `#`, `วันที่`, `รายการ / ชื่อบริษัท`, `ประเภท`, `เลขที่บิล`, `ถอนเงิน`, `ฝากเงิน`, `ยอดคงเหลือ`, `หมายเหตุ` (blank for now). Company/bill fields are resolved at report time from live matches + source masters; matched daily net sales (`tar_cntar_net`) show `ยอดขายสุทธิรายวัน (TAR|3TAR …) ของวันที่ DD/MM/YYYY` using the sales date in `matched_ref_id`. Raw bank columns stay in `bank.statement_lines` for reconciliation.
+Report Excel columns (operator-facing): `#`, `วันที่`, `รายการ / ชื่อบริษัท`, `ประเภท`, `เลขที่บิล`, `ถอนเงิน`, `ฝากเงิน`, `ยอดคงเหลือ`, `หมายเหตุ` (blank for now). Company/bill fields are resolved at report time from live matches + source masters; matched daily net sales (`tar_cntar_net`) show `ยอดขายสุทธิรายวัน (TAR|3TAR …) ของวันที่ DD/MM/YYYY` using the sales date in `matched_ref_id`. On account `KTB_248-0-42113-9`, Shopee/Lazada/TikTok keywords in bank detail map to `ลูกค้า …` even when unmatched/manual. Raw bank columns stay in `bank.statement_lines` for reconciliation.
 
 ## UI
 

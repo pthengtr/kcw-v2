@@ -393,6 +393,32 @@ export function formatDailyNetSalesDescription(
   return `ยอดขายสุทธิรายวัน (TAR หัก CNTAR) ของวันที่ ${dateLabel}`;
 }
 
+/** KTB marketplace settlement account (sheet `KTB_248-0-42113-9`). */
+const KTB_MARKETPLACE_ACCOUNT_NO = "248-0-42113-9";
+
+export function isKtbMarketplaceAccount(row: StatementLineRow): boolean {
+  const accountNo = String(row.account_no ?? "").trim();
+  const bankName = String(row.bank_name ?? "").trim().toUpperCase();
+  return accountNo === KTB_MARKETPLACE_ACCOUNT_NO && bankName === "KTB";
+}
+
+/**
+ * For KTB_248-0-42113-9, map marketplace keywords in bank detail/description
+ * to customer labels. Applies regardless of match status (including unmatched/manual).
+ */
+export function formatMarketplaceCustomerDescription(
+  row: StatementLineRow,
+): string | null {
+  if (!isKtbMarketplaceAccount(row)) return null;
+
+  const { detail } = extractRawFields(row.raw_json);
+  const haystack = `${detail}\n${row.description ?? ""}`.toLowerCase();
+  if (haystack.includes("shopee")) return "ลูกค้า Shopee";
+  if (haystack.includes("lazada")) return "ลูกค้า Lazada";
+  if (haystack.includes("tiktok")) return "ลูกค้า TikTok";
+  return null;
+}
+
 export function shortenMatchReason(reason: string | null | undefined): string {
   if (!reason) return "";
   let text = reason.trim();
@@ -424,6 +450,9 @@ export function formatReportRemark(row: StatementLineRow): string {
 }
 
 export function resolveDescriptionColumn(row: StatementLineRow): string {
+  const marketplace = formatMarketplaceCustomerDescription(row);
+  if (marketplace) return marketplace;
+
   const dailyNet = formatDailyNetSalesDescription(row);
   if (dailyNet) return dailyNet;
 
