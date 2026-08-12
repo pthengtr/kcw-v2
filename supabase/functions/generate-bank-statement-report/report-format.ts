@@ -13,6 +13,7 @@ export const COLUMN_ORDER = [
   "#",
   "วันที่",
   "รายการ / ชื่อบริษัท",
+  "ประเภท",
   "เลขที่บิล",
   "ถอนเงิน",
   "ฝากเงิน",
@@ -26,7 +27,7 @@ const DONE_MATCH_STATUSES = new Set(["matched", "manual", "resolved"]);
 
 const UNMATCHED_NOTE = "ยังไม่พบรายการจับคู่";
 
-/** Short human-readable document / reconciliation type for หมายเหตุ. */
+/** Short human-readable document / reconciliation type for ประเภท. */
 const REMARK_BY_REF_TYPE: Record<string, string> = {
   rvmas: "ใบสำคัญรับเงิน",
   rvi: "ใบสำคัญรับเงิน",
@@ -396,11 +397,12 @@ export function enrichStatementRows(rows: StatementLineRow[]): EnrichedRow[] {
       "#": 0,
       วันที่: parseDate(row.txn_date),
       "รายการ / ชื่อบริษัท": resolveDescriptionColumn(row),
+      ประเภท: formatReportRemark(row),
       เลขที่บิล: formatBillNumbers(row),
       ถอนเงิน: debit,
       ฝากเงิน: credit,
       ยอดคงเหลือ: moneyOrBlank(row.balance_after),
-      หมายเหตุ: formatReportRemark(row),
+      หมายเหตุ: "",
     };
   });
 }

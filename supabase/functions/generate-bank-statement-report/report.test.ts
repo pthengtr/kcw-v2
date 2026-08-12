@@ -50,6 +50,7 @@ describe("bank statement report columns", () => {
       "#",
       "วันที่",
       "รายการ / ชื่อบริษัท",
+      "ประเภท",
       "เลขที่บิล",
       "ถอนเงิน",
       "ฝากเงิน",
@@ -151,11 +152,12 @@ describe("bank statement report columns", () => {
     expect(enriched["รายการ / ชื่อบริษัท"]).toBe(
       "บริษัท 168 เทรลเลอร์ทรานสปอร์ต จำกัด",
     );
+    expect(enriched["ประเภท"]).toBe("ใบสำคัญรับเงิน");
     expect(enriched["เลขที่บิล"]).toBe("RC6908-003");
     expect(enriched["ถอนเงิน"]).toBeNull();
     expect(enriched["ฝากเงิน"]).toBe(26508);
     expect(enriched["ยอดคงเหลือ"]).toBe(1173631.99);
-    expect(enriched["หมายเหตุ"]).toBe("ใบสำคัญรับเงิน");
+    expect(enriched["หมายเหตุ"]).toBe("");
     expect(enriched._match_status).toBe("matched");
     expect(enriched.วันที่).toBeInstanceOf(Date);
   });
