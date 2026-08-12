@@ -15,6 +15,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireBankStatementSyncPermission } from "../_shared/rbac-auth.ts";
 import { corsHeaders } from "./cors.ts";
+import { attachMatchedPartyAndBills } from "./party-lookup.ts";
 import {
   buildAccountSheets,
   buildWorkbookBuffer,
@@ -152,7 +153,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const enriched = enrichStatementRows(reportLines);
+    const withParties = await attachMatchedPartyAndBills(admin, reportLines);
+    const enriched = enrichStatementRows(withParties);
     const sheets = buildAccountSheets(enriched);
     const counts = matchStatusCounts(enriched);
     const bytes = await buildWorkbookBuffer(sheets, year, month);

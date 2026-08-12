@@ -26,7 +26,7 @@ Display description is excluded. KTB detail is normalized (strip trailing online
 
 Upstream Drive BAT (thin uploader → this Edge Function): [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md).
 
-Report layout parity: [kcw-analytics `src/kcw/bank_statement_report.py`](https://github.com/pthengtr/kcw-analytics/blob/main/src/kcw/bank_statement_report.py).
+Report Excel columns (operator-facing): `#`, `วันที่`, `รายการ / ชื่อบริษัท`, `เลขที่บิล`, `ถอนเงิน`, `ฝากเงิน`, `ยอดคงเหลือ`, `หมายเหตุ`. Company/bill fields are resolved at report time from live matches + source masters; raw bank columns stay in `bank.statement_lines` for reconciliation.
 
 ## UI
 
