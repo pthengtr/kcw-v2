@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Edge Function storage deploy artifacts
+supabase/functions/generate-bank-statement-report/.bundle/
+
