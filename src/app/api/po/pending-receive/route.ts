@@ -6,6 +6,7 @@ import { PO_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import {
   PO_PENDING_RECEIVE_STATUSES,
   listPoPendingReceive,
+  type PoPrepareFilter,
 } from "@/lib/po/po-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -14,6 +15,9 @@ export const maxDuration = 60;
 const QuerySchema = z.object({
   site: z.enum(["HQ", "SYP"]),
   status: z.enum(PO_PENDING_RECEIVE_STATUSES).default("pending_receive"),
+  prepare: z
+    .enum(["all", "prepared", "partially_prepared", "not_prepared"])
+    .default("all"),
   q: z.string().optional(),
   vendor: z.string().optional(),
   from: z
@@ -43,6 +47,7 @@ export async function GET(req: Request) {
   const parsed = QuerySchema.safeParse({
     site: url.searchParams.get("site") ?? undefined,
     status: url.searchParams.get("status") ?? undefined,
+    prepare: url.searchParams.get("prepare") ?? undefined,
     q: url.searchParams.get("q") || undefined,
     vendor: url.searchParams.get("vendor") || undefined,
     from: url.searchParams.get("from") || undefined,
@@ -62,6 +67,7 @@ export async function GET(req: Request) {
       supabase,
       site: parsed.data.site,
       status: parsed.data.status,
+      prepareFilter: parsed.data.prepare as PoPrepareFilter,
       q: parsed.data.q,
       vendor: parsed.data.vendor,
       from: parsed.data.from,

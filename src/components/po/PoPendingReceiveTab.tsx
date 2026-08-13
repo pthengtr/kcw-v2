@@ -10,6 +10,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
 import PoProductCell from "@/components/po/PoProductCell";
@@ -31,6 +38,7 @@ import {
   type PoLineRow,
   type PoPendingReceiveRow,
   type PoPendingReceiveStatus,
+  type PoPrepareFilter,
   type PoPrepareStatus,
 } from "@/lib/po/po-queries";
 import type { PoSyncSite } from "@/lib/po/worker-jobs";
@@ -209,6 +217,7 @@ export default function PoPendingReceiveTab({
   const [error, setError] = useState<string | null>(null);
 
   const [q, setQ] = useState("");
+  const [prepare, setPrepare] = useState<PoPrepareFilter>("all");
   const [from, setFrom] = useState(() => last30DaysPoDateRange().from);
   const [to, setTo] = useState(() => last30DaysPoDateRange().to);
   const [lookbackId, setLookbackId] = useState("30d");
@@ -243,7 +252,7 @@ export default function PoPendingReceiveTab({
 
   useEffect(() => {
     setOffset(0);
-  }, [q, from, to, site, status]);
+  }, [q, prepare, from, to, site, status]);
 
   useEffect(() => {
     // รอสั่งซื้อ has no DOCDATE filter (often null). Other ICLOW tabs default to 30d.
@@ -263,6 +272,9 @@ export default function PoPendingReceiveTab({
         const params = new URLSearchParams();
         params.set("site", site);
         params.set("status", status);
+        if (site === "SYP" && prepare !== "all") {
+          params.set("prepare", prepare);
+        }
         if (q.trim()) params.set("q", q.trim());
         if (showDates) {
           const range = last30DaysPoDateRange();
@@ -298,7 +310,7 @@ export default function PoPendingReceiveTab({
     }
     void fetchRows();
     return () => ac.abort();
-  }, [site, status, q, from, to, limit, offset, refreshToken, showDates]);
+  }, [site, status, prepare, q, from, to, limit, offset, refreshToken, showDates]);
 
   async function openPoDetail(row: PoPendingReceiveRow) {
     if (!row.docno) return;
@@ -756,6 +768,22 @@ export default function PoPendingReceiveTab({
             : "รายการรอสั่งซื้อจาก PARTS9 (แยกจาก POMAS/PODET). คลิก DOCNO → POMAS/PODET"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        {site === "SYP" ? (
+          <Select
+            value={prepare}
+            onValueChange={(v) => setPrepare(v as PoPrepareFilter)}
+          >
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="สถานะจัด" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทั้งหมด</SelectItem>
+              <SelectItem value="not_prepared">ยังไม่จัด</SelectItem>
+              <SelectItem value="partially_prepared">จัดของบางส่วน</SelectItem>
+              <SelectItem value="prepared">จัดแล้ว</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : null}
         <Input
           className="w-full sm:max-w-xs"
           placeholder={

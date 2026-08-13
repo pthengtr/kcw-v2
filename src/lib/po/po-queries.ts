@@ -491,6 +491,7 @@ export async function listPoPendingReceive(params: {
   supabase: SupabaseClient;
   site: PoSyncSite;
   status?: PoPendingReceiveStatus;
+  prepareFilter?: PoPrepareFilter;
   q?: string;
   vendor?: string;
   from?: string;
@@ -507,6 +508,7 @@ export async function listPoPendingReceive(params: {
     supabase,
     site,
     status = "pending_receive",
+    prepareFilter = "all",
     q,
     vendor,
     from,
@@ -526,6 +528,7 @@ export async function listPoPendingReceive(params: {
     p_months: months,
     p_limit: limit,
     p_offset: offset,
+    p_prepare: site === "SYP" ? prepareFilter : "all",
   });
 
   if (error) throw error;
