@@ -50,7 +50,7 @@ Workbench create-batch / mark / skip UI and RPCs were removed. Daily pick lives 
 
 - Page: `/stock-audit`
 - RBAC: `stock_audit`
-- Home menu: สถานะตรวจนับ
+- Home menu group **KPI งาน**: KPI ตรวจนับ
 
 ## Out of scope
 

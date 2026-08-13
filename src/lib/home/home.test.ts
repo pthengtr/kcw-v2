@@ -67,13 +67,26 @@ describe("home favorites", () => {
   it("resolves favorite items from the shared menu catalog", () => {
     const items = resolveFavoriteItems(["reminder", "bi"]);
     expect(items.map((item) => item.href)).toEqual(["/reminder", "/bi/income"]);
-    expect(Object.keys(HOME_MENU_ITEMS).length).toBeGreaterThanOrEqual(10);
-    expect(HOME_MENU_GROUPS).toHaveLength(4);
+    expect(Object.keys(HOME_MENU_ITEMS).length).toBeGreaterThanOrEqual(11);
+    expect(HOME_MENU_GROUPS).toHaveLength(5);
+    expect(HOME_MENU_GROUPS.map((group) => group.title)).toEqual([
+      "งานประจำวัน",
+      "KPI งาน",
+      "การเงินและรับชำระ",
+      "ข้อมูลและสินค้า",
+      "รายงานและความรู้",
+    ]);
     expect(HOME_MENU_GROUPS[0].items.map((item) => item.key)).toEqual([
       "reminder",
       "po",
-      "stockAudit",
     ]);
+    expect(HOME_MENU_GROUPS[1].items.map((item) => item.key)).toEqual([
+      "stockAudit",
+      "productImageKpi",
+    ]);
+    expect(HOME_MENU_ITEMS.stockAudit.href).toBe("/stock-audit");
+    expect(HOME_MENU_ITEMS.productImageKpi.href).toBe("/product-images/kpi");
+    expect(HOME_MENU_ITEMS.productImages.href).toBe("/product-images");
   });
 });
 

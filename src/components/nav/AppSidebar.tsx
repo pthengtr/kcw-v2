@@ -18,6 +18,7 @@ import { expenseMobileLinks } from "@/components/nav/nav-config";
 import {
   canAccessAdminRbac,
   filterHomeMenuItem,
+  isHomeMenuPathActive,
   matchesMenuSearch,
 } from "@/lib/home/sidebar-menu";
 import {
@@ -36,10 +37,7 @@ type SidebarNavProps = {
 };
 
 function isPathActive(pathname: string, href: string) {
-  return (
-    pathname === href ||
-    (href !== "/home" && pathname.startsWith(`${href}/`))
-  );
+  return isHomeMenuPathActive(pathname, href);
 }
 
 function SidebarLink({

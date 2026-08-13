@@ -19,7 +19,8 @@ Migration: `supabase/migrations/20260813041000_product_image_kpi.sql`
 - `GET /api/product-images/kpi?from=YYYY-MM-DD&to=YYYY-MM-DD` (auth required; no dedicated RBAC page key)
 - Page: `/product-images/kpi` — today cards, operator leaderboard, recent activity
 - Admin slots: `/product-images` — linked via tabs
-- Home menu “จัดการรูปสินค้า” → KPI page
+- Home menu group **KPI งาน**: “KPI รูปสินค้า” → KPI page
+- Home menu group **ข้อมูลและสินค้า**: “จัดการรูปสินค้า” → admin
 
 ## Notes
 
