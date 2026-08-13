@@ -6,6 +6,7 @@ import {
   Boxes,
   ClipboardList,
   Handshake,
+  ImageUp,
   Images,
   Link2,
   MessageCircleWarning,
@@ -18,6 +19,7 @@ export type HomeMenuKey =
   | "expense"
   | "po"
   | "stockAudit"
+  | "productImageKpi"
   | "bankStatement"
   | "tigerPay"
   | "party"
@@ -72,11 +74,20 @@ export const HOME_MENU_ITEMS = {
   stockAudit: {
     key: "stockAudit",
     href: "/stock-audit",
-    label: "สถานะตรวจนับ",
-    description: "KPI และความครบถ้วนจากการนับที่สาขา",
+    label: "KPI ตรวจนับ",
+    description: "งานนับสต็อกจาก LINE และความสดของรหัส",
     icon: Boxes,
     iconClassName: "text-sky-600",
     iconSurfaceClassName: "bg-sky-50 ring-sky-100",
+  },
+  productImageKpi: {
+    key: "productImageKpi",
+    href: "/product-images/kpi",
+    label: "KPI รูปสินค้า",
+    description: "งานอัปโหลด แทนที่ ลบรูปจาก LINE",
+    icon: ImageUp,
+    iconClassName: "text-rose-600",
+    iconSurfaceClassName: "bg-rose-50 ring-rose-100",
   },
   bankStatement: {
     key: "bankStatement",
@@ -118,10 +129,10 @@ export const HOME_MENU_ITEMS = {
     key: "productImages",
     href: "/product-images",
     label: "จัดการรูปสินค้า",
-    description: "ซิงก์และตรวจสอบรูปภาพสินค้า",
+    description: "แก้ไขช่องรูปสินค้าใน Storage",
     icon: Images,
-    iconClassName: "text-rose-600",
-    iconSurfaceClassName: "bg-rose-50 ring-rose-100",
+    iconClassName: "text-pink-600",
+    iconSurfaceClassName: "bg-pink-50 ring-pink-100",
   },
   faq: {
     key: "faq",
@@ -157,19 +168,20 @@ export const DEFAULT_FAVORITE_KEYS: HomeMenuKey[] = [
  * the Home sidebar renders groups with dividers only (no visible titles).
  *
  * Order mirrors the Home sidebar:
- * 1. daily ops (reminder / PO / stock audit) — expense is rendered separately
- * 2. finance
- * 3. master data / products
- * 4. reports / knowledge
+ * 1. daily ops (reminder / PO) — expense is rendered separately
+ * 2. ops KPI reports (stock check / product images)
+ * 3. finance
+ * 4. master data / products
+ * 5. reports / knowledge
  */
 export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
   {
     title: "งานประจำวัน",
-    items: [
-      HOME_MENU_ITEMS.reminder,
-      HOME_MENU_ITEMS.po,
-      HOME_MENU_ITEMS.stockAudit,
-    ],
+    items: [HOME_MENU_ITEMS.reminder, HOME_MENU_ITEMS.po],
+  },
+  {
+    title: "KPI งาน",
+    items: [HOME_MENU_ITEMS.stockAudit, HOME_MENU_ITEMS.productImageKpi],
   },
   {
     title: "การเงินและรับชำระ",

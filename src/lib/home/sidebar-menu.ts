@@ -6,7 +6,7 @@ import {
   canAccessStockAudit,
   canAccessTigerPay,
 } from "@/lib/auth/client-permissions";
-import type { HomeMenuItem, HomeMenuKey } from "./menu";
+import { HOME_MENU_ITEMS, type HomeMenuItem, type HomeMenuKey } from "./menu";
 
 export function canAccessHomeMenuItem(
   key: HomeMenuKey,
@@ -46,6 +46,21 @@ export function matchesMenuSearch(
     item.label.toLowerCase().includes(normalized) ||
     item.description.toLowerCase().includes(normalized)
   );
+}
+
+/** True when pathname matches href, preferring longer sibling menu hrefs. */
+export function isHomeMenuPathActive(pathname: string, href: string): boolean {
+  if (pathname === href) return true;
+  if (href === "/home" || !pathname.startsWith(`${href}/`)) return false;
+
+  const menuHrefs = Object.values(HOME_MENU_ITEMS).map((item) => item.href);
+  const hasLongerMenuMatch = menuHrefs.some(
+    (other) =>
+      other !== href &&
+      other.startsWith(`${href}/`) &&
+      (pathname === other || pathname.startsWith(`${other}/`))
+  );
+  return !hasLongerMenuMatch;
 }
 
 export { canAccessAdminRbac };
