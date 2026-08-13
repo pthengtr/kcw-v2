@@ -143,6 +143,106 @@ describe("bank statement report columns", () => {
     ).toBe("ยังไม่พบรายการจับคู่");
   });
 
+  it("labels matched TAR / 3TAR daily net sales with the sales date", () => {
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          description: "รับโอนเงิน",
+          match_status: "matched",
+          match_reason: "ยอดขายสุทธิ TAR (เข้าวันถัดไป)",
+          match_notes:
+            "ยอดขายสุทธิรายวัน (TAR หัก CNTAR) ของวันที่ 31/07/2026 จำนวน 88,170.70 บาท",
+          matched_ref_type: "tar_cntar_net",
+          matched_ref_id: "2026-07-31",
+          matched_party_name: null,
+          credit: 88170.7,
+        }),
+      ),
+    ).toBe("ยอดขายสุทธิรายวัน (TAR หัก CNTAR) ของวันที่ 31/07/2026");
+
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "064-8-92039-3",
+          description: "รับโอนเงิน",
+          match_status: "matched",
+          match_reason: "ยอดขายสุทธิ 3TAR (เข้าวันถัดไป)",
+          match_notes:
+            "ยอดขายสุทธิรายวัน (3TAR หัก 3CNTAR) ของวันที่ 31/07/2026 จำนวน 40,357.40 บาท",
+          matched_ref_type: "tar_cntar_net",
+          matched_ref_id: "2026-07-31",
+          matched_party_name: null,
+          credit: 40357.4,
+        }),
+      ),
+    ).toBe("ยอดขายสุทธิรายวัน (3TAR หัก 3CNTAR) ของวันที่ 31/07/2026");
+  });
+
+  it("labels KTB marketplace settlements from detail keywords", () => {
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "248-0-42113-9",
+          bank_name: "KTB",
+          description: "TR from 9825080752 Shopeepay (Thailand)C",
+          match_status: "unmatched",
+          match_reason: null,
+          match_notes: null,
+          matched_ref_type: null,
+          matched_ref_id: null,
+          matched_party_name: null,
+          raw_json: {
+            DESCRIPTION: "TR from 9825080752 Shopeepay (Thailand)C",
+          },
+        }),
+      ),
+    ).toBe("ลูกค้า Shopee");
+
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "248-0-42113-9",
+          bank_name: "KTB",
+          description: "BPS/017/01/Lazada Ltd./108682",
+          match_status: "manual",
+          matched_party_name: null,
+          raw_json: { DESCRIPTION: "BPS/017/01/Lazada Ltd./108682" },
+        }),
+      ),
+    ).toBe("ลูกค้า Lazada");
+
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "248-0-42113-9",
+          bank_name: "KTB",
+          description: "TT from TikTok Shop payout",
+          match_status: "unmatched",
+          matched_party_name: null,
+          raw_json: { DESCRIPTION: "TT from TikTok Shop payout" },
+        }),
+      ),
+    ).toBe("ลูกค้า TikTok");
+
+    // Other accounts keep bank text even if keyword appears.
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "064-8-91723-6",
+          bank_name: "KBANK",
+          description: "Shopee transfer",
+          match_status: "unmatched",
+          match_reason: null,
+          match_notes: null,
+          matched_ref_type: null,
+          matched_ref_id: null,
+          matched_party_name: null,
+          raw_json: { รายการ: "รับโอนเงิน", รายละเอียด: "Shopee" },
+        }),
+      ),
+    ).toBe("รับโอนเงิน");
+  });
+
   it("enriches the example RC6908-003 row into the simplified layout", () => {
     const [enriched] = enrichStatementRows([
       baseRow({
