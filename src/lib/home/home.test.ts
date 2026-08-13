@@ -17,6 +17,7 @@ import {
   STOCK_AUDIT_DAILY_TARGET,
   bangkokTodayIsoDate,
 } from "@/lib/home/workspace-todos";
+import { STOCK_AUDIT_DAILY_TARGET as sharedTarget } from "@/lib/stock-audit/daily-target";
 
 describe("home favorites", () => {
   it("falls back to default favorites when cookie is empty", () => {
@@ -88,5 +89,6 @@ describe("home workspace todos helpers", () => {
 
   it("keeps the stock-audit daily target aligned with the operator page", () => {
     expect(STOCK_AUDIT_DAILY_TARGET).toBe(30);
+    expect(sharedTarget).toBe(STOCK_AUDIT_DAILY_TARGET);
   });
 });
