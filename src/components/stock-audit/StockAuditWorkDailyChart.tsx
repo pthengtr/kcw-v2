@@ -38,7 +38,7 @@ export default function StockAuditWorkDailyChart({
   const hasAny = data.some((d) => d.completed_counts > 0 || d.total_actions > 0);
 
   return (
-    <Card className="border-slate-200/80 shadow-sm">
+    <Card className="min-w-0 w-full border-slate-200/80 shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold">
           จำนวนนับเสร็จต่อวัน

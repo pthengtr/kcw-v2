@@ -160,7 +160,7 @@ export default function StockAuditPage() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
+    <main className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
       <header className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-3">
           <ClipboardCheck className="h-7 w-7 text-blue-600" aria-hidden />
@@ -278,7 +278,7 @@ export default function StockAuditPage() {
       ) : null}
 
       {tab === "status" ? (
-        <section className="space-y-5">
+        <section className="min-w-0 space-y-5">
           {loading && !overview && !workKpi ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <Skeleton className="h-56 rounded-lg" />
@@ -287,7 +287,7 @@ export default function StockAuditPage() {
           ) : (
             <>
               {workKpi ? (
-                <div className="space-y-4">
+                <div className="min-w-0 space-y-4">
                   <div>
                     <h2 className="mb-1 text-sm font-semibold text-slate-900">
                       งานตรวจนับวันนี้
@@ -331,7 +331,7 @@ export default function StockAuditPage() {
                     ))}
                   </div>
 
-                  <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="grid min-w-0 gap-4 lg:grid-cols-2 lg:items-start">
                     <StockAuditWorkDailyChart
                       series={workKpi.daily}
                       completedToday={todayDone}
@@ -343,7 +343,7 @@ export default function StockAuditPage() {
               ) : null}
 
               {overview ? (
-                <div className="space-y-4 border-t border-slate-100 pt-5">
+                <div className="min-w-0 space-y-4 border-t border-slate-100 pt-5">
                   <div>
                     <h2 className="mb-1 text-sm font-semibold text-slate-900">
                       ความสดของสต็อก
@@ -425,19 +425,25 @@ export default function StockAuditPage() {
                     </div>
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-slate-200">
-                    <table className="w-full text-left text-sm">
+                  <div className="min-w-0 overflow-x-auto overscroll-x-contain rounded-lg border border-slate-200 touch-pan-x">
+                    <table className="w-max min-w-full text-left text-sm">
                       <thead className="bg-slate-50 text-xs text-muted-foreground">
                         <tr>
-                          <th className="px-3 py-2 font-medium">รหัส</th>
-                          <th className="px-3 py-2 font-medium">รายละเอียด</th>
-                          <th className="hidden px-3 py-2 font-medium sm:table-cell">
+                          <th className="whitespace-nowrap px-3 py-2 font-medium">
+                            รหัส
+                          </th>
+                          <th className="whitespace-nowrap px-3 py-2 font-medium">
+                            รายละเอียด
+                          </th>
+                          <th className="hidden whitespace-nowrap px-3 py-2 font-medium sm:table-cell">
                             ที่เก็บ
                           </th>
-                          <th className="px-3 py-2 text-right font-medium">
+                          <th className="whitespace-nowrap px-3 py-2 text-right font-medium">
                             คงเหลือ
                           </th>
-                          <th className="px-3 py-2 font-medium">สถานะ</th>
+                          <th className="whitespace-nowrap px-3 py-2 font-medium">
+                            สถานะ
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 bg-white">

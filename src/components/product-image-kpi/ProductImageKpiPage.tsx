@@ -78,7 +78,7 @@ export default function ProductImageKpiPageClient() {
   const range = kpi?.summary_range;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
+    <main className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
           <BackButton href="/home" />
@@ -167,7 +167,7 @@ export default function ProductImageKpiPageClient() {
             รายการ · สินค้า {formatCount(range.unique_products)} รหัส
           </p>
 
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <div className="min-w-0 w-full rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
             <div className="mb-3">
               <h2 className="text-sm font-semibold text-slate-900">
                 ผู้ปฏิบัติงาน
@@ -181,16 +181,28 @@ export default function ProductImageKpiPageClient() {
                 ยังไม่มีเหตุการณ์รูปสินค้าในระบบ — เมื่ออัปโหลดผ่าน LINE จะโชว์ที่นี่
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-left text-sm">
+              <div className="-mx-1 max-w-full min-w-0 overflow-x-auto overscroll-x-contain px-1 touch-pan-x">
+                <table className="w-max min-w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 text-xs text-muted-foreground">
-                      <th className="pb-2 pr-3 font-medium">ชื่อ</th>
-                      <th className="pb-2 pr-2 text-right font-medium">วันนี้</th>
-                      <th className="pb-2 pr-2 text-right font-medium">อัปโหลด</th>
-                      <th className="pb-2 pr-2 text-right font-medium">แทนที่</th>
-                      <th className="pb-2 pr-2 text-right font-medium">ลบ</th>
-                      <th className="pb-2 text-right font-medium">7 วัน</th>
+                      <th className="whitespace-nowrap pb-2 pr-3 font-medium">
+                        ชื่อ
+                      </th>
+                      <th className="whitespace-nowrap pb-2 pr-2 text-right font-medium">
+                        วันนี้
+                      </th>
+                      <th className="whitespace-nowrap pb-2 pr-2 text-right font-medium">
+                        อัปโหลด
+                      </th>
+                      <th className="whitespace-nowrap pb-2 pr-2 text-right font-medium">
+                        แทนที่
+                      </th>
+                      <th className="whitespace-nowrap pb-2 pr-2 text-right font-medium">
+                        ลบ
+                      </th>
+                      <th className="whitespace-nowrap pb-2 text-right font-medium">
+                        7 วัน
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -199,22 +211,22 @@ export default function ProductImageKpiPageClient() {
                         key={row.line_user_id}
                         className="border-b border-slate-50 last:border-0"
                       >
-                        <td className="py-2.5 pr-3 font-medium text-slate-800">
+                        <td className="whitespace-nowrap py-2.5 pr-3 font-medium text-slate-800">
                           {row.display_name}
                         </td>
-                        <td className="py-2.5 pr-2 text-right tabular-nums font-semibold">
+                        <td className="whitespace-nowrap py-2.5 pr-2 text-right font-semibold tabular-nums">
                           {formatCount(row.total_today)}
                         </td>
-                        <td className="py-2.5 pr-2 text-right tabular-nums text-slate-700">
+                        <td className="whitespace-nowrap py-2.5 pr-2 text-right tabular-nums text-slate-700">
                           {formatCount(row.uploads_today)}
                         </td>
-                        <td className="py-2.5 pr-2 text-right tabular-nums text-slate-700">
+                        <td className="whitespace-nowrap py-2.5 pr-2 text-right tabular-nums text-slate-700">
                           {formatCount(row.replaces_today)}
                         </td>
-                        <td className="py-2.5 pr-2 text-right tabular-nums text-slate-700">
+                        <td className="whitespace-nowrap py-2.5 pr-2 text-right tabular-nums text-slate-700">
                           {formatCount(row.deletes_today)}
                         </td>
-                        <td className="py-2.5 text-right tabular-nums text-slate-700">
+                        <td className="whitespace-nowrap py-2.5 text-right tabular-nums text-slate-700">
                           {formatCount(row.total_actions)}
                           <span className="ml-1 text-xs text-muted-foreground">
                             ({formatCount(row.unique_products)} รหัส)
