@@ -30,6 +30,7 @@ export type StatementLineRow = {
   matched_ref_type: string | null;
   matched_ref_id: string | null;
   match_notes: string | null;
+  report_remark: string | null;
   matched_at: string | null;
   matched_by: string | null;
   source_sheet_name: string | null;

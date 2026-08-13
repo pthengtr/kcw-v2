@@ -55,6 +55,7 @@ const PatchBodySchema = z
     match_status: z.enum(BANK_MATCH_STATUSES).optional(),
     match_reason: z.string().trim().max(500).nullable().optional(),
     match_notes: z.string().trim().max(4000).nullable().optional(),
+    report_remark: z.string().trim().max(1000).nullable().optional(),
     matched_ref_type: z
       .string()
       .trim()
@@ -76,6 +77,7 @@ const PatchBodySchema = z
       body.match_status !== undefined ||
       body.match_reason !== undefined ||
       body.match_notes !== undefined ||
+      body.report_remark !== undefined ||
       body.matched_ref_type !== undefined ||
       body.matched_ref_id !== undefined,
     { message: "No match fields to update" }
@@ -109,7 +111,7 @@ export async function PATCH(
     .schema("bank")
     .from("statement_lines")
     .select(
-      "id, match_status, match_reason, match_notes, matched_ref_type, matched_ref_id"
+      "id, match_status, match_reason, match_notes, report_remark, matched_ref_type, matched_ref_id"
     )
     .eq("id", id)
     .maybeSingle();
@@ -167,6 +169,10 @@ export async function PATCH(
   }
   if (parsed.data.match_notes !== undefined && !requeueForAgent) {
     patch.match_notes = parsed.data.match_notes;
+  }
+  // report_remark is report annotation — always writable (including on requeue).
+  if (parsed.data.report_remark !== undefined) {
+    patch.report_remark = parsed.data.report_remark;
   }
   if (parsed.data.matched_ref_type !== undefined && !requeueForAgent) {
     const refType = parsed.data.matched_ref_type;

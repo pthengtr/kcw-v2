@@ -56,6 +56,7 @@ export async function GET(
         "matched_ref_type",
         "matched_ref_id",
         "match_notes",
+        "report_remark",
         "matched_at",
         "matched_by",
         "source_sheet_name",

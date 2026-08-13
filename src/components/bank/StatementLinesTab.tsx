@@ -297,6 +297,7 @@ export default function StatementLinesTab({
   const [selectedRawJson, setSelectedRawJson] = useState<unknown>(null);
   const [editReason, setEditReason] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [editReportRemark, setEditReportRemark] = useState("");
   const [editRefType, setEditRefType] = useState("");
   const [editRefId, setEditRefId] = useState("");
   const [savingMatch, setSavingMatch] = useState(false);
@@ -492,6 +493,7 @@ export default function StatementLinesTab({
     setSelectedRawJson(null);
     setEditReason(row.match_reason ?? "");
     setEditNotes(row.match_notes ?? "");
+    setEditReportRemark(row.report_remark ?? "");
     setEditRefType(
       normalizeBankMatchedRefType(row.matched_ref_type) ??
         row.matched_ref_type ??
@@ -517,12 +519,14 @@ export default function StatementLinesTab({
           matched_ref_type: data.row.matched_ref_type ?? null,
           matched_ref_id: data.row.matched_ref_id ?? null,
           match_notes: data.row.match_notes ?? null,
+          report_remark: data.row.report_remark ?? null,
           matched_at: data.row.matched_at ?? null,
           matched_by: data.row.matched_by ?? null,
         };
         setSelected(next);
         setEditReason(next.match_reason ?? "");
         setEditNotes(next.match_notes ?? "");
+        setEditReportRemark(next.report_remark ?? "");
         setEditRefType(next.matched_ref_type ?? "");
         setEditRefId(next.matched_ref_id ?? "");
         setSelectedRawJson(data.row.raw_json ?? null);
@@ -562,6 +566,9 @@ export default function StatementLinesTab({
           match_status: status,
           match_reason: editReason.trim() ? editReason.trim() : null,
           match_notes: editNotes.trim() ? editNotes.trim() : null,
+          report_remark: editReportRemark.trim()
+            ? editReportRemark.trim()
+            : null,
           matched_ref_type: editRefType.trim() ? editRefType.trim() : null,
           matched_ref_id: editRefId.trim() ? editRefId.trim() : null,
         }),
@@ -580,6 +587,7 @@ export default function StatementLinesTab({
         );
         setEditReason(updated.match_reason ?? "");
         setEditNotes(updated.match_notes ?? "");
+        setEditReportRemark(updated.report_remark ?? "");
         setEditRefType(updated.matched_ref_type ?? "");
         setEditRefId(updated.matched_ref_id ?? "");
       }
@@ -622,6 +630,7 @@ export default function StatementLinesTab({
         "match_status",
         "match_reason",
         "match_notes",
+        "report_remark",
         "match_confidence",
         "matched_ref_type",
         "matched_ref_id",
@@ -644,6 +653,7 @@ export default function StatementLinesTab({
             r.match_status,
             r.match_reason,
             r.match_notes,
+            r.report_remark,
             r.match_confidence,
             r.matched_ref_type,
             r.matched_ref_id,
@@ -735,7 +745,7 @@ export default function StatementLinesTab({
       },
       {
         key: "match_reason",
-        header: "เหตุผล",
+        header: "เหตุผลการจับคู่",
         className: "min-w-[10rem] max-w-[16rem] hidden lg:table-cell",
         render: (r) => (
           <span className="line-clamp-2 break-words">{r.match_reason ?? ""}</span>
@@ -749,10 +759,20 @@ export default function StatementLinesTab({
       },
       {
         key: "match_notes",
-        header: "หมายเหตุ",
+        header: "รายละเอียดการจับคู่",
         className: "min-w-[12rem] max-w-[18rem] hidden xl:table-cell",
         render: (r) => (
           <span className="line-clamp-2 break-words">{r.match_notes ?? ""}</span>
+        ),
+      },
+      {
+        key: "report_remark",
+        header: "หมายเหตุ",
+        className: "min-w-[10rem] max-w-[16rem] hidden xl:table-cell",
+        render: (r) => (
+          <span className="line-clamp-2 break-words">
+            {r.report_remark ?? ""}
+          </span>
         ),
       },
       {
@@ -814,7 +834,7 @@ export default function StatementLinesTab({
           </div>
           {row.match_reason ? (
             <div>
-              <div className="text-xs text-muted-foreground">เหตุผล</div>
+              <div className="text-xs text-muted-foreground">เหตุผลการจับคู่</div>
               <div className="text-sm line-clamp-2 break-words">
                 {row.match_reason}
               </div>
@@ -1059,7 +1079,7 @@ export default function StatementLinesTab({
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">
-                        เหตุผล
+                        เหตุผลการจับคู่
                       </div>
                       <Input
                         value={editReason}
@@ -1134,13 +1154,25 @@ export default function StatementLinesTab({
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">
-                      หมายเหตุ
+                      รายละเอียดการจับคู่
                     </div>
                     <Textarea
                       value={editNotes}
                       onChange={(e) => setEditNotes(e.target.value)}
-                      placeholder="รายละเอียดให้เจ้าหน้าที่อ่าน"
+                      placeholder="รายละเอียดให้เจ้าหน้าที่อ่าน (ไม่ขึ้นในรายงาน)"
                       rows={3}
+                      disabled={savingMatch}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">
+                      หมายเหตุ
+                    </div>
+                    <Textarea
+                      value={editReportRemark}
+                      onChange={(e) => setEditReportRemark(e.target.value)}
+                      placeholder="ข้อความที่จะขึ้นในรายงานเดินบัญชี"
+                      rows={2}
                       disabled={savingMatch}
                     />
                   </div>
@@ -1214,7 +1246,9 @@ export default function StatementLinesTab({
               ) : (
                 <div className="grid gap-2 border-t pt-3 sm:grid-cols-2">
                   <div>
-                    <div className="text-xs text-muted-foreground">เหตุผล</div>
+                    <div className="text-xs text-muted-foreground">
+                      เหตุผลการจับคู่
+                    </div>
                     <div>{selected.match_reason || "-"}</div>
                   </div>
                   <div>
@@ -1224,9 +1258,17 @@ export default function StatementLinesTab({
                     <div>{formatMatchedRef(selected) || "-"}</div>
                   </div>
                   <div className="sm:col-span-2">
-                    <div className="text-xs text-muted-foreground">หมายเหตุ</div>
+                    <div className="text-xs text-muted-foreground">
+                      รายละเอียดการจับคู่
+                    </div>
                     <div className="whitespace-pre-wrap">
                       {selected.match_notes || "-"}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <div className="text-xs text-muted-foreground">หมายเหตุ</div>
+                    <div className="whitespace-pre-wrap">
+                      {selected.report_remark || "-"}
                     </div>
                   </div>
                 </div>
