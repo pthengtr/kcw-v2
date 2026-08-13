@@ -451,7 +451,7 @@ July 2026 check (revenue filters): line `ACCTNO` equals bill `ACCTNO` whenever f
 
 #### Customer ranking rules (Confirmed — owner)
 
-1. **Grain:** bill header · revenue = `BEFORETAX` · same filters as sales overview (`CANCELED=N`, `JOURMODE<>0`, exclude `TF`/`TFV`/`TAR`; reporting branch `ONLINE` for TAD/CNTAD).
+1. **Grain:** bill header · revenue = `BEFORETAX` · same filters as sales overview (`CANCELED=N`, `JOURMODE<>0`, `fn_bi_sales_bill_excluded_from_revenue`; reporting branch `ONLINE` for TAD/CNTAD).
 2. **Exclude blank `ACCTNO`** — walk-in / random cash customers (often `ACCTNAME='เงินสด'`). Do not rank them.
 3. **Join:** `bill.ACCTNO = public.party.party_code` (left join).
 4. **Display name priority:** `party.party_name` → else ARMAS `"ACCTNAME"` (`raw_kcw.raw_hq_armas_receivable`) → else **blank**. Do **not** invent a name from bill `ACCTNAME` or `ACCTNO` when both masters are missing.
@@ -480,11 +480,43 @@ RPC: `public.fn_bi_customer_overview` · UI `/bi/customers`.
 | `TD` | **VAT credit sales** | **Include** | **100% `CASHED=N`** (2,557/2,557); usually `TERM≈30`, `DUEAMT>0` |
 | `TR` | **VAT cash sales** | **Include** | **100% `CASHED=Y`** (1,255/1,255); `DUEAMT=0` |
 | `DN` | Debit note | **Include** (sign +) | Confirmed name |
-| `CN` | Credit note | **Include** (sign −) | Confirmed name; subtypes in billno: `CNTAD`, `CNTF…`, plain `CN…` |
+| `CN` | Credit note | **Include** (sign −) | Confirmed name; subtypes in billno: `CNTAD`, plain `CN…` |
+| `CNTF` | Credit note against `TF` / `TFV` transfer | **Exclude** | Billno prefix `CNTF…` / `CNTFV…` (HQ); `3CNTF…` / `3CNTFV…` (SYP). Source `BILLTYPE_STD` stays `CN` until curated split. `PO` → original `TF`/`TFV` bill |
+| `3CNTF` | SYP transfer credit note | **Exclude** | Same as `CNTF`; leading `3` = SYP branch doc (none in load as of 2026-08; rule is forward-looking) |
 | `TF` | Transfer HQ ↔ SYP | **Exclude** | Non-VAT (`ISVAT` mostly N); not customer revenue |
 | `TFV` | Transfer HQ ↔ SYP (VAT-tagged variant) | **Exclude** | Same — inter-branch transfer |
 | `TAR` | Reopen non-VAT bill into VAT doc (no new economic sale) | **Exclude** | All on `JOURMODE=0`; almost all `TAXIC=Y` |
 | `CNTAR` | Credit/reopen pair for TAR family | **Exclude** | Owner rule; exact `CNTAR…` billnos currently **0** in bills (may appear as other CN naming) |
+
+**CN billno subtypes (when `BILLTYPE_STD = CN`)**
+
+| Billno prefix | Meaning | Revenue? | Reporting branch |
+|---------------|---------|----------|------------------|
+| `CNTAD…` / `3CNTAD…` | Online sale credit | **Include** (sign −) | **`ONLINE`** |
+| `CNTF…` / `CNTFV…` / `3CNTF…` / `3CNTFV…` | Transfer (`TF`/`TFV`) credit | **Exclude** | n/a (out of revenue set) |
+| plain `CN…` | Counter / VAT credit | **Include** (sign −) | `HQ` or `SYP` by branch |
+
+Detection (Confirmed — matches `public.fn_bi_sales_bill_excluded_from_revenue`):
+
+```text
+exclude when billno ~* '^(3)?CNTF'   -- catches CNTF, CNTFV, 3CNTF, 3CNTFV
+```
+
+**Curated `BILLTYPE_STD` split (kcw-analytics) — recommended, not required**
+
+`CNTAD` is **not** a separate `BILLTYPE_STD` in curated today; BI splits it from `CN` by billno prefix. Use the **same pattern** for `CNTF` / `3CNTF`:
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Billno prefix only** (current BI) | No curated change; works now | Subtype logic duplicated in SQL |
+| **Add `CNTF` / `3CNTF` to curated `BILLTYPE_STD`** | Cleaner typing in analytics notebooks | Requires kcw-analytics curated refresh; kcw-v2 helper already accepts these values when present |
+
+If kcw-analytics adds curated types later, map:
+
+- `CNTF…` / `CNTFV…` → `CNTF`
+- `3CNTF…` / `3CNTFV…` → `3CNTF`
+
+Until then, keep source `BILLTYPE_STD = CN` and rely on the billno prefix rule above.
 
 **Billno conventions**
 
@@ -534,6 +566,7 @@ EXCLUDE from sales revenue:
   - BILLTYPE_STD IN ('TF','TFV')    -- inter-branch transfers
   - BILLTYPE_STD IN ('TAR')         -- VAT reopen of non-VAT (no revenue impact)
   - CNTAR / TAR-reopen family       -- same economic reason
+  - CNTF / 3CNTF transfer credits   -- billno ~* '^(3)?CNTF' (credit against TF/TFV)
   - BILLNO ~ '^(3)?SA'              -- stock-check adjustments (SA / 3SA), not sales
   - CANCELED = 'Y'
   - (lines) IS_VALID <> 'True' when using line grain
@@ -543,7 +576,7 @@ INCLUDE (net BEFORETAX / net line amount):
   - UNKNOWN IV/TA series (legacy VAT — count as VAT)
   - TAD (online)
   - TD (VAT credit), TR (VAT cash)
-  - DN / CN (with natural sign; not TAR-reopen family)
+  - DN / CN (with natural sign; not TAR-reopen or CNTF family)
 ```
 
 ### 6.3 `JOURMODE`
@@ -647,7 +680,8 @@ Also subtract allocated bill DISCOUNT+DEDUCT (see §6.7) or line totals will not
 Filters (Confirmed core):
   IS_VALID = 'True', CANCELED = 'N',
   JOURMODE <> '0',
-  BILLTYPE_STD NOT IN ('TF','TFV','TAR')
+  NOT fn_bi_sales_bill_excluded_from_revenue(BILLNO, BILLTYPE_STD)
+    -- TF/TFV/TAR billtypes + CNTF/3CNTF billno prefixes
 Sign: CN negative amounts already in data; keep natural sign.
 ```
 
@@ -660,7 +694,7 @@ revenue = sum("BEFORETAX"::numeric)
 Filters (Confirmed):
   CANCELED = 'N',
   JOURMODE <> '0',
-  BILLTYPE_STD NOT IN ('TF','TFV','TAR')
+  NOT fn_bi_sales_bill_excluded_from_revenue(BILLNO, BILLTYPE_STD)
 
 vat_collected (separate) = sum("TAX"::numeric) on VAT docs only
 do NOT use "VAT" as money (it is the 7% rate)
@@ -691,7 +725,7 @@ It is a **base grain** (usually line-level) that already applies *invariant* bus
 Invariant rules (always applied in the base):
   - revenue = net / before tax
   - JOURMODE <> '0'
-  - exclude TF, TFV, TAR
+  - exclude TF, TFV, TAR, CNTF/3CNTF (fn_bi_sales_bill_excluded_from_revenue)
   - CANCELED = 'N' (+ IS_VALID on lines)
   - bill deduct/discount allocated (or documented gap handling)
   - /1.07 only when ISVAT='Y' AND TAXIC='Y'
@@ -802,13 +836,14 @@ Walk-in totals may be reported separately but are outside the ranking set.
 
 - [x] `TAXIC` = keyed incl/excl VAT; `ISVAT` = VAT vs non-VAT sale — Confirmed in §6.0
 - [x] Official revenue KPI = **net / before tax**; split by **`ISVAT`** — Confirmed in §8.0
-- [x] `BILLTYPE_STD` meanings + revenue include/exclude (TF/TFV/TAR out; SA/3SA stock-check out; TAD/TD/TR/UNKNOWN/CN/DN in) — Confirmed §6.2
+- [x] `BILLTYPE_STD` meanings + revenue include/exclude (TF/TFV/TAR/CNTF out; SA/3SA stock-check out; TAD/TD/TR/UNKNOWN/CN/DN in) — Confirmed §6.2
 - [x] Always exclude `JOURMODE=0` — Confirmed; maps mainly to `TAR` reopen
 - [x] `TD` = VAT credit (`CASHED=N`); `TR` = VAT cash (`CASHED=Y`) — Confirmed
 - [ ] How to classify **bill-level** VAT vs non-VAT (no `ISVAT` on bills) — can use `BILLTYPE_STD`/`TAXIC`/`ISVAT` from lines
 - [x] Legacy `UNKNOWN` `IV…`/`TA…` count as VAT revenue (historical; not recent)
 - [x] `PO` on `CN` = original bill; `PO` on `TAD` = online transaction id
 - [x] `MTP` = smallest-unit multiplier; unit price = `PRICE/MTP` or `AMOUNT/(QTY*MTP)`
+- [x] `CNTF` / `3CNTF` transfer credit notes excluded from revenue (billno `^(3)?CNTF`; `fn_bi_sales_bill_excluded_from_revenue`) — Confirmed §6.2
 - [x] `TAD` / `CNTAD` → BI reporting branch `ONLINE` (exclude from HQ store sales)
 - [x] `ISVAT=N` + `TAXIC=Y` — invalid; ignore `TAXIC` (Confirmed)
 - [x] Line discounts already in `AMOUNT`; bill `DEDUCT`/`DISCOUNT` must be allocated to lines (Confirmed need)
@@ -846,6 +881,7 @@ Walk-in totals may be reported separately but are outside the ranking set.
 | 2026-07-26 | Confirm ACCTNO (AR customer) vs ACCT_NO (AP/supplier); customer ranking rules + party master; ship `fn_bi_customer_overview` | Owner + Cursor |
 | 2026-07-26 | Lock gross margin §8.5 (LAST_PURCHASE_COST; blank=0; ignore XPRICE) + income report net = gross − opex | Owner + Cursor |
 | 2026-07-27 | Cross-link ARMAS/APMAS; `MOBILE` = tax id (see ar-ap dictionary) | Owner |
+| 2026-08-08 | Exclude `CNTF`/`3CNTF` transfer credit notes from sales revenue; add `fn_bi_sales_bill_excluded_from_revenue`; document curated split guidance | Owner + Cursor |
 | 2026-07-27 | Customer name fallback: party → ARMAS → blank; expose `name_source` | Owner + Cursor |
 
 ---

@@ -34,7 +34,7 @@ Last reviewed: 2026-08-05
 
 **Filters (Confirmed):**
 
-- Drop bills whose `BILLNO` contains `TF`
+- Drop bills whose `BILLNO` contains `TF` (excludes `TF`/`TFV` transfers and `CNTF`/`CNTFV`/`3CNTF` transfer credit notes)
 - `CANCELED = N` on curated bills
 - CNTAD split from CN by billno prefix
 

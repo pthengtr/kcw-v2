@@ -46,7 +46,7 @@ gross_margin_pct = gross_profit / revenue_net   -- null if revenue_net = 0
 | Ignore `XPRICE` for COGS | Confirmed |
 | Blank / missing `LAST_PURCHASE_COST` | **Exclude from margin totals**; keep drilldown list (Confirmed) |
 | Allocate bill gap onto lines before margin | Confirmed |
-| Sales filters = revenue include set (no TF/TFV/TAR; no SA/3SA stock-check; `JOURMODE≠0`; etc.) | Confirmed |
+| Sales filters = revenue include set (`fn_bi_sales_bill_excluded_from_revenue`; no SA/3SA stock-check; `JOURMODE≠0`; etc.) | Confirmed |
 | Reporting branch HQ / SYP / ONLINE (TAD/CNTAD) | Confirmed |
 
 ---
