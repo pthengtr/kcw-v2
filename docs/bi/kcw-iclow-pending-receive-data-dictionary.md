@@ -174,7 +174,8 @@ No mixed missing/received breakdown dialog. On ICLOW tabs:
 
 | Click | Opens |
 |-------|--------|
-| **DOCNO** | Same PO lines dialog as รายการ PO — HQ `POMAS`/`PODET` or SYP `POMAS`/`PODET` (`GET /api/po/hq/[docno]` / `GET /api/po/syp/[docno]`) |
+| **DOCNO** (SYP) | Same as รายการ PO — `PoSypDetailDialog` via `GET /api/po/syp/[docno]` (prepare badges, TF billnos, print) |
+| **DOCNO** (HQ) | PO lines — `GET /api/po/hq/[docno]` |
 | **RCVDNO** (HQ, exact / left-12) | Purchase invoice — `GET /api/po/pi/[billno]` |
 | **RCVDNO** with `(จับคู่แบบ implied ไม่ใช่ 1:1 → {BILLNO})` | Implied remap (space-normalized BILLNO or AP+PO key+fingerprint); click opens resolved invoice |
 | **RCVDNO** with `(ไม่พบลิงก์ PIMAS)` | Not clickable |
@@ -204,7 +205,7 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 
 | Piece | Contract |
 |-------|----------|
-| List RPC | `public.fn_po_pending_receive` |
+| List RPC | `public.fn_po_pending_receive` (SYP rows include `prepare_status` / `prepare_tf_billnos` from `fn_po_syp_tf_prepare_status`) |
 | List API | `GET /api/po/pending-receive?site=&status=` |
 | PO lines API | `GET /api/po/hq/[docno]` · `GET /api/po/syp/[docno]` |
 | PI detail API | `GET /api/po/pi/[billno]` (RCVDNO → PIMAS/PIDET) |

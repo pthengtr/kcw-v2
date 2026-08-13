@@ -13,6 +13,8 @@ import {
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
 import PoProductCell from "@/components/po/PoProductCell";
+import PrepareStatusBadge from "@/components/po/PrepareStatusBadge";
+import PoSypDetailDialog from "@/components/po/PoSypDetailDialog";
 import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
 import {
   formatPoAmount,
@@ -24,15 +26,49 @@ import {
   PO_ICLOW_STATUS_TABS,
   type PiHeader,
   type PiLineRow,
+  type PoHeaderRow,
   type PoLineRow,
   type PoPendingReceiveRow,
   type PoPendingReceiveStatus,
+  type PoPrepareStatus,
 } from "@/lib/po/po-queries";
 import type { PoSyncSite } from "@/lib/po/worker-jobs";
 
 export { PO_ICLOW_STATUS_TABS };
 
 type DetailKind = "po" | "pi";
+
+/** Same rules as fn_po_syp_tf_prepare_status header rollup. */
+function derivePrepareStatusFromLines(lines: PoLineRow[]): PoPrepareStatus {
+  if (lines.length === 0) return "not_prepared";
+  const preparedCount = lines.filter(
+    (l) => l.prepare_line_status === "prepared"
+  ).length;
+  const anyTf = lines.some((l) => l.prepare_line_status !== "not_prepared");
+  if (!anyTf) return "not_prepared";
+  if (preparedCount >= lines.length) return "prepared";
+  return "partially_prepared";
+}
+
+function pendingRowToSypHeader(row: PoPendingReceiveRow): PoHeaderRow {
+  return {
+    docno: row.docno ?? "",
+    docdate: row.docdate,
+    acctno: row.vendor,
+    acctname: row.acctname,
+    billed: null,
+    canceled: null,
+    beforetax: null,
+    tax: null,
+    aftertax: null,
+    billno: null,
+    billdate: null,
+    remarks: null,
+    ingested_at: null,
+    prepare_status: row.prepare_status ?? "not_prepared",
+    tf_billnos: row.prepare_tf_billnos ?? null,
+  };
+}
 
 function statusLabel(status: PoPendingReceiveStatus): string {
   return PO_ICLOW_STATUS_TABS.find((o) => o.value === status)?.label ?? status;
@@ -190,6 +226,12 @@ export default function PoPendingReceiveTab({
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
+  const [sypPoOpen, setSypPoOpen] = useState(false);
+  const [sypSelected, setSypSelected] = useState<PoHeaderRow | null>(null);
+  const [sypLines, setSypLines] = useState<PoLineRow[]>([]);
+  const [sypLinesLoading, setSypLinesLoading] = useState(false);
+  const [sypTfBillnos, setSypTfBillnos] = useState<string | null>(null);
+
   const showDates = status !== "to_be_ordered";
   const isBcodeQty =
     status === "pending_receive" || status === "partially_received";
@@ -255,6 +297,46 @@ export default function PoPendingReceiveTab({
 
   async function openPoDetail(row: PoPendingReceiveRow) {
     if (!row.docno) return;
+
+    if (site === "SYP") {
+      const header = pendingRowToSypHeader(row);
+      setSypSelected(header);
+      setSypTfBillnos(row.prepare_tf_billnos ?? null);
+      setSypPoOpen(true);
+      setSypLines([]);
+      setSypLinesLoading(true);
+      try {
+        const res = await fetch(
+          `/api/po/syp/${encodeURIComponent(row.docno)}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.error ?? `Request failed (${res.status})`);
+        }
+        const data = (await res.json()) as {
+          lines: PoLineRow[];
+          tf_billnos?: string | null;
+        };
+        const lines = data.lines ?? [];
+        setSypLines(lines);
+        setSypTfBillnos(
+          data.tf_billnos ?? row.prepare_tf_billnos ?? null
+        );
+        setSypSelected({
+          ...header,
+          prepare_status:
+            row.prepare_status ?? derivePrepareStatusFromLines(lines),
+          tf_billnos: data.tf_billnos ?? row.prepare_tf_billnos ?? null,
+        });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setSypLinesLoading(false);
+      }
+      return;
+    }
+
     setDetailKind("po");
     setDetailKey(row.docno);
     setDetailOpen(true);
@@ -264,11 +346,10 @@ export default function PoPendingReceiveTab({
     setDetailError(null);
     setDetailLoading(true);
     try {
-      const path =
-        site === "SYP"
-          ? `/api/po/syp/${encodeURIComponent(row.docno)}`
-          : `/api/po/hq/${encodeURIComponent(row.docno)}`;
-      const res = await fetch(path, { cache: "no-store" });
+      const res = await fetch(
+        `/api/po/hq/${encodeURIComponent(row.docno)}`,
+        { cache: "no-store" }
+      );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error ?? `Request failed (${res.status})`);
@@ -405,11 +486,31 @@ export default function PoPendingReceiveTab({
       },
     ];
 
+    const prepareCol: Column<PoPendingReceiveRow> | null =
+      site === "SYP"
+        ? {
+            key: "prepare_status",
+            header: "สถานะจัด",
+            className: "w-[1%] whitespace-nowrap align-top",
+            render: (r) => (
+              <span className="inline-flex flex-col items-start gap-1">
+                <PrepareStatusBadge status={r.prepare_status} />
+                {r.prepare_tf_billnos ? (
+                  <span className="font-mono text-xs text-muted-foreground break-all">
+                    {r.prepare_tf_billnos}
+                  </span>
+                ) : null}
+              </span>
+            ),
+          }
+        : null;
+
     if (isBcodeQty) {
       return [
         statusCol,
         docnoCol,
         docdateCol,
+        ...(prepareCol ? [prepareCol] : []),
         ...midCols,
         {
           key: "ordered_qty",
@@ -481,6 +582,7 @@ export default function PoPendingReceiveTab({
       statusCol,
       docnoCol,
       docdateCol,
+      ...(prepareCol ? [prepareCol] : []),
       ...midCols,
       {
         key: "qty",
@@ -524,6 +626,17 @@ export default function PoPendingReceiveTab({
           {formatPoDate(row.docdate)}
           {row.vendor ? ` · ${row.vendor}` : ""}
         </div>
+        {site === "SYP" ? (
+          <div className="mt-2 flex flex-col items-start gap-1">
+            <div className="text-xs text-muted-foreground">สถานะจัด</div>
+            <PrepareStatusBadge status={row.prepare_status} />
+            {row.prepare_tf_billnos?.trim() ? (
+              <span className="break-all font-mono text-xs text-muted-foreground">
+                {row.prepare_tf_billnos}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         <div className="mt-2 text-sm">
           <PoProductCell descr={row.descr} mcode={row.mcode} />
         </div>
@@ -591,8 +704,10 @@ export default function PoPendingReceiveTab({
         {isBcodeQty
           ? site === "HQ"
             ? "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก PIDET ผ่าน RCVDNO (exact หรือ implied จาก BILLNO/PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
-            : "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก SIDet = TF ผ่าน RCVDNO ∪ TF ที่ REMARKS ตรง DOCNO (ส่งเพิ่มเคลียร์ค้าง). คลิก DOCNO → POMAS/PODET. ค่าเริ่มต้น: 30 วันล่าสุด"
-          : "รายการรอสั่งซื้อจาก PARTS9 (แยกจาก POMAS/PODET). คลิก DOCNO → POMAS/PODET"}
+            : "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก SIDet = TF ผ่าน RCVDNO ∪ TF ที่ REMARKS ตรง DOCNO (ส่งเพิ่มเคลียร์ค้าง). คลิก DOCNO → รายละเอียดจัดของ/พิมพ์เหมือนรายการ PO. ค่าเริ่มต้น: 30 วันล่าสุด"
+          : site === "SYP"
+            ? "รายการรอสั่งซื้อจาก PARTS9 (แยกจาก POMAS/PODET). คลิก DOCNO → รายละเอียดจัดของ/พิมพ์เหมือนรายการ PO"
+            : "รายการรอสั่งซื้อจาก PARTS9 (แยกจาก POMAS/PODET). คลิก DOCNO → POMAS/PODET"}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
@@ -635,6 +750,15 @@ export default function PoPendingReceiveTab({
         tableMinWidthClassName="min-w-[56rem]"
         rowKey={(row) => row.id || `${row.docno}-${row.bcode}`}
         mobileCardRender={renderMobileCard}
+      />
+
+      <PoSypDetailDialog
+        open={sypPoOpen}
+        onOpenChange={setSypPoOpen}
+        selected={sypSelected}
+        lines={sypLines}
+        linesLoading={sypLinesLoading}
+        tfBillnos={sypTfBillnos}
       />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
