@@ -8,10 +8,6 @@ export type StockAuditBucket =
   | "d365"
   | "over_365";
 
-export type StockAuditBatchItemStatus = "pending" | "done" | "skipped";
-
-export type StockAuditMarkSource = "batch" | "ondemand" | "manual";
-
 export type StockAuditSummary = {
   total: number;
   never_count: number;
@@ -28,6 +24,12 @@ export type StockAuditSummary = {
 export type StockAuditDailyMark = {
   date: string;
   count: number;
+};
+
+export type StockAuditOperatorMark = {
+  name: string;
+  today_count: number;
+  week_count: number;
 };
 
 export type StockAuditRow = {
@@ -64,42 +66,13 @@ export type StockAuditOverview = {
   sales_to: string | null;
   summary: StockAuditSummary;
   daily_marks: StockAuditDailyMark[];
+  operator_marks: StockAuditOperatorMark[];
   open_batches: StockAuditOpenBatchSummary[];
   rows: StockAuditRow[];
   row_total: number;
   limit: number;
   offset: number;
   bucket: StockAuditBucket | null;
-};
-
-export type StockAuditBatchItem = {
-  bcode: string;
-  status: StockAuditBatchItemStatus;
-  priority_score: number;
-  pos_dateaudit: string | null;
-  app_dateaudit: string | null;
-  location1: string | null;
-  descr: string | null;
-  qty: number;
-  sell_qty_period: number;
-  sell_revenue_period: number;
-  done_at: string | null;
-  done_by: string | null;
-};
-
-export type StockAuditBatch = {
-  id: string;
-  branch: StockAuditBranch;
-  created_at: string;
-  created_by: string;
-  target_count: number;
-  status: "open" | "closed";
-  filters: Record<string, unknown>;
-  closed_at: string | null;
-  pending_count: number;
-  done_count: number;
-  skipped_count: number;
-  items: StockAuditBatchItem[];
 };
 
 export type StockAuditLookup = {
@@ -130,7 +103,7 @@ export const STOCK_AUDIT_BUCKETS: {
   {
     key: "never",
     label: "ยังไม่เคยตรวจ",
-    hint: "ยังไม่เคยกดบันทึกในแอป",
+    hint: "ยังไม่เคยมีบันทึกตรวจในระบบ",
     tone: "border-l-slate-400 bg-slate-50/90",
     chip: "bg-slate-200 text-slate-800",
   },

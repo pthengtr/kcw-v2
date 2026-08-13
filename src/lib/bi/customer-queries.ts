@@ -5,6 +5,10 @@ import type {
   BiCustomerOverview,
   BiCustomerRankRow,
 } from "./customer-types";
+import {
+  parseMonthColumns,
+  parseMonthCompareRows,
+} from "./month-compare";
 import type { BiSplitRow } from "./sales-types";
 
 function asNumber(value: unknown): number {
@@ -114,6 +118,8 @@ export function normalizeCustomerOverview(raw: unknown): BiCustomerOverview {
     by_branch: parseSplitRows(data.by_branch),
     top_customers: parseCustomerRows(data.top_customers),
     unmatched_customers: parseCustomerRows(data.unmatched_customers),
+    month_columns: parseMonthColumns(data.month_columns),
+    by_customer_month: parseMonthCompareRows(data.by_customer_month),
   };
 }
 

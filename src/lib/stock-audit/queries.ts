@@ -1,15 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
-  StockAuditBatch,
-  StockAuditBatchItem,
-  StockAuditBatchItemStatus,
   StockAuditBranch,
   StockAuditBucket,
   StockAuditDailyMark,
   StockAuditLookup,
-  StockAuditMarkSource,
   StockAuditOpenBatchSummary,
+  StockAuditOperatorMark,
   StockAuditOverview,
   StockAuditRow,
   StockAuditSummary,
@@ -65,12 +62,6 @@ function asBucket(value: unknown): StockAuditBucket {
   return "never";
 }
 
-function asItemStatus(value: unknown): StockAuditBatchItemStatus {
-  const s = asString(value);
-  if (s === "done" || s === "skipped" || s === "pending") return s;
-  return "pending";
-}
-
 function parseSummary(value: unknown): StockAuditSummary {
   const r = (value ?? {}) as Record<string, unknown>;
   return {
@@ -119,51 +110,20 @@ function parseOpenBatch(value: unknown): StockAuditOpenBatchSummary {
   };
 }
 
-function parseBatchItem(value: unknown): StockAuditBatchItem {
-  const r = (value ?? {}) as Record<string, unknown>;
-  return {
-    bcode: asString(r.bcode),
-    status: asItemStatus(r.status),
-    priority_score: asNumber(r.priority_score),
-    pos_dateaudit: asNullableString(r.pos_dateaudit),
-    app_dateaudit: asNullableString(r.app_dateaudit),
-    location1: asNullableString(r.location1),
-    descr: asNullableString(r.descr),
-    qty: asNumber(r.qty),
-    sell_qty_period: asNumber(r.sell_qty_period),
-    sell_revenue_period: asNumber(r.sell_revenue_period),
-    done_at: asNullableString(r.done_at),
-    done_by: asNullableString(r.done_by),
-  };
-}
-
-function parseBatch(value: unknown): StockAuditBatch {
-  const r = (value ?? {}) as Record<string, unknown>;
-  const items = Array.isArray(r.items) ? r.items.map(parseBatchItem) : [];
-  return {
-    id: asString(r.id),
-    branch: asBranch(r.branch),
-    created_at: asString(r.created_at),
-    created_by: asString(r.created_by),
-    target_count: asNumber(r.target_count),
-    status: asString(r.status) === "closed" ? "closed" : "open",
-    filters:
-      r.filters && typeof r.filters === "object" && !Array.isArray(r.filters)
-        ? (r.filters as Record<string, unknown>)
-        : {},
-    closed_at: asNullableString(r.closed_at),
-    pending_count: asNumber(r.pending_count),
-    done_count: asNumber(r.done_count),
-    skipped_count: asNumber(r.skipped_count),
-    items,
-  };
-}
-
 function parseDailyMark(value: unknown): StockAuditDailyMark {
   const r = (value ?? {}) as Record<string, unknown>;
   return {
     date: asString(r.date).slice(0, 10),
     count: asNumber(r.count),
+  };
+}
+
+function parseOperatorMark(value: unknown): StockAuditOperatorMark {
+  const r = (value ?? {}) as Record<string, unknown>;
+  return {
+    name: asString(r.name) || "unknown",
+    today_count: asNumber(r.today_count),
+    week_count: asNumber(r.week_count),
   };
 }
 
@@ -179,6 +139,9 @@ function parseOverview(value: unknown): StockAuditOverview {
     summary: parseSummary(r.summary),
     daily_marks: Array.isArray(r.daily_marks)
       ? r.daily_marks.map(parseDailyMark)
+      : [],
+    operator_marks: Array.isArray(r.operator_marks)
+      ? r.operator_marks.map(parseOperatorMark)
       : [],
     open_batches: Array.isArray(r.open_batches)
       ? r.open_batches.map(parseOpenBatch)
@@ -219,87 +182,6 @@ export async function fetchStockAuditOverview(
     p_offset: opts.offset ?? 0,
   });
   return parseOverview(data);
-}
-
-export async function createStockAuditBatch(
-  supabase: SupabaseClient,
-  opts: {
-    branch: StockAuditBranch;
-    count: number;
-    createdBy: string;
-    withStockOnly?: boolean;
-    category?: string | null;
-    location?: string | null;
-  }
-): Promise<StockAuditBatch> {
-  const data = await rpcJson(supabase, "fn_stock_audit_create_batch", {
-    p_branch: opts.branch,
-    p_count: opts.count,
-    p_created_by: opts.createdBy,
-    p_with_stock_only: opts.withStockOnly ?? true,
-    p_category: opts.category ?? null,
-    p_location: opts.location ?? null,
-  });
-  return parseBatch(data);
-}
-
-export async function fetchStockAuditBatch(
-  supabase: SupabaseClient,
-  batchId: string
-): Promise<StockAuditBatch> {
-  const data = await rpcJson(supabase, "fn_stock_audit_get_batch", {
-    p_batch_id: batchId,
-  });
-  return parseBatch(data);
-}
-
-export async function markStockAudited(
-  supabase: SupabaseClient,
-  opts: {
-    branch: StockAuditBranch;
-    bcode: string;
-    auditedBy: string;
-    source?: StockAuditMarkSource;
-    batchId?: string | null;
-    notes?: string | null;
-  }
-): Promise<{
-  branch: StockAuditBranch;
-  bcode: string;
-  audited_at: string;
-  audited_by: string;
-  source: string;
-  batch_id: string | null;
-}> {
-  const data = (await rpcJson(supabase, "fn_stock_audit_mark", {
-    p_branch: opts.branch,
-    p_bcode: opts.bcode,
-    p_audited_by: opts.auditedBy,
-    p_source: opts.source ?? "ondemand",
-    p_batch_id: opts.batchId ?? null,
-    p_notes: opts.notes ?? null,
-  })) as Record<string, unknown>;
-
-  return {
-    branch: asBranch(data.branch),
-    bcode: asString(data.bcode),
-    audited_at: asString(data.audited_at),
-    audited_by: asString(data.audited_by),
-    source: asString(data.source),
-    batch_id: asNullableString(data.batch_id),
-  };
-}
-
-export async function skipStockAuditItem(
-  supabase: SupabaseClient,
-  opts: { batchId: string; bcode: string; by: string }
-): Promise<StockAuditBatch> {
-  const data = await rpcJson(supabase, "fn_stock_audit_skip_item", {
-    p_batch_id: opts.batchId,
-    p_bcode: opts.bcode,
-    p_by: opts.by,
-  });
-  return parseBatch(data);
 }
 
 export async function lookupStockAuditProduct(

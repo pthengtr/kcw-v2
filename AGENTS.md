@@ -18,12 +18,14 @@ The code reads these exact names (no `.env.local` bridging is needed — inject 
 - `NEXT_PUBLIC_SUPABASE_URL` — hosted Supabase project URL (browser/server/middleware clients).
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key (auth + user-scoped queries).
 - `SUPABASE_SERVICE_KEY` — service-role key; `src/lib/supabase/admin.ts` throws without it. Powers BI/PO/bank/RBAC/KB privileged RPCs (the `ops`/curated schemas are not exposed via PostgREST).
+- `NEXT_PUBLIC_LINE_LIFF_PRODUCT_SCANNER_ID` — optional; LIFF ID for `/liff/scan-product` (LINE chatbot scanner). Browser-safe only.
 
 `admin.ts` also accepts fallbacks `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, but the browser Supabase client only reads the `NEXT_PUBLIC_*` names, so those two must be set with the `NEXT_PUBLIC_` prefix.
 
 ### Auth / RBAC (how to reach a page)
 
-- Unauthenticated requests to any non-public path redirect to `/login` (public prefixes: `/login`, `/auth`, `/error`, `/no-access`). Login is Supabase email/password.
+- Unauthenticated requests to any non-public path redirect to `/login` (public prefixes: `/login`, `/auth`, `/error`, `/no-access`, `/liff`). Login is Supabase email/password.
+- **`/liff/*`** is public to Supabase on purpose (LINE WebView). It must not require a second KCW login. Product authorization stays in **kcw-api** LINE webhook / `ops.line_access`. See `docs/liff-product-scan.md`.
 - **Layer 1:** a signed-in user must have ≥1 row in `public.kcw_user_roles`, else they are redirected to `/no-access`. A DB trigger (`trg_kcw_assign_default_role`) auto-grants the `normal` role on new signup, so a freshly created Auth user can immediately reach the home menu.
 - **Layer 2:** per-page permission checks (`src/lib/auth/`, `kcw_role_page_permissions`); the `admin` role bypasses page checks. Admin-only areas (e.g. `/admin/rbac`, BI dashboards) need the `admin` role.
 - The hosted DB holds **real business data** — prefer read-only flows when testing; do not mutate production tables.

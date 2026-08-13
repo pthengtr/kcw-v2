@@ -567,6 +567,7 @@ EXCLUDE from sales revenue:
   - BILLTYPE_STD IN ('TAR')         -- VAT reopen of non-VAT (no revenue impact)
   - CNTAR / TAR-reopen family       -- same economic reason
   - CNTF / 3CNTF transfer credits   -- billno ~* '^(3)?CNTF' (credit against TF/TFV)
+  - BILLNO ~ '^(3)?SA'              -- stock-check adjustments (SA / 3SA), not sales
   - CANCELED = 'Y'
   - (lines) IS_VALID <> 'True' when using line grain
 
@@ -835,7 +836,7 @@ Walk-in totals may be reported separately but are outside the ranking set.
 
 - [x] `TAXIC` = keyed incl/excl VAT; `ISVAT` = VAT vs non-VAT sale — Confirmed in §6.0
 - [x] Official revenue KPI = **net / before tax**; split by **`ISVAT`** — Confirmed in §8.0
-- [x] `BILLTYPE_STD` meanings + revenue include/exclude (TF/TFV/TAR/CNTF out; TAD/TD/TR/UNKNOWN/CN/DN in) — Confirmed §6.2
+- [x] `BILLTYPE_STD` meanings + revenue include/exclude (TF/TFV/TAR/CNTF out; SA/3SA stock-check out; TAD/TD/TR/UNKNOWN/CN/DN in) — Confirmed §6.2
 - [x] Always exclude `JOURMODE=0` — Confirmed; maps mainly to `TAR` reopen
 - [x] `TD` = VAT credit (`CASHED=N`); `TR` = VAT cash (`CASHED=Y`) — Confirmed
 - [ ] How to classify **bill-level** VAT vs non-VAT (no `ISVAT` on bills) — can use `BILLTYPE_STD`/`TAXIC`/`ISVAT` from lines

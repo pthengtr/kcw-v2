@@ -26,7 +26,7 @@ Display description is excluded. KTB detail is normalized (strip trailing online
 
 Upstream Drive BAT (thin uploader → this Edge Function): [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md).
 
-Report layout parity: [kcw-analytics `src/kcw/bank_statement_report.py`](https://github.com/pthengtr/kcw-analytics/blob/main/src/kcw/bank_statement_report.py).
+Report Excel columns (operator-facing): `#`, `วันที่`, `รายการ / ชื่อบริษัท`, `ประเภท`, `เลขที่บิล`, `ถอนเงิน`, `ฝากเงิน`, `ยอดคงเหลือ`, `หมายเหตุ` (blank for now). Company/bill fields are resolved at report time from live matches + source masters; matched daily net sales (`tar_cntar_net`) show `ยอดขายสุทธิรายวัน (TAR|3TAR …) ของวันที่ DD/MM/YYYY` using the sales date in `matched_ref_id`. On account `KTB_248-0-42113-9`, Shopee/Lazada/TikTok keywords in bank detail map to `ลูกค้า …` even when unmatched/manual. Raw bank columns stay in `bank.statement_lines` for reconciliation.
 
 ## UI
 
@@ -62,7 +62,9 @@ const { data, error } = await supabase.functions.invoke(
 // bank-statements/reports/{year}/{mm}/bank_statement_report_{year}_{mm}.xlsx
 ```
 
-Source of the Edge Function: [`supabase/functions/generate-bank-statement-report/`](../supabase/functions/generate-bank-statement-report/) (Deno; excluded from the Next.js `tsconfig` so `npm:` imports are not typechecked by `next build`).  
+Source of the Edge Function: [`supabase/functions/generate-bank-statement-report/`](../supabase/functions/generate-bank-statement-report/) (Deno; excluded from the Next.js `tsconfig` so `npm:` imports are not typechecked by `next build`).
+When Management API / CLI deploy is unavailable, production may run a tiny Storage-backed loader (`reports/_bundles/generate-bank-statement-report-v18.js`) built via `node supabase/functions/generate-bank-statement-report/build-storage-bundle.mjs --upload`. Prefer `supabase functions deploy generate-bank-statement-report` when credentials allow.
+  
 No Google Drive write — operators download from the signed URL (or Storage path under the private `bank-statements` bucket).  
 Rows with `match_status = ignored` (operator ไม่ใช้) are **omitted** from the Excel; response includes `ignored_skipped`.
 

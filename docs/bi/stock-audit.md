@@ -1,64 +1,41 @@
-# Stock date-audit (kcw-v2)
+# Stock date-audit status (kcw-v2)
 
-Track **when** each product (`BCODE`) was last stock-checked in kcw-v2. Qty adjustment stays in legacy POS; this app only records the audit date and prioritizes what to check next.
+Branch operators count stock on the **LAN stock-check app** (LINE → `/stock-check/`). That flow mirrors into Supabase `stock.audit_event` / `stock.audit_status`. This page is a **read-only status / KPI board** — not a second place to mark items.
 
-## Schema: `stock` (not `public`)
-
-Matches other domain schemas (`bank`, `kb`, `ops`, `tiger_pay`):
+## Schema: `stock`
 
 | Object | Location |
 |--------|----------|
 | Tables | `stock.audit_status`, `stock.audit_event`, `stock.audit_batch`, `stock.audit_batch_item` |
-| RPCs | `public.fn_stock_audit_*` (service_role SECURITY DEFINER) |
-
-Tables are service_role-only (RLS on, no anon/authenticated grants).
+| RPCs | `fn_stock_audit_overview`, `fn_stock_audit_lookup` (service_role) |
 
 SQL: `docs/bi/sql/fn_stock_audit_ops.sql`  
-Migration: `supabase/migrations/20260804180000_stock_audit_ops.sql`
+Migrations: `supabase/migrations/20260804180000_stock_audit_ops.sql`, `20260804193000_stock_audit_overview_charts.sql`, `20260810192359_stock_audit_operator_marks.sql`, `20260811043000_drop_obsolete_stock_audit_workbench_rpcs.sql`
 
 ## What counts as “last audited”?
 
-**App marks only** (`stock.audit_status`).
+**App marks only** (`stock.audit_status`), including rows mirrored from branch stock-check.
 
-POS ICMAS `DATEAUDIT` is treated as **stale / unreliable** — shown as reference on rows, **not** used for:
+POS ICMAS `DATEAUDIT` is **reference only** — not used for buckets or priority.
 
-- status color buckets
-- smart-pick priority
-- “skip if audited in last 7 days”
+`audited_by` from LINE mirrors as `DisplayName|LINE_UID`. Operator KPI uses the name before `|`.
 
-Until operators start marking in kcw-v2, almost every stocked SKU is in the **never** bucket. That is intentional.
+## Features (status UI)
 
-## Smart pick (daily / on-demand batch)
+1. **สถานะ** — progress strip, KPIs, freshness pie, daily bars, **per-operator today/7d**, bucket list
+2. **ค้นหารหัส** — read-only BCODE lookup (no mark)
+3. Soft daily target of 30 (`STOCK_AUDIT_DAILY_TARGET`) for HQ progress on home
 
-Rank score (higher = pick sooner):
-
-1. **Current-period sales** (last 30 days Bangkok) — sell qty + light revenue (best sellers first)
-2. **App-audit staleness** — never marked in app gets a large boost; older marks score higher
-3. **On-hand qty** — light preference for items that still have stock
-4. Soft cluster by `LOCATION1` for walking the warehouse
-
-Operator chooses count (1–200) and optional location filter.
-
-## Features
-
-1. **งานวันนี้** (default tab) — pick count, get smart list, mark/skip
-2. **ภาพรวม** — progress KPIs, freshness pie chart, daily bar chart, filterable list
-3. On-demand BCODE lookup + mark
-4. POS dates hidden behind “รายละเอียด” (reference only)
-
-Status buckets: never / ≤30d / 1–3m / 3–6m / 6–12m / >1y (**app dates**)
-
-Progress strip: soft daily target of 30 + week count (`marked_week_count`, `daily_marks` last 14 days).
+Workbench create-batch / mark / skip UI and RPCs were removed. Daily pick lives in **kcw-api** stock-check (`src/stock_check/daily_pick.py`).
 
 ## Access
 
 - Page: `/stock-audit`
-- RBAC: `stock_audit` (admins bypass; grant via `/admin/rbac`)
-- Home tile: ตรวจนับสต็อก
+- RBAC: `stock_audit`
+- Home menu: สถานะตรวจนับ
 
-## Out of scope (v1)
+## Out of scope
 
-- Writing back into POS `DATEAUDIT`
-- Cycle-count qty / variance
-- Cron auto-batches
-- Configurable sales window (fixed 30d for now)
+- Writing back into POS `DATEAUDIT` from v2
+- Mapping LINE UIDs to Auth users
+- Creating count batches from the back office

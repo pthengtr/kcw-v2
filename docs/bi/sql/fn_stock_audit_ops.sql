@@ -265,6 +265,7 @@ begin
       where b."CANCELED" = 'N'
         and b."JOURMODE" <> '0'
         and coalesce(b."BILLTYPE_STD", '') not in ('TF', 'TFV', 'TAR')
+        and upper(btrim(b."BILLNO")) !~ '^(3)?SA'
         and b."BILLDATE" >= v_sales_from::text
         and b."BILLDATE" < (v_today + 1)::text
     ),
@@ -382,6 +383,36 @@ begin
         group by 1
       ) e on e.d = ds.d
     ),
+    operator_marks as (
+      select coalesce(
+        (
+          select jsonb_agg(
+            jsonb_build_object(
+              'name', x.name,
+              'today_count', x.today_count,
+              'week_count', x.week_count
+            )
+            order by x.today_count desc, x.week_count desc, x.name
+          )
+          from (
+            select
+              coalesce(
+                nullif(btrim(split_part(audited_by, '|', 1)), ''),
+                audited_by
+              ) as name,
+              count(*) filter (
+                where (audited_at at time zone 'Asia/Bangkok')::date = v_today
+              )::int as today_count,
+              count(*)::int as week_count
+            from stock.audit_event
+            where branch = v_branch
+              and (audited_at at time zone 'Asia/Bangkok')::date >= (v_today - 6)
+            group by 1
+          ) x
+        ),
+        '[]'::jsonb
+      ) as series
+    ),
     open_batches as (
       select
         coalesce(
@@ -442,6 +473,7 @@ begin
       'sales_to', v_today,
       'summary', to_jsonb(s),
       'daily_marks', dm.series,
+      'operator_marks', om.series,
       'open_batches', ob.batches,
       'rows', coalesce(
         (
@@ -476,6 +508,7 @@ begin
     cross join open_batches ob
     cross join list_total lt
     cross join daily_marks dm
+    cross join operator_marks om
   );
 end;
 $$;
@@ -677,6 +710,7 @@ begin
     where b."CANCELED" = 'N'
       and b."JOURMODE" <> '0'
       and coalesce(b."BILLTYPE_STD", '') not in ('TF', 'TFV', 'TAR')
+        and upper(btrim(b."BILLNO")) !~ '^(3)?SA'
       and b."BILLDATE" >= v_sales_from::text
       and b."BILLDATE" < (v_today + 1)::text
   ),
@@ -1047,6 +1081,7 @@ begin
     where b."CANCELED" = 'N'
       and b."JOURMODE" <> '0'
       and coalesce(b."BILLTYPE_STD", '') not in ('TF', 'TFV', 'TAR')
+        and upper(btrim(b."BILLNO")) !~ '^(3)?SA'
       and b."BILLDATE" >= v_sales_from::text
       and b."BILLDATE" < (v_today + 1)::text
   ),

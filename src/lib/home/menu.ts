@@ -72,8 +72,8 @@ export const HOME_MENU_ITEMS = {
   stockAudit: {
     key: "stockAudit",
     href: "/stock-audit",
-    label: "ตรวจนับสต็อก",
-    description: "ติดตามความครบถ้วนของการตรวจนับ",
+    label: "สถานะตรวจนับ",
+    description: "KPI และความครบถ้วนจากการนับที่สาขา",
     icon: Boxes,
     iconClassName: "text-sky-600",
     iconSurfaceClassName: "bg-sky-50 ring-sky-100",
@@ -150,16 +150,25 @@ export const DEFAULT_FAVORITE_KEYS: HomeMenuKey[] = [
   "expense",
   "po",
   "bi",
-  "bankStatement",
 ];
 
+/**
+ * Sidebar / catalog groups. Section titles are kept for catalog identity but
+ * the Home sidebar renders groups with dividers only (no visible titles).
+ *
+ * Order mirrors the Home sidebar:
+ * 1. daily ops (reminder / PO / stock audit) — expense is rendered separately
+ * 2. finance
+ * 3. master data / products
+ * 4. reports / knowledge
+ */
 export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
   {
     title: "งานประจำวัน",
     items: [
       HOME_MENU_ITEMS.reminder,
-      HOME_MENU_ITEMS.expense,
       HOME_MENU_ITEMS.po,
+      HOME_MENU_ITEMS.stockAudit,
     ],
   },
   {
@@ -172,7 +181,6 @@ export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
       HOME_MENU_ITEMS.party,
       HOME_MENU_ITEMS.relatedProducts,
       HOME_MENU_ITEMS.productImages,
-      HOME_MENU_ITEMS.stockAudit,
     ],
   },
   {

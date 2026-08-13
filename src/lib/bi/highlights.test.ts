@@ -129,6 +129,8 @@ const productBase: BiProductOverview = {
       brand: "FB",
     },
   ],
+  month_columns: [],
+  by_product_month: [],
 };
 
 describe("BI highlight builders", () => {
@@ -217,6 +219,8 @@ describe("BI highlight builders", () => {
         },
       ],
       unmatched_customers: [],
+      month_columns: [],
+      by_customer_month: [],
     };
 
     const lines = buildCustomerHighlights(customerBase);
@@ -538,6 +542,7 @@ describe("buildCashflowHighlights", () => {
         supplier_out: 400_000,
         payroll_out: 0,
         opex_out: 0,
+        net_cash: 500_000,
         ending_cash: 700_000,
         forecast_30d: 720_000,
         forecast_daily_net: 666,
@@ -571,6 +576,8 @@ describe("buildCashflowHighlights", () => {
       top_inflows: [],
       top_outflows: [],
       accounts: [],
+      month_columns: [],
+      report_by_month: [],
     };
 
     const lines = buildCashflowHighlights(cashflowBase);

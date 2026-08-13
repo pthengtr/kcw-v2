@@ -96,10 +96,10 @@ function ReportNav({
   className?: string;
 }) {
   return (
-    <nav className={cn("flex flex-col gap-4", className)} aria-label="รายงาน BI">
+    <nav className={cn("flex flex-col gap-5", className)} aria-label="รายงาน BI">
       {groups.map((group) => (
         <div key={group.id}>
-          <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <p className="mb-2 border-b border-slate-200/80 px-3 pb-1.5 text-sm font-bold tracking-wide text-slate-900">
             {group.label}
           </p>
           <div className="flex flex-col gap-0.5">
@@ -162,7 +162,7 @@ export default function BiShell({ children }: { children: ReactNode }) {
     ) ?? visibleReports[0];
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-gradient-to-b from-slate-100 via-slate-50 to-white">
+    <div className="min-h-full bg-gradient-to-b from-slate-100 via-slate-50 to-white">
       <div className="mx-auto flex w-full max-w-7xl gap-0 md:gap-6 md:px-4 md:py-4 lg:px-6">
         <aside className="hidden w-56 shrink-0 md:block">
           <div className="sticky top-4 rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm backdrop-blur">

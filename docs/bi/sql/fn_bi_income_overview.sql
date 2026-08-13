@@ -47,6 +47,7 @@ BEGIN
     WHERE b."CANCELED" = 'N'
       AND b."JOURMODE" <> '0'
       AND NOT public.fn_bi_sales_bill_excluded_from_revenue(b."BILLNO", b."BILLTYPE_STD")
+      AND upper(btrim(b."BILLNO")) !~ '^(3)?SA'
       AND b."BILLDATE" >= p_from::text
       AND b."BILLDATE" < (p_to + 1)::text
   ),
@@ -152,6 +153,7 @@ BEGIN
     WHERE b."CANCELED" = 'N'
       AND b."JOURMODE" <> '0'
       AND NOT public.fn_bi_sales_bill_excluded_from_revenue(b."BILLNO", b."BILLTYPE_STD")
+      AND upper(btrim(b."BILLNO")) !~ '^(3)?SA'
       AND b."BILLDATE" >= v_prev_from::text
       AND b."BILLDATE" < (v_prev_to + 1)::text
   ),

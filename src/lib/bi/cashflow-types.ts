@@ -74,7 +74,12 @@ export type BiCashflowAccountOption = {
   bank_name: string;
 };
 
-export type BiCashflowReportLineKind = "balance" | "in" | "out" | "forecast";
+export type BiCashflowReportLineKind =
+  | "balance"
+  | "in"
+  | "out"
+  | "net"
+  | "forecast";
 
 export type BiCashflowReportLine = {
   key: string;
@@ -91,6 +96,7 @@ export type BiCashflowReport = {
   supplier_out: number;
   payroll_out: number;
   opex_out: number;
+  net_cash: number;
   ending_cash: number;
   forecast_30d: number;
   forecast_daily_net: number;
@@ -98,6 +104,14 @@ export type BiCashflowReport = {
   other_out: number;
   other_count: number;
   lines: BiCashflowReportLine[];
+};
+
+export type BiCashflowReportMonthRow = {
+  key: string;
+  label: string;
+  kind: BiCashflowReportLineKind;
+  total: number;
+  months: Record<string, number>;
 };
 
 export type BiCashflowOverview = {
@@ -119,4 +133,6 @@ export type BiCashflowOverview = {
   top_inflows: BiCashflowLineRow[];
   top_outflows: BiCashflowLineRow[];
   accounts: BiCashflowAccountOption[];
+  month_columns: string[];
+  report_by_month: BiCashflowReportMonthRow[];
 };

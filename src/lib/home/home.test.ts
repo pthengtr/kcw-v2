@@ -17,6 +17,7 @@ import {
   STOCK_AUDIT_DAILY_TARGET,
   bangkokTodayIsoDate,
 } from "@/lib/home/workspace-todos";
+import { STOCK_AUDIT_DAILY_TARGET as sharedTarget } from "@/lib/stock-audit/daily-target";
 
 describe("home favorites", () => {
   it("falls back to default favorites when cookie is empty", () => {
@@ -24,6 +25,7 @@ describe("home favorites", () => {
     expect(parseFavoriteKeys("")).toEqual(DEFAULT_FAVORITE_KEYS);
     expect(parseFavoriteKeys("[]")).toEqual(DEFAULT_FAVORITE_KEYS);
     expect(FAVORITES_COOKIE_KEY).toBe("home_favorite_menus");
+    expect(DEFAULT_FAVORITE_KEYS).toHaveLength(4);
   });
 
   it("parses and normalizes favorite keys from JSON or CSV", () => {
@@ -33,6 +35,26 @@ describe("home favorites", () => {
     ]);
     expect(parseFavoriteKeys("bi,stockAudit,bi")).toEqual(["bi", "stockAudit"]);
     expect(normalizeFavoriteKeys(["faq"])).toEqual(["faq"]);
+  });
+
+  it("allows more than four favorite menus", () => {
+    expect(
+      normalizeFavoriteKeys([
+        "reminder",
+        "expense",
+        "po",
+        "bi",
+        "bankStatement",
+        "party",
+      ])
+    ).toEqual([
+      "reminder",
+      "expense",
+      "po",
+      "bi",
+      "bankStatement",
+      "party",
+    ]);
   });
 
   it("serializes favorites and refuses emptying via toggle", () => {
@@ -47,6 +69,11 @@ describe("home favorites", () => {
     expect(items.map((item) => item.href)).toEqual(["/reminder", "/bi/income"]);
     expect(Object.keys(HOME_MENU_ITEMS).length).toBeGreaterThanOrEqual(10);
     expect(HOME_MENU_GROUPS).toHaveLength(4);
+    expect(HOME_MENU_GROUPS[0].items.map((item) => item.key)).toEqual([
+      "reminder",
+      "po",
+      "stockAudit",
+    ]);
   });
 });
 
@@ -62,5 +89,6 @@ describe("home workspace todos helpers", () => {
 
   it("keeps the stock-audit daily target aligned with the operator page", () => {
     expect(STOCK_AUDIT_DAILY_TARGET).toBe(30);
+    expect(sharedTarget).toBe(STOCK_AUDIT_DAILY_TARGET);
   });
 });

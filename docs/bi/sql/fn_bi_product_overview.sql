@@ -54,6 +54,7 @@ BEGIN
     WHERE b."CANCELED" = 'N'
       AND b."JOURMODE" <> '0'
       AND NOT public.fn_bi_sales_bill_excluded_from_revenue(b."BILLNO", b."BILLTYPE_STD")
+      AND upper(btrim(b."BILLNO")) !~ '^(3)?SA'
       AND b."BILLDATE" >= p_from::text
       AND b."BILLDATE" < (p_to + 1)::text
   ),
@@ -71,6 +72,7 @@ BEGIN
     WHERE b."CANCELED" = 'N'
       AND b."JOURMODE" <> '0'
       AND NOT public.fn_bi_sales_bill_excluded_from_revenue(b."BILLNO", b."BILLTYPE_STD")
+      AND upper(btrim(b."BILLNO")) !~ '^(3)?SA'
       AND b."BILLDATE" >= v_prev_from::text
       AND b."BILLDATE" < (v_prev_to + 1)::text
   ),
@@ -78,6 +80,7 @@ BEGIN
     SELECT
       l."BCODE" AS bcode,
       l."DETAIL" AS detail,
+      left(l."BILLDATE", 10)::date AS bill_date,
       lpad(left(COALESCE(l."BCODE", ''), 2), 2, '0') AS category_code,
       b.reporting_branch,
       CASE
@@ -291,6 +294,38 @@ BEGIN
     FROM enriched
     ORDER BY revenue_net DESC, base_qty DESC, bcode
     LIMIT v_limit
+  ),
+  month_columns AS (
+    SELECT to_char(d::date, 'YYYY-MM') AS period
+    FROM generate_series(
+      date_trunc('month', p_from::timestamp)::date,
+      date_trunc('month', p_to::timestamp)::date,
+      interval '1 month'
+    ) AS d
+  ),
+  product_month AS (
+    SELECT
+      bcode,
+      to_char(bill_date, 'YYYY-MM') AS period,
+      sum(revenue_net) AS revenue_net
+    FROM line_base
+    GROUP BY bcode, to_char(bill_date, 'YYYY-MM')
+  ),
+  by_product_month AS (
+    SELECT
+      tp.bcode::text AS key,
+      tp.detail AS label,
+      tp.category_name AS sublabel,
+      tp.revenue_net AS total,
+      COALESCE(
+        (
+          SELECT jsonb_object_agg(pm.period, pm.revenue_net)
+          FROM product_month pm
+          WHERE pm.bcode = tp.bcode
+        ),
+        '{}'::jsonb
+      ) AS months
+    FROM top_products tp
   )
   SELECT jsonb_build_object(
     'from', p_from,
@@ -364,6 +399,20 @@ BEGIN
         'brand', brand
       ) ORDER BY revenue_net DESC, base_qty DESC, bcode)
       FROM top_products
+    ), '[]'::jsonb),
+    'month_columns', COALESCE((
+      SELECT jsonb_agg(period ORDER BY period)
+      FROM month_columns
+    ), '[]'::jsonb),
+    'by_product_month', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'key', key,
+        'label', label,
+        'sublabel', sublabel,
+        'total', total,
+        'months', months
+      ) ORDER BY total DESC, label)
+      FROM by_product_month
     ), '[]'::jsonb)
   ) INTO v_result;
 

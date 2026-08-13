@@ -131,7 +131,7 @@ export default function FavoriteMenuSection({
               <DialogHeader>
                 <DialogTitle>จัดการเมนูโปรด</DialogTitle>
                 <DialogDescription>
-                  เลือกเมนูจากรายการด้านล่างเพื่อปักหมุดไว้ด้านบนหน้าแรก
+                  เลือกหรือยกเลิกเมนูโปรดเพื่อแสดงบนหน้าแรกได้ตามต้องการ
                 </DialogDescription>
               </DialogHeader>
 
@@ -213,7 +213,7 @@ export default function FavoriteMenuSection({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {favoriteItems.map((item) => (
           <FavoriteCard key={item.key} item={item} />
         ))}
