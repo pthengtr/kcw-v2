@@ -25,7 +25,8 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_po_sync_ops.sql](./sql/fn_po_sync_ops.sql) | Service-role RPCs for PO sync via `ops.job_queue` |
 | [sql/fn_po_related_sync_ops.sql](./sql/fn_po_related_sync_ops.sql) | Combined `/po` update button — `sync_po_related` HQ+SYP |
 | [sql/fn_po_list.sql](./sql/fn_po_list.sql) | PO list + last-ingested RPCs / open-PO indexes |
-| [sql/fn_po_pending_receive.sql](./sql/fn_po_pending_receive.sql) | ICLOW `/po` pending tab; HQ `RCVDNO→PIDET`; SYP `RCVDNO∪REMARKS TF→SIDet` |
+| [sql/fn_po_pending_receive.sql](./sql/fn_po_pending_receive.sql) | ICLOW `/po` pending tab; HQ `RCVDNO→PIDET`; SYP `RCVDNO∪REMARKS TF→SIDet`; SYP BCODE prepare via `fn_po_syp_tf_prepare_by_bcode` |
+| [sql/fn_po_syp_tf_prepare_by_bcode.sql](./sql/fn_po_syp_tf_prepare_by_bcode.sql) | Per-BCODE TF prepare qty for SYP ICLOW tabs |
 | [kcw-product-movement-data-dictionary.md](./kcw-product-movement-data-dictionary.md) | Stock-more + dead-stock aging rules |
 | [sql/fn_bank_sync_ops.sql](./sql/fn_bank_sync_ops.sql) | Legacy enqueue/poll `bank_statement_import` (HQ-PC); web UI uses Edge Function |
 | [sql/create_raw_hq_brdet_bpdet.sql](./sql/create_raw_hq_brdet_bpdet.sql) | `raw_kcw` BRDET/BPDET cheque+transfer registers (from kcw-analytics) |

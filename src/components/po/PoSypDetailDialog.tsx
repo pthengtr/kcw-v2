@@ -38,6 +38,7 @@ export default function PoSypDetailDialog({
   lines,
   linesLoading,
   tfBillnos,
+  highlightBcode,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,6 +46,8 @@ export default function PoSypDetailDialog({
   lines: PoLineRow[];
   linesLoading: boolean;
   tfBillnos?: string | null;
+  /** When set (e.g. from ค้างรับ), highlight that BCODE line and surface its prepare status. */
+  highlightBcode?: string | null;
 }) {
   const [printBusy, setPrintBusy] = useState(false);
 
@@ -52,6 +55,14 @@ export default function PoSypDetailDialog({
     () => lines.filter((l) => l.prepare_line_status === "prepared").length,
     [lines]
   );
+
+  const highlightKey = highlightBcode?.trim() || "";
+  const highlightedLine = useMemo(() => {
+    if (!highlightKey) return null;
+    return (
+      lines.find((l) => (l.bcode?.trim() || "") === highlightKey) ?? null
+    );
+  }, [lines, highlightKey]);
 
   function handlePrint() {
     setPrintBusy(true);
@@ -80,13 +91,29 @@ export default function PoSypDetailDialog({
                   {billedLabel(selected.billed)} · ยอด:{" "}
                   {formatPoAmount(selected.aftertax)}
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-muted-foreground">สถานะ:</span>
-                  <PrepareStatusBadge status={selected.prepare_status} />
-                  <span className="text-muted-foreground">
-                    จัดแล้ว: {preparedCount}/{lines.length} รายการ
-                  </span>
-                </div>
+                {highlightKey ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-muted-foreground">สถานะ BCODE</span>
+                    <span className="font-mono font-medium">{highlightKey}</span>
+                    <PrepareStatusBadge
+                      status={
+                        highlightedLine?.prepare_line_status ??
+                        selected.prepare_status
+                      }
+                    />
+                    <span className="text-muted-foreground">
+                      · ทั้ง PO จัดแล้ว: {preparedCount}/{lines.length} รายการ
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-muted-foreground">สถานะ:</span>
+                    <PrepareStatusBadge status={selected.prepare_status} />
+                    <span className="text-muted-foreground">
+                      จัดแล้ว: {preparedCount}/{lines.length} รายการ
+                    </span>
+                  </div>
+                )}
                 {tfBillnos ? (
                   <div className="text-muted-foreground">
                     เลขที่บิลโอน:{" "}
@@ -141,8 +168,19 @@ export default function PoSypDetailDialog({
                 ) : (
                   lines.map((line, i) => {
                     const lineKey = line.line ?? String(i);
+                    const isHighlight =
+                      Boolean(highlightKey) &&
+                      (line.bcode?.trim() || "") === highlightKey;
                     return (
-                      <tr key={`${lineKey}-${i}`} className="border-b">
+                      <tr
+                        key={`${lineKey}-${i}`}
+                        className={
+                          isHighlight
+                            ? "border-b bg-amber-50 dark:bg-amber-950/40"
+                            : "border-b"
+                        }
+                        data-highlight-bcode={isHighlight ? "true" : undefined}
+                      >
                         <td className="p-2 align-middle whitespace-nowrap">
                           <PrepareStatusBadge
                             status={line.prepare_line_status}
@@ -153,7 +191,15 @@ export default function PoSypDetailDialog({
                             className="mx-auto hidden h-4 w-4 border border-black print:inline-block"
                           />
                         </td>
-                        <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
+                        <td
+                          className={
+                            isHighlight
+                              ? "p-2 font-mono font-semibold text-amber-950 dark:text-amber-100"
+                              : "p-2 font-mono"
+                          }
+                        >
+                          {line.bcode ?? "—"}
+                        </td>
                         <td className="p-2">
                           <PoProductCell detail={line.detail} mcode={line.mcode} />
                         </td>

@@ -21,6 +21,7 @@ import {
   formatPoDate,
   formatPoQty,
   last30DaysPoDateRange,
+  prepareStatusBadgeClassName,
 } from "@/lib/po/format";
 import {
   PO_ICLOW_STATUS_TABS,
@@ -33,6 +34,7 @@ import {
   type PoPrepareStatus,
 } from "@/lib/po/po-queries";
 import type { PoSyncSite } from "@/lib/po/worker-jobs";
+import { cn } from "@/lib/utils";
 
 export { PO_ICLOW_STATUS_TABS };
 
@@ -231,6 +233,9 @@ export default function PoPendingReceiveTab({
   const [sypLines, setSypLines] = useState<PoLineRow[]>([]);
   const [sypLinesLoading, setSypLinesLoading] = useState(false);
   const [sypTfBillnos, setSypTfBillnos] = useState<string | null>(null);
+  const [sypHighlightBcode, setSypHighlightBcode] = useState<string | null>(
+    null
+  );
 
   const showDates = status !== "to_be_ordered";
   const isBcodeQty =
@@ -302,6 +307,7 @@ export default function PoPendingReceiveTab({
       const header = pendingRowToSypHeader(row);
       setSypSelected(header);
       setSypTfBillnos(row.prepare_tf_billnos ?? null);
+      setSypHighlightBcode(row.bcode?.trim() || null);
       setSypPoOpen(true);
       setSypLines([]);
       setSypLinesLoading(true);
@@ -323,6 +329,7 @@ export default function PoPendingReceiveTab({
         setSypTfBillnos(
           data.tf_billnos ?? row.prepare_tf_billnos ?? null
         );
+        // Prefer BCODE-level prepare from the pending row; fall back to PO rollup.
         setSypSelected({
           ...header,
           prepare_status:
@@ -476,7 +483,21 @@ export default function PoPendingReceiveTab({
         key: "bcode",
         header: "BCODE",
         className: "whitespace-nowrap font-mono",
-        render: (r) => r.bcode ?? "—",
+        render: (r) => {
+          const code = r.bcode ?? "—";
+          if (site !== "SYP" || !r.bcode) return code;
+          return (
+            <span
+              className={cn(
+                "inline-block rounded px-1.5 py-0.5 font-mono font-semibold",
+                prepareStatusBadgeClassName(r.prepare_status)
+              )}
+              title={`สถานะจัดของ BCODE นี้: ${r.prepare_status ?? "not_prepared"}`}
+            >
+              {code}
+            </span>
+          );
+        },
       },
       {
         key: "product",
@@ -523,6 +544,17 @@ export default function PoPendingReceiveTab({
             </span>
           ),
         },
+        ...(site === "SYP"
+          ? [
+              {
+                key: "prepared_qty",
+                header: "จัด",
+                className: "text-right whitespace-nowrap",
+                render: (r: PoPendingReceiveRow) =>
+                  formatPoQty(r.prepared_qty ?? 0),
+              } satisfies Column<PoPendingReceiveRow>,
+            ]
+          : []),
         {
           key: "received_qty",
           header: site === "HQ" ? "รับ (PIDET)" : "รับ (SIDet)",
@@ -628,7 +660,7 @@ export default function PoPendingReceiveTab({
         </div>
         {site === "SYP" ? (
           <div className="mt-2 flex flex-col items-start gap-1">
-            <div className="text-xs text-muted-foreground">สถานะจัด</div>
+            <div className="text-xs text-muted-foreground">สถานะจัด (BCODE)</div>
             <PrepareStatusBadge status={row.prepare_status} />
             {row.prepare_tf_billnos?.trim() ? (
               <span className="break-all font-mono text-xs text-muted-foreground">
@@ -643,15 +675,29 @@ export default function PoPendingReceiveTab({
         <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
           <div>
             <div className="text-xs text-muted-foreground">BCODE</div>
-            <div className="font-mono break-all">{row.bcode || "—"}</div>
+            {site === "SYP" && row.bcode ? (
+              <div
+                className={cn(
+                  "inline-block rounded px-1.5 py-0.5 font-mono font-semibold",
+                  prepareStatusBadgeClassName(row.prepare_status)
+                )}
+              >
+                {row.bcode}
+              </div>
+            ) : (
+              <div className="font-mono break-all">{row.bcode || "—"}</div>
+            )}
           </div>
           {isBcodeQty ? (
             <>
               <div>
-                <div className="text-xs text-muted-foreground">สั่ง / รับ / ค้าง</div>
+                <div className="text-xs text-muted-foreground">
+                  {site === "SYP" ? "สั่ง / จัด / รับ / ค้าง" : "สั่ง / รับ / ค้าง"}
+                </div>
                 <div className="font-semibold">
-                  {formatPoQty(row.ordered_qty ?? row.qty)} /{" "}
-                  {formatPoQty(row.received_qty ?? 0)} /{" "}
+                  {formatPoQty(row.ordered_qty ?? row.qty)}
+                  {site === "SYP" ? <> / {formatPoQty(row.prepared_qty ?? 0)}</> : null}{" "}
+                  / {formatPoQty(row.received_qty ?? 0)} /{" "}
                   {formatPoQty(
                     row.missing_qty ??
                       Math.max(
@@ -704,7 +750,7 @@ export default function PoPendingReceiveTab({
         {isBcodeQty
           ? site === "HQ"
             ? "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก PIDET ผ่าน RCVDNO (exact หรือ implied จาก BILLNO/PO). คลิก DOCNO → POMAS/PODET · คลิก RCVDNO → PIMAS/PIDET. ค่าเริ่มต้น: 30 วันล่าสุด"
-            : "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก SIDet = TF ผ่าน RCVDNO ∪ TF ที่ REMARKS ตรง DOCNO (ส่งเพิ่มเคลียร์ค้าง). คลิก DOCNO → รายละเอียดจัดของ/พิมพ์เหมือนรายการ PO. ค่าเริ่มต้น: 30 วันล่าสุด"
+            : "เกรน DOCNO+BCODE — สั่งจากรายการค้าง; รับจาก SIDet = TF ผ่าน RCVDNO ∪ TF ที่ REMARKS ตรง DOCNO (ส่งเพิ่มเคลียร์ค้าง). สถานะจัด/จำนวนจัดเป็นราย BCODE. คลิก DOCNO → รายละเอียดจัดของ (ไฮไลต์ BCODE ที่เลือก). ค่าเริ่มต้น: 30 วันล่าสุด"
           : site === "SYP"
             ? "รายการรอสั่งซื้อจาก PARTS9 (แยกจาก POMAS/PODET). คลิก DOCNO → รายละเอียดจัดของ/พิมพ์เหมือนรายการ PO"
             : "รายการรอสั่งซื้อจาก PARTS9 (แยกจาก POMAS/PODET). คลิก DOCNO → POMAS/PODET"}
@@ -754,11 +800,15 @@ export default function PoPendingReceiveTab({
 
       <PoSypDetailDialog
         open={sypPoOpen}
-        onOpenChange={setSypPoOpen}
+        onOpenChange={(next) => {
+          setSypPoOpen(next);
+          if (!next) setSypHighlightBcode(null);
+        }}
         selected={sypSelected}
         lines={sypLines}
         linesLoading={sypLinesLoading}
         tfBillnos={sypTfBillnos}
+        highlightBcode={sypHighlightBcode}
       />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>

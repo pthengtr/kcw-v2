@@ -205,7 +205,7 @@ Legacy RPC `fn_po_pending_receive_detail` / `GET /api/po/pending-receive/[docno]
 
 | Piece | Contract |
 |-------|----------|
-| List RPC | `public.fn_po_pending_receive` (SYP rows include `prepare_status` / `prepare_tf_billnos` from `fn_po_syp_tf_prepare_status`) |
+| List RPC | `public.fn_po_pending_receive` (SYP rows include BCODE-level `prepare_status` / `prepared_qty` / `prepare_tf_billnos` from `fn_po_syp_tf_prepare_by_bcode`) |
 | List API | `GET /api/po/pending-receive?site=&status=` |
 | PO lines API | `GET /api/po/hq/[docno]` · `GET /api/po/syp/[docno]` |
 | PI detail API | `GET /api/po/pi/[billno]` (RCVDNO → PIMAS/PIDET) |
