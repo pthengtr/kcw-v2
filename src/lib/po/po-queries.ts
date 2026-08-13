@@ -368,7 +368,9 @@ export type PoPendingReceiveRow = {
   tf_billnos?: string | null;
   /** SYP: header prepare status from HQ TF/SIMas REMARKS (same as รายการ PO). */
   prepare_status?: PoPrepareStatus;
-  /** SYP: docno-level TF billnos from prepare helper (distinct from per-BCODE receive tf_billnos). */
+  /** SYP: TF prepared qty for this DOCNO+BCODE (SIDet via REMARKS TF). */
+  prepared_qty?: number;
+  /** SYP: BCODE-level TF billnos used for prepare_status / prepared_qty. */
   prepare_tf_billnos?: string | null;
   /**
    * HQ RCVDNO→PIMAS resolve method for this row:
@@ -464,6 +466,8 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     pimas_link_missing: Boolean(row.pimas_link_missing),
     tf_billnos: (row.tf_billnos as string | null | undefined) ?? null,
     prepare_status: parsePrepareStatus(row.prepare_status),
+    prepared_qty:
+      row.prepared_qty === undefined ? undefined : num(row.prepared_qty),
     prepare_tf_billnos:
       (row.prepare_tf_billnos as string | null | undefined) ?? null,
     pimas_match_method: (() => {
