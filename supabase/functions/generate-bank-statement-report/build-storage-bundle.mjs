@@ -21,7 +21,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname);
 const outDir = join(root, ".bundle");
 const outFile = join(outDir, "generate-bank-statement-report.bundle.js");
-const STORAGE_PATH = "reports/_bundles/generate-bank-statement-report-v18.js";
+const STORAGE_PATH = "reports/_bundles/generate-bank-statement-report-v19.js";
 
 function stripEnv(name) {
   let v = process.env[name] || "";

@@ -9,7 +9,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import ExcelJS from "npm:exceljs@4.4.0";
 
-const BUNDLE_PATH = "reports/_bundles/generate-bank-statement-report-v18.js";
+const BUNDLE_PATH = "reports/_bundles/generate-bank-statement-report-v19.js";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";

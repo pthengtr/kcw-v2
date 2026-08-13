@@ -106,6 +106,7 @@ export type StatementLineRow = {
   match_status: string | null;
   match_reason: string | null;
   match_notes: string | null;
+  report_remark: string | null;
   matched_ref_type: string | null;
   matched_ref_id: string | null;
   match_confidence: number | null;
@@ -508,7 +509,7 @@ export function enrichStatementRows(rows: StatementLineRow[]): EnrichedRow[] {
       ถอนเงิน: debit,
       ฝากเงิน: credit,
       ยอดคงเหลือ: moneyOrBlank(row.balance_after),
-      หมายเหตุ: "",
+      หมายเหตุ: (row.report_remark ?? "").trim(),
     };
   });
 }

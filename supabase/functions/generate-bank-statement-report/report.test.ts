@@ -36,6 +36,7 @@ function baseRow(overrides: Partial<StatementLineRow> = {}): StatementLineRow {
     match_reason: "ใบสำคัญรับเงิน (วันเดียวกัน)",
     match_notes:
       "จับคู่กับใบสำคัญรับเงิน RC6908-003 จำนวน 26,508.00 บาท วันที่ 01/08/2026 (วันเดียวกับใบสำคัญ) — บริษัท 168 เทรลเลอร์ทรานสปอร์ต จำกัด",
+    report_remark: null,
     matched_ref_type: "rvmas",
     matched_ref_id: "RC6908-003",
     match_confidence: 0.98,
@@ -260,6 +261,14 @@ describe("bank statement report columns", () => {
     expect(enriched["หมายเหตุ"]).toBe("");
     expect(enriched._match_status).toBe("matched");
     expect(enriched.วันที่).toBeInstanceOf(Date);
+  });
+
+  it("fills Excel หมายเหตุ from report_remark", () => {
+    const [enriched] = enrichStatementRows([
+      baseRow({ report_remark: "  รับชำระตามใบแจ้งหนี้  " }),
+    ]);
+    expect(enriched["หมายเหตุ"]).toBe("รับชำระตามใบแจ้งหนี้");
+    expect(enriched["ประเภท"]).toBe("ใบสำคัญรับเงิน");
   });
 
   it("normalizes HQ suffix on party names", () => {
