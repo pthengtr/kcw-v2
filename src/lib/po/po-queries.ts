@@ -366,6 +366,10 @@ export type PoPendingReceiveRow = {
   pimas_link_missing?: boolean;
   /** SYP: TF/TFV billnos contributing to received_qty (RCVDNO ∪ REMARKS) */
   tf_billnos?: string | null;
+  /** SYP: header prepare status from HQ TF/SIMas REMARKS (same as รายการ PO). */
+  prepare_status?: PoPrepareStatus;
+  /** SYP: docno-level TF billnos from prepare helper (distinct from per-BCODE receive tf_billnos). */
+  prepare_tf_billnos?: string | null;
   /**
    * HQ RCVDNO→PIMAS resolve method for this row:
    * - exact: left(btrim(BILLNO),12) 1:1-style match
@@ -459,6 +463,9 @@ function mapPendingReceiveRow(row: Record<string, unknown>): PoPendingReceiveRow
     billdate: (row.billdate as string | null) ?? null,
     pimas_link_missing: Boolean(row.pimas_link_missing),
     tf_billnos: (row.tf_billnos as string | null | undefined) ?? null,
+    prepare_status: parsePrepareStatus(row.prepare_status),
+    prepare_tf_billnos:
+      (row.prepare_tf_billnos as string | null | undefined) ?? null,
     pimas_match_method: (() => {
       const m = String(row.pimas_match_method ?? "");
       if (m === "exact" || m === "pattern" || m === "mixed") return m;
