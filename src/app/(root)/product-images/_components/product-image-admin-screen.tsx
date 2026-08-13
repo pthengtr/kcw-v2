@@ -5,6 +5,7 @@ import { ProductImageStatusAlert } from "./product-image-status-alert";
 import { UploadAutoCard } from "./upload-auto-card";
 import { ProductImageSearchForm } from "./product-image-search-form";
 import BackButton from "@/components/common/BackButton";
+import Link from "next/link";
 
 type ProductImageAdminScreenProps = {
   bcode: string;
@@ -27,15 +28,35 @@ export function ProductImageAdminScreen({
 }: ProductImageAdminScreenProps) {
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-        <BackButton href="/home" />
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">จัดการรูปสินค้า</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            ใช้รูปจาก Supabase Storage: pictures/product/[BCODE]/[BCODE].jpg ถึง
-            [BCODE]_4.jpg
-          </p>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+          <BackButton href="/home" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">จัดการรูปสินค้า</h1>
+            <p className="mt-2 text-sm text-slate-500">
+              ใช้รูปจาก Supabase Storage: pictures/product/[BCODE]/[BCODE].jpg ถึง
+              [BCODE]_4.jpg
+            </p>
+          </div>
         </div>
+        <Link
+          href="/product-images/kpi"
+          className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+        >
+          ดู KPI
+        </Link>
+      </div>
+
+      <div className="mb-5 flex gap-1 rounded-lg bg-slate-100 p-1">
+        <Link
+          href="/product-images/kpi"
+          className="flex flex-1 items-center justify-center rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+        >
+          KPI
+        </Link>
+        <span className="flex flex-1 items-center justify-center rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm">
+          จัดการรูป
+        </span>
       </div>
 
       <ProductImageStatusAlert status={status} />

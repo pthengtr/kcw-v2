@@ -21,11 +21,15 @@ import {
   type StockAuditOverview,
 } from "@/lib/stock-audit/types";
 import { STOCK_AUDIT_DAILY_TARGET } from "@/lib/stock-audit/daily-target";
+import {
+  STOCK_WORK_EVENT_META,
+  type StockWorkKpi,
+} from "@/lib/stock-audit/work-types";
 import { cn } from "@/lib/utils";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
-import StockAuditDailyChart from "@/components/stock-audit/StockAuditDailyChart";
 import StockAuditFreshnessPie from "@/components/stock-audit/StockAuditFreshnessPie";
 import StockAuditOperatorTable from "@/components/stock-audit/StockAuditOperatorTable";
+import StockAuditWorkDailyChart from "@/components/stock-audit/StockAuditWorkDailyChart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +76,7 @@ export default function StockAuditPage() {
   const [bucket, setBucket] = useState<StockAuditBucket | "ALL">("never");
   const [offset, setOffset] = useState(0);
   const [overview, setOverview] = useState<StockAuditOverview | null>(null);
+  const [workKpi, setWorkKpi] = useState<StockWorkKpi | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,16 +96,31 @@ export default function StockAuditPage() {
           offset: String(offset),
         });
         if (bucket !== "ALL") params.set("bucket", bucket);
-        const res = await fetch(`/api/stock-audit/overview?${params}`, {
-          signal,
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "load failed");
-        setOverview(data.overview as StockAuditOverview);
+
+        const workParams = new URLSearchParams({ branch });
+
+        const [overviewRes, workRes] = await Promise.all([
+          fetch(`/api/stock-audit/overview?${params}`, { signal }),
+          fetch(`/api/stock-audit/work-kpi?${workParams}`, { signal }),
+        ]);
+
+        const overviewData = await overviewRes.json();
+        if (!overviewRes.ok) {
+          throw new Error(overviewData.error || "load overview failed");
+        }
+
+        const workData = await workRes.json();
+        if (!workRes.ok) {
+          throw new Error(workData.error || "load work kpi failed");
+        }
+
+        setOverview(overviewData.overview as StockAuditOverview);
+        setWorkKpi(workData.kpi as StockWorkKpi);
       } catch (e) {
         if (signal?.aborted) return;
         setError(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
         setOverview(null);
+        setWorkKpi(null);
       } finally {
         if (!signal?.aborted) setLoading(false);
       }
@@ -132,8 +152,8 @@ export default function StockAuditPage() {
     }
   }
 
-  const todayDone = overview?.summary.marked_today_count ?? 0;
-  const weekDone = overview?.summary.marked_week_count ?? 0;
+  const todayDone = workKpi?.summary_today.completed_counts ?? 0;
+  const weekDone = workKpi?.summary_week.completed_counts ?? 0;
   const todayProgress = Math.min(
     100,
     Math.round((100 * todayDone) / STOCK_AUDIT_DAILY_TARGET)
@@ -259,186 +279,247 @@ export default function StockAuditPage() {
 
       {tab === "status" ? (
         <section className="space-y-5">
-          {loading && !overview ? (
+          {loading && !overview && !workKpi ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <Skeleton className="h-56 rounded-lg" />
               <Skeleton className="h-56 rounded-lg" />
             </div>
-          ) : overview ? (
+          ) : (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <SalesKpiCard
-                  title="วันนี้"
-                  value={`${formatCount(todayDone)} / ${formatCount(STOCK_AUDIT_DAILY_TARGET)}`}
-                  hint="เป้าแนะนำต่อวัน (สาขา)"
-                  icon={<CheckCircle2 className="h-4 w-4" />}
-                />
-                <SalesKpiCard
-                  title="7 วันนี้"
-                  value={formatCount(weekDone)}
-                  hint="จำนวนที่ตรวจแล้ว"
-                  icon={<Target className="h-4 w-4" />}
-                />
-                <SalesKpiCard
-                  title="ยังไม่เคยตรวจ"
-                  value={formatCount(overview.summary.never_count)}
-                  hint={`จาก ${formatCount(overview.summary.total)} รหัสที่มีสต็อก`}
-                />
-                <SalesKpiCard
-                  title="สด ≤ 30 วัน"
-                  value={formatCount(overview.summary.d30_count)}
-                  hint="สุขภาพสต็อกที่ดี"
-                />
-              </div>
+              {workKpi ? (
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="mb-1 text-sm font-semibold text-slate-900">
+                      งานตรวจนับวันนี้
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      จากเหตุการณ์นับ/ตรวจใน LINE · นับเสร็จ = นับตรง + นับคลาด
+                    </p>
+                  </div>
 
-              <div className="grid gap-4 lg:grid-cols-2">
-                <StockAuditFreshnessPie overview={overview} />
-                <StockAuditDailyChart
-                  series={overview.daily_marks}
-                  markedToday={todayDone}
-                  markedWeek={weekDone}
-                />
-              </div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <SalesKpiCard
+                      title="นับเสร็จวันนี้"
+                      value={`${formatCount(todayDone)} / ${formatCount(STOCK_AUDIT_DAILY_TARGET)}`}
+                      hint="เป้าแนะนำต่อวัน (สาขา)"
+                      icon={<CheckCircle2 className="h-4 w-4" />}
+                    />
+                    <SalesKpiCard
+                      title="นับเสร็จ 7 วัน"
+                      value={formatCount(weekDone)}
+                      hint={`การกระทำทั้งหมด ${formatCount(workKpi.summary_week.total_actions)}`}
+                      icon={<Target className="h-4 w-4" />}
+                    />
+                    {STOCK_WORK_EVENT_META.slice(0, 2).map((m) => (
+                      <SalesKpiCard
+                        key={m.key}
+                        title={m.label}
+                        value={formatCount(workKpi.summary_today[m.key])}
+                        hint={m.hint}
+                      />
+                    ))}
+                  </div>
 
-              <StockAuditOperatorTable
-                rows={overview.operator_marks ?? []}
-              />
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {STOCK_WORK_EVENT_META.slice(2).map((m) => (
+                      <SalesKpiCard
+                        key={m.key}
+                        title={m.label}
+                        value={formatCount(workKpi.summary_today[m.key])}
+                        hint={m.hint}
+                      />
+                    ))}
+                  </div>
 
-              <div>
-                <h2 className="mb-2 text-sm font-semibold text-slate-800">
-                  รายการตามสถานะ
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBucket("ALL");
-                      setOffset(0);
-                    }}
-                    className={cn(
-                      "rounded-md px-3 py-1.5 text-sm font-medium transition",
-                      bucket === "ALL"
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    )}
-                  >
-                    ทั้งหมด {formatCount(overview.summary.total)}
-                  </button>
-                  {STOCK_AUDIT_BUCKETS.map((b) => {
-                    const count = summaryCount(overview, b.key);
-                    return (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <StockAuditWorkDailyChart
+                      series={workKpi.daily}
+                      completedToday={todayDone}
+                      completedWeek={weekDone}
+                    />
+                    <StockAuditOperatorTable rows={workKpi.operators} />
+                  </div>
+                </div>
+              ) : null}
+
+              {overview ? (
+                <div className="space-y-4 border-t border-slate-100 pt-5">
+                  <div>
+                    <h2 className="mb-1 text-sm font-semibold text-slate-900">
+                      ความสดของสต็อก
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      จากสถานะตรวจล่าสุดต่อรหัส · ไม่ใช่จำนวนงานวันนี้
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <SalesKpiCard
+                      title="ยังไม่เคยตรวจ"
+                      value={formatCount(overview.summary.never_count)}
+                      hint={`จาก ${formatCount(overview.summary.total)} รหัสที่มีสต็อก`}
+                    />
+                    <SalesKpiCard
+                      title="สด ≤ 30 วัน"
+                      value={formatCount(overview.summary.d30_count)}
+                      hint="สุขภาพสต็อกที่ดี"
+                    />
+                    <SalesKpiCard
+                      title="3–12 เดือน"
+                      value={formatCount(
+                        overview.summary.d180_count +
+                          overview.summary.d365_count
+                      )}
+                      hint="ควรหมุนเวียนตรวจ"
+                    />
+                    <SalesKpiCard
+                      title="นานกว่า 1 ปี"
+                      value={formatCount(overview.summary.over_365_count)}
+                      hint="ค้างนาน"
+                    />
+                  </div>
+
+                  <StockAuditFreshnessPie overview={overview} />
+
+                  <div>
+                    <h2 className="mb-2 text-sm font-semibold text-slate-800">
+                      รายการตามสถานะ
+                    </h2>
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        key={b.key}
                         type="button"
                         onClick={() => {
-                          setBucket(b.key);
+                          setBucket("ALL");
                           setOffset(0);
                         }}
                         className={cn(
                           "rounded-md px-3 py-1.5 text-sm font-medium transition",
-                          b.chip,
-                          bucket === b.key &&
-                            "ring-2 ring-slate-900 ring-offset-1"
+                          bucket === "ALL"
+                            ? "bg-slate-900 text-white"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                         )}
                       >
-                        {b.label} {formatCount(count)}
+                        ทั้งหมด {formatCount(overview.summary.total)}
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="overflow-hidden rounded-lg border border-slate-200">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-xs text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2 font-medium">รหัส</th>
-                      <th className="px-3 py-2 font-medium">รายละเอียด</th>
-                      <th className="hidden px-3 py-2 font-medium sm:table-cell">
-                        ที่เก็บ
-                      </th>
-                      <th className="px-3 py-2 text-right font-medium">คงเหลือ</th>
-                      <th className="px-3 py-2 font-medium">สถานะ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
-                    {overview.rows.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="px-3 py-8 text-center text-muted-foreground"
-                        >
-                          ไม่มีรายการในตัวกรองนี้
-                        </td>
-                      </tr>
-                    ) : (
-                      overview.rows.map((row) => {
-                        const meta = bucketMeta(row.bucket);
+                      {STOCK_AUDIT_BUCKETS.map((b) => {
+                        const count = summaryCount(overview, b.key);
                         return (
-                          <tr key={row.bcode}>
-                            <td className="px-3 py-2 font-mono text-xs font-semibold">
-                              {row.bcode}
-                            </td>
-                            <td className="max-w-[220px] truncate px-3 py-2 text-slate-700">
-                              {row.descr || "—"}
-                            </td>
-                            <td className="hidden px-3 py-2 text-muted-foreground sm:table-cell">
-                              {row.location1 || "—"}
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums">
-                              {formatCount(row.qty)}
-                            </td>
-                            <td className="px-3 py-2">
-                              <Badge
-                                variant="outline"
-                                className={cn("font-normal", meta.chip)}
-                              >
-                                {meta.label}
-                                {row.app_dateaudit
-                                  ? ` · ${row.app_dateaudit}`
-                                  : ""}
-                              </Badge>
+                          <button
+                            key={b.key}
+                            type="button"
+                            onClick={() => {
+                              setBucket(b.key);
+                              setOffset(0);
+                            }}
+                            className={cn(
+                              "rounded-md px-3 py-1.5 text-sm font-medium transition",
+                              b.chip,
+                              bucket === b.key &&
+                                "ring-2 ring-slate-900 ring-offset-1"
+                            )}
+                          >
+                            {b.label} {formatCount(count)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="overflow-hidden rounded-lg border border-slate-200">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-slate-50 text-xs text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-2 font-medium">รหัส</th>
+                          <th className="px-3 py-2 font-medium">รายละเอียด</th>
+                          <th className="hidden px-3 py-2 font-medium sm:table-cell">
+                            ที่เก็บ
+                          </th>
+                          <th className="px-3 py-2 text-right font-medium">
+                            คงเหลือ
+                          </th>
+                          <th className="px-3 py-2 font-medium">สถานะ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {overview.rows.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={5}
+                              className="px-3 py-8 text-center text-muted-foreground"
+                            >
+                              ไม่มีรายการในตัวกรองนี้
                             </td>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                        ) : (
+                          overview.rows.map((row) => {
+                            const meta = bucketMeta(row.bucket);
+                            return (
+                              <tr key={row.bcode}>
+                                <td className="px-3 py-2 font-mono text-xs font-semibold">
+                                  {row.bcode}
+                                </td>
+                                <td className="max-w-[220px] truncate px-3 py-2 text-slate-700">
+                                  {row.descr || "—"}
+                                </td>
+                                <td className="hidden px-3 py-2 text-muted-foreground sm:table-cell">
+                                  {row.location1 || "—"}
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">
+                                  {formatCount(row.qty)}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn("font-normal", meta.chip)}
+                                  >
+                                    {meta.label}
+                                    {row.app_dateaudit
+                                      ? ` · ${row.app_dateaudit}`
+                                      : ""}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
 
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-muted-foreground">
-                  แสดง {formatCount(overview.rows.length)} จาก{" "}
-                  {formatCount(overview.row_total)}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={offset <= 0 || loading}
-                    onClick={() =>
-                      setOffset((o) => Math.max(0, o - PAGE_SIZE))
-                    }
-                  >
-                    ก่อนหน้า
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={
-                      loading || offset + PAGE_SIZE >= overview.row_total
-                    }
-                    onClick={() => setOffset((o) => o + PAGE_SIZE)}
-                  >
-                    ถัดไป
-                  </Button>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-muted-foreground">
+                      แสดง {formatCount(overview.rows.length)} จาก{" "}
+                      {formatCount(overview.row_total)}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={offset <= 0 || loading}
+                        onClick={() =>
+                          setOffset((o) => Math.max(0, o - PAGE_SIZE))
+                        }
+                      >
+                        ก่อนหน้า
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                          loading || offset + PAGE_SIZE >= overview.row_total
+                        }
+                        onClick={() => setOffset((o) => o + PAGE_SIZE)}
+                      >
+                        ถัดไป
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </>
-          ) : null}
+          )}
         </section>
       ) : null}
 

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { listPoHeaders } from "@/lib/po/po-queries";
 import { STOCK_AUDIT_DAILY_TARGET } from "@/lib/stock-audit/daily-target";
-import { fetchStockAuditOverview } from "@/lib/stock-audit/queries";
+import { fetchStockWorkKpi } from "@/lib/stock-audit/work-queries";
 
 export { STOCK_AUDIT_DAILY_TARGET };
 
@@ -191,13 +191,10 @@ export async function fetchWorkspaceTodos(params: {
       return sypPoTodo(count ?? 0);
     })(),
     (async () => {
-      const overview = await fetchStockAuditOverview(params.adminClient, {
+      const kpi = await fetchStockWorkKpi(params.adminClient, {
         branch: "HQ",
-        withStockOnly: true,
-        limit: 1,
-        offset: 0,
       });
-      return stockAuditTodo(overview.summary.marked_today_count);
+      return stockAuditTodo(kpi.summary_today.completed_counts);
     })(),
   ]);
 

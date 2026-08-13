@@ -39,6 +39,10 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_bi_income_overview.sql](./sql/fn_bi_income_overview.sql) | RPC used by `/bi/income` |
 | [sql/fn_bi_income_blank_costs.sql](./sql/fn_bi_income_blank_costs.sql) | Blank-cost line drilldown for `/bi/income` |
 | [sql/fn_bi_vat_overview.sql](./sql/fn_bi_vat_overview.sql) | RPC used by `/bi/vat` (ภาษีขาย/ซื้อ + พยากรณ์) |
+| [stock-audit.md](./stock-audit.md) | Branch stock-check status + work KPI (`stock.work_event`) |
+| [product-image-kpi.md](./product-image-kpi.md) | LINE product-image operator KPI |
+| [sql/fn_stock_work_kpi.sql](./sql/fn_stock_work_kpi.sql) | RPC used by `/stock-audit` work section |
+| [sql/fn_product_image_kpi.sql](./sql/fn_product_image_kpi.sql) | RPC used by `/product-images/kpi` |
 
 ## App entry
 

@@ -116,9 +116,9 @@ export const HOME_MENU_ITEMS = {
   },
   productImages: {
     key: "productImages",
-    href: "/product-images",
+    href: "/product-images/kpi",
     label: "จัดการรูปสินค้า",
-    description: "ซิงก์และตรวจสอบรูปภาพสินค้า",
+    description: "KPI และจัดการรูปภาพสินค้าจาก LINE",
     icon: Images,
     iconClassName: "text-rose-600",
     iconSurfaceClassName: "bg-rose-50 ring-rose-100",
