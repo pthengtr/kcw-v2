@@ -117,7 +117,7 @@ New features almost never need new queue tables — only new `job_type` values a
 - Worker BATs (kcw-analytics):
   - **HQ** [`run_hq_po_related_sync.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_hq_po_related_sync.bat): POMAS/PODET + ICLOW + **SIDET/SIMAS** (latest 6 months) → Drive + `raw_kcw`, then inventory on-hand qty.
   - **SYP** [`run_syp_po_related_sync.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_syp_po_related_sync.bat): POMAS/PODET + ICLOW → Drive + `raw_kcw`, then inventory (no sales Supabase upload).
-- Pending-receive / ค้างรับ semantics: [bi/kcw-iclow-pending-receive-data-dictionary.md](./bi/kcw-iclow-pending-receive-data-dictionary.md) (from analytic `parts9_pending_receive`).
+- Pending-receive / ค้างรับ semantics: [ICLOW dictionary](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-iclow-pending-receive-data-dictionary.md) (extract notes: analytic `parts9_pending_receive`).
 - Before insert: if any recent (`< 30 min`) `sync_po_related` is `pending`/`running`, return **already running**.
 - Gate: at least one PC online (~30s); still enqueue both site jobs.
 - UI keeps **per-stream last-updated** (PO HQ/SYP, ICLOW HQ/SYP, สต็อก HQ) so operators can see which side moved.
@@ -131,7 +131,7 @@ New features almost never need new queue tables — only new `job_type` values a
 - Parse + insert into `bank.statement_*` and Storage `bank-statements` live in this repo: [`supabase/functions/import-bank-statement/`](../supabase/functions/import-bank-statement/) (`parser_version: auto_v2` — stable detail + KTB cross-format normalize; display description excluded). Docs: [bank-statement-upload.md](./bank-statement-upload.md).
 - Caller: signed-in user with RBAC page `bank_statement_sync` (or `admin`), **or** HQ Drive bulk with **service-role** bearer.
 - Daily HQ BAT [`run_bank_statement_import.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_bank_statement_import.bat) still runs BRDET/BPDET, then a **thin Drive uploader** that POSTs each Excel to the same Edge Function (no local Python parse). Web uploads no longer enqueue `ops.job_queue`.
-- Data dictionary: [bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md](./bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md).
+- Data dictionary: [BRDET/BPDET](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md).
 - Legacy service-role RPCs `fn_bank_find_inflight_import` / `fn_bank_enqueue_import` remain for LINE/compat — see [bi/sql/fn_bank_sync_ops.sql](./bi/sql/fn_bank_sync_ops.sql) — but the kcw-v2 web button no longer uses them.
 
 ### Bank statement monthly report from `/bank-statement-sync` (kcw-v2) — **not** a PC worker job
@@ -192,8 +192,8 @@ New features almost never need new queue tables — only new `job_type` values a
 
 ## Related
 
-- Purchase orders synced by `sync_pomas_podet` — see [bi/kcw-po-data-dictionary.md](./bi/kcw-po-data-dictionary.md)
-- Pending receive / ICLOW — [bi/kcw-iclow-pending-receive-data-dictionary.md](./bi/kcw-iclow-pending-receive-data-dictionary.md)
-- Cheque/transfer registers (BRDET/BPDET) — [bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md](./bi/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md)
+- Purchase orders synced by `sync_pomas_podet` — see [PO dictionary](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-po-data-dictionary.md)
+- Pending receive / ICLOW — [ICLOW dictionary](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-iclow-pending-receive-data-dictionary.md)
+- Cheque/transfer registers (BRDET/BPDET) — [BRDET/BPDET dictionary](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md)
 - BI data docs — [bi/README.md](./bi/README.md)
 - Analytic pipelines / BATs — [kcw-analytics](https://github.com/pthengtr/kcw-analytics)
