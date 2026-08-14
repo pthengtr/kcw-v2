@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Printer } from "lucide-react";
 
 import PrepareStatusBadge from "@/components/po/PrepareStatusBadge";
@@ -12,6 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import TableLoadingState from "@/components/common/TableLoadingState";
 import {
   billedLabel,
@@ -19,7 +26,11 @@ import {
   formatPoDate,
   formatPoQty,
 } from "@/lib/po/format";
-import type { PoHeaderRow, PoLineRow } from "@/lib/po/po-queries";
+import type {
+  PoHeaderRow,
+  PoLineRow,
+  PoPrepareFilter,
+} from "@/lib/po/po-queries";
 
 function formatHqLocation(
   location1: string | null | undefined,
@@ -50,11 +61,21 @@ export default function PoSypDetailDialog({
   highlightBcode?: string | null;
 }) {
   const [printBusy, setPrintBusy] = useState(false);
+  const [prepareFilter, setPrepareFilter] = useState<PoPrepareFilter>("all");
+
+  useEffect(() => {
+    setPrepareFilter("all");
+  }, [selected?.docno]);
 
   const preparedCount = useMemo(
     () => lines.filter((l) => l.prepare_line_status === "prepared").length,
     [lines]
   );
+
+  const visibleLines = useMemo(() => {
+    if (prepareFilter === "all") return lines;
+    return lines.filter((l) => l.prepare_line_status === prepareFilter);
+  }, [lines, prepareFilter]);
 
   const highlightKey = highlightBcode?.trim() || "";
   const highlightedLine = useMemo(() => {
@@ -114,6 +135,11 @@ export default function PoSypDetailDialog({
                     </span>
                   </div>
                 )}
+                {prepareFilter !== "all" ? (
+                  <div className="text-xs text-muted-foreground">
+                    แสดง {visibleLines.length} จาก {lines.length} รายการ
+                  </div>
+                ) : null}
                 {tfBillnos ? (
                   <div className="text-muted-foreground">
                     เลขที่บิลโอน:{" "}
@@ -127,17 +153,38 @@ export default function PoSypDetailDialog({
                   </div>
                 )}
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="print:hidden"
-                disabled={printBusy || linesLoading || lines.length === 0}
-                onClick={handlePrint}
-              >
-                <Printer className="h-4 w-4" />
-                พิมพ์ตาราง
-              </Button>
+              <div className="flex flex-wrap items-center gap-2 print:hidden">
+                <Select
+                  value={prepareFilter}
+                  onValueChange={(v) =>
+                    setPrepareFilter(v as PoPrepareFilter)
+                  }
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="สถานะจัด" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
+                    <SelectItem value="not_prepared">ยังไม่จัด</SelectItem>
+                    <SelectItem value="partially_prepared">
+                      จัดของบางส่วน
+                    </SelectItem>
+                    <SelectItem value="prepared">จัดแล้ว</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    printBusy || linesLoading || visibleLines.length === 0
+                  }
+                  onClick={handlePrint}
+                >
+                  <Printer className="h-4 w-4" />
+                  พิมพ์ตาราง
+                </Button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -165,8 +212,14 @@ export default function PoSypDetailDialog({
                       ไม่มีรายการ
                     </td>
                   </tr>
+                ) : visibleLines.length === 0 ? (
+                  <tr>
+                    <td className="p-2 text-muted-foreground" colSpan={7}>
+                      ไม่มีรายการตามสถานะที่เลือก
+                    </td>
+                  </tr>
                 ) : (
-                  lines.map((line, i) => {
+                  visibleLines.map((line, i) => {
                     const lineKey = line.line ?? String(i);
                     const isHighlight =
                       Boolean(highlightKey) &&
@@ -184,11 +237,6 @@ export default function PoSypDetailDialog({
                         <td className="p-2 align-middle whitespace-nowrap">
                           <PrepareStatusBadge
                             status={line.prepare_line_status}
-                            className="print:hidden"
-                          />
-                          <span
-                            aria-hidden
-                            className="mx-auto hidden h-4 w-4 border border-black print:inline-block"
                           />
                         </td>
                         <td
