@@ -2,7 +2,7 @@
 
 ## Cursor Cloud specific instructions
 
-This repo is a single **Next.js 15** (App Router, React 19, TypeScript, Turbopack) app — internal name `kcw-v2`, an internal ERP/BI back-office for the KCW business (UI is mostly Thai). There is one `package.json` at the repo root; package manager is **npm** (`package-lock.json`). Standard scripts (`dev`, `build`, `start`, `lint`, `test`) live in `package.json` — run them as documented there.
+This repo is a single **Next.js 15** (App Router, React 19, TypeScript, Turbopack) app — internal name `kcw-v2`, an internal ERP/BI back-office for the KCW business (UI is mostly Thai). There is one `package.json` at the repo root; package manager is **npm** (`package-lock.json`). Standard scripts (`dev`, `build`, `start`, `lint`, `test`) live in `package.json` — run them as documented there. Shared data dictionaries: [kcw-docs/dictionaries](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/README.md).
 
 ### Services
 
