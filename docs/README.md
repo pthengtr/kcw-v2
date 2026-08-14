@@ -4,7 +4,7 @@
 |-----|---------|
 | [worker-jobs.md](./worker-jobs.md) | **PC worker queue** — enqueue via `ops.job_queue` (same as LINE); heartbeats; known `job_type`s |
 | [bank-statement-upload.md](./bank-statement-upload.md) | Bank Excel upload UI → Edge Function `import-bank-statement` (no PC worker) |
-| [liff-product-scan.md](./liff-product-scan.md) | LINE LIFF product scanner (`/liff/scan-product`) → `liff.sendMessages` → kcw-api Reply |
+| [liff-product-scan.md](./liff-product-scan.md) | **Retired.** Product scan is LINE camera → [kcw-api product-scan.md](https://github.com/pthengtr/kcw-api/blob/master/docs/product-scan.md) |
 | [bi/README.md](./bi/README.md) | BI RPC contracts + app-only BI docs (`raw_kcw` / `curated_kcw` / app tables) |
 | [kcw-docs dictionaries](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/README.md) | Shared data dictionaries (sales, ICMAS, PO, ICLOW, …) |
 
