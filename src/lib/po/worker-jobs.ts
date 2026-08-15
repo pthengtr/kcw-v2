@@ -12,10 +12,16 @@ export const INVENTORY_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
 export const ICLOW_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
 export const PO_RELATED_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
 
+export const HQ_WORKER_CANDIDATES = ["HQ-UBUNTU-SERVER", "HQ-PC"] as const;
+
 const SITE_WORKER: Record<PoSyncSite, "HQ-PC" | "SYP-PC"> = {
   HQ: "HQ-PC",
   SYP: "SYP-PC",
 };
+
+export function workerNamesForSite(site: PoSyncSite): string[] {
+  return site === "HQ" ? [...HQ_WORKER_CANDIDATES] : ["SYP-PC"];
+}
 
 export type WorkerHeartbeatRow = {
   worker_name: string;
@@ -69,6 +75,35 @@ function mapJob(row: Record<string, unknown>): JobQueueRow {
   };
 }
 
+export async function pickLiveHqWorkerName(
+  supabase: SupabaseClient
+): Promise<string | null> {
+  for (const workerName of HQ_WORKER_CANDIDATES) {
+    const heartbeat = await getWorkerHeartbeat(supabase, workerName);
+    if (isWorkerOnline(heartbeat?.last_seen ?? null)) {
+      return workerName;
+    }
+  }
+  return null;
+}
+
+export async function isSiteWorkerOnline(
+  supabase: SupabaseClient,
+  site: PoSyncSite
+): Promise<{ online: boolean; workerName: string; lastSeen: string | null }> {
+  let lastSeen: string | null = null;
+  let lastName = workerNameForSite(site);
+  for (const workerName of workerNamesForSite(site)) {
+    const heartbeat = await getWorkerHeartbeat(supabase, workerName);
+    lastName = workerName;
+    lastSeen = heartbeat?.last_seen ?? lastSeen;
+    if (isWorkerOnline(heartbeat?.last_seen ?? null)) {
+      return { online: true, workerName, lastSeen: heartbeat?.last_seen ?? null };
+    }
+  }
+  return { online: false, workerName: lastName, lastSeen };
+}
+
 export async function getWorkerHeartbeat(
   supabase: SupabaseClient,
   workerName: string
@@ -114,20 +149,24 @@ export async function enqueuePoSync(params: {
     }
 > {
   const { supabase, site, requestedBy } = params;
-  const workerName = workerNameForSite(site);
+  const preferred =
+    site === "HQ"
+      ? (await pickLiveHqWorkerName(supabase)) ?? workerNameForSite(site)
+      : workerNameForSite(site);
+  const workerName = preferred;
 
   const inFlight = await findInFlightPoSync(supabase, site);
   if (inFlight) {
     return { alreadyRunning: true, job: inFlight };
   }
 
-  const heartbeat = await getWorkerHeartbeat(supabase, workerName);
-  if (!isWorkerOnline(heartbeat?.last_seen ?? null)) {
+  const siteHb = await isSiteWorkerOnline(supabase, site);
+  if (!siteHb.online) {
     return {
       alreadyRunning: false,
       workerOnline: false,
-      workerName,
-      lastSeen: heartbeat?.last_seen ?? null,
+      workerName: siteHb.workerName,
+      lastSeen: siteHb.lastSeen,
     };
   }
 
@@ -194,13 +233,12 @@ export async function enqueueInventorySync(params: {
   // Gate like bank: need at least one PC online; still enqueue both site jobs.
   const heartbeats = await Promise.all(
     INVENTORY_SYNC_SITES.map(async (site) => {
-      const workerName = workerNameForSite(site);
-      const heartbeat = await getWorkerHeartbeat(supabase, workerName);
+      const hb = await isSiteWorkerOnline(supabase, site);
       return {
         site,
-        workerName,
-        lastSeen: heartbeat?.last_seen ?? null,
-        online: isWorkerOnline(heartbeat?.last_seen ?? null),
+        workerName: hb.workerName,
+        lastSeen: hb.lastSeen,
+        online: hb.online,
       };
     })
   );
@@ -278,13 +316,12 @@ export async function enqueueIclowSync(params: {
 
   const heartbeats = await Promise.all(
     ICLOW_SYNC_SITES.map(async (site) => {
-      const workerName = workerNameForSite(site);
-      const heartbeat = await getWorkerHeartbeat(supabase, workerName);
+      const hb = await isSiteWorkerOnline(supabase, site);
       return {
         site,
-        workerName,
-        lastSeen: heartbeat?.last_seen ?? null,
-        online: isWorkerOnline(heartbeat?.last_seen ?? null),
+        workerName: hb.workerName,
+        lastSeen: hb.lastSeen,
+        online: hb.online,
       };
     })
   );
@@ -364,13 +401,12 @@ export async function enqueuePoRelatedSync(params: {
 
   const heartbeats = await Promise.all(
     PO_RELATED_SYNC_SITES.map(async (site) => {
-      const workerName = workerNameForSite(site);
-      const heartbeat = await getWorkerHeartbeat(supabase, workerName);
+      const hb = await isSiteWorkerOnline(supabase, site);
       return {
         site,
-        workerName,
-        lastSeen: heartbeat?.last_seen ?? null,
-        online: isWorkerOnline(heartbeat?.last_seen ?? null),
+        workerName: hb.workerName,
+        lastSeen: hb.lastSeen,
+        online: hb.online,
       };
     })
   );

@@ -10,6 +10,7 @@ import {
   PO_RELATED_SYNC_SITES,
   WORKER_ONLINE_WINDOW_MS,
   workerNameForSite,
+  workerNamesForSite,
 } from "@/lib/po/worker-jobs";
 import {
   billedLabel,
@@ -43,6 +44,7 @@ describe("PO worker helpers", () => {
     expect(INVENTORY_SYNC_SITES).toEqual(["HQ", "SYP"]);
     expect(workerNameForSite("HQ")).toBe("HQ-PC");
     expect(workerNameForSite("SYP")).toBe("SYP-PC");
+    expect(workerNamesForSite("HQ")).toEqual(["HQ-UBUNTU-SERVER", "HQ-PC"]);
   });
 
   it("maps ICLOW sync to both site workers", () => {
