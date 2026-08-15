@@ -8,7 +8,7 @@
 | [bi/README.md](./bi/README.md) | BI RPC contracts + app-only BI docs (`raw_kcw` / `curated_kcw` / app tables) |
 | [kcw-docs dictionaries](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/README.md) | Shared data dictionaries (sales, ICMAS, PO, ICLOW, …) |
 
-Upstream extract / BAT pipelines live in **[kcw-analytics](https://github.com/pthengtr/kcw-analytics)** (PARTS9 → Drive → Supabase). Domain meaning lives in **[kcw-docs](https://github.com/pthengtr/kcw-docs)** — e.g. [ICLOW ค้างรับ](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-iclow-pending-receive-data-dictionary.md), [BRDET/BPDET เช็ครับ-จ่าย](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md).
+Upstream extract / BAT pipelines live in **[kcw-analytics](https://github.com/pthengtr/kcw-analytics)** (PARTS9 → Drive → Supabase). Domain meaning lives in **[kcw-docs](https://github.com/pthengtr/kcw-docs)** — e.g. [ICLOW ค้างรับ](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-iclow-pending-receive-data-dictionary.md), [BRDET/BPDET เช็ครับ-จ่าย](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md), [PVMAS/RVMAS โน้ต-ใบสำคัญ](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-pvmas-rvmas-notes-vouchers-data-dictionary.md).
 
 ## Agent note (workers)
 
