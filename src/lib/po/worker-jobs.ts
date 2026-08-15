@@ -13,13 +13,14 @@ export const ICLOW_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
 export const PO_RELATED_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
 
 export const HQ_WORKER_CANDIDATES = ["HQ-UBUNTU-SERVER", "HQ-PC"] as const;
+export type PoWorkerName = (typeof HQ_WORKER_CANDIDATES)[number] | "SYP-PC";
 
-const SITE_WORKER: Record<PoSyncSite, "HQ-PC" | "SYP-PC"> = {
+const SITE_WORKER: Record<PoSyncSite, Extract<PoWorkerName, "HQ-PC" | "SYP-PC">> = {
   HQ: "HQ-PC",
   SYP: "SYP-PC",
 };
 
-export function workerNamesForSite(site: PoSyncSite): string[] {
+export function workerNamesForSite(site: PoSyncSite): PoWorkerName[] {
   return site === "HQ" ? [...HQ_WORKER_CANDIDATES] : ["SYP-PC"];
 }
 
@@ -90,9 +91,9 @@ export async function pickLiveHqWorkerName(
 export async function isSiteWorkerOnline(
   supabase: SupabaseClient,
   site: PoSyncSite
-): Promise<{ online: boolean; workerName: string; lastSeen: string | null }> {
+): Promise<{ online: boolean; workerName: PoWorkerName; lastSeen: string | null }> {
   let lastSeen: string | null = null;
-  let lastName = workerNameForSite(site);
+  let lastName: PoWorkerName = workerNameForSite(site);
   for (const workerName of workerNamesForSite(site)) {
     const heartbeat = await getWorkerHeartbeat(supabase, workerName);
     lastName = workerName;
