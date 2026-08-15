@@ -7,9 +7,7 @@ import {
   findInFlightPoSync,
   fetchIclowLastIngestedAt,
   fetchInventoryLastUpdatedAt,
-  getWorkerHeartbeat,
-  isWorkerOnline,
-  workerNameForSite,
+  isSiteWorkerOnline,
   type JobQueueRow,
   type PoSyncSite,
 } from "./worker-jobs";
@@ -167,20 +165,19 @@ export async function fetchPoMeta(supabase: SupabaseClient) {
 
   const siteEntries = await Promise.all(
     sites.map(async (site) => {
-      const workerName = workerNameForSite(site);
-      const [lastIngestedAt, heartbeat, inFlightJob] = await Promise.all([
+      const hb = await isSiteWorkerOnline(supabase, site);
+      const [lastIngestedAt, inFlightJob] = await Promise.all([
         fetchLastIngestedAt(supabase, site),
-        getWorkerHeartbeat(supabase, workerName),
         findInFlightPoSync(supabase, site),
       ]);
       return [
         site,
         {
           lastIngestedAt,
-          workerName,
-          workerOnline: isWorkerOnline(heartbeat?.last_seen ?? null),
-          workerLastSeen: heartbeat?.last_seen ?? null,
-          workerStatus: heartbeat?.status ?? null,
+          workerName: hb.workerName,
+          workerOnline: hb.online,
+          workerLastSeen: hb.lastSeen,
+          workerStatus: null,
           inFlightJob,
         },
       ] as const;

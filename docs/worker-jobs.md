@@ -9,8 +9,8 @@ PC background work is coordinated **only through Supabase**. LINE (`kcw-api`) an
 ## Flow
 
 1. Client (LINE handler or kcw-v2 UI) inserts a row into `ops.job_queue` with `status='pending'`.
-2. Windows workers (`HQ-PC`, `SYP-PC`) heartbeat into `ops.worker_heartbeat`.
-3. Each worker claims the next pending job where `worker_name is null` **or** `worker_name` matches that PC.
+2. Workers (`HQ-UBUNTU-SERVER` preferred for HQ when live, else `HQ-PC`; `SYP-PC`) heartbeat into `ops.worker_heartbeat`.
+3. Each worker claims the next pending job where `worker_name is null` **or** `worker_name` matches that process.
 4. Worker runs the local command from its `.env`: `WORKER_JOB_<JOB_TYPE>_COMMAND` (usually `worker_tasks\*.bat`).
 5. Worker updates the same row to `done` / `failed` with `result_message` / `error_message`.
 
@@ -19,7 +19,7 @@ kcw-v2 only needs **steps 1 + status polling**. Pipeline/BAT code lives in analy
 ```text
 kcw-v2 / LINE  --insert-->  ops.job_queue (pending)
                                  ↑ claim
-                    HQ-PC / SYP-PC workers (kcw-api)
+                    HQ-UBUNTU-SERVER (preferred) / HQ-PC / SYP-PC
                                  ↓
                             done | failed
 kcw-v2  --poll same row-->  status UI
@@ -36,7 +36,7 @@ kcw-v2  --poll same row-->  status UI
 | `job_type` | text | snake_case key workers understand |
 | `payload` | jsonb | e.g. `{ "task": "...", "site": "HQ" }` |
 | `status` | `pending` → `running` → `done` \| `failed` | |
-| `worker_name` | `'HQ-PC'` \| `'SYP-PC'` \| `null` | `null` = any PC may claim |
+| `worker_name` | `'HQ-UBUNTU-SERVER'` \| `'HQ-PC'` \| `'SYP-PC'` \| `null` | `null` = any live worker may claim. HQ enqueue prefers Ubuntu if online. |
 | `requested_by` | uuid / text | user id |
 | `source` | `'line'` or `'web'` | use `'web'` from kcw-v2 |
 | `requested_at` / `started_at` / `finished_at` | timestamptz | |
@@ -46,7 +46,7 @@ kcw-v2  --poll same row-->  status UI
 
 | Column | Notes |
 |--------|-------|
-| `worker_name` | `'HQ-PC'` or `'SYP-PC'` |
+| `worker_name` | `'HQ-PC'`, `'HQ-UBUNTU-SERVER'`, or `'SYP-PC'` |
 | `last_seen` | Treat as **online** if within ~**30s** |
 | `status` | `idle` / `running` |
 
