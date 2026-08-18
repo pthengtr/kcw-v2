@@ -27,4 +27,12 @@ describe("BI_REPORT_GROUPS", () => {
       BI_REPORT_GROUPS.flatMap((g) => g.reports.map((r) => r.id))
     );
   });
+
+  it("lists product-sales under สินค้า", () => {
+    const products = BI_REPORT_GROUPS.find((g) => g.id === "products");
+    expect(products?.reports.map((r) => r.id)).toEqual([
+      "product-sales",
+      "product-movement",
+    ]);
+  });
 });

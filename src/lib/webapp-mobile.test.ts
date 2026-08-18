@@ -164,6 +164,15 @@ describe("Webapp mobile layout", () => {
     const salesHighlights = read("src/components/bi/sales/SalesOverviewPage.tsx");
     expect(salesHighlights).toContain("BiHighlightsCard");
     expect(salesHighlights).toContain("buildSalesHighlights");
+
+    const productSales = read("src/components/bi/products/ProductSalesPage.tsx");
+    expect(productSales).toContain("grid-cols-1");
+    expect(productSales).toContain("sm:grid-cols-2");
+    expect(productSales).toContain("xl:grid-cols-3");
+    expect(productSales).toContain("ProductBcodeSelect");
+    expect(productSales).toContain("ProductSalesPeriodTable");
+    expect(productSales).toContain("BiHighlightsCard");
+    expect(productSales).not.toContain("w-[1000px]");
   });
 });
 

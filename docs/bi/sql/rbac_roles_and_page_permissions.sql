@@ -111,6 +111,9 @@ revoke execute on function public.fn_bi_sales_overview(date, date, text) from au
 revoke execute on function public.fn_bi_customer_overview(date, date, text, integer) from authenticated, anon, public;
 revoke execute on function public.fn_bi_product_overview(date, date, text, integer) from authenticated, anon, public;
 revoke execute on function public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text) from authenticated, anon, public;
+revoke execute on function public.fn_bi_product_search(text, integer) from authenticated, anon, public;
+revoke execute on function public.fn_bi_product_sales_lines(text, date, date, text) from authenticated, anon, public;
+revoke execute on function public.fn_bi_product_sales(text, date, date, text, integer) from authenticated, anon, public;
 revoke execute on function public.fn_bi_expense_overview(date, date, uuid, text, integer, text) from authenticated, anon, public;
 revoke execute on function public.fn_bi_income_overview(date, date, text, text) from authenticated, anon, public;
 revoke execute on function public.fn_bi_income_blank_costs(date, date, text, integer) from authenticated, anon, public;
@@ -120,6 +123,9 @@ grant execute on function public.fn_bi_sales_overview(date, date, text) to servi
 grant execute on function public.fn_bi_customer_overview(date, date, text, integer) to service_role;
 grant execute on function public.fn_bi_product_overview(date, date, text, integer) to service_role;
 grant execute on function public.fn_bi_product_movement(date, date, text, integer, integer, integer, text, text, text, text) to service_role;
+grant execute on function public.fn_bi_product_search(text, integer) to service_role;
+grant execute on function public.fn_bi_product_sales_lines(text, date, date, text) to service_role;
+grant execute on function public.fn_bi_product_sales(text, date, date, text, integer) to service_role;
 grant execute on function public.fn_bi_expense_overview(date, date, uuid, text, integer, text) to service_role;
 grant execute on function public.fn_bi_income_overview(date, date, text, text) to service_role;
 grant execute on function public.fn_bi_income_blank_costs(date, date, text, integer) to service_role;

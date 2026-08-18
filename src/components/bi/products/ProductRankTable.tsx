@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { BiProductRankRow } from "@/lib/bi/product-types";
@@ -99,9 +100,12 @@ export default function ProductRankTable({
                     {index + 1}
                   </td>
                   <td className="max-w-[14rem] py-2.5 pr-3">
-                    <span className="block font-medium text-slate-900">
+                    <Link
+                      href={`/bi/product-sales?bcode=${encodeURIComponent(row.bcode)}`}
+                      className="block font-medium text-slate-900 hover:underline"
+                    >
                       {row.bcode}
-                    </span>
+                    </Link>
                     <span className="block truncate text-xs text-muted-foreground">
                       {row.detail}
                     </span>
