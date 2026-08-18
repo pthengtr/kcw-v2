@@ -84,6 +84,22 @@ export type BiProductSalesTrendRow = {
   gross_profit: number;
 };
 
+/** One point on the unit-price vs cost chart (sale/COGS + optional HQ buy). */
+export type BiProductSalesPricePoint = {
+  period: string;
+  avg_sale: number | null;
+  avg_cost: number | null;
+  margin_pct: number | null;
+  avg_buy: number | null;
+  buy_qty: number;
+};
+
+export const BRANCH_MIX_COLORS: Record<string, string> = {
+  HQ: "#0f766e",
+  SYP: "#0369a1",
+  ONLINE: "#b45309",
+};
+
 export type BiProductSalesHistoryRow = {
   bill_date: string;
   reporting_branch: string;
