@@ -37,6 +37,12 @@ export const BI_REPORT_GROUPS: BiReportNavGroup[] = [
     label: "สินค้า",
     reports: [
       {
+        id: "product-sales",
+        href: "/bi/product-sales",
+        label: "ยอดขายตามสินค้า",
+        available: true,
+      },
+      {
         id: "product-movement",
         href: "/bi/product-movement",
         label: "การเคลื่อนไหวสินค้า",

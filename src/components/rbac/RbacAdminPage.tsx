@@ -42,6 +42,7 @@ const PAGE_KEY_LABELS: Record<string, string> = {
   bi_sales_compare: "BI: เปรียบเทียบยอดขาย",
   bi_customers: "BI: อันดับลูกค้า",
   bi_products: "BI: อันดับสินค้า",
+  bi_product_sales: "BI: ยอดขายตามสินค้า",
   bi_product_movement: "BI: การเคลื่อนไหวสินค้า",
   bi_expenses: "BI: ภาพรวมค่าใช้จ่าย",
   bi_cashflow: "BI: กระแสเงินสด",

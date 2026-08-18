@@ -28,6 +28,7 @@ const REPORT_PAGE_KEYS: Record<string, string> = {
   "sales-compare": BI_PAGE_KEYS.salesCompare,
   customers: BI_PAGE_KEYS.customers,
   products: BI_PAGE_KEYS.products,
+  "product-sales": BI_PAGE_KEYS.productSales,
   "product-movement": BI_PAGE_KEYS.productMovement,
   expenses: BI_PAGE_KEYS.expenses,
   "cash-flow": BI_PAGE_KEYS.cashflow,

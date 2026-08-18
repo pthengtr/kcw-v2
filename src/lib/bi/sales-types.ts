@@ -53,6 +53,7 @@ export type BiReportId =
   | "sales-compare"
   | "customers"
   | "products"
+  | "product-sales"
   | "product-movement"
   | "expenses"
   | "cash-flow"
