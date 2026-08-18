@@ -24,7 +24,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
 | [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products` |
 | [sql/fn_bi_product_search.sql](./sql/fn_bi_product_search.sql) | ICMAS picker RPC used by `/bi/product-sales` |
-| [sql/fn_bi_product_sales.sql](./sql/fn_bi_product_sales.sql) | RPC used by `/bi/product-sales` (plus `fn_bi_product_sales_lines`) |
+| [sql/fn_bi_product_sales.sql](./sql/fn_bi_product_sales.sql) | RPC used by `/bi/product-sales` (plus `fn_bi_product_sales_lines`). UI: unit sale vs LAST_PURCHASE_COST chart + HQ/SYP/online pie when ≥2 branches have sales. |
 | [sql/fn_bi_product_movement.sql](./sql/fn_bi_product_movement.sql) | RPC used by `/bi/product-movement` |
 | [sql/fn_bi_customer_overview.sql](./sql/fn_bi_customer_overview.sql) | RPC used by `/bi/customers` |
 | [sql/fn_bi_expense_overview.sql](./sql/fn_bi_expense_overview.sql) | RPC used by `/bi/expenses` |

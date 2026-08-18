@@ -171,6 +171,8 @@ describe("Webapp mobile layout", () => {
     expect(productSales).toContain("xl:grid-cols-3");
     expect(productSales).toContain("ProductBcodeSelect");
     expect(productSales).toContain("ProductSalesPeriodTable");
+    expect(productSales).toContain("ProductSalesPriceChart");
+    expect(productSales).toContain("ProductSalesBranchPie");
     expect(productSales).toContain("BiHighlightsCard");
     expect(productSales).not.toContain("w-[1000px]");
   });

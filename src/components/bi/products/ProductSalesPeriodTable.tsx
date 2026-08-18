@@ -22,6 +22,7 @@ function sumField(
     | "hq_revenue_net"
     | "syp_revenue_net"
     | "online_revenue_net"
+    | "cogs"
     | "gross_profit"
   >
 ): number {
@@ -41,7 +42,7 @@ export default function ProductSalesPeriodTable({ rows, mode }: Props) {
         </p>
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <table className="w-full min-w-[44rem] text-left text-sm">
+        <table className="w-full min-w-[52rem] text-left text-sm">
           <thead>
             <tr className="border-b text-xs text-muted-foreground">
               <th className="py-2 pr-3 font-medium">
@@ -52,6 +53,8 @@ export default function ProductSalesPeriodTable({ rows, mode }: Props) {
               <th className="py-2 pr-3 text-right font-medium">SYP</th>
               <th className="py-2 pr-3 text-right font-medium">ออนไลน์</th>
               <th className="py-2 pr-3 text-right font-medium">จำนวน</th>
+              <th className="py-2 pr-3 text-right font-medium">ขาย/หน่วย</th>
+              <th className="py-2 pr-3 text-right font-medium">ต้นทุน/หน่วย</th>
               <th className="py-2 pr-3 text-right font-medium">ขั้นต้น</th>
               <th className="py-2 text-right font-medium">บิล</th>
             </tr>
@@ -60,7 +63,7 @@ export default function ProductSalesPeriodTable({ rows, mode }: Props) {
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={10}
                   className="py-8 text-center text-muted-foreground"
                 >
                   ไม่มีข้อมูล
@@ -89,6 +92,16 @@ export default function ProductSalesPeriodTable({ rows, mode }: Props) {
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
                     {formatCount(row.base_qty)}
+                  </td>
+                  <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums text-slate-700">
+                    {row.base_qty === 0
+                      ? "—"
+                      : formatBaht(row.revenue_net / row.base_qty, true)}
+                  </td>
+                  <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums text-slate-700">
+                    {row.base_qty === 0
+                      ? "—"
+                      : formatBaht(row.cogs / row.base_qty, true)}
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
                     {formatBaht(row.gross_profit)}
@@ -121,6 +134,19 @@ export default function ProductSalesPeriodTable({ rows, mode }: Props) {
                 </td>
                 <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
                   {formatCount(sumField(rows, "base_qty"))}
+                </td>
+                <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
+                  {sumField(rows, "base_qty") === 0
+                    ? "—"
+                    : formatBaht(total / sumField(rows, "base_qty"), true)}
+                </td>
+                <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
+                  {sumField(rows, "base_qty") === 0
+                    ? "—"
+                    : formatBaht(
+                        sumField(rows, "cogs") / sumField(rows, "base_qty"),
+                        true
+                      )}
                 </td>
                 <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
                   {formatBaht(sumField(rows, "gross_profit"))}

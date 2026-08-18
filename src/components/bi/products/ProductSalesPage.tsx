@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { buildProductSalesHighlights } from "@/lib/bi/highlights";
+import { isBranchMixPieApplicable } from "@/lib/bi/product-sales-chart";
 import type {
   BiProductSalesOverview,
   BiProductSearchHit,
@@ -53,9 +54,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 import ProductBcodeSelect from "./ProductBcodeSelect";
+import ProductSalesBranchPie from "./ProductSalesBranchPie";
 import ProductSalesBranchTable from "./ProductSalesBranchTable";
 import ProductSalesHistoryTables from "./ProductSalesHistoryTables";
 import ProductSalesPeriodTable from "./ProductSalesPeriodTable";
+import ProductSalesPriceChart from "./ProductSalesPriceChart";
 import ProductSalesTrendChart from "./ProductSalesTrendChart";
 
 const PERIODS: BiPeriodPreset[] = ["month", "ytd", "custom"];
@@ -211,6 +214,10 @@ export default function ProductSalesPage() {
   const highlightLines = useMemo(
     () => (overview ? buildProductSalesHighlights(overview) : []),
     [overview]
+  );
+  const showBranchPie = Boolean(
+    overview &&
+      isBranchMixPieApplicable(overview.branch ?? branch, overview.by_branch)
   );
 
   const product = overview?.product;
@@ -514,8 +521,31 @@ export default function ProductSalesPage() {
               rows={trendRows}
               mode={useDaily ? "daily" : "monthly"}
             />
-            <ProductSalesBranchTable rows={overview.by_branch} />
+            {showBranchPie ? (
+              <ProductSalesBranchPie rows={overview.by_branch} />
+            ) : (
+              <ProductSalesBranchTable rows={overview.by_branch} />
+            )}
           </section>
+
+          <section>
+            <ProductSalesPriceChart
+              title={
+                useDaily
+                  ? "ราคาขาย vs ต้นทุนรายวัน"
+                  : "ราคาขาย vs ต้นทุนรายเดือน"
+              }
+              rows={trendRows}
+              purchases={overview.purchase_history}
+              mode={useDaily ? "daily" : "monthly"}
+            />
+          </section>
+
+          {showBranchPie ? (
+            <section>
+              <ProductSalesBranchTable rows={overview.by_branch} />
+            </section>
+          ) : null}
 
           <section>
             <ProductSalesPeriodTable
