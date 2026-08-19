@@ -502,7 +502,11 @@ export default function ProductOverviewPage() {
               value={formatCount(overview.summary.sku_count)}
               deltaPct={skuDelta}
               hint={
-                filterLabel ? `ที่ขายในช่วงนี้ · ${filterLabel}` : "สินค้าที่มีการขาย"
+                customBcodes.length
+                  ? `${formatCount(overview.summary.sku_count)} มียอดขายจาก ${formatCount(customBcodes.length)} ที่เลือก`
+                  : filterLabel
+                    ? `ที่ขายในช่วงนี้ · ${filterLabel}`
+                    : "สินค้าที่มีการขาย"
               }
               icon={<Package className="h-4 w-4" />}
             />
