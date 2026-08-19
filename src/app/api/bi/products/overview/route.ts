@@ -3,6 +3,10 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import {
+  parseBcodesParam,
+  normalizeCategoryParam,
+} from "@/lib/bi/product-filters";
 import { fetchProductOverview } from "@/lib/bi/product-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -11,6 +15,8 @@ const QuerySchema = z.object({
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   branch: z.enum(["HQ", "SYP", "ONLINE"]).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
+  category: z.string().regex(/^\d{1,2}$/).optional(),
+  bcodes: z.string().max(400).optional(),
 });
 
 export async function GET(req: Request) {
@@ -28,6 +34,8 @@ export async function GET(req: Request) {
     to: url.searchParams.get("to") ?? undefined,
     branch: url.searchParams.get("branch") || undefined,
     limit: url.searchParams.get("limit") || undefined,
+    category: url.searchParams.get("category") || undefined,
+    bcodes: url.searchParams.get("bcodes") || undefined,
   });
 
   if (!parsed.success) {
@@ -42,12 +50,16 @@ export async function GET(req: Request) {
   }
 
   try {
+    const category = normalizeCategoryParam(parsed.data.category);
+    const bcodes = parseBcodesParam(parsed.data.bcodes);
     const supabase = createAdminClient();
     const overview = await fetchProductOverview(supabase, {
       from: parsed.data.from,
       to: parsed.data.to,
       branch: parsed.data.branch ?? null,
-      limit: parsed.data.limit ?? 50,
+      limit: parsed.data.limit ?? (category || bcodes.length ? 100 : 50),
+      category,
+      bcodes: bcodes.length ? bcodes : null,
     });
     return NextResponse.json({ overview });
   } catch (error) {

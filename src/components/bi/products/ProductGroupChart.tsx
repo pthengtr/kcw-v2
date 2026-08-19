@@ -19,6 +19,8 @@ type ProductGroupChartProps = {
   rows: BiProductGroupRow[];
   maxSlices?: number;
   emptyLabel?: string;
+  selectedKey?: string | null;
+  onSelect?: (key: string) => void;
 };
 
 export default function ProductGroupChart({
@@ -26,6 +28,8 @@ export default function ProductGroupChart({
   rows,
   maxSlices = 8,
   emptyLabel = "ไม่มีข้อมูล",
+  selectedKey,
+  onSelect,
 }: ProductGroupChartProps) {
   const sorted = [...rows].sort((a, b) => b.revenue_net - a.revenue_net);
   const head = sorted.slice(0, maxSlices);
@@ -79,6 +83,11 @@ export default function ProductGroupChart({
                     innerRadius="55%"
                     outerRadius="80%"
                     paddingAngle={2}
+                    onClick={(entry) => {
+                      const key = (entry as { key?: string } | undefined)?.key;
+                      if (!onSelect || !key || key === "__other__") return;
+                      onSelect(selectedKey === key ? "" : key);
+                    }}
                   >
                     {data.map((entry, i) => (
                       <Cell
@@ -106,9 +115,25 @@ export default function ProductGroupChart({
                     aria-hidden
                   />
                   <span className="min-w-0">
-                    <span className="block truncate font-medium text-slate-800">
-                      {row.name}
-                    </span>
+                    {onSelect && row.key !== "__other__" ? (
+                      <button
+                        type="button"
+                        className={`block truncate text-left font-medium hover:underline ${
+                          selectedKey === row.key
+                            ? "text-teal-800"
+                            : "text-slate-800"
+                        }`}
+                        onClick={() =>
+                          onSelect(selectedKey === row.key ? "" : row.key)
+                        }
+                      >
+                        {row.name}
+                      </button>
+                    ) : (
+                      <span className="block truncate font-medium text-slate-800">
+                        {row.name}
+                      </span>
+                    )}
                     <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
                       <span className="whitespace-nowrap">
                         {formatBaht(row.value)}

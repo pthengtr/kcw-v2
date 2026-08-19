@@ -4,16 +4,21 @@ import {
   formatCount,
   shareOf,
 } from "@/lib/bi/sales-format";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type ProductCategoryTableProps = {
   rows: BiProductGroupRow[];
   title?: string;
+  selectedKey?: string | null;
+  onSelect?: (key: string) => void;
 };
 
 export default function ProductCategoryTable({
   rows,
   title = "แยกตามหมวดสินค้า",
+  selectedKey,
+  onSelect,
 }: ProductCategoryTableProps) {
   const total = rows.reduce((sum, r) => sum + r.revenue_net, 0);
 
@@ -21,6 +26,9 @@ export default function ProductCategoryTable({
     <Card className="border-slate-200/80 shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
+        {onSelect ? (
+          <p className="text-xs text-muted-foreground">คลิกหมวดเพื่อกรองอันดับ SKU</p>
+        ) : null}
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <table className="w-full min-w-[28rem] text-left text-sm">
@@ -47,7 +55,17 @@ export default function ProductCategoryTable({
               rows.map((row) => (
                 <tr
                   key={row.key}
-                  className="border-b border-slate-100 last:border-0"
+                  className={cn(
+                    "border-b border-slate-100 last:border-0",
+                    onSelect && "cursor-pointer hover:bg-slate-50",
+                    selectedKey === row.key && "bg-teal-50/80"
+                  )}
+                  onClick={
+                    onSelect
+                      ? () =>
+                          onSelect(selectedKey === row.key ? "" : row.key)
+                      : undefined
+                  }
                 >
                   <td className="max-w-[16rem] py-2.5 pr-3">
                     <span className="block whitespace-nowrap text-xs text-slate-500">

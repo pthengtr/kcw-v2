@@ -11,8 +11,18 @@ import {
   Wallet,
 } from "lucide-react";
 
-import { buildProductSalesHighlights } from "@/lib/bi/highlights";
-import { isBranchMixPieApplicable } from "@/lib/bi/product-sales-chart";
+import {
+  parseProductSalesSelection,
+  writeProductSalesSelection,
+} from "@/lib/bi/product-filters";
+import {
+  PRODUCT_SALES_COMPARE_HISTORY_LIMIT,
+  PRODUCT_SALES_SINGLE_HISTORY_LIMIT,
+  buildCompareRevenueSeries,
+  pickFocusedBcode,
+  summarizeProductSalesReports,
+  toCompareRow,
+} from "@/lib/bi/product-sales-compare";
 import type {
   BiProductSalesOverview,
   BiProductSearchHit,
@@ -38,7 +48,6 @@ import type {
   BiPeriodPreset,
 } from "@/lib/bi/sales-types";
 import { cn } from "@/lib/utils";
-import BiHighlightsCard from "@/components/bi/BiHighlightsCard";
 import BiLoadingBody from "@/components/bi/BiLoadingBody";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import { Button } from "@/components/ui/button";
@@ -53,19 +62,49 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import ProductBcodeSelect from "./ProductBcodeSelect";
-import ProductSalesBranchPie from "./ProductSalesBranchPie";
-import ProductSalesBranchTable from "./ProductSalesBranchTable";
-import ProductSalesHistoryTables from "./ProductSalesHistoryTables";
-import ProductSalesPeriodTable from "./ProductSalesPeriodTable";
-import ProductSalesPriceChart from "./ProductSalesPriceChart";
-import ProductSalesTrendChart from "./ProductSalesTrendChart";
+import ProductBcodeMultiSelect from "./ProductBcodeMultiSelect";
+import ProductSalesCompareTable from "./ProductSalesCompareTable";
+import ProductSalesCompareTrendChart from "./ProductSalesCompareTrendChart";
+import ProductSalesDetail from "./ProductSalesDetail";
+import ProductSalesSkuMixPie from "./ProductSalesSkuMixPie";
 
 const PERIODS: BiPeriodPreset[] = ["month", "ytd", "custom"];
 
 function formatMarginPct(value: number | null): string {
   if (value == null || !Number.isFinite(value)) return "—";
   return `${value.toFixed(1)}%`;
+}
+
+function stubHit(bcode: string): BiProductSearchHit {
+  return {
+    bcode,
+    detail: bcode,
+    brand: null,
+    model: null,
+    pcode: null,
+    mcode: null,
+    category_code: bcode.slice(0, 2).padStart(2, "0"),
+    on_hand_qty: 0,
+  };
+}
+
+async function resolveHits(bcodes: string[]): Promise<BiProductSearchHit[]> {
+  return Promise.all(
+    bcodes.map(async (bcode) => {
+      try {
+        const res = await fetch(
+          `/api/bi/products/search?${new URLSearchParams({ q: bcode, limit: "5" })}`
+        );
+        const json = (await res.json()) as { products?: BiProductSearchHit[] };
+        return (
+          (json.products ?? []).find((hit) => hit.bcode === bcode) ??
+          stubHit(bcode)
+        );
+      } catch {
+        return stubHit(bcode);
+      }
+    })
+  );
 }
 
 export default function ProductSalesPage() {
@@ -78,13 +117,20 @@ export default function ProductSalesPage() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [customMonth, setCustomMonth] = useState("");
-  const [selected, setSelected] = useState<BiProductSearchHit | undefined>();
-  const [overview, setOverview] = useState<BiProductSalesOverview | null>(null);
+  const [selected, setSelected] = useState<BiProductSearchHit[]>([]);
+  const [reports, setReports] = useState<BiProductSalesOverview[]>([]);
+  const [focusedBcode, setFocusedBcode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   const yearOptions = useMemo(() => bangkokYearOptions(), []);
+  const selectedBcodes = useMemo(
+    () => selected.map((hit) => hit.bcode),
+    [selected]
+  );
+  const selectedKey = selectedBcodes.join(",");
+  const isCompare = selected.length > 1;
 
   const range = useMemo(
     () =>
@@ -102,47 +148,27 @@ export default function ProductSalesPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const initial = (params.get("bcode") ?? "").trim();
-    if (!initial) {
+    const initial = parseProductSalesSelection(params);
+    if (!initial.length) {
       setHydrated(true);
       return;
     }
     void (async () => {
-      try {
-        const res = await fetch(
-          `/api/bi/products/search?${new URLSearchParams({ q: initial, limit: "5" })}`
-        );
-        const json = (await res.json()) as { products?: BiProductSearchHit[] };
-        const hit = (json.products ?? []).find((p) => p.bcode === initial);
-        setSelected(
-          hit ?? {
-            bcode: initial,
-            detail: initial,
-            brand: null,
-            model: null,
-            pcode: null,
-            mcode: null,
-            category_code: initial.slice(0, 2).padStart(2, "0"),
-            on_hand_qty: 0,
-          }
-        );
-      } finally {
-        setHydrated(true);
-      }
+      setSelected(await resolveHits(initial));
+      setHydrated(true);
     })();
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
     const url = new URL(window.location.href);
-    if (selected?.bcode) url.searchParams.set("bcode", selected.bcode);
-    else url.searchParams.delete("bcode");
+    writeProductSalesSelection(url, selectedBcodes);
     window.history.replaceState(null, "", `${url.pathname}${url.search}`);
-  }, [selected?.bcode, hydrated]);
+  }, [selectedBcodes, hydrated]);
 
   const load = useCallback(async () => {
-    if (!selected?.bcode) {
-      setOverview(null);
+    if (!selectedBcodes.length) {
+      setReports([]);
       setError(null);
       setLoading(false);
       return;
@@ -150,32 +176,73 @@ export default function ProductSalesPage() {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        bcode: selected.bcode,
-        from: range.from,
-        to: range.to,
-      });
-      if (branch !== "ALL") params.set("branch", branch);
+      const historyLimit = isCompare
+        ? PRODUCT_SALES_COMPARE_HISTORY_LIMIT
+        : PRODUCT_SALES_SINGLE_HISTORY_LIMIT;
+      const settled = await Promise.allSettled(
+        selectedBcodes.map(async (bcode) => {
+          const params = new URLSearchParams({
+            bcode,
+            from: range.from,
+            to: range.to,
+            history_limit: String(historyLimit),
+          });
+          if (branch !== "ALL") params.set("branch", branch);
+          const res = await fetch(`/api/bi/products/sales?${params.toString()}`);
+          const json = (await res.json()) as {
+            overview?: BiProductSalesOverview;
+            error?: string;
+          };
+          if (!res.ok) {
+            throw new Error(json.error || `โหลด ${bcode} ไม่สำเร็จ`);
+          }
+          if (!json.overview) {
+            throw new Error(`ไม่มีข้อมูล ${bcode}`);
+          }
+          return json.overview;
+        })
+      );
 
-      const res = await fetch(`/api/bi/products/sales?${params.toString()}`);
-      const json = (await res.json()) as {
-        overview?: BiProductSalesOverview;
-        error?: string;
-      };
-      if (!res.ok) {
-        throw new Error(json.error || "โหลดข้อมูลไม่สำเร็จ");
+      const ok: BiProductSalesOverview[] = [];
+      const failed: string[] = [];
+      settled.forEach((result, index) => {
+        if (result.status === "fulfilled") ok.push(result.value);
+        else failed.push(selectedBcodes[index] ?? "");
+      });
+      setReports(ok);
+      if (!ok.length) {
+        throw new Error("โหลดข้อมูลไม่สำเร็จ");
       }
-      if (!json.overview) {
-        throw new Error("ไม่มีข้อมูล");
+      if (failed.length) {
+        setError(`โหลดไม่ครบ: ${failed.filter(Boolean).join(", ")}`);
       }
-      setOverview(json.overview);
+
+      setSelected((prev) => {
+        let changed = false;
+        const next = prev.map((hit) => {
+          const report = ok.find((row) => row.product.bcode === hit.bcode);
+          if (!report || hit.detail === report.product.detail) return hit;
+          changed = true;
+          return {
+            ...hit,
+            detail: report.product.detail,
+            brand: report.product.brand,
+            model: report.product.model,
+            pcode: report.product.pcode,
+            mcode: report.product.mcode,
+            category_code: report.product.category_code,
+            on_hand_qty: report.product.on_hand_qty,
+          };
+        });
+        return changed ? next : prev;
+      });
     } catch (err) {
-      setOverview(null);
+      setReports([]);
       setError(err instanceof Error ? err.message : "โหลดข้อมูลไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
-  }, [selected?.bcode, range.from, range.to, branch]);
+  }, [selectedKey, isCompare, range.from, range.to, branch]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -190,37 +257,35 @@ export default function ProductSalesPage() {
     setCustomMonth((prev) => prev || bangkokCurrentMonthIso());
   }, [preset]);
 
+  const compareRows = useMemo(() => reports.map(toCompareRow), [reports]);
+  const totals = useMemo(
+    () => (reports.length ? summarizeProductSalesReports(reports) : null),
+    [reports]
+  );
   const useDaily = preferDailyBreakdown(range.from, range.to);
-  const trendRows = overview
-    ? useDaily
-      ? overview.trend_daily
-      : overview.trend_monthly
-    : [];
-  const revenueDelta = overview
-    ? pctChange(
-        overview.summary.revenue_net,
-        overview.previous_summary.revenue_net
-      )
-    : null;
-  const qtyDelta = overview
-    ? pctChange(overview.summary.base_qty, overview.previous_summary.base_qty)
-    : null;
-  const gpDelta = overview
-    ? pctChange(
-        overview.summary.gross_profit,
-        overview.previous_summary.gross_profit
-      )
-    : null;
-  const highlightLines = useMemo(
-    () => (overview ? buildProductSalesHighlights(overview) : []),
-    [overview]
+  const compareSeries = useMemo(
+    () =>
+      reports.length > 1
+        ? buildCompareRevenueSeries(reports, useDaily ? "daily" : "monthly")
+        : [],
+    [reports, useDaily]
   );
-  const showBranchPie = Boolean(
-    overview &&
-      isBranchMixPieApplicable(overview.branch ?? branch, overview.by_branch)
-  );
+  const effectiveFocus = pickFocusedBcode(reports, focusedBcode);
+  const focusedReport =
+    reports.find(
+      (row) =>
+        row.product.bcode === effectiveFocus || row.bcode === effectiveFocus
+    ) ?? null;
 
-  const product = overview?.product;
+  const revenueDelta = totals
+    ? pctChange(totals.revenue_net, totals.previous_revenue_net)
+    : null;
+  const qtyDelta = totals
+    ? pctChange(totals.base_qty, totals.previous_base_qty)
+    : null;
+  const gpDelta = totals
+    ? pctChange(totals.gross_profit, totals.previous_gross_profit)
+    : null;
 
   return (
     <div className="space-y-4 pb-8 md:space-y-5">
@@ -231,7 +296,7 @@ export default function ProductSalesPage() {
               ยอดขายตามสินค้า
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              เลือก SKU แล้วดูยอดขายรายสาขา/รายช่วง · กำไรขั้นต้นจาก
+              เลือก SKU ได้หลายตัวเพื่อเทียบยอดขาย · กำไรขั้นต้นจาก
               LAST_PURCHASE_COST · ซื้อเข้า HQ แยกต่างหาก
             </p>
             <p className="mt-2 text-xs text-slate-600 sm:text-sm">
@@ -239,13 +304,13 @@ export default function ProductSalesPage() {
               <span className="font-medium">
                 {formatThaiDateRange(range.from, range.to)}
               </span>
-              {overview ? (
+              {reports[0] ? (
                 <>
                   {" "}
                   · เทียบ{" "}
                   {formatThaiDateRange(
-                    overview.previous_from,
-                    overview.previous_to
+                    reports[0].previous_from,
+                    reports[0].previous_to
                   )}
                 </>
               ) : null}
@@ -255,7 +320,7 @@ export default function ProductSalesPage() {
             variant="outline"
             size="sm"
             onClick={() => void load()}
-            disabled={loading || !selected}
+            disabled={loading || selected.length === 0}
             className="self-start"
           >
             {loading ? (
@@ -269,8 +334,11 @@ export default function ProductSalesPage() {
 
         <div className="mt-4 flex flex-col gap-3">
           <div className="space-y-1.5">
-            <Label>สินค้า</Label>
-            <ProductBcodeSelect selected={selected} onSelect={setSelected} />
+            <Label>สินค้า (เลือกได้หลายตัว)</Label>
+            <ProductBcodeMultiSelect
+              selected={selected}
+              onChange={setSelected}
+            />
           </div>
 
           <div className="flex flex-wrap gap-2" role="group" aria-label="ช่วงเวลา">
@@ -398,10 +466,10 @@ export default function ProductSalesPage() {
         </div>
       </header>
 
-      {!selected ? (
+      {!selected.length ? (
         <Card className="border-dashed border-slate-300">
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            เลือกสินค้าด้านบนเพื่อดูยอดขาย กำไรขั้นต้น และประวัติซื้อ/ขาย
+            เลือกสินค้าด้านบน — ได้หลายตัวเพื่อเทียบยอดขายและมาร์จิ้น
           </CardContent>
         </Card>
       ) : null}
@@ -415,7 +483,7 @@ export default function ProductSalesPage() {
         </div>
       ) : null}
 
-      {loading && selected && !overview ? (
+      {loading && selected.length > 0 && reports.length === 0 ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
@@ -423,148 +491,92 @@ export default function ProductSalesPage() {
         </div>
       ) : null}
 
-      {overview && product ? (
+      {isCompare && totals ? (
         <BiLoadingBody loading={loading}>
-          <Card className="border-slate-200/80 shadow-sm">
-            <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <p className="text-xs text-muted-foreground">สินค้า</p>
-                <p className="font-semibold text-slate-900">{product.bcode}</p>
-                <p className="text-sm text-slate-700">{product.detail}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">หมวด / ชนิด</p>
-                <p className="text-sm text-slate-800">
-                  {product.category_code} {product.category_name}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {product.code1_name
-                    ? `${product.code1} · ${product.code1_name}`
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">ยี่ห้อ / รุ่น</p>
-                <p className="text-sm text-slate-800">
-                  {[product.brand, product.model].filter(Boolean).join(" · ") ||
-                    "—"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  เบอร์แท้ {product.mcode || "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">สต็อก / ต้นทุนล่าสุด</p>
-                <p className="text-sm text-slate-800">
-                  คงเหลือ {formatCount(product.on_hand_qty)} · COSTLAST{" "}
-                  {product.costlast == null
-                    ? "—"
-                    : formatBaht(product.costlast, true)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  ขายล่าสุด {product.last_sale_date || "—"} · ซื้อล่าสุด{" "}
-                  {product.last_purchase_date || "—"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <SalesKpiCard
-              title="ยอดขายสุทธิ"
-              value={formatBahtCompact(overview.summary.revenue_net)}
+              title="ยอดขายรวม"
+              value={formatBahtCompact(totals.revenue_net)}
               deltaPct={revenueDelta}
-              hint="ระดับบรรทัด · ก่อน VAT"
+              hint={`${totals.soldSkuCount} มียอดขายจาก ${totals.skuCount} ที่เลือก`}
               icon={<Wallet className="h-4 w-4" />}
             />
             <SalesKpiCard
-              title="จำนวนขาย"
-              value={formatCount(overview.summary.base_qty)}
+              title="จำนวนขายรวม"
+              value={formatCount(totals.base_qty)}
               deltaPct={qtyDelta}
-              hint={`${formatCount(overview.summary.bill_count)} บิล · เฉลี่ย ${formatBaht(overview.summary.avg_unit_price, true)}/หน่วย`}
+              hint="รวมตาม SKU ที่เลือก"
               icon={<Boxes className="h-4 w-4" />}
             />
             <SalesKpiCard
-              title="กำไรขั้นต้น"
-              value={formatBahtCompact(overview.summary.gross_profit)}
+              title="กำไรขั้นต้นรวม"
+              value={formatBahtCompact(totals.gross_profit)}
               deltaPct={gpDelta}
               hint="ยอดที่มี LAST_PURCHASE_COST − ต้นทุนขาย"
               icon={<Percent className="h-4 w-4" />}
             />
             <SalesKpiCard
-              title="อัตรากำไรขั้นต้น"
-              value={formatMarginPct(overview.summary.gross_margin_pct)}
+              title="มาร์จิ้นรวม"
+              value={formatMarginPct(totals.gross_margin_pct)}
               hint={
-                overview.summary.blank_cost_line_count > 0
-                  ? `ตัด ${formatCount(overview.summary.blank_cost_line_count)} บรรทัดไม่มีต้นทุน`
+                totals.blank_cost_line_count > 0
+                  ? `ตัด ${formatCount(totals.blank_cost_line_count)} บรรทัดไม่มีต้นทุน`
                   : "คิดจากบรรทัดที่มีต้นทุนซื้อล่าสุด"
               }
               icon={<Percent className="h-4 w-4" />}
             />
             <SalesKpiCard
               title="ซื้อเข้าช่วงนี้"
-              value={formatCount(overview.purchase.buy_qty)}
-              hint={`${formatBaht(overview.purchase.buy_amount_net)} · ${formatCount(overview.purchase.buy_bills)} บิล HQ — ไม่ใช่ COGS`}
+              value={formatCount(totals.buy_qty)}
+              hint={`${formatBaht(totals.buy_amount_net)} · ${formatCount(totals.buy_bills)} บิล HQ — ไม่ใช่ COGS`}
               icon={<ShoppingCart className="h-4 w-4" />}
             />
             <SalesKpiCard
               title="คงเหลือ HQ"
-              value={formatCount(product.on_hand_qty)}
-              hint="QTYOH2 จาก ICMAS ณ ตอนซิงก์ล่าสุด"
+              value={formatCount(totals.on_hand_qty)}
+              hint="รวม QTYOH2 ของ SKU ที่เลือก"
               icon={<Package className="h-4 w-4" />}
             />
           </section>
 
-          <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-            <ProductSalesTrendChart
-              title={useDaily ? "แนวโน้มรายวันตามสาขา" : "แนวโน้มรายเดือนตามสาขา"}
-              rows={trendRows}
-              mode={useDaily ? "daily" : "monthly"}
-            />
-            {showBranchPie ? (
-              <ProductSalesBranchPie rows={overview.by_branch} />
-            ) : (
-              <ProductSalesBranchTable rows={overview.by_branch} />
-            )}
-          </section>
+          <ProductSalesCompareTable
+            rows={compareRows}
+            focusedBcode={effectiveFocus}
+            onFocus={setFocusedBcode}
+          />
 
-          <section>
-            <ProductSalesPriceChart
+          <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+            <ProductSalesCompareTrendChart
               title={
                 useDaily
-                  ? "ราคาขาย vs ต้นทุนรายวัน"
-                  : "ราคาขาย vs ต้นทุนรายเดือน"
+                  ? "แนวโน้มยอดขายรายวันตามสินค้า"
+                  : "แนวโน้มยอดขายรายเดือนตามสินค้า"
               }
-              rows={trendRows}
-              purchases={overview.purchase_history}
+              rows={compareSeries}
+              skus={compareRows}
               mode={useDaily ? "daily" : "monthly"}
             />
-          </section>
-
-          {showBranchPie ? (
-            <section>
-              <ProductSalesBranchTable rows={overview.by_branch} />
-            </section>
-          ) : null}
-
-          <section>
-            <ProductSalesPeriodTable
-              rows={trendRows}
-              mode={useDaily ? "daily" : "monthly"}
-            />
-          </section>
-
-          <section>
-            <ProductSalesHistoryTables
-              sales={overview.sales_history}
-              purchases={overview.purchase_history}
-            />
-          </section>
-
-          <section>
-            <BiHighlightsCard lines={highlightLines} />
+            <ProductSalesSkuMixPie rows={compareRows} />
           </section>
         </BiLoadingBody>
+      ) : null}
+
+      {focusedReport ? (
+        <div className="space-y-3">
+          {isCompare ? (
+            <h2 className="text-sm font-semibold text-slate-800">
+              รายละเอียด · {focusedReport.product.bcode}{" "}
+              <span className="font-normal text-muted-foreground">
+                {focusedReport.product.detail}
+              </span>
+            </h2>
+          ) : null}
+          <ProductSalesDetail
+            overview={focusedReport}
+            loading={loading && !isCompare}
+            branchFilter={branch}
+          />
+        </div>
       ) : null}
     </div>
   );

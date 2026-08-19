@@ -15,6 +15,8 @@ describe("Webapp mobile layout", () => {
     expect(shell).toContain("SheetContent");
     expect(shell).toContain("hidden w-60 shrink-0");
     expect(shell).toContain('aria-label="เปิดเมนู"');
+    expect(shell).toContain('aria-label="ซ่อนเมนู"');
+    expect(shell).toContain('aria-label="แสดงเมนู"');
   });
 
   it("keeps shared menu cards fluid on narrow screens", () => {
@@ -130,8 +132,10 @@ describe("Webapp mobile layout", () => {
   it("keeps BI shell and sales overview usable on narrow screens", () => {
     const shell = read("src/components/bi/BiShell.tsx");
     expect(shell).toContain("md:hidden");
-    expect(shell).toContain("hidden w-56 shrink-0 md:block");
+    expect(shell).toContain("hidden w-56 shrink-0");
     expect(shell).toContain('aria-label="เปิดรายการรายงาน"');
+    expect(shell).toContain('aria-label="ซ่อนรายการรายงาน"');
+    expect(shell).toContain('aria-label="แสดงรายการรายงาน"');
     expect(shell).toContain("SheetContent");
 
     const sales = read("src/components/bi/sales/SalesOverviewPage.tsx");
@@ -156,6 +160,8 @@ describe("Webapp mobile layout", () => {
     expect(products).toContain("sm:grid-cols-3");
     expect(products).toContain("ProductRankTable");
     expect(products).toContain("ProductCategoryTable");
+    expect(products).toContain("ProductBcodeMultiSelect");
+    expect(products).toContain("bi-product-category");
     expect(products).toContain("BiHighlightsCard");
     expect(products).not.toContain("บรรทัดบิล");
     expect(products).not.toContain("HQ / SYP / ออนไลน์");
@@ -169,12 +175,19 @@ describe("Webapp mobile layout", () => {
     expect(productSales).toContain("grid-cols-1");
     expect(productSales).toContain("sm:grid-cols-2");
     expect(productSales).toContain("xl:grid-cols-3");
-    expect(productSales).toContain("ProductBcodeSelect");
-    expect(productSales).toContain("ProductSalesPeriodTable");
-    expect(productSales).toContain("ProductSalesPriceChart");
-    expect(productSales).toContain("ProductSalesBranchPie");
-    expect(productSales).toContain("BiHighlightsCard");
+    expect(productSales).toContain("ProductBcodeMultiSelect");
+    expect(productSales).toContain("ProductSalesCompareTable");
+    expect(productSales).toContain("ProductSalesDetail");
+    expect(productSales).toContain("ProductSalesSkuMixPie");
     expect(productSales).not.toContain("w-[1000px]");
+
+    const productSalesDetail = read(
+      "src/components/bi/products/ProductSalesDetail.tsx"
+    );
+    expect(productSalesDetail).toContain("ProductSalesPeriodTable");
+    expect(productSalesDetail).toContain("ProductSalesPriceChart");
+    expect(productSalesDetail).toContain("ProductSalesBranchPie");
+    expect(productSalesDetail).toContain("BiHighlightsCard");
   });
 });
 
