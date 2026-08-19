@@ -171,12 +171,19 @@ describe("Webapp mobile layout", () => {
     expect(productSales).toContain("grid-cols-1");
     expect(productSales).toContain("sm:grid-cols-2");
     expect(productSales).toContain("xl:grid-cols-3");
-    expect(productSales).toContain("ProductBcodeSelect");
-    expect(productSales).toContain("ProductSalesPeriodTable");
-    expect(productSales).toContain("ProductSalesPriceChart");
-    expect(productSales).toContain("ProductSalesBranchPie");
-    expect(productSales).toContain("BiHighlightsCard");
+    expect(productSales).toContain("ProductBcodeMultiSelect");
+    expect(productSales).toContain("ProductSalesCompareTable");
+    expect(productSales).toContain("ProductSalesDetail");
+    expect(productSales).toContain("ProductSalesSkuMixPie");
     expect(productSales).not.toContain("w-[1000px]");
+
+    const productSalesDetail = read(
+      "src/components/bi/products/ProductSalesDetail.tsx"
+    );
+    expect(productSalesDetail).toContain("ProductSalesPeriodTable");
+    expect(productSalesDetail).toContain("ProductSalesPriceChart");
+    expect(productSalesDetail).toContain("ProductSalesBranchPie");
+    expect(productSalesDetail).toContain("BiHighlightsCard");
   });
 });
 

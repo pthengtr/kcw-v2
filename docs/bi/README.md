@@ -24,7 +24,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
 | [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products`. Optional `p_category` (KACC9) and `p_bcodes` (custom SKU set). |
 | [sql/fn_bi_product_search.sql](./sql/fn_bi_product_search.sql) | ICMAS picker RPC used by `/bi/product-sales` |
-| [sql/fn_bi_product_sales.sql](./sql/fn_bi_product_sales.sql) | RPC used by `/bi/product-sales` (plus `fn_bi_product_sales_lines`). UI: unit sale vs LAST_PURCHASE_COST chart + HQ/SYP/online pie when ≥2 branches have sales. |
+| [sql/fn_bi_product_sales.sql](./sql/fn_bi_product_sales.sql) | RPC used by `/bi/product-sales` (plus `fn_bi_product_sales_lines`). UI: pick one SKU for the full report, or several to compare. Unit sale vs LAST_PURCHASE_COST chart + HQ/SYP/online pie when ≥2 branches have sales. |
 | [sql/fn_bi_product_movement.sql](./sql/fn_bi_product_movement.sql) | RPC used by `/bi/product-movement` |
 | [sql/fn_bi_customer_overview.sql](./sql/fn_bi_customer_overview.sql) | RPC used by `/bi/customers` |
 | [sql/fn_bi_expense_overview.sql](./sql/fn_bi_expense_overview.sql) | RPC used by `/bi/expenses` |
@@ -46,7 +46,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 - API: `GET /api/bi/sales/compare?mode=years|months&years=&periods=&branch=`
 - API: `GET /api/bi/products/overview?from=&to=&branch=&limit=&category=&bcodes=`
 - API: `GET /api/bi/products/search?q=`
-- API: `GET /api/bi/products/sales?bcode=&from=&to=&branch=`
+- API: `GET /api/bi/products/sales?bcode=&from=&to=&branch=` (UI fetches this once per selected SKU; `?bcode=` for one, `?bcodes=` for a compare set)
 - API: `GET /api/bi/products/movement?from=&to=&branch=&stock_limit=&dead_limit=`
 - API: `GET /api/bi/customers/overview?from=&to=&branch=&limit=`
 - API: `GET /api/bi/expenses/overview?from=&to=&branch=&source=&limit=`

@@ -78,9 +78,10 @@ export default function ProductBcodeMultiSelect({
 
   function add(hit: BiProductSearchHit) {
     if (selected.some((p) => p.bcode === hit.bcode) || atCap) return;
-    onChange([...selected, hit]);
+    const next = [...selected, hit];
+    onChange(next);
     setQ("");
-    setOpen(false);
+    if (next.length >= max) setOpen(false);
   }
 
   function remove(bcode: string) {

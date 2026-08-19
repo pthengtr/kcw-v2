@@ -4,7 +4,9 @@ import {
   MAX_CUSTOM_BCODES,
   normalizeCategoryParam,
   parseBcodesParam,
+  parseProductSalesSelection,
   serializeBcodesParam,
+  writeProductSalesSelection,
 } from "./product-filters";
 
 describe("normalizeCategoryParam", () => {
@@ -37,5 +39,39 @@ describe("serializeBcodesParam", () => {
     expect(serializeBcodesParam(["22010574", "22010574", "21"])).toBe(
       "22010574,21"
     );
+  });
+});
+
+describe("parseProductSalesSelection", () => {
+  it("keeps ranking ?bcode= as a one-SKU set", () => {
+    const params = new URLSearchParams("bcode=22010574");
+    expect(parseProductSalesSelection(params)).toEqual(["22010574"]);
+  });
+
+  it("prefers ?bcodes= and prepends a stray bcode", () => {
+    expect(
+      parseProductSalesSelection(
+        new URLSearchParams("bcodes=22010574,21050289")
+      )
+    ).toEqual(["22010574", "21050289"]);
+    expect(
+      parseProductSalesSelection(
+        new URLSearchParams("bcode=99&bcodes=22010574,21050289")
+      )
+    ).toEqual(["99", "22010574", "21050289"]);
+  });
+});
+
+describe("writeProductSalesSelection", () => {
+  it("writes bcode for one SKU and bcodes for many", () => {
+    const one = new URL("https://example.test/bi/product-sales?bcodes=x");
+    writeProductSalesSelection(one, ["22010574"]);
+    expect(one.searchParams.get("bcode")).toBe("22010574");
+    expect(one.searchParams.get("bcodes")).toBeNull();
+
+    const many = new URL("https://example.test/bi/product-sales?bcode=x");
+    writeProductSalesSelection(many, ["22010574", "21050289"]);
+    expect(many.searchParams.get("bcode")).toBeNull();
+    expect(many.searchParams.get("bcodes")).toBe("22010574,21050289");
   });
 });
