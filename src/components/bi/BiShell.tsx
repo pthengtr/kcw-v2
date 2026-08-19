@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Menu, PanelLeft } from "lucide-react";
+import { BarChart3, Menu, PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { BI_REPORT_GROUPS } from "@/lib/bi/reports";
 import type { BiReportNavGroup, BiReportNavItem } from "@/lib/bi/sales-types";
 import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { canAccessPage } from "@/lib/auth/client-permissions";
+import { usePersistedBoolean } from "@/lib/use-persisted-boolean";
 import { cn } from "@/lib/utils";
 import BackButton from "@/components/common/BackButton";
 import { Badge } from "@/components/ui/badge";
@@ -122,6 +123,10 @@ function ReportNav({
 export default function BiShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [navHidden, setNavHidden] = usePersistedBoolean(
+    "kcw-bi-sidebar-hidden",
+    false
+  );
   const [pageKeys, setPageKeys] = useState<string[] | null>(null);
 
   useEffect(() => {
@@ -165,19 +170,34 @@ export default function BiShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-full bg-gradient-to-b from-slate-100 via-slate-50 to-white">
       <div className="mx-auto flex w-full max-w-7xl gap-0 md:gap-6 md:px-4 md:py-4 lg:px-6">
-        <aside className="hidden w-56 shrink-0 md:block">
+        <aside
+          className={cn(
+            "hidden w-56 shrink-0",
+            navHidden ? "md:hidden" : "md:block"
+          )}
+        >
           <div className="sticky top-4 rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm backdrop-blur">
             <div className="mb-3 flex items-start gap-2 px-1">
               <BackButton href="/home" className="shrink-0" />
-              <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
                 <PanelLeft className="h-5 w-5 shrink-0 text-slate-700" aria-hidden />
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold tracking-wide text-slate-900">
                     KCW BI
                   </p>
                   <p className="text-xs text-muted-foreground">รายงานธุรกิจ</p>
                 </div>
               </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                aria-label="ซ่อนรายการรายงาน"
+                onClick={() => setNavHidden(true)}
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </Button>
             </div>
             {visibleGroups.length === 0 ? (
               <p className="px-1 text-xs text-muted-foreground">
@@ -190,6 +210,23 @@ export default function BiShell({ children }: { children: ReactNode }) {
         </aside>
 
         <div className="min-w-0 flex-1">
+          {navHidden ? (
+            <div className="mb-3 hidden items-center gap-2 md:flex">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label="แสดงรายการรายงาน"
+                onClick={() => setNavHidden(false)}
+              >
+                <PanelLeftOpen className="mr-2 h-4 w-4" />
+                รายงาน
+              </Button>
+              <p className="truncate text-sm font-medium text-slate-800">
+                {activeReport?.label ?? "BI"}
+              </p>
+            </div>
+          ) : null}
           <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-3 py-2.5 backdrop-blur md:hidden">
             <BackButton href="/home" />
             <Sheet open={open} onOpenChange={setOpen}>
