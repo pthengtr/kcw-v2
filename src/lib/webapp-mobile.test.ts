@@ -15,6 +15,8 @@ describe("Webapp mobile layout", () => {
     expect(shell).toContain("SheetContent");
     expect(shell).toContain("hidden w-60 shrink-0");
     expect(shell).toContain('aria-label="เปิดเมนู"');
+    expect(shell).toContain('aria-label="ซ่อนเมนู"');
+    expect(shell).toContain('aria-label="แสดงเมนู"');
   });
 
   it("keeps shared menu cards fluid on narrow screens", () => {
@@ -130,8 +132,10 @@ describe("Webapp mobile layout", () => {
   it("keeps BI shell and sales overview usable on narrow screens", () => {
     const shell = read("src/components/bi/BiShell.tsx");
     expect(shell).toContain("md:hidden");
-    expect(shell).toContain("hidden w-56 shrink-0 md:block");
+    expect(shell).toContain("hidden w-56 shrink-0");
     expect(shell).toContain('aria-label="เปิดรายการรายงาน"');
+    expect(shell).toContain('aria-label="ซ่อนรายการรายงาน"');
+    expect(shell).toContain('aria-label="แสดงรายการรายงาน"');
     expect(shell).toContain("SheetContent");
 
     const sales = read("src/components/bi/sales/SalesOverviewPage.tsx");
