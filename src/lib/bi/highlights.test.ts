@@ -62,6 +62,8 @@ const productBase: BiProductOverview = {
   from: "2026-07-01",
   to: "2026-07-25",
   branch: null,
+  category: null,
+  bcodes: null,
   limit: 50,
   previous_from: "2026-06-06",
   previous_to: "2026-06-30",

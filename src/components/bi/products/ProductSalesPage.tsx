@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Boxes,
@@ -435,12 +436,24 @@ export default function ProductSalesPage() {
               <div>
                 <p className="text-xs text-muted-foreground">หมวด / ชนิด</p>
                 <p className="text-sm text-slate-800">
-                  {product.category_code} {product.category_name}
+                  <Link
+                    href={`/bi/products?category=${encodeURIComponent(product.category_code)}`}
+                    className="hover:underline"
+                  >
+                    {product.category_code} {product.category_name}
+                  </Link>
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {product.code1_name
                     ? `${product.code1} · ${product.code1_name}`
                     : "—"}
+                  {" · "}
+                  <Link
+                    href={`/bi/products?category=${encodeURIComponent(product.category_code)}`}
+                    className="text-teal-800 hover:underline"
+                  >
+                    ดูอันดับทั้งหมวด
+                  </Link>
                 </p>
               </div>
               <div>

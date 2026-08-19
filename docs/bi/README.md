@@ -22,7 +22,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/create_raw_hq_brdet_bpdet.sql](./sql/create_raw_hq_brdet_bpdet.sql) | `raw_kcw` BRDET/BPDET cheque+transfer registers (from kcw-analytics) |
 | [sql/fn_bi_sales_revenue_filters.sql](./sql/fn_bi_sales_revenue_filters.sql) | Shared revenue include/exclude helper (`fn_bi_sales_bill_excluded_from_revenue`) |
 | [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
-| [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products` |
+| [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products`. Optional `p_category` (KACC9) and `p_bcodes` (custom SKU set). |
 | [sql/fn_bi_product_search.sql](./sql/fn_bi_product_search.sql) | ICMAS picker RPC used by `/bi/product-sales` |
 | [sql/fn_bi_product_sales.sql](./sql/fn_bi_product_sales.sql) | RPC used by `/bi/product-sales` (plus `fn_bi_product_sales_lines`). UI: unit sale vs LAST_PURCHASE_COST chart + HQ/SYP/online pie when ≥2 branches have sales. |
 | [sql/fn_bi_product_movement.sql](./sql/fn_bi_product_movement.sql) | RPC used by `/bi/product-movement` |
@@ -44,7 +44,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 - UI: `/bi/sales`, `/bi/sales-compare`, `/bi/products`, `/bi/product-sales`, `/bi/product-movement`, `/bi/customers`, `/bi/expenses`, `/bi/cash-flow`, `/bi/income`, `/bi/income-statement`, `/bi/vat`
 - API: `GET /api/bi/sales/overview?from=&to=&branch=`
 - API: `GET /api/bi/sales/compare?mode=years|months&years=&periods=&branch=`
-- API: `GET /api/bi/products/overview?from=&to=&branch=&limit=`
+- API: `GET /api/bi/products/overview?from=&to=&branch=&limit=&category=&bcodes=`
 - API: `GET /api/bi/products/search?q=`
 - API: `GET /api/bi/products/sales?bcode=&from=&to=&branch=`
 - API: `GET /api/bi/products/movement?from=&to=&branch=&stock_limit=&dead_limit=`

@@ -66,11 +66,26 @@ describe("normalizeProductOverview", () => {
     });
 
     expect(overview.summary.sku_count).toBe(2);
+    expect(overview.category).toBeNull();
+    expect(overview.bcodes).toBeNull();
     expect(overview.by_category[0]?.label).toContain("แบตเตอรี่");
     expect(overview.top_products[0]).toMatchObject({
       bcode: "21050289",
       hq_revenue_net: 500,
       on_hand_qty: 37,
     });
+  });
+
+  it("keeps category and custom bcode filters", () => {
+    const overview = normalizeProductOverview({
+      from: "2026-08-01",
+      to: "2026-08-18",
+      category: "12",
+      bcodes: ["12010001", "12010002"],
+      summary: { revenue_net: 10, base_qty: 1, sku_count: 2, line_count: 2, bill_count: 2 },
+      previous_summary: { revenue_net: 8, base_qty: 1, sku_count: 1 },
+    });
+    expect(overview.category).toBe("12");
+    expect(overview.bcodes).toEqual(["12010001", "12010002"]);
   });
 });

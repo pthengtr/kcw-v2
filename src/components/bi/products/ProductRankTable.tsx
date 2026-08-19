@@ -15,11 +15,13 @@ import { Input } from "@/components/ui/input";
 type ProductRankTableProps = {
   rows: BiProductRankRow[];
   totalRevenue: number;
+  filterLabel?: string | null;
 };
 
 export default function ProductRankTable({
   rows,
   totalRevenue,
+  filterLabel,
 }: ProductRankTableProps) {
   const [query, setQuery] = useState("");
 
@@ -49,10 +51,15 @@ export default function ProductRankTable({
       <CardHeader className="gap-3 pb-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <CardTitle className="text-base font-semibold">
-            อันดับสินค้า (ตามยอดสุทธิ)
+            {filterLabel
+              ? `อันดับสินค้า · ${filterLabel}`
+              : "อันดับสินค้า (ตามยอดสุทธิ)"}
           </CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
             จำนวนเป็นหน่วยเล็กสุด (QTY × MTP) · คงเหลือจาก HQ ICMAS (QTYOH2)
+            {rows.length > 0
+              ? ` · แสดง ${rows.length} อันดับแรก`
+              : ""}
           </p>
         </div>
         <Input

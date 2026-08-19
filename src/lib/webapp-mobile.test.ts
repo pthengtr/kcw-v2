@@ -156,6 +156,8 @@ describe("Webapp mobile layout", () => {
     expect(products).toContain("sm:grid-cols-3");
     expect(products).toContain("ProductRankTable");
     expect(products).toContain("ProductCategoryTable");
+    expect(products).toContain("ProductBcodeMultiSelect");
+    expect(products).toContain("bi-product-category");
     expect(products).toContain("BiHighlightsCard");
     expect(products).not.toContain("บรรทัดบิล");
     expect(products).not.toContain("HQ / SYP / ออนไลน์");

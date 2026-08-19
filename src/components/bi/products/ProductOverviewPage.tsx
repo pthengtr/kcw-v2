@@ -10,6 +10,13 @@ import {
 } from "lucide-react";
 
 import { buildProductHighlights } from "@/lib/bi/highlights";
+import { CATEGORY_LABELS, categoryLabel } from "@/lib/bi/icmas-labels";
+import {
+  parseBcodesParam,
+  serializeBcodesParam,
+  normalizeCategoryParam,
+} from "@/lib/bi/product-filters";
+import type { BiProductSearchHit } from "@/lib/bi/product-sales-types";
 import type { BiProductOverview } from "@/lib/bi/product-types";
 import {
   formatBahtCompact,
@@ -45,6 +52,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import ProductBcodeMultiSelect from "./ProductBcodeMultiSelect";
 import ProductCategoryTable from "./ProductCategoryTable";
 import ProductGroupChart from "./ProductGroupChart";
 import ProductRankTable from "./ProductRankTable";
@@ -64,6 +72,11 @@ export default function ProductOverviewPage() {
   const [overview, setOverview] = useState<BiProductOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
+  const [customProducts, setCustomProducts] = useState<BiProductSearchHit[]>(
+    []
+  );
+  const [hydrated, setHydrated] = useState(false);
 
   const yearOptions = useMemo(() => bangkokYearOptions(), []);
 
@@ -81,6 +94,11 @@ export default function ProductOverviewPage() {
     [preset, customFrom, customTo, customMode, customMonth, ytdYear]
   );
 
+  const customBcodes = useMemo(
+    () => customProducts.map((p) => p.bcode),
+    [customProducts]
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -88,9 +106,13 @@ export default function ProductOverviewPage() {
       const params = new URLSearchParams({
         from: range.from,
         to: range.to,
-        limit: "50",
       });
       if (branch !== "ALL") params.set("branch", branch);
+      if (customBcodes.length) {
+        params.set("bcodes", serializeBcodesParam(customBcodes));
+      } else if (category) {
+        params.set("category", category);
+      }
 
       const res = await fetch(`/api/bi/products/overview?${params.toString()}`);
       const json = (await res.json()) as {
@@ -110,11 +132,73 @@ export default function ProductOverviewPage() {
     } finally {
       setLoading(false);
     }
-  }, [range.from, range.to, branch]);
+  }, [range.from, range.to, branch, category, customBcodes]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromCategory = normalizeCategoryParam(params.get("category"));
+    const fromBcodes = parseBcodesParam(params.get("bcodes"));
+    if (fromBcodes.length) {
+      setCustomProducts(
+        fromBcodes.map((bcode) => ({
+          bcode,
+          detail: bcode,
+          brand: null,
+          model: null,
+          pcode: null,
+          mcode: null,
+          category_code: bcode.slice(0, 2).padStart(2, "0"),
+          on_hand_qty: 0,
+        }))
+      );
+      setCategory(null);
+    } else {
+      setCategory(fromCategory);
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const url = new URL(window.location.href);
+    if (customBcodes.length) {
+      url.searchParams.set("bcodes", serializeBcodesParam(customBcodes));
+      url.searchParams.delete("category");
+    } else if (category) {
+      url.searchParams.set("category", category);
+      url.searchParams.delete("bcodes");
+    } else {
+      url.searchParams.delete("category");
+      url.searchParams.delete("bcodes");
+    }
+    window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+  }, [category, customBcodes, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
     void load();
-  }, [load]);
+  }, [load, hydrated]);
+
+  useEffect(() => {
+    if (!overview || customProducts.length === 0) return;
+    setCustomProducts((prev) => {
+      let changed = false;
+      const next = prev.map((p) => {
+        const row = overview.top_products.find((r) => r.bcode === p.bcode);
+        if (!row || p.detail === row.detail) return p;
+        changed = true;
+        return {
+          ...p,
+          detail: row.detail,
+          brand: row.brand,
+          mcode: row.mcode,
+          category_code: row.category_code,
+          on_hand_qty: row.on_hand_qty,
+        };
+      });
+      return changed ? next : prev;
+    });
+  }, [overview, customProducts.length]);
 
   useEffect(() => {
     if (preset !== "custom") return;
@@ -143,6 +227,27 @@ export default function ProductOverviewPage() {
     () => (overview ? buildProductHighlights(overview) : []),
     [overview]
   );
+  const categoryOptions = useMemo(
+    () => Object.entries(CATEGORY_LABELS).sort(([a], [b]) => a.localeCompare(b)),
+    []
+  );
+  const filterLabel = customBcodes.length
+    ? `ชุด ${customBcodes.length} SKU`
+    : category
+      ? `${category} ${categoryLabel(category)}`
+      : null;
+  const showCategorySplit = !category;
+
+  function selectCategory(key: string) {
+    const next = normalizeCategoryParam(key);
+    setCategory(next);
+    setCustomProducts([]);
+  }
+
+  function selectCustom(products: BiProductSearchHit[]) {
+    setCustomProducts(products);
+    if (products.length) setCategory(null);
+  }
 
   return (
     <div className="space-y-4 pb-8 md:space-y-5">
@@ -153,7 +258,8 @@ export default function ProductOverviewPage() {
               อันดับสินค้า
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              ยอดสุทธิระดับบรรทัด (ก่อน VAT) · หมวดจาก BCODE · ชนิดจาก CODE1
+              ยอดสุทธิระดับบรรทัด (ก่อน VAT) · คลิกหมวดเพื่อดู SKU ในหมวด ·
+              หรือเลือกชุดสินค้าเอง
             </p>
             <p className="mt-2 text-xs text-slate-600 sm:text-sm">
               ช่วง{" "}
@@ -246,6 +352,28 @@ export default function ProductOverviewPage() {
               </Select>
             </div>
 
+            <div className="space-y-1.5">
+              <Label htmlFor="bi-product-category">หมวดสินค้า</Label>
+              <Select
+                value={category ?? "ALL"}
+                onValueChange={(v) =>
+                  selectCategory(v === "ALL" ? "" : v)
+                }
+              >
+                <SelectTrigger id="bi-product-category" className="w-full">
+                  <SelectValue placeholder="ทุกหมวด" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">ทุกหมวด</SelectItem>
+                  {categoryOptions.map(([code, label]) => (
+                    <SelectItem key={code} value={code}>
+                      {code} {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {preset === "custom" ? (
               <>
                 <div className="space-y-1.5">
@@ -313,6 +441,28 @@ export default function ProductOverviewPage() {
               </>
             ) : null}
           </div>
+
+          <div className="space-y-1.5">
+            <Label>ชุดสินค้า (ไม่ใช้ร่วมกับหมวด)</Label>
+            <ProductBcodeMultiSelect
+              selected={customProducts}
+              onChange={selectCustom}
+            />
+            {filterLabel ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={() => {
+                  setCategory(null);
+                  setCustomProducts([]);
+                }}
+              >
+                ล้างตัวกรอง · {filterLabel}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -340,14 +490,20 @@ export default function ProductOverviewPage() {
               title="ยอดขายสุทธิ"
               value={formatBahtCompact(overview.summary.revenue_net)}
               deltaPct={revenueDelta}
-              hint="ระดับบรรทัด · ก่อน VAT"
+              hint={
+                filterLabel
+                  ? `${filterLabel} · ก่อน VAT`
+                  : "ระดับบรรทัด · ก่อน VAT"
+              }
               icon={<Wallet className="h-4 w-4" />}
             />
             <SalesKpiCard
               title="จำนวน SKU"
               value={formatCount(overview.summary.sku_count)}
               deltaPct={skuDelta}
-              hint="สินค้าที่มีการขาย"
+              hint={
+                filterLabel ? `ที่ขายในช่วงนี้ · ${filterLabel}` : "สินค้าที่มีการขาย"
+              }
               icon={<Package className="h-4 w-4" />}
             />
             <SalesKpiCard
@@ -360,18 +516,32 @@ export default function ProductOverviewPage() {
           </section>
 
           <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {showCategorySplit ? (
+              <ProductGroupChart
+                title="หมวดสินค้า (KACC9)"
+                rows={overview.by_category}
+                selectedKey={category}
+                onSelect={selectCategory}
+              />
+            ) : null}
             <ProductGroupChart
-              title="หมวดสินค้า (KACC9)"
-              rows={overview.by_category}
-            />
-            <ProductGroupChart
-              title="ชนิดชิ้นส่วน (CODE1)"
+              title={
+                category
+                  ? `ชนิดชิ้นส่วนในหมวด ${category}`
+                  : "ชนิดชิ้นส่วน (CODE1)"
+              }
               rows={overview.by_code1}
             />
           </section>
 
           <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-            <ProductCategoryTable rows={overview.by_category} />
+            {showCategorySplit ? (
+              <ProductCategoryTable
+                rows={overview.by_category}
+                selectedKey={category}
+                onSelect={selectCategory}
+              />
+            ) : null}
             <ProductCategoryTable
               rows={overview.by_code1}
               title="แยกตามชนิดชิ้นส่วน (CODE1)"
@@ -395,6 +565,7 @@ export default function ProductOverviewPage() {
             <ProductRankTable
               rows={overview.top_products}
               totalRevenue={overview.summary.revenue_net}
+              filterLabel={filterLabel}
             />
           </section>
 

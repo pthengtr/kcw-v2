@@ -47,6 +47,8 @@ export type BiProductOverview = {
   from: string;
   to: string;
   branch: string | null;
+  category: string | null;
+  bcodes: string[] | null;
   limit: number;
   previous_from: string;
   previous_to: string;

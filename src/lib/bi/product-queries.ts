@@ -5,6 +5,7 @@ import type {
   BiProductOverview,
   BiProductRankRow,
 } from "./product-types";
+import { CATEGORY_LABELS } from "./icmas-labels";
 import {
   parseMonthColumns,
   parseMonthCompareRows,
@@ -36,14 +37,22 @@ function parseGroupRows(value: unknown): BiProductGroupRow[] {
   if (!Array.isArray(value)) return [];
   return value.map((row) => {
     const r = (row ?? {}) as Record<string, unknown>;
+    const key = asString(r.key);
     return {
-      key: asString(r.key),
+      key,
       label: asString(r.label) || asString(r.key),
       revenue_net: asNumber(r.revenue_net),
       base_qty: asNumber(r.base_qty),
       sku_count: asNumber(r.sku_count),
     };
   });
+}
+
+function parseCategoryGroupRows(value: unknown): BiProductGroupRow[] {
+  return parseGroupRows(value).map((row) => ({
+    ...row,
+    label: CATEGORY_LABELS[row.key] ?? row.label,
+  }));
 }
 
 function parseSplitRows(value: unknown): BiSplitRow[] {
@@ -58,6 +67,16 @@ function parseSplitRows(value: unknown): BiSplitRow[] {
   });
 }
 
+function parseStringArray(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const out: string[] = [];
+  for (const item of value) {
+    const s = asString(item).trim();
+    if (s) out.push(s);
+  }
+  return out.length ? out : null;
+}
+
 function parseProductRows(value: unknown): BiProductRankRow[] {
   if (!Array.isArray(value)) return [];
   return value.map((row) => {
@@ -66,7 +85,9 @@ function parseProductRows(value: unknown): BiProductRankRow[] {
       bcode: asString(r.bcode),
       detail: asString(r.detail),
       category_code: asString(r.category_code),
-      category_name: asString(r.category_name),
+      category_name:
+        CATEGORY_LABELS[asString(r.category_code)] ??
+        asString(r.category_name),
       code1: asNullableString(r.code1),
       code1_name: asNullableString(r.code1_name),
       revenue_net: asNumber(r.revenue_net),
@@ -93,6 +114,8 @@ export function normalizeProductOverview(raw: unknown): BiProductOverview {
     from: asString(data.from),
     to: asString(data.to),
     branch: data.branch == null ? null : asString(data.branch),
+    category: asNullableString(data.category),
+    bcodes: parseStringArray(data.bcodes),
     limit: asNumber(data.limit) || 50,
     previous_from: asString(data.previous_from),
     previous_to: asString(data.previous_to),
@@ -108,7 +131,7 @@ export function normalizeProductOverview(raw: unknown): BiProductOverview {
       base_qty: asNumber(previous.base_qty),
       sku_count: asNumber(previous.sku_count),
     },
-    by_category: parseGroupRows(data.by_category),
+    by_category: parseCategoryGroupRows(data.by_category),
     by_code1: parseGroupRows(data.by_code1),
     by_branch: parseSplitRows(data.by_branch),
     top_products: parseProductRows(data.top_products),
@@ -124,6 +147,8 @@ export async function fetchProductOverview(
     to: string;
     branch?: string | null;
     limit?: number;
+    category?: string | null;
+    bcodes?: string[] | null;
   }
 ): Promise<BiProductOverview> {
   const { data, error } = await supabase.rpc("fn_bi_product_overview", {
@@ -131,6 +156,9 @@ export async function fetchProductOverview(
     p_to: params.to,
     p_branch: params.branch ?? null,
     p_limit: params.limit ?? 50,
+    p_category: params.category ?? null,
+    p_bcodes:
+      params.bcodes && params.bcodes.length > 0 ? params.bcodes : null,
   });
 
   if (error) {

@@ -142,7 +142,7 @@ export function buildProductHighlights(overview: BiProductOverview): string[] {
   const topCategory = [...overview.by_category].sort(
     (a, b) => b.revenue_net - a.revenue_net
   )[0];
-  if (topCategory) {
+  if (topCategory && !overview.category) {
     lines.push(
       `หมวดนำ: ${topCategory.key} ${topCategory.label} · ${formatBaht(topCategory.revenue_net)} · ${shareOf(topCategory.revenue_net, total).toFixed(0)}% · ${formatCount(topCategory.sku_count)} SKU`
     );
