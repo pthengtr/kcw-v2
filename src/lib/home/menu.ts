@@ -145,7 +145,7 @@ export const HOME_MENU_ITEMS = {
   },
   bi: {
     key: "bi",
-    href: "/bi/income",
+    href: "/bi",
     label: "รายงาน BI",
     description: "ดูภาพรวมและวิเคราะห์ข้อมูลธุรกิจ",
     icon: BarChart3,

@@ -20,13 +20,13 @@ describe("Navbar menu order and design", () => {
       "/home",
       "/reminder",
       "/party",
-      "/bi/income",
+      "/bi",
     ]);
     expect(EXPENSE_DROPDOWN_AFTER_INDEX).toBe(1);
   });
 
   it("marks nested BI and expense routes as active", () => {
-    const bi = primaryNavLinks.find((link) => link.href === "/bi/income");
+    const bi = primaryNavLinks.find((link) => link.href === "/bi");
     expect(bi).toBeTruthy();
     expect(isNavActive("/bi/sales", bi!)).toBe(true);
     expect(isNavActive("/party", bi!)).toBe(false);

@@ -67,6 +67,8 @@ export type BiReportNavItem = {
   id: BiReportId;
   href: string;
   label: string;
+  /** RBAC page_key that gates this report. */
+  pageKey: string;
   /** Optional longer hint; sidebar shows label only. */
   description?: string;
   available: boolean;

@@ -20,6 +20,7 @@ describe("client permission helpers", () => {
       false
     );
     expect(canAccessAnyBi([BI_PAGE_KEYS.customers])).toBe(true);
+    expect(canAccessAnyBi([BI_PAGE_KEYS.productSales])).toBe(true);
     expect(canAccessAnyBi([])).toBe(false);
     expect(canAccessAdminRbac([ADMIN_RBAC_PAGE])).toBe(true);
   });
