@@ -11,7 +11,7 @@ export type NavLink = {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Match nested routes under this prefix (e.g. /bi → /bi/income). */
+  /** Match nested routes under this prefix (e.g. /bi → /bi/sales). */
   matchPrefix?: string;
   pageKey?: string;
 };
@@ -46,7 +46,7 @@ export const primaryNavLinks: NavLink[] = [
     matchPrefix: "/party",
   },
   {
-    href: "/bi/income",
+    href: "/bi",
     label: "BI",
     icon: BarChart3,
     matchPrefix: "/bi",

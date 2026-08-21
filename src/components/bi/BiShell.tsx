@@ -7,7 +7,6 @@ import { BarChart3, Menu, PanelLeft } from "lucide-react";
 
 import { BI_REPORT_GROUPS } from "@/lib/bi/reports";
 import type { BiReportNavGroup, BiReportNavItem } from "@/lib/bi/sales-types";
-import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { canAccessPage } from "@/lib/auth/client-permissions";
 import { cn } from "@/lib/utils";
 import BackButton from "@/components/common/BackButton";
@@ -20,19 +19,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-
-const REPORT_PAGE_KEYS: Record<string, string> = {
-  income: BI_PAGE_KEYS.income,
-  "income-statement": BI_PAGE_KEYS.incomeStatement,
-  sales: BI_PAGE_KEYS.sales,
-  "sales-compare": BI_PAGE_KEYS.salesCompare,
-  customers: BI_PAGE_KEYS.customers,
-  products: BI_PAGE_KEYS.products,
-  "product-movement": BI_PAGE_KEYS.productMovement,
-  expenses: BI_PAGE_KEYS.expenses,
-  "cash-flow": BI_PAGE_KEYS.cashflow,
-  vat: BI_PAGE_KEYS.vat,
-};
 
 function ReportLink({
   report,
@@ -143,11 +129,9 @@ export default function BiShell({ children }: { children: ReactNode }) {
     if (pageKeys == null) return [];
     return BI_REPORT_GROUPS.map((group) => ({
       ...group,
-      reports: group.reports.filter((report) => {
-        const pageKey = REPORT_PAGE_KEYS[report.id];
-        if (!pageKey) return false;
-        return canAccessPage(pageKeys, pageKey);
-      }),
+      reports: group.reports.filter((report) =>
+        canAccessPage(pageKeys, report.pageKey)
+      ),
     })).filter((group) => group.reports.length > 0);
   }, [pageKeys]);
 

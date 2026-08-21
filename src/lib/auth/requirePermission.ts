@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ROLE_ADMIN } from "./rbac-pages";
+import { ROLE_ADMIN, pageKeysMatching } from "./rbac-pages";
 
 export type RequirePermissionResult =
   | { ok: true; userId: string; userEmail: string }
@@ -47,7 +47,7 @@ export async function requirePermission(
     .from("kcw_role_page_permissions")
     .select("page_key")
     .in("role_key", roleKeys)
-    .eq("page_key", pageKey)
+    .in("page_key", pageKeysMatching(pageKey))
     .limit(1);
 
   if (allowedError) {

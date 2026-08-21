@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
-import { ADMIN_RBAC_PAGE, RBAC_PROTECTED_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import {
+  ADMIN_RBAC_PAGE,
+  RBAC_PROTECTED_PAGE_KEYS,
+  canonicalizePageKeys,
+} from "@/lib/auth/rbac-pages";
 import {
   getAuthUsersByIds,
   listAuthEmailToIdMap,
@@ -77,7 +81,9 @@ export async function GET(
   return NextResponse.json({
     role: roleRes.data ?? null,
     members: filteredUsers,
-    pageKeys: (permsRes.data ?? []).map((p) => p.page_key),
+    pageKeys: canonicalizePageKeys(
+      (permsRes.data ?? []).map((p) => p.page_key)
+    ),
   });
 }
 
@@ -105,7 +111,9 @@ export async function POST(
   const allowedPageKeys = new Set(
     RBAC_PROTECTED_PAGE_KEYS.filter((k) => k !== ADMIN_RBAC_PAGE)
   );
-  const normalizedPageKeys = pageKeys.filter((k) => allowedPageKeys.has(k));
+  const normalizedPageKeys = canonicalizePageKeys(pageKeys).filter((k) =>
+    allowedPageKeys.has(k)
+  );
 
   const supabase = createAdminClient();
 

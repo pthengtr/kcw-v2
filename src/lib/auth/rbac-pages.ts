@@ -17,6 +17,27 @@ export const BI_PAGE_KEYS = {
   vat: "bi_vat",
 } as const;
 
+/** Old keys that still exist in kcw_role_page_permissions. */
+export const PAGE_KEY_ALIASES: Record<string, string> = {
+  bi_product_sales: BI_PAGE_KEYS.sales,
+};
+
+export function canonicalizePageKey(pageKey: string): string {
+  return PAGE_KEY_ALIASES[pageKey] ?? pageKey;
+}
+
+export function canonicalizePageKeys(pageKeys: string[]): string[] {
+  return Array.from(new Set(pageKeys.map(canonicalizePageKey)));
+}
+
+/** Canonical key plus any stored aliases that should grant it. */
+export function pageKeysMatching(canonicalPageKey: string): string[] {
+  const aliases = Object.entries(PAGE_KEY_ALIASES)
+    .filter(([, target]) => target === canonicalPageKey)
+    .map(([alias]) => alias);
+  return [canonicalPageKey, ...aliases];
+}
+
 export const BANK_PAGE_KEYS = {
   tigerPay: "bank_tiger_pay",
   statementSync: "bank_statement_sync",

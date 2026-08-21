@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { BI_REPORT_GROUPS, BI_REPORTS } from "./reports";
+import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { BI_REPORT_GROUPS, BI_REPORTS, firstAllowedBiReport } from "./reports";
 
 describe("BI_REPORT_GROUPS", () => {
   it("has three top-level sections in the requested order", () => {
@@ -26,5 +27,26 @@ describe("BI_REPORT_GROUPS", () => {
     expect(BI_REPORTS.map((r) => r.id)).toEqual(
       BI_REPORT_GROUPS.flatMap((g) => g.reports.map((r) => r.id))
     );
+  });
+
+  it("gates every report with a known BI page key", () => {
+    const known = new Set<string>(Object.values(BI_PAGE_KEYS));
+    for (const report of BI_REPORTS) {
+      expect(known.has(report.pageKey)).toBe(true);
+    }
+  });
+
+  it("prefers income when granted, else the first allowed sidebar report", () => {
+    expect(firstAllowedBiReport(["*"])?.href).toBe("/bi/income");
+    expect(firstAllowedBiReport([BI_PAGE_KEYS.income])?.href).toBe(
+      "/bi/income"
+    );
+    expect(firstAllowedBiReport([BI_PAGE_KEYS.customers])?.href).toBe(
+      "/bi/customers"
+    );
+    expect(
+      firstAllowedBiReport([BI_PAGE_KEYS.expenses, BI_PAGE_KEYS.sales])?.href
+    ).toBe("/bi/sales");
+    expect(firstAllowedBiReport([])).toBeNull();
   });
 });

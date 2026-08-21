@@ -66,7 +66,7 @@ describe("home favorites", () => {
 
   it("resolves favorite items from the shared menu catalog", () => {
     const items = resolveFavoriteItems(["reminder", "bi"]);
-    expect(items.map((item) => item.href)).toEqual(["/reminder", "/bi/income"]);
+    expect(items.map((item) => item.href)).toEqual(["/reminder", "/bi"]);
     expect(Object.keys(HOME_MENU_ITEMS).length).toBeGreaterThanOrEqual(11);
     expect(HOME_MENU_GROUPS).toHaveLength(5);
     expect(HOME_MENU_GROUPS.map((group) => group.title)).toEqual([
