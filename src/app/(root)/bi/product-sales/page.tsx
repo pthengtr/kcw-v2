@@ -1,0 +1,16 @@
+import ProductSalesPage from "@/components/bi/products/ProductSalesPage";
+import { requirePermission } from "@/lib/auth/requirePermission";
+import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+
+export default async function BiProductSalesPage() {
+  const permCheck = await requirePermission(BI_PAGE_KEYS.productSales);
+  if (!permCheck.ok) {
+    return (
+      <div className="px-4 py-8 text-muted-foreground">
+        คุณไม่มีสิทธิ์เข้าถึงหน้านี้
+      </div>
+    );
+  }
+
+  return <ProductSalesPage />;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -34,6 +34,7 @@ type SidebarNavProps = {
   pageKeys: string[] | null;
   onNavigate?: () => void;
   className?: string;
+  headerAction?: ReactNode;
 };
 
 function isPathActive(pathname: string, href: string) {
@@ -108,6 +109,7 @@ export function SidebarNav({
   pageKeys,
   onNavigate,
   className,
+  headerAction,
 }: SidebarNavProps) {
   const pathname = usePathname();
   const [query, setQuery] = useState("");
@@ -162,21 +164,24 @@ export function SidebarNav({
   return (
     <div className={cn("flex h-full flex-col", className)}>
       <div className="border-b border-slate-200 px-3 py-3">
-        <Link
-          href="/home"
-          onClick={onNavigate}
-          className="mb-3 inline-flex items-center gap-2 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-1 focus-visible:ring-ring"
-          aria-label="KCW หน้าแรก"
-        >
-          <Image
-            src="/kcw-logo.png"
-            alt=""
-            width={28}
-            height={28}
-            className="h-7 w-7 object-contain"
-          />
-          <span className="text-sm font-semibold text-slate-900">KCW v.2</span>
-        </Link>
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <Link
+            href="/home"
+            onClick={onNavigate}
+            className="inline-flex items-center gap-2 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="KCW หน้าแรก"
+          >
+            <Image
+              src="/kcw-logo.png"
+              alt=""
+              width={28}
+              height={28}
+              className="h-7 w-7 object-contain"
+            />
+            <span className="text-sm font-semibold text-slate-900">KCW v.2</span>
+          </Link>
+          {headerAction}
+        </div>
 
         <div className="relative">
           <Search

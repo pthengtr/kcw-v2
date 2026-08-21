@@ -3,24 +3,19 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
-import {
-  parseBcodesParam,
-  normalizeCategoryParam,
-} from "@/lib/bi/product-filters";
-import { fetchProductOverview } from "@/lib/bi/product-queries";
+import { fetchProductSales } from "@/lib/bi/product-sales-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const QuerySchema = z.object({
+  bcode: z.string().trim().min(1).max(32),
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   branch: z.enum(["HQ", "SYP", "ONLINE"]).optional(),
-  limit: z.coerce.number().int().min(1).max(200).optional(),
-  category: z.string().regex(/^\d{1,2}$/).optional(),
-  bcodes: z.string().max(400).optional(),
+  history_limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 export async function GET(req: Request) {
-  const permCheck = await requirePermission(BI_PAGE_KEYS.products);
+  const permCheck = await requirePermission(BI_PAGE_KEYS.productSales);
   if (!permCheck.ok) {
     return NextResponse.json(
       { error: permCheck.message },
@@ -30,12 +25,11 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const parsed = QuerySchema.safeParse({
+    bcode: url.searchParams.get("bcode") ?? undefined,
     from: url.searchParams.get("from") ?? undefined,
     to: url.searchParams.get("to") ?? undefined,
     branch: url.searchParams.get("branch") || undefined,
-    limit: url.searchParams.get("limit") || undefined,
-    category: url.searchParams.get("category") || undefined,
-    bcodes: url.searchParams.get("bcodes") || undefined,
+    history_limit: url.searchParams.get("history_limit") || undefined,
   });
 
   if (!parsed.success) {
@@ -50,22 +44,19 @@ export async function GET(req: Request) {
   }
 
   try {
-    const category = normalizeCategoryParam(parsed.data.category);
-    const bcodes = parseBcodesParam(parsed.data.bcodes);
     const supabase = createAdminClient();
-    const overview = await fetchProductOverview(supabase, {
+    const overview = await fetchProductSales(supabase, {
+      bcode: parsed.data.bcode,
       from: parsed.data.from,
       to: parsed.data.to,
       branch: parsed.data.branch ?? null,
-      limit: parsed.data.limit ?? (category || bcodes.length ? 100 : 50),
-      category,
-      bcodes: bcodes.length ? bcodes : null,
+      historyLimit: parsed.data.history_limit ?? 40,
     });
     return NextResponse.json({ overview });
   } catch (error) {
-    console.error("bi product overview", error);
+    console.error("bi product sales", error);
     return NextResponse.json(
-      { error: "Unable to load product overview" },
+      { error: "Unable to load product sales" },
       { status: 500 }
     );
   }

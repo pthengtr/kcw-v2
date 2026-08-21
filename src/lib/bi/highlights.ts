@@ -4,6 +4,7 @@ import type { BiExpenseOverview } from "./expense-types";
 import type { BiIncomeOverview } from "./income-types";
 import type { BiIncomeStatementOverview } from "./income-statement-types";
 import type { BiProductOverview } from "./product-types";
+import type { BiProductSalesOverview } from "./product-sales-types";
 import type { BiVatOverview } from "./vat-types";
 import {
   BRANCH_LABELS,
@@ -141,7 +142,7 @@ export function buildProductHighlights(overview: BiProductOverview): string[] {
   const topCategory = [...overview.by_category].sort(
     (a, b) => b.revenue_net - a.revenue_net
   )[0];
-  if (topCategory) {
+  if (topCategory && !overview.category) {
     lines.push(
       `หมวดนำ: ${topCategory.key} ${topCategory.label} · ${formatBaht(topCategory.revenue_net)} · ${shareOf(topCategory.revenue_net, total).toFixed(0)}% · ${formatCount(topCategory.sku_count)} SKU`
     );
@@ -153,6 +154,62 @@ export function buildProductHighlights(overview: BiProductOverview): string[] {
   if (topCode1) {
     lines.push(
       `ชนิดชิ้นส่วนนำ (CODE1): ${topCode1.key} ${topCode1.label} · ${formatBaht(topCode1.revenue_net)} · ${shareOf(topCode1.revenue_net, total).toFixed(0)}%`
+    );
+  }
+
+  return lines;
+}
+
+export function buildProductSalesHighlights(
+  overview: BiProductSalesOverview
+): string[] {
+  const lines: string[] = [];
+  const revenueDelta = pctChange(
+    overview.summary.revenue_net,
+    overview.previous_summary.revenue_net
+  );
+  const qtyDelta = pctChange(
+    overview.summary.base_qty,
+    overview.previous_summary.base_qty
+  );
+  const gpDelta = pctChange(
+    overview.summary.gross_profit,
+    overview.previous_summary.gross_profit
+  );
+  const margin =
+    overview.summary.gross_margin_pct != null
+      ? `${overview.summary.gross_margin_pct.toFixed(1)}%`
+      : "—";
+
+  lines.push(
+    `${overview.product.bcode} ${overview.product.detail} · ขาย ${formatBaht(overview.summary.revenue_net)} (${changePhrase(revenueDelta)}) · ${formatCount(overview.summary.base_qty)} หน่วย (${changePhrase(qtyDelta)})`
+  );
+  lines.push(
+    `กำไรขั้นต้น ${formatBaht(overview.summary.gross_profit)} (${margin} ของยอดที่มีต้นทุน · ${changePhrase(gpDelta)}) · ต้นทุนขาย ${formatBaht(overview.summary.cogs)}`
+  );
+
+  const branchParts = overview.by_branch
+    .slice()
+    .sort((a, b) => b.revenue_net - a.revenue_net)
+    .map(
+      (r) =>
+        `${labelFor(BRANCH_LABELS, r.key)} ${formatBaht(r.revenue_net)} / ${formatCount(r.base_qty)} ชิ้น`
+    );
+  if (branchParts.length > 0) {
+    lines.push(`แยกสาขา: ${branchParts.join(" · ")}`);
+  }
+
+  if (overview.purchase.buy_qty !== 0 || overview.purchase.buy_bills > 0) {
+    lines.push(
+      `ซื้อเข้าช่วงนี้ (HQ PIDET) ${formatCount(overview.purchase.buy_qty)} หน่วย · ${formatBaht(overview.purchase.buy_amount_net)} — ไม่ใช่ต้นทุนขาย`
+    );
+  } else {
+    lines.push("ช่วงนี้ไม่มีบิลซื้อเข้า HQ");
+  }
+
+  if (overview.summary.blank_cost_line_count > 0) {
+    lines.push(
+      `บรรทัดขายที่ไม่มี LAST_PURCHASE_COST: ${formatCount(overview.summary.blank_cost_line_count)} แถว (ตัดออกจากคำนวณกำไร)`
     );
   }
 

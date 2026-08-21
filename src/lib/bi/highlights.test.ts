@@ -7,6 +7,7 @@ import {
   buildIncomeHighlights,
   buildIncomeStatementHighlights,
   buildProductHighlights,
+  buildProductSalesHighlights,
   buildSalesHighlights,
   buildVatHighlights,
 } from "./highlights";
@@ -16,6 +17,7 @@ import type { BiExpenseOverview } from "./expense-types";
 import type { BiIncomeOverview } from "./income-types";
 import type { BiIncomeStatementOverview } from "./income-statement-types";
 import type { BiProductOverview } from "./product-types";
+import type { BiProductSalesOverview } from "./product-sales-types";
 import type { BiSalesOverview } from "./sales-types";
 import type { BiVatOverview } from "./vat-types";
 
@@ -60,6 +62,8 @@ const productBase: BiProductOverview = {
   from: "2026-07-01",
   to: "2026-07-25",
   branch: null,
+  category: null,
+  bcodes: null,
   limit: 50,
   previous_from: "2026-06-06",
   previous_to: "2026-06-30",
@@ -173,6 +177,93 @@ describe("BI highlight builders", () => {
       true
     );
     expect(lines.some((l) => l.includes("OTHER"))).toBe(false);
+  });
+
+  it("builds product-sales highlights with margin and HQ purchases", () => {
+    const overview: BiProductSalesOverview = {
+      from: "2026-07-01",
+      to: "2026-07-31",
+      branch: null,
+      bcode: "22010574",
+      previous_from: "2026-05-31",
+      previous_to: "2026-06-30",
+      product: {
+        bcode: "22010574",
+        detail: "น.ม.พ.ATF",
+        category_code: "22",
+        category_name: "น้ำมัน จารบี น้ำยา",
+        code1: null,
+        code1_name: null,
+        brand: "STATES",
+        model: "1LT",
+        pcode: null,
+        mcode: null,
+        on_hand_qty: 112,
+        costlast: 98.5,
+        last_sale_date: "2026-07-31",
+        last_purchase_date: "2026-07-17",
+      },
+      summary: {
+        revenue_net: 19768,
+        base_qty: 154,
+        line_count: 90,
+        bill_count: 90,
+        avg_unit_price: 128,
+        cogs: 15966,
+        costed_revenue_net: 19768,
+        gross_profit: 3802,
+        gross_margin_pct: 19.2,
+        blank_cost_line_count: 0,
+        hq_revenue_net: 15478,
+        syp_revenue_net: 4290,
+        online_revenue_net: 0,
+        hq_qty: 122,
+        syp_qty: 32,
+        online_qty: 0,
+      },
+      previous_summary: {
+        revenue_net: 18000,
+        base_qty: 140,
+        line_count: 80,
+        cogs: 15000,
+        gross_profit: 3000,
+      },
+      purchase: {
+        buy_qty: 120,
+        buy_amount_net: 12850,
+        buy_bills: 1,
+        avg_unit_cost: 107,
+      },
+      by_branch: [
+        {
+          key: "HQ",
+          revenue_net: 15478,
+          base_qty: 122,
+          bill_count: 63,
+          cogs: 12743,
+          gross_profit: 2735,
+        },
+        {
+          key: "SYP",
+          revenue_net: 4290,
+          base_qty: 32,
+          bill_count: 27,
+          cogs: 3223,
+          gross_profit: 1067,
+        },
+      ],
+      trend_daily: [],
+      trend_monthly: [],
+      sales_history: [],
+      purchase_history: [],
+    };
+    const lines = buildProductSalesHighlights(overview);
+    expect(lines[0]).toContain("22010574");
+    expect(lines[0]).toContain("เพิ่มขึ้น");
+    expect(lines.some((l) => l.includes("กำไรขั้นต้น"))).toBe(true);
+    expect(lines.some((l) => l.includes("HQ"))).toBe(true);
+    expect(lines.some((l) => l.includes("ซื้อเข้าช่วงนี้"))).toBe(true);
+    expect(lines.some((l) => l.includes("ไม่ใช่ต้นทุนขาย"))).toBe(true);
   });
 
   it("builds customer highlight lines with top acct and walk-in note", () => {

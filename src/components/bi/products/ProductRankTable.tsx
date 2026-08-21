@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { BiProductRankRow } from "@/lib/bi/product-types";
@@ -14,11 +15,13 @@ import { Input } from "@/components/ui/input";
 type ProductRankTableProps = {
   rows: BiProductRankRow[];
   totalRevenue: number;
+  filterLabel?: string | null;
 };
 
 export default function ProductRankTable({
   rows,
   totalRevenue,
+  filterLabel,
 }: ProductRankTableProps) {
   const [query, setQuery] = useState("");
 
@@ -48,10 +51,15 @@ export default function ProductRankTable({
       <CardHeader className="gap-3 pb-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <CardTitle className="text-base font-semibold">
-            อันดับสินค้า (ตามยอดสุทธิ)
+            {filterLabel
+              ? `อันดับสินค้า · ${filterLabel}`
+              : "อันดับสินค้า (ตามยอดสุทธิ)"}
           </CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
             จำนวนเป็นหน่วยเล็กสุด (QTY × MTP) · คงเหลือจาก HQ ICMAS (QTYOH2)
+            {rows.length > 0
+              ? ` · แสดง ${rows.length} อันดับแรก`
+              : ""}
           </p>
         </div>
         <Input
@@ -99,9 +107,12 @@ export default function ProductRankTable({
                     {index + 1}
                   </td>
                   <td className="max-w-[14rem] py-2.5 pr-3">
-                    <span className="block font-medium text-slate-900">
+                    <Link
+                      href={`/bi/product-sales?bcode=${encodeURIComponent(row.bcode)}`}
+                      className="block font-medium text-slate-900 hover:underline"
+                    >
                       {row.bcode}
-                    </span>
+                    </Link>
                     <span className="block truncate text-xs text-muted-foreground">
                       {row.detail}
                     </span>

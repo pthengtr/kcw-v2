@@ -29,6 +29,14 @@ describe("BI_REPORT_GROUPS", () => {
     );
   });
 
+  it("lists product-sales under สินค้า", () => {
+    const products = BI_REPORT_GROUPS.find((g) => g.id === "products");
+    expect(products?.reports.map((r) => r.id)).toEqual([
+      "product-sales",
+      "product-movement",
+    ]);
+  });
+
   it("gates every report with a known BI page key", () => {
     const known = new Set<string>(Object.values(BI_PAGE_KEYS));
     for (const report of BI_REPORTS) {
@@ -47,6 +55,9 @@ describe("BI_REPORT_GROUPS", () => {
     expect(
       firstAllowedBiReport([BI_PAGE_KEYS.expenses, BI_PAGE_KEYS.sales])?.href
     ).toBe("/bi/sales");
+    expect(firstAllowedBiReport([BI_PAGE_KEYS.productSales])?.href).toBe(
+      "/bi/product-sales"
+    );
     expect(firstAllowedBiReport([])).toBeNull();
   });
 });

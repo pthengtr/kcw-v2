@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ROLE_ADMIN, canonicalizePageKeys } from "./rbac-pages";
+import { ROLE_ADMIN } from "./rbac-pages";
 
 export type MyPageAccess = {
   roleKeys: string[];
@@ -39,8 +39,8 @@ export async function getMyPageAccess(): Promise<MyPageAccess> {
     .in("role_key", roleKeys);
 
   return {
-    pageKeys: canonicalizePageKeys(
-      (perms ?? []).map((p) => p.page_key as string)
+    pageKeys: Array.from(
+      new Set((perms ?? []).map((p) => p.page_key as string))
     ),
     roleKeys,
   };
