@@ -150,6 +150,9 @@ describe("toCompareRow + summarizeProductSalesReports", () => {
     const row = toCompareRow(a);
     expect(row.hq_revenue_net).toBe(600);
     expect(row.syp_revenue_net).toBe(400);
+    expect(row.hq_qty).toBe(6);
+    expect(row.syp_qty).toBe(4);
+    expect(row.online_qty).toBe(0);
     expect(row.buy_qty).toBe(4);
 
     const totals = summarizeProductSalesReports([a, b]);
@@ -159,6 +162,23 @@ describe("toCompareRow + summarizeProductSalesReports", () => {
     expect(totals.previous_revenue_net).toBe(500);
     expect(totals.on_hand_qty).toBe(13);
     expect(totals.gross_margin_pct).toBeCloseTo(24);
+  });
+
+  it("falls back to summary qty when a branch row is missing", () => {
+    const row = toCompareRow(
+      overview({
+        bcode: "C",
+        product: identity({ bcode: "C" }),
+        summary: summary({
+          hq_qty: 12,
+          syp_qty: 3,
+          online_qty: 1,
+        }),
+      })
+    );
+    expect(row.hq_qty).toBe(12);
+    expect(row.syp_qty).toBe(3);
+    expect(row.online_qty).toBe(1);
   });
 });
 

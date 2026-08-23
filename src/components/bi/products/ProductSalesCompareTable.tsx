@@ -31,7 +31,8 @@ export default function ProductSalesCompareTable({
           เทียบสินค้าที่เลือก
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          คลิกแถวเพื่อดูกราฟราคา ประวัติซื้อ/ขาย และมาร์จิ้นของ SKU นั้น
+          คลิกแถวเพื่อดูกราฟราคา ประวัติซื้อ/ขาย และมาร์จิ้นของ SKU นั้น · HQ /
+          SYP / ออนไลน์ เป็นจำนวนชิ้น
         </p>
       </CardHeader>
       <CardContent className="overflow-x-auto">
@@ -107,13 +108,13 @@ export default function ProductSalesCompareTable({
                       {formatMarginPct(row.gross_margin_pct)}
                     </td>
                     <td className="py-2.5 pr-3 text-right tabular-nums text-muted-foreground">
-                      {formatBaht(row.hq_revenue_net)}
+                      {formatCount(row.hq_qty)}
                     </td>
                     <td className="py-2.5 pr-3 text-right tabular-nums text-muted-foreground">
-                      {formatBaht(row.syp_revenue_net)}
+                      {formatCount(row.syp_qty)}
                     </td>
                     <td className="py-2.5 pr-3 text-right tabular-nums text-muted-foreground">
-                      {formatBaht(row.online_revenue_net)}
+                      {formatCount(row.online_qty)}
                     </td>
                     <td className="py-2.5 text-right tabular-nums text-muted-foreground">
                       {formatCount(row.buy_qty)}

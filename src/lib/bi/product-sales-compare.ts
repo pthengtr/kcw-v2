@@ -35,6 +35,9 @@ export type ProductSalesCompareRow = {
   hq_revenue_net: number;
   syp_revenue_net: number;
   online_revenue_net: number;
+  hq_qty: number;
+  syp_qty: number;
+  online_qty: number;
   buy_qty: number;
   buy_amount_net: number;
   on_hand_qty: number;
@@ -59,11 +62,15 @@ export type ProductSalesCompareTotals = {
   on_hand_qty: number;
 };
 
-function branchRevenue(
+function branchField(
   report: BiProductSalesOverview,
-  key: string
+  key: string,
+  field: "revenue_net" | "base_qty",
+  fallback = 0
 ): number {
-  return report.by_branch.find((row) => row.key === key)?.revenue_net ?? 0;
+  const row = report.by_branch.find((item) => item.key === key);
+  if (row) return row[field];
+  return fallback;
 }
 
 export function toCompareRow(
@@ -78,9 +85,17 @@ export function toCompareRow(
     base_qty: report.summary.base_qty,
     gross_profit: report.summary.gross_profit,
     gross_margin_pct: report.summary.gross_margin_pct,
-    hq_revenue_net: branchRevenue(report, "HQ"),
-    syp_revenue_net: branchRevenue(report, "SYP"),
-    online_revenue_net: branchRevenue(report, "ONLINE"),
+    hq_revenue_net: branchField(report, "HQ", "revenue_net"),
+    syp_revenue_net: branchField(report, "SYP", "revenue_net"),
+    online_revenue_net: branchField(report, "ONLINE", "revenue_net"),
+    hq_qty: branchField(report, "HQ", "base_qty", report.summary.hq_qty),
+    syp_qty: branchField(report, "SYP", "base_qty", report.summary.syp_qty),
+    online_qty: branchField(
+      report,
+      "ONLINE",
+      "base_qty",
+      report.summary.online_qty
+    ),
     buy_qty: report.purchase.buy_qty,
     buy_amount_net: report.purchase.buy_amount_net,
     on_hand_qty: report.product.on_hand_qty,

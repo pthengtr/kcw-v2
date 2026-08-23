@@ -19,9 +19,9 @@ function sumField(
     | "revenue_net"
     | "base_qty"
     | "bill_count"
-    | "hq_revenue_net"
-    | "syp_revenue_net"
-    | "online_revenue_net"
+    | "hq_qty"
+    | "syp_qty"
+    | "online_qty"
     | "cogs"
     | "gross_profit"
   >
@@ -38,7 +38,7 @@ export default function ProductSalesPeriodTable({ rows, mode }: Props) {
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
         <p className="text-xs text-muted-foreground">
-          รวมทุกสาขา + แยก HQ / SYP / ออนไลน์ · จำนวนเป็นหน่วยเล็ก
+          รวมทุกสาขา + แยก HQ / SYP / ออนไลน์ เป็นจำนวนชิ้น · จำนวนเป็นหน่วยเล็ก
         </p>
       </CardHeader>
       <CardContent className="overflow-x-auto">
@@ -82,13 +82,13 @@ export default function ProductSalesPeriodTable({ rows, mode }: Props) {
                     {formatBaht(row.revenue_net)}
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums text-slate-700">
-                    {formatBaht(row.hq_revenue_net)}
+                    {formatCount(row.hq_qty)}
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums text-slate-700">
-                    {formatBaht(row.syp_revenue_net)}
+                    {formatCount(row.syp_qty)}
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums text-slate-700">
-                    {formatBaht(row.online_revenue_net)}
+                    {formatCount(row.online_qty)}
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
                     {formatCount(row.base_qty)}
@@ -124,13 +124,13 @@ export default function ProductSalesPeriodTable({ rows, mode }: Props) {
                   {formatBaht(total)}
                 </td>
                 <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
-                  {formatBaht(sumField(rows, "hq_revenue_net"))}
+                  {formatCount(sumField(rows, "hq_qty"))}
                 </td>
                 <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
-                  {formatBaht(sumField(rows, "syp_revenue_net"))}
+                  {formatCount(sumField(rows, "syp_qty"))}
                 </td>
                 <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
-                  {formatBaht(sumField(rows, "online_revenue_net"))}
+                  {formatCount(sumField(rows, "online_qty"))}
                 </td>
                 <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
                   {formatCount(sumField(rows, "base_qty"))}
