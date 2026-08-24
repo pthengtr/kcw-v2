@@ -39,6 +39,17 @@ function prettyJson(value: unknown) {
   }
 }
 
+function displayImportAccountNo(row: StatementImportFileRow): string {
+  const meta = row.raw_metadata;
+  if (meta && typeof meta === "object" && !Array.isArray(meta)) {
+    const nos = (meta as { account_nos?: unknown }).account_nos;
+    if (Array.isArray(nos) && nos.length) {
+      return nos.map((x) => String(x).trim()).filter(Boolean).join(", ");
+    }
+  }
+  return row.account_no ?? "";
+}
+
 function statusBadgeVariant(status: string): BadgeProps["variant"] {
   if (status === "done" || status === "processed") return "secondary";
   if (status === "error" || status === "failed") return "destructive";
@@ -144,7 +155,7 @@ export default function ImportFilesTab({ refreshToken }: { refreshToken: number 
         key: "account_no",
         header: "account_no",
         className: "whitespace-nowrap",
-        render: (r) => r.account_no ?? "",
+        render: (r) => displayImportAccountNo(r) || "",
       },
       {
         key: "original_filename",
@@ -240,7 +251,7 @@ export default function ImportFilesTab({ refreshToken }: { refreshToken: number 
             <div>
               <div className="text-xs text-muted-foreground">account</div>
               <div className="text-sm font-mono break-all">
-                {row.account_no || "—"}
+                {displayImportAccountNo(row) || "—"}
               </div>
             </div>
           </div>

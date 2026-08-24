@@ -6,7 +6,36 @@ export type BankAccountOption = {
 type AccountBankRow = {
   account_no: string | null;
   bank_name: string | null;
+  raw_metadata?: unknown;
 };
+
+/** Split a stored `account_no` that may list several tabs: `248-0-…, 248-6-…`. */
+export function splitStoredAccountNos(value: string | null | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+export function accountsFromImportFileRow(row: AccountBankRow): AccountBankRow[] {
+  const bank = row.bank_name ?? null;
+  const nos = new Set<string>();
+  for (const part of splitStoredAccountNos(row.account_no)) {
+    nos.add(part);
+  }
+  const meta = row.raw_metadata;
+  if (meta && typeof meta === "object" && !Array.isArray(meta)) {
+    const extra = (meta as { account_nos?: unknown }).account_nos;
+    if (Array.isArray(extra)) {
+      for (const item of extra) {
+        const account = String(item ?? "").trim();
+        if (account) nos.add(account);
+      }
+    }
+  }
+  return [...nos].map((account_no) => ({ account_no, bank_name: bank }));
+}
 
 /**
  * Collapse rows into distinct accounts.
@@ -99,7 +128,7 @@ export async function listStatementAccounts(
   const filesQuery = supabase
     .schema("bank")
     .from("statement_import_files")
-    .select("account_no, bank_name") as StatementAccountQuery;
+    .select("account_no, bank_name, raw_metadata") as StatementAccountQuery;
 
   const latestQuery = supabase
     .schema("bank")
@@ -121,7 +150,9 @@ export async function listStatementAccounts(
   }
 
   return {
-    accounts: collapseStatementAccounts(filesRes.data ?? []),
+    accounts: collapseStatementAccounts(
+      (filesRes.data ?? []).flatMap(accountsFromImportFileRow)
+    ),
     latestMonth: toYearMonth(latestRes.data?.[0]?.txn_date),
   };
 }

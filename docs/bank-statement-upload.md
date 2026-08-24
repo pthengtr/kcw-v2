@@ -23,6 +23,9 @@ Display description is excluded. KTB detail is normalized (strip trailing online
 |-------|--------|--------|
 | `DownLoadService` | signed `Amount` | `Description` |
 | `Account_Statement_Report_TH_XLS` | signed `ถอนเงิน/ฝากเงิน` | `รายละเอียด` |
+| Multi-tab (one sheet per account, e.g. `248-0-42113-9`) | same as that sheet's layout | per-sheet `Account No.` / tab name |
+
+A single workbook may contain several account tabs. Each tab is parsed independently; line `account_no` comes from in-sheet metadata, then the tab name (`248-0-42113-9`), then a previous tab (KBANK `in`/`out` or month sheets), then the filename. File-level `account_no` lists every account that produced rows (`248-0-42113-9, 248-6-00618-4`); `raw_metadata.account_nos` / `sheet_summaries` keep the per-tab split.
 
 Upstream Drive BAT (thin uploader → this Edge Function): [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md).
 

@@ -52,6 +52,24 @@ describe("Bank statement upload helpers", () => {
 
     expect(
       formatBankStatementImportMessage({
+        status: "imported",
+        original_filename: "6184-1139 W1-23 D8.xls",
+        account_no: "248-0-42113-9, 248-6-00618-4",
+        account_nos: ["248-0-42113-9", "248-6-00618-4"],
+        sheet_summaries: [
+          { sheet_name: "248-0-42113-9", account_no: "248-0-42113-9", row_count: 27 },
+          { sheet_name: "248-6-00618-4", account_no: "248-6-00618-4", row_count: 32 },
+        ],
+        row_count: 59,
+        inserted_count: 59,
+        duplicate_count: 0,
+      })
+    ).toBe(
+      "นำเข้าสำเร็จ: 6184-1139 W1-23 D8.xls · บัญชี 248-0-42113-9, 248-6-00618-4 · 2 แท็บ · 59/59 แถวใหม่"
+    );
+
+    expect(
+      formatBankStatementImportMessage({
         status: "skipped",
         original_filename: "a.xlsx",
       })

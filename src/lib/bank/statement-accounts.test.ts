@@ -1,9 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  accountsFromImportFileRow,
   collapseStatementAccounts,
   listStatementAccounts,
 } from "@/lib/bank/statement-accounts";
+
+describe("accountsFromImportFileRow", () => {
+  it("expands comma-separated account_no and raw_metadata.account_nos", () => {
+    expect(
+      accountsFromImportFileRow({
+        account_no: "248-0-42113-9, 248-6-00618-4",
+        bank_name: "KTB",
+        raw_metadata: { account_nos: ["248-0-42113-9", "248-6-00618-4"] },
+      })
+    ).toEqual([
+      { account_no: "248-0-42113-9", bank_name: "KTB" },
+      { account_no: "248-6-00618-4", bank_name: "KTB" },
+    ]);
+  });
+});
 
 describe("collapseStatementAccounts", () => {
   it("returns distinct accounts sorted by account_no", () => {
@@ -40,7 +56,13 @@ describe("listStatementAccounts", () => {
         data: [
           { account_no: "248-6-00618-4", bank_name: "KBANK" },
           { account_no: "248-6-00618-4", bank_name: "KTB" },
-          { account_no: "248-6-00618-4", bank_name: "KTB" },
+          {
+            account_no: "248-0-42113-9, 248-6-00618-4",
+            bank_name: "KTB",
+            raw_metadata: {
+              account_nos: ["248-0-42113-9", "248-6-00618-4"],
+            },
+          },
           { account_no: "064-8-91723-6", bank_name: "KBANK" },
         ],
         error: null,
@@ -82,6 +104,7 @@ describe("listStatementAccounts", () => {
     expect(result).toEqual({
       accounts: [
         { account_no: "064-8-91723-6", bank_name: "KBANK" },
+        { account_no: "248-0-42113-9", bank_name: "KTB" },
         { account_no: "248-6-00618-4", bank_name: "KTB" },
       ],
       latestMonth: "2026-07",
