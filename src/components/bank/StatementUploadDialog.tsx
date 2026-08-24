@@ -102,7 +102,7 @@ export default function StatementUploadDialog({
           <DialogTitle>อัปโหลด Statement</DialogTitle>
           <DialogDescription>
             เลือกธนาคารแล้วอัปโหลดไฟล์ Excel (.xlsx / .xls / .xlsm) — สูงสุด 15
-            MB
+            MB · ไฟล์ใบเดียวรองรับหลายแท็บ (หนึ่งแท็บต่อบัญชี)
           </DialogDescription>
         </DialogHeader>
 

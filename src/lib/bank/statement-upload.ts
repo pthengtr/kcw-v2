@@ -15,12 +15,21 @@ const EXCEL_EXT = /\.(xlsx|xls|xlsm)$/i;
 
 export type BankStatementImportStatus = "imported" | "skipped" | "failed";
 
+export type BankStatementSheetSummary = {
+  sheet_name?: string | null;
+  account_no?: string | null;
+  row_count?: number | null;
+  skipped?: boolean | null;
+};
+
 export type BankStatementImportResult = {
   status: BankStatementImportStatus;
   file_id?: string | null;
   file_hash?: string | null;
   bank_name?: string | null;
   account_no?: string | null;
+  account_nos?: string[] | null;
+  sheet_summaries?: BankStatementSheetSummary[] | null;
   original_filename?: string | null;
   source_path?: string | null;
   is_new_file?: boolean | null;
@@ -49,11 +58,23 @@ export function validateBankStatementFile(file: File): string | null {
   return null;
 }
 
+function formatImportAccounts(result: BankStatementImportResult): string {
+  const fromList = (result.account_nos ?? [])
+    .map((a) => String(a).trim())
+    .filter(Boolean);
+  if (fromList.length) return ` · บัญชี ${fromList.join(", ")}`;
+  return result.account_no ? ` · บัญชี ${result.account_no}` : "";
+}
+
 export function formatBankStatementImportMessage(
   result: BankStatementImportResult
 ): string {
   const name = result.original_filename ?? "ไฟล์";
-  const account = result.account_no ? ` · บัญชี ${result.account_no}` : "";
+  const account = formatImportAccounts(result);
+  const sheetCount = (result.sheet_summaries ?? []).filter(
+    (s) => (s.row_count ?? 0) > 0
+  ).length;
+  const sheets = sheetCount > 1 ? ` · ${sheetCount} แท็บ` : "";
   const counts =
     result.row_count != null
       ? ` · ${result.inserted_count ?? 0}/${result.row_count} แถวใหม่` +
@@ -63,7 +84,7 @@ export function formatBankStatementImportMessage(
       : "";
 
   if (result.status === "imported") {
-    return `นำเข้าสำเร็จ: ${name}${account}${counts}`;
+    return `นำเข้าสำเร็จ: ${name}${account}${sheets}${counts}`;
   }
   if (result.status === "skipped") {
     return `ข้าม (ไฟล์ซ้ำ): ${name}${account}`;

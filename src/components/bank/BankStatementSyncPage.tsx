@@ -57,7 +57,7 @@ export default function BankStatementSyncPage() {
             <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
             <p className="text-sm text-muted-foreground">
               อัปโหลด Excel statement (KBANK / KTB) แล้วจับคู่รายการ ·
-              สร้างรายงานเดินบัญชีจาก Storage
+              ไฟล์หลายแท็บนำเข้าทุกบัญชี · สร้างรายงานเดินบัญชีจาก Storage
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

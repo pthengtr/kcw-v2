@@ -5,7 +5,7 @@
  *   - signed-in user with RBAC page `bank_statement_sync` (or admin role), or
  *   - service-role bearer (HQ Drive bulk uploader only).
  * Body: multipart/form-data with fields:
- *   - file: .xlsx / .xls / .xlsm
+ *   - file: .xlsx / .xls / .xlsm (multi-tab OK — one sheet per account)
  *   - bank_name: KBANK | KTB (required)
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -135,6 +135,12 @@ Deno.serve(async (req: Request) => {
       source: importSource,
     });
     const resolvedAccount = String(meta.account_no ?? accountGuess ?? "") || null;
+    const accountNos = Array.isArray(meta.account_nos)
+      ? (meta.account_nos as unknown[]).map((x) => String(x))
+      : resolvedAccount
+        ? [resolvedAccount]
+        : [];
+    const sheetSummaries = meta.sheet_summaries ?? [];
 
     const now = new Date();
     const yyyy = now.getUTCFullYear();
@@ -193,6 +199,8 @@ Deno.serve(async (req: Request) => {
             file_hash: fileHash,
             bank_name: bankName,
             account_no: resolvedAccount,
+            account_nos: accountNos,
+            sheet_summaries: sheetSummaries,
             original_filename: originalFilename,
             source_path: sourcePath,
             row_count: priorRows,
@@ -215,6 +223,8 @@ Deno.serve(async (req: Request) => {
           file_hash: fileHash,
           bank_name: bankName,
           account_no: resolvedAccount,
+          account_nos: accountNos,
+          sheet_summaries: sheetSummaries,
           original_filename: originalFilename,
           source_path: sourcePath,
           row_count: existing.row_count,
@@ -281,6 +291,8 @@ Deno.serve(async (req: Request) => {
         file_hash: fileHash,
         bank_name: bankName,
         account_no: resolvedAccount,
+        account_nos: accountNos,
+        sheet_summaries: sheetSummaries,
         original_filename: originalFilename,
         source_path: sourcePath,
         is_new_file: isNewFile,
@@ -306,6 +318,8 @@ Deno.serve(async (req: Request) => {
           file_hash: fileHash,
           bank_name: bankName,
           account_no: resolvedAccount,
+          account_nos: accountNos,
+          sheet_summaries: sheetSummaries,
           original_filename: originalFilename,
           source_path: sourcePath,
           row_count: lines.length,
