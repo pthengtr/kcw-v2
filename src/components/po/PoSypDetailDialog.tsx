@@ -195,14 +195,28 @@ export default function PoSypDetailDialog({
           ) : (
             <table className="w-full min-w-[60rem] border-collapse text-sm print:min-w-0">
               <thead>
-                <tr className="border-b bg-muted/40 text-left">
-                  <th className="p-2">สถานะ</th>
-                  <th className="p-2">BCODE</th>
-                  <th className="p-2">รายละเอียด</th>
-                  <th className="p-2">ที่เก็บ HQ</th>
-                  <th className="p-2">คงเหลือ HQ</th>
-                  <th className="p-2">จำนวน TF</th>
-                  <th className="p-2">จำนวนสั่ง</th>
+                <tr className="text-left">
+                  <th className="sticky top-0 z-10 border-b bg-muted p-2 print:static">
+                    สถานะ
+                  </th>
+                  <th className="sticky top-0 z-10 border-b bg-muted p-2 print:static">
+                    BCODE
+                  </th>
+                  <th className="sticky top-0 z-10 border-b bg-muted p-2 print:static">
+                    รายละเอียด
+                  </th>
+                  <th className="sticky top-0 z-10 border-b bg-muted p-2 print:static">
+                    ที่เก็บ HQ
+                  </th>
+                  <th className="sticky top-0 z-10 border-b bg-muted p-2 print:static">
+                    คงเหลือ HQ
+                  </th>
+                  <th className="sticky top-0 z-10 border-b bg-muted p-2 print:static">
+                    จำนวน TF
+                  </th>
+                  <th className="sticky top-0 z-10 border-b bg-muted p-2 print:static">
+                    จำนวนสั่ง
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -263,8 +277,9 @@ export default function PoSypDetailDialog({
                         <td className="p-2 tabular-nums">
                           {formatPoQty(line.tf_qty)}
                         </td>
-                        <td className="p-2">
-                          {line.qty ?? "—"} {line.ui ?? ""}
+                        <td className="p-2 tabular-nums">
+                          {formatPoQty(line.qty)}
+                          {line.ui?.trim() ? ` ${line.ui.trim()}` : ""}
                         </td>
                       </tr>
                     );
