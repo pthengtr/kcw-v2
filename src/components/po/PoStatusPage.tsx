@@ -247,10 +247,12 @@ export default function PoStatusPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={meta.HQ?.workerOnline ? "secondary" : "outline"}>
-            HQ-PC {meta.HQ?.workerOnline ? "online" : "offline"}
+            {meta.HQ?.workerName ?? "HQ-PC"}{" "}
+            {meta.HQ?.workerOnline ? "online" : "offline"}
           </Badge>
           <Badge variant={meta.SYP?.workerOnline ? "secondary" : "outline"}>
-            SYP-PC {meta.SYP?.workerOnline ? "online" : "offline"}
+            {meta.SYP?.workerName ?? "SYP-PC"}{" "}
+            {meta.SYP?.workerOnline ? "online" : "offline"}
           </Badge>
           {relatedInFlight ? (
             <Badge variant="outline">กำลังอัปเดต…</Badge>

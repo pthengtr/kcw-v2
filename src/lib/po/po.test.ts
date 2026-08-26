@@ -45,6 +45,10 @@ describe("PO worker helpers", () => {
     expect(workerNameForSite("HQ")).toBe("HQ-PC");
     expect(workerNameForSite("SYP")).toBe("SYP-PC");
     expect(workerNamesForSite("HQ")).toEqual(["HQ-UBUNTU-SERVER", "HQ-PC"]);
+    expect(workerNamesForSite("SYP")).toEqual([
+      "SYP-UBUNTU-SERVER",
+      "SYP-PC",
+    ]);
   });
 
   it("maps ICLOW sync to both site workers", () => {
