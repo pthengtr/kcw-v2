@@ -13,15 +13,21 @@ export const ICLOW_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
 export const PO_RELATED_SYNC_SITES: PoSyncSite[] = ["HQ", "SYP"];
 
 export const HQ_WORKER_CANDIDATES = ["HQ-UBUNTU-SERVER", "HQ-PC"] as const;
-export type PoWorkerName = (typeof HQ_WORKER_CANDIDATES)[number] | "SYP-PC";
+export const SYP_WORKER_CANDIDATES = ["SYP-UBUNTU-SERVER", "SYP-PC"] as const;
+export type PoWorkerName =
+  | (typeof HQ_WORKER_CANDIDATES)[number]
+  | (typeof SYP_WORKER_CANDIDATES)[number];
 
-const SITE_WORKER: Record<PoSyncSite, Extract<PoWorkerName, "HQ-PC" | "SYP-PC">> = {
+const SITE_WORKER: Record<
+  PoSyncSite,
+  Extract<PoWorkerName, "HQ-PC" | "SYP-PC">
+> = {
   HQ: "HQ-PC",
   SYP: "SYP-PC",
 };
 
 export function workerNamesForSite(site: PoSyncSite): PoWorkerName[] {
-  return site === "HQ" ? [...HQ_WORKER_CANDIDATES] : ["SYP-PC"];
+  return site === "HQ" ? [...HQ_WORKER_CANDIDATES] : [...SYP_WORKER_CANDIDATES];
 }
 
 export type WorkerHeartbeatRow = {
@@ -74,6 +80,18 @@ function mapJob(row: Record<string, unknown>): JobQueueRow {
     result_message: (row.result_message as string | null) ?? null,
     error_message: (row.error_message as string | null) ?? null,
   };
+}
+
+export async function pickLiveSypWorkerName(
+  supabase: SupabaseClient
+): Promise<string | null> {
+  for (const workerName of SYP_WORKER_CANDIDATES) {
+    const heartbeat = await getWorkerHeartbeat(supabase, workerName);
+    if (isWorkerOnline(heartbeat?.last_seen ?? null)) {
+      return workerName;
+    }
+  }
+  return null;
 }
 
 export async function pickLiveHqWorkerName(
@@ -153,7 +171,7 @@ export async function enqueuePoSync(params: {
   const preferred =
     site === "HQ"
       ? (await pickLiveHqWorkerName(supabase)) ?? workerNameForSite(site)
-      : workerNameForSite(site);
+      : (await pickLiveSypWorkerName(supabase)) ?? workerNameForSite(site);
   const workerName = preferred;
 
   const inFlight = await findInFlightPoSync(supabase, site);
