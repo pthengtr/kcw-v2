@@ -69,6 +69,7 @@ describe("PO format helpers", () => {
 
   it("formats inventory qty", () => {
     expect(formatPoQty("12.5")).toBe("12.5");
+    expect(formatPoQty("10.0")).toBe("10");
     expect(formatPoQty(0)).toBe("0");
     expect(formatPoQty(null)).toBe("—");
   });

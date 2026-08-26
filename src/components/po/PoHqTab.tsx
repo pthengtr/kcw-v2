@@ -261,12 +261,22 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
                 <div className="max-h-[50vh] overflow-auto rounded-md border">
                   <table className="w-full min-w-[40rem] border-collapse text-sm">
                     <thead>
-                      <tr className="border-b bg-muted/40 text-left">
-                        <th className="p-2">BCODE</th>
-                        <th className="p-2">สินค้า</th>
-                        <th className="p-2">Qty</th>
-                        <th className="p-2">ราคา</th>
-                        <th className="p-2">จำนวนเงิน</th>
+                      <tr className="text-left">
+                        <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                          BCODE
+                        </th>
+                        <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                          สินค้า
+                        </th>
+                        <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                          Qty
+                        </th>
+                        <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                          ราคา
+                        </th>
+                        <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                          จำนวนเงิน
+                        </th>
                       </tr>
                     </thead>
                     <tbody>

@@ -860,12 +860,22 @@ export default function PoPendingReceiveTab({
             <div className="max-h-[60vh] overflow-auto rounded-md border">
               <table className="w-full min-w-[40rem] border-collapse text-sm">
                 <thead>
-                  <tr className="border-b bg-muted/40 text-left">
-                    <th className="p-2">BCODE</th>
-                    <th className="p-2">รายละเอียด</th>
-                    <th className="p-2">Qty</th>
-                    <th className="p-2">ราคา</th>
-                    <th className="p-2">จำนวนเงิน</th>
+                  <tr className="text-left">
+                    <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                      BCODE
+                    </th>
+                    <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                      รายละเอียด
+                    </th>
+                    <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                      Qty
+                    </th>
+                    <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                      ราคา
+                    </th>
+                    <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                      จำนวนเงิน
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -882,9 +892,9 @@ export default function PoPendingReceiveTab({
                         <td className="p-2">
                           <PoProductCell detail={line.detail} mcode={line.mcode} />
                         </td>
-                        <td className="p-2 whitespace-nowrap">
-                          {line.qty ?? "—"}
-                          {line.ui ? ` ${line.ui}` : ""}
+                        <td className="p-2 whitespace-nowrap tabular-nums">
+                          {formatPoQty(line.qty)}
+                          {line.ui?.trim() ? ` ${line.ui.trim()}` : ""}
                         </td>
                         <td className="p-2">{formatPoAmount(line.price)}</td>
                         <td className="p-2">{formatPoAmount(line.amount)}</td>
@@ -940,12 +950,22 @@ export default function PoPendingReceiveTab({
               <div className="max-h-[50vh] overflow-auto rounded-md border">
                 <table className="w-full min-w-[36rem] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b bg-muted/40 text-left">
-                      <th className="p-2">BCODE</th>
-                      <th className="p-2">รายละเอียด</th>
-                      <th className="p-2">Qty</th>
-                      <th className="p-2">ราคา</th>
-                      <th className="p-2">จำนวนเงิน</th>
+                    <tr className="text-left">
+                      <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                        BCODE
+                      </th>
+                      <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                        รายละเอียด
+                      </th>
+                      <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                        Qty
+                      </th>
+                      <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                        ราคา
+                      </th>
+                      <th className="sticky top-0 z-10 border-b bg-muted p-2">
+                        จำนวนเงิน
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -960,9 +980,9 @@ export default function PoPendingReceiveTab({
                         <tr key={`${line.bcode}-${i}`} className="border-b">
                           <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
                           <td className="p-2">{line.detail ?? "—"}</td>
-                          <td className="p-2 whitespace-nowrap">
-                            {line.qty ?? "—"}
-                            {line.ui ? ` ${line.ui}` : ""}
+                          <td className="p-2 whitespace-nowrap tabular-nums">
+                            {formatPoQty(line.qty)}
+                            {line.ui?.trim() ? ` ${line.ui.trim()}` : ""}
                           </td>
                           <td className="p-2">{formatPoAmount(line.price)}</td>
                           <td className="p-2">{formatPoAmount(line.amount)}</td>
