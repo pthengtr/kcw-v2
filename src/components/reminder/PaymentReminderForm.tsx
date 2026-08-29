@@ -34,6 +34,10 @@ import type {
 } from "@/lib/types/models";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
+import {
+  REMINDER_CREATION_DISABLED,
+  REMINDER_CREATION_DISABLED_MESSAGE,
+} from "@/lib/reminder/flags";
 
 /* ---------------- constants & helpers ---------------- */
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -341,6 +345,10 @@ export default function PaymentReminderForm({
         if (error) throw error;
         onSaved?.(data!);
       } else {
+        if (REMINDER_CREATION_DISABLED) {
+          throw new Error(REMINDER_CREATION_DISABLED_MESSAGE);
+        }
+
         const insert = {
           created_at: nowIso,
           last_modified: nowIso,
@@ -672,9 +680,22 @@ export default function PaymentReminderForm({
         />
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="submit" disabled={submitting}>
-            {isEdit ? "บันทึกการแก้ไข" : "สร้างรายการ"}
-          </Button>
+          {isEdit ? (
+            <Button type="submit" disabled={submitting}>
+              บันทึกการแก้ไข
+            </Button>
+          ) : REMINDER_CREATION_DISABLED ? (
+            <p
+              data-testid="reminder-creation-retired"
+              className="text-sm text-muted-foreground"
+            >
+              {REMINDER_CREATION_DISABLED_MESSAGE}
+            </p>
+          ) : (
+            <Button type="submit" disabled={submitting}>
+              สร้างรายการ
+            </Button>
+          )}
         </div>
       </form>
     </Form>

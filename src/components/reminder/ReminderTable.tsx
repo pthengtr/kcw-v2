@@ -7,10 +7,10 @@ import { DataTable } from "@/components/common/DataTable";
 
 import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import ReminderSearchForm from "./ReminderSearchForm";
-import ReminderFormDialog from "./ReminderFormDialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { ChevronLeft, ChevronRight, Plus, RefreshCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
+import { REMINDER_CREATION_DISABLED_MESSAGE } from "@/lib/reminder/flags";
 import { clearMyCookie } from "@/app/(root)/action";
 import ResetTableCookiesDropdown from "../common/ResetTableCookiesDropdown";
 import { Button } from "../ui/button";
@@ -204,8 +204,6 @@ export default function ReminderTable({
   paginationPageSize,
 }: ReminderTableProps) {
   const {
-    openCreateDialog,
-    setOpenCreateDialog,
     openUpdateDialog,
     setSubmitError,
     reminders,
@@ -229,7 +227,6 @@ export default function ReminderTable({
     getReminder();
   }, [
     getReminder,
-    openCreateDialog,
     openUpdateDialog,
     setSelectedSupplier,
     setSubmitError,
@@ -336,17 +333,13 @@ export default function ReminderTable({
             }}
           />
         </div>
-        <div className="flex justify-end shrink-0">
-          <ReminderFormDialog
-            open={openCreateDialog}
-            setOpen={setOpenCreateDialog}
-            dialogTrigger={
-              <Button>
-                <Plus />
-              </Button>
-            }
-            dialogHeader="เพิ่มรายการเตือนโอน"
-          />
+        <div className="flex justify-end shrink-0 self-center">
+          <p
+            data-testid="reminder-creation-retired"
+            className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm"
+          >
+            {REMINDER_CREATION_DISABLED_MESSAGE}
+          </p>
         </div>
       </div>
 

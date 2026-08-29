@@ -12,6 +12,7 @@ import { ReminderContext, ReminderContextType } from "./ReminderProvider";
 import PaymentReminderForm from "./PaymentReminderForm";
 import { createClient } from "@/lib/supabase/client";
 import { PaymentReminderRow } from "@/lib/types/models";
+import { REMINDER_CREATION_DISABLED_MESSAGE } from "@/lib/reminder/flags";
 
 type ReminderFormDialogProps = {
   open: boolean;
@@ -70,17 +71,23 @@ export default function ReminderFormDialog({
           </div>
         )}
         <div className="w-full min-w-0 h-full overflow-x-hidden overflow-y-auto md:w-[60vw]">
-          {currentUserId && (
+          {update && selectedRow && currentUserId ? (
             <PaymentReminderForm
               open={open}
               className="flex flex-col gap-6 items-stretch p-2 sm:p-8"
               currentUserId={currentUserId}
               defaultPartyKind="SUPPLIER"
               onSaved={(row) => handleOnsavedForm(row)}
-              {...(update && selectedRow
-                ? { mode: "edit" as const, value: selectedRow }
-                : { mode: "create" as const })}
+              mode="edit"
+              value={selectedRow}
             />
+          ) : (
+            <p
+              data-testid="reminder-creation-retired"
+              className="px-2 py-8 text-center text-sm text-muted-foreground"
+            >
+              {REMINDER_CREATION_DISABLED_MESSAGE}
+            </p>
           )}
         </div>
       </DialogContent>
