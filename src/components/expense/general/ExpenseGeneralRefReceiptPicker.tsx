@@ -1,23 +1,8 @@
 "use client";
 
-import {
-  ChangeEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ExpenseReceiptType } from "@/lib/types/models";
 
@@ -35,7 +20,6 @@ export default function ExpenseGeneralRefReceiptPicker({
   const supabase = useMemo(() => createClient(), []);
   const [filterText, setFilterText] = useState("");
   const [options, setOptions] = useState<ExpenseReceiptType[]>([]);
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<number | null>(null);
 
@@ -66,7 +50,6 @@ export default function ExpenseGeneralRefReceiptPicker({
   );
 
   useEffect(() => {
-    if (!open) return;
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(
       () => void runQuery(filterText),
@@ -75,92 +58,81 @@ export default function ExpenseGeneralRefReceiptPicker({
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [filterText, open, runQuery]);
+  }, [filterText, runQuery]);
 
   const selected = value ?? undefined;
 
   return (
-    <div className="flex flex-col gap-1">
-      <DropdownMenu
-        open={open}
-        onOpenChange={(v) => {
-          setOpen(v);
-          if (v) void runQuery(filterText);
-        }}
-      >
-        <DropdownMenuTrigger asChild className="max-w-full truncate flex justify-start">
-          <Button variant="outline" className="h-auto min-h-10 w-full justify-start">
-            {selected ? (
-              <div className="flex flex-col items-start text-left">
-                <div className="font-semibold">{selected.receipt_number}</div>
-                <div className="text-xs opacity-70">
-                  {formatDate(selected.receipt_date)} • ฿
-                  {fmtMoney(selected.total_amount)}
-                  {selected.vat ? ` • VAT ${selected.vat}%` : ""}
-                  {selected.party?.party_name
-                    ? ` • ${selected.party.party_name}`
-                    : ""}
-                </div>
+    <div className="flex flex-col gap-2">
+      {selected ? (
+        <div className="rounded-md border bg-background px-3 py-2 text-sm">
+          <div className="font-semibold">{selected.receipt_number}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatDate(selected.receipt_date)} • ฿
+            {fmtMoney(selected.total_amount)}
+            {selected.vat ? ` • VAT ${selected.vat}%` : ""}
+            {selected.party?.party_name ? ` • ${selected.party.party_name}` : ""}
+          </div>
+          <button
+            type="button"
+            className="mt-1 text-xs text-muted-foreground underline"
+            onClick={() => {
+              onChange(undefined);
+              setFilterText("");
+              setOptions([]);
+            }}
+          >
+            เปลี่ยนบิลอ้างอิง
+          </button>
+        </div>
+      ) : (
+        <>
+          <Input
+            autoFocus
+            placeholder="พิมพ์เลขที่บิลบริษัท..."
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+          />
+          <div className="max-h-48 overflow-y-auto rounded-md border bg-background">
+            {loading ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">
+                กำลังค้นหา...
               </div>
-            ) : (
-              "เลือกบิลบริษัทที่ต้องการหัก"
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-[min(28rem,calc(100vw-2rem))]">
-          <DropdownMenuLabel>
-            <div className="p-2">
-              <Input
-                autoFocus
-                placeholder="พิมพ์เลขที่บิลบริษัท..."
-                value={filterText}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setFilterText(e.target.value)
-                }
-                className="h-8"
-              />
-              <div className="mt-1 text-[10px] text-muted-foreground">
+            ) : null}
+            {!loading && filterText && options.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">
+                ไม่พบเอกสารที่ตรงกัน
+              </div>
+            ) : null}
+            {!filterText ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">
                 ค้นหาจากเลขที่เอกสาร
               </div>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {loading && (
-            <DropdownMenuItem disabled>กำลังค้นหา...</DropdownMenuItem>
-          )}
-          {!loading && options.length === 0 && filterText && (
-            <DropdownMenuItem disabled>ไม่พบเอกสารที่ตรงกัน</DropdownMenuItem>
-          )}
-          {options.map((rec) => (
-            <DropdownMenuItem
-              key={rec.receipt_uuid}
-              onClick={() => {
-                onChange(rec);
-                setOpen(false);
-              }}
-              className="flex flex-col items-start gap-0.5"
-            >
-              <div className="font-semibold leading-tight">
-                {rec.receipt_number}
-              </div>
-              <div className="text-xs opacity-70">
-                {formatDate(rec.receipt_date)} • ฿{fmtMoney(rec.total_amount)}
-                {rec.vat ? ` • VAT ${rec.vat}%` : ""}
-                {rec.party?.party_name ? ` • ${rec.party.party_name}` : ""}
-              </div>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {selected ? (
-        <button
-          type="button"
-          className="self-start text-xs text-muted-foreground underline"
-          onClick={() => onChange(undefined)}
-        >
-          ล้างบิลอ้างอิง
-        </button>
-      ) : null}
+            ) : null}
+            {options.map((rec) => (
+              <Button
+                key={rec.receipt_uuid}
+                type="button"
+                variant="ghost"
+                className="h-auto w-full justify-start rounded-none px-3 py-2 text-left"
+                onClick={() => onChange(rec)}
+              >
+                <div className="flex flex-col items-start">
+                  <div className="font-semibold leading-tight">
+                    {rec.receipt_number}
+                  </div>
+                  <div className="text-xs opacity-70">
+                    {formatDate(rec.receipt_date)} • ฿
+                    {fmtMoney(rec.total_amount)}
+                    {rec.vat ? ` • VAT ${rec.vat}%` : ""}
+                    {rec.party?.party_name ? ` • ${rec.party.party_name}` : ""}
+                  </div>
+                </div>
+              </Button>
+            ))}
+          </div>
+        </>
+      )}
       {error ? <div className="text-red-500 text-xs">{error}</div> : null}
     </div>
   );

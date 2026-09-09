@@ -55,7 +55,7 @@ export default function ExpenseGeneralFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
-      <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-lg flex-col overflow-hidden sm:min-w-96">
+      <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-lg flex-col overflow-hidden sm:min-w-96 sm:max-w-xl">
         <DialogHeader className="grid shrink-0 place-content-center py-4">
           <DialogTitle>{dialogHeader}</DialogTitle>
         </DialogHeader>

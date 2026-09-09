@@ -22,11 +22,7 @@ describe("personal offset helpers", () => {
       })
     ).toBe(false);
     expect(
-      isPersonalOffsetRow({
-        ref_receipt_uuid: "abc",
-        unit_price: 500,
-        quantity: 1,
-      })
+      isPersonalOffsetRow(undefined)
     ).toBe(false);
   });
 

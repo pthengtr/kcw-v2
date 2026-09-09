@@ -12,7 +12,8 @@ export function isPersonalOffsetRow(row: {
   ref_receipt_uuid?: string | null;
   unit_price: number;
   quantity: number;
-}): boolean {
+} | undefined): boolean {
+  if (!row) return false;
   return Boolean(row.ref_receipt_uuid) && row.unit_price * row.quantity < 0;
 }
 
