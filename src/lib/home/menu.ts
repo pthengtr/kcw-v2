@@ -4,7 +4,6 @@ import {
   BarChart3,
   BookOpen,
   Boxes,
-  ClipboardList,
   Handshake,
   ImageUp,
   Images,
@@ -17,7 +16,6 @@ import {
 export type HomeMenuKey =
   | "reminder"
   | "expense"
-  | "po"
   | "stockAudit"
   | "productImageKpi"
   | "bankStatement"
@@ -61,15 +59,6 @@ export const HOME_MENU_ITEMS = {
     icon: Banknote,
     iconClassName: "text-emerald-600",
     iconSurfaceClassName: "bg-emerald-50 ring-emerald-100",
-  },
-  po: {
-    key: "po",
-    href: "/po",
-    label: "ใบสั่งซื้อ (PO)",
-    description: "ตรวจสอบสถานะใบสั่งซื้อ",
-    icon: ClipboardList,
-    iconClassName: "text-violet-600",
-    iconSurfaceClassName: "bg-violet-50 ring-violet-100",
   },
   stockAudit: {
     key: "stockAudit",
@@ -159,7 +148,6 @@ export const HOME_MENU_KEYS = Object.keys(HOME_MENU_ITEMS) as HomeMenuKey[];
 export const DEFAULT_FAVORITE_KEYS: HomeMenuKey[] = [
   "reminder",
   "expense",
-  "po",
   "bi",
 ];
 
@@ -168,7 +156,7 @@ export const DEFAULT_FAVORITE_KEYS: HomeMenuKey[] = [
  * the Home sidebar renders groups with dividers only (no visible titles).
  *
  * Order mirrors the Home sidebar:
- * 1. daily ops (reminder / PO) — expense is rendered separately
+ * 1. daily ops (reminder) — expense is rendered separately
  * 2. ops KPI reports (stock check / product images)
  * 3. finance
  * 4. master data / products
@@ -177,7 +165,7 @@ export const DEFAULT_FAVORITE_KEYS: HomeMenuKey[] = [
 export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
   {
     title: "งานประจำวัน",
-    items: [HOME_MENU_ITEMS.reminder, HOME_MENU_ITEMS.po],
+    items: [HOME_MENU_ITEMS.reminder],
   },
   {
     title: "KPI งาน",

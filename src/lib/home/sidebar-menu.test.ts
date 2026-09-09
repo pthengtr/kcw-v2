@@ -9,7 +9,6 @@ import {
 describe("sidebar menu helpers", () => {
   it("filters protected menu items by page keys", () => {
     const pageKeys = ["po_status", "bi_income"];
-    expect(canAccessHomeMenuItem("po", pageKeys)).toBe(true);
     expect(canAccessHomeMenuItem("bi", pageKeys)).toBe(true);
     expect(canAccessHomeMenuItem("tigerPay", pageKeys)).toBe(false);
     expect(canAccessHomeMenuItem("reminder", pageKeys)).toBe(true);

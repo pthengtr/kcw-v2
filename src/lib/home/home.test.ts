@@ -25,12 +25,11 @@ describe("home favorites", () => {
     expect(parseFavoriteKeys("")).toEqual(DEFAULT_FAVORITE_KEYS);
     expect(parseFavoriteKeys("[]")).toEqual(DEFAULT_FAVORITE_KEYS);
     expect(FAVORITES_COOKIE_KEY).toBe("home_favorite_menus");
-    expect(DEFAULT_FAVORITE_KEYS).toHaveLength(4);
+    expect(DEFAULT_FAVORITE_KEYS).toHaveLength(3);
   });
 
   it("parses and normalizes favorite keys from JSON or CSV", () => {
     expect(parseFavoriteKeys(JSON.stringify(["po", "reminder", "po", "nope"]))).toEqual([
-      "po",
       "reminder",
     ]);
     expect(parseFavoriteKeys("bi,stockAudit,bi")).toEqual(["bi", "stockAudit"]);
@@ -42,7 +41,6 @@ describe("home favorites", () => {
       normalizeFavoriteKeys([
         "reminder",
         "expense",
-        "po",
         "bi",
         "bankStatement",
         "party",
@@ -50,7 +48,6 @@ describe("home favorites", () => {
     ).toEqual([
       "reminder",
       "expense",
-      "po",
       "bi",
       "bankStatement",
       "party",
@@ -61,7 +58,7 @@ describe("home favorites", () => {
     const serialized = serializeFavoriteKeys(["reminder", "expense"]);
     expect(JSON.parse(serialized)).toEqual(["reminder", "expense"]);
     expect(toggleFavoriteKey(["reminder"], "reminder")).toEqual(["reminder"]);
-    expect(toggleFavoriteKey(["reminder"], "po")).toEqual(["reminder", "po"]);
+    expect(toggleFavoriteKey(["reminder"], "bi")).toEqual(["reminder", "bi"]);
   });
 
   it("resolves favorite items from the shared menu catalog", () => {
@@ -78,7 +75,6 @@ describe("home favorites", () => {
     ]);
     expect(HOME_MENU_GROUPS[0].items.map((item) => item.key)).toEqual([
       "reminder",
-      "po",
     ]);
     expect(HOME_MENU_GROUPS[1].items.map((item) => item.key)).toEqual([
       "stockAudit",

@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { listPoHeaders } from "@/lib/po/po-queries";
 import { STOCK_AUDIT_DAILY_TARGET } from "@/lib/stock-audit/daily-target";
 import { fetchStockWorkKpi } from "@/lib/stock-audit/work-queries";
 
@@ -97,27 +96,6 @@ function reminderTodo(params: {
   };
 }
 
-function sypPoTodo(notPreparedToday: number): WorkspaceTodoItem {
-  const status: WorkspaceTodoStatus =
-    notPreparedToday > 0 ? "attention" : "ok";
-
-  return {
-    id: "syp-po-not-prepared",
-    title: "SYP PO ยังไม่จัด",
-    description: "ใบสั่งซื้อวันที่วันนี้ที่ยังไม่จัดของ",
-    href: "/po",
-    status,
-    primaryValue:
-      notPreparedToday === 0
-        ? "เรียบร้อย"
-        : `${notPreparedToday.toLocaleString("th-TH")} ใบ`,
-    secondaryValue:
-      notPreparedToday === 0
-        ? "PO วันนี้จัดครบแล้ว"
-        : "ต้องจัดของให้ครบในวันนี้",
-  };
-}
-
 function stockAuditTodo(markedToday: number): WorkspaceTodoItem {
   const remaining = Math.max(0, STOCK_AUDIT_DAILY_TARGET - markedToday);
   const status: WorkspaceTodoStatus =
@@ -161,7 +139,7 @@ export async function fetchWorkspaceTodos(params: {
 }): Promise<WorkspaceTodoItem[]> {
   const today = params.today ?? bangkokTodayIsoDate();
 
-  const [reminderResult, poResult, stockResult] = await Promise.allSettled([
+  const [reminderResult, stockResult] = await Promise.allSettled([
     (async () => {
       const [unpaidTotal, unpaidDueToday, unpaidOverdue] = await Promise.all([
         countPaymentReminders(params.userClient, { unpaidOnly: true }),
@@ -175,20 +153,6 @@ export async function fetchWorkspaceTodos(params: {
         }),
       ]);
       return reminderTodo({ unpaidTotal, unpaidDueToday, unpaidOverdue });
-    })(),
-    (async () => {
-      const { count } = await listPoHeaders({
-        supabase: params.adminClient,
-        site: "SYP",
-        status: "open",
-        prepareFilter: "not_prepared",
-        from: today,
-        to: today,
-        months: 1,
-        limit: 1,
-        offset: 0,
-      });
-      return sypPoTodo(count ?? 0);
     })(),
     (async () => {
       const kpi = await fetchStockWorkKpi(params.adminClient, {
@@ -206,14 +170,6 @@ export async function fetchWorkspaceTodos(params: {
           "เตือนโอน",
           "/reminder",
           "รายการที่ยังไม่ได้บันทึกวันชำระ"
-        ),
-    poResult.status === "fulfilled"
-      ? poResult.value
-      : unknownTodo(
-          "syp-po-not-prepared",
-          "SYP PO ยังไม่จัด",
-          "/po",
-          "ใบสั่งซื้อวันที่วันนี้ที่ยังไม่จัดของ"
         ),
     stockResult.status === "fulfilled"
       ? stockResult.value
