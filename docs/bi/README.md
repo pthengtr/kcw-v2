@@ -27,7 +27,8 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_bi_product_sales.sql](./sql/fn_bi_product_sales.sql) | RPC used by `/bi/product-sales` (plus `fn_bi_product_sales_lines`). UI: pick one SKU for the full report, or several to compare. Unit sale vs LAST_PURCHASE_COST chart + HQ/SYP/online pie when ≥2 branches have sales. |
 | [sql/fn_bi_product_movement.sql](./sql/fn_bi_product_movement.sql) | RPC used by `/bi/product-movement` |
 | [sql/fn_bi_customer_overview.sql](./sql/fn_bi_customer_overview.sql) | RPC used by `/bi/customers` |
-| [sql/fn_bi_expense_overview.sql](./sql/fn_bi_expense_overview.sql) | RPC used by `/bi/expenses` |
+| [sql/fn_bi_expense_overview.sql](./sql/fn_bi_expense_overview.sql) | RPC used by `/bi/expenses` (company + general + personal offsets) |
+| [sql/fn_expense_receipt_opex.sql](./sql/fn_expense_receipt_opex.sql) | `ref_receipt_uuid` on `expense_general`, OpEx helper, offset cap trigger |
 | [sql/fn_bi_cashflow_overview.sql](./sql/fn_bi_cashflow_overview.sql) | RPC used by `/bi/cash-flow` (bank statements) |
 | [sql/fn_bi_income_overview.sql](./sql/fn_bi_income_overview.sql) | RPC used by `/bi/income` |
 | [sql/fn_bi_income_blank_costs.sql](./sql/fn_bi_income_blank_costs.sql) | Blank-cost line drilldown for `/bi/income` |

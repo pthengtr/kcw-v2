@@ -130,6 +130,8 @@ const companyExpense: BiExpenseOverview = {
     general_count: 0,
     entries_amount: 6_800_000,
     general_amount: 0,
+    general_offset_amount: 0,
+    general_offset_count: 0,
   },
   previous_summary: {
     amount: 6_000_000,
@@ -160,6 +162,7 @@ const companyExpense: BiExpenseOverview = {
       line_count: 120,
       entries_amount: 900_000,
       general_amount: 0,
+      offset_amount: 0,
     },
     {
       period: "2026-08",
@@ -167,6 +170,7 @@ const companyExpense: BiExpenseOverview = {
       line_count: 130,
       entries_amount: 1_000_000,
       general_amount: 0,
+      offset_amount: 0,
     },
   ],
   month_columns: [],
@@ -255,5 +259,22 @@ describe("deriveIncomeStatement", () => {
       0
     );
     expect(overview.trend_monthly[0]?.expense).toBe(900_000);
+  });
+
+  it("ignores general personal offsets on the taxed P&L", () => {
+    const overview = deriveIncomeStatement({
+      vat: vatBase,
+      companyExpense: {
+        ...companyExpense,
+        summary: {
+          ...companyExpense.summary,
+          amount: 6_300_000,
+          general_amount: -500_000,
+          general_offset_amount: -500_000,
+          general_offset_count: 2,
+        },
+      },
+    });
+    expect(overview.summary.expense).toBe(6_800_000);
   });
 });

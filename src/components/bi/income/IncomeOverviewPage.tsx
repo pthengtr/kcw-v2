@@ -370,7 +370,7 @@ export default function IncomeOverviewPage() {
               title="ค่าใช้จ่าย (OpEx)"
               value={formatBahtCompact(overview.summary.opex)}
               deltaPct={opexDelta}
-              hint="บริษัท + ทั่วไป"
+              hint="บริษัท + ทั่วไป (รวมหักส่วนตัวจากบิลบริษัท)"
               icon={<Landmark className="h-4 w-4" />}
             />
             <SalesKpiCard

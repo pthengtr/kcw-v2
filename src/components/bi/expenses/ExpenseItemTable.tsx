@@ -47,7 +47,7 @@ export default function ExpenseItemTable({
         />
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <table className="w-full min-w-[40rem] text-left text-sm">
+        <table className="w-full min-w-[44rem] text-left text-sm">
           <thead>
             <tr className="border-b text-xs text-muted-foreground">
               <th className="py-2 pr-2 font-medium">#</th>
@@ -56,6 +56,7 @@ export default function ExpenseItemTable({
               <th className="py-2 pr-3 text-right font-medium">ยอดรวม</th>
               <th className="py-2 pr-3 text-right font-medium">บริษัท</th>
               <th className="py-2 pr-3 text-right font-medium">ทั่วไป</th>
+              <th className="py-2 pr-3 text-right font-medium">หักส่วนตัว</th>
               <th className="py-2 pr-3 text-right font-medium">รายการ</th>
               <th className="py-2 text-right font-medium">สัดส่วน</th>
             </tr>
@@ -64,7 +65,7 @@ export default function ExpenseItemTable({
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="py-8 text-center text-muted-foreground"
                 >
                   ไม่มีข้อมูล
@@ -93,6 +94,9 @@ export default function ExpenseItemTable({
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums text-slate-700">
                     {formatBaht(row.general_amount)}
+                  </td>
+                  <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums text-rose-700">
+                    {formatBaht(row.offset_amount)}
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">
                     {formatCount(row.line_count)}

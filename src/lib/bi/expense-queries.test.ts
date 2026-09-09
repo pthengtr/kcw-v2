@@ -20,6 +20,8 @@ describe("normalizeExpenseOverview", () => {
         general_count: 80,
         entries_amount: 300_000,
         general_amount: 200_000,
+        general_offset_amount: 0,
+        general_offset_count: 0,
       },
       previous_summary: {
         amount: 450_000,
@@ -45,6 +47,9 @@ describe("normalizeExpenseOverview", () => {
           amount: 120_000,
           item_count: 4,
           line_count: 20,
+          entries_amount: 100_000,
+          general_amount: 20_000,
+          offset_amount: 0,
         },
       ],
       top_items: [
@@ -56,6 +61,7 @@ describe("normalizeExpenseOverview", () => {
           line_count: 5,
           entries_amount: 70_000,
           general_amount: 10_000,
+          offset_amount: 0,
         },
       ],
       trend_monthly: [
@@ -65,6 +71,7 @@ describe("normalizeExpenseOverview", () => {
           line_count: 120,
           entries_amount: 300_000,
           general_amount: 200_000,
+          offset_amount: 0,
         },
       ],
       month_columns: ["2026-01", "2026-07"],
@@ -86,11 +93,54 @@ describe("normalizeExpenseOverview", () => {
     });
 
     expect(overview.summary.entries_amount).toBe(300_000);
+    expect(overview.summary.general_offset_amount).toBe(0);
+    expect(overview.top_items[0]?.offset_amount).toBe(0);
     expect(overview.by_category[0]?.label).toBe("สาธารณูปโภค");
     expect(overview.top_items[0]?.label).toBe("ค่าไฟ");
     expect(overview.trend_monthly[0]?.period).toBe("2026-07");
     expect(overview.month_columns).toEqual(["2026-01", "2026-07"]);
     expect(overview.by_item_month[0]?.months["2026-07"]).toBe(80_000);
     expect(overview.branches).toHaveLength(1);
+  });
+
+  it("parses personal offset splits", () => {
+    const overview = normalizeExpenseOverview({
+      summary: {
+        amount: 450_000,
+        entries_amount: 300_000,
+        general_amount: 150_000,
+        general_offset_amount: -50_000,
+        general_offset_count: 3,
+      },
+      by_source: [
+        { key: "ENTRIES", amount: 300_000, line_count: 40 },
+        { key: "GENERAL", amount: 200_000, line_count: 77 },
+        { key: "OFFSET", amount: -50_000, line_count: 3 },
+      ],
+      by_category: [
+        {
+          key: "off",
+          label: "หักส่วนตัวจากบิลบริษัท",
+          amount: -50_000,
+          offset_amount: -50_000,
+        },
+      ],
+      top_items: [
+        {
+          key: "off-item",
+          label: "หักส่วนตัวจากบิลบริษัท",
+          offset_amount: -50_000,
+        },
+      ],
+    });
+    expect(overview.summary.general_offset_amount).toBe(-50_000);
+    expect(overview.summary.general_offset_count).toBe(3);
+    expect(overview.by_source.map((r) => r.key)).toEqual([
+      "ENTRIES",
+      "GENERAL",
+      "OFFSET",
+    ]);
+    expect(overview.by_category[0]?.offset_amount).toBe(-50_000);
+    expect(overview.top_items[0]?.offset_amount).toBe(-50_000);
   });
 });

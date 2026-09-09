@@ -30,9 +30,12 @@ export default function ExpenseGeneralTable({
       const supabase = createClient();
       const query = supabase
         .from("expense_general")
-        .select("*, expense_item(*), payment_method(*), branch(*)", {
-          count: "exact",
-        })
+        .select(
+          "*, expense_item(*), payment_method(*), branch(*), expense_receipt:ref_receipt_uuid(receipt_uuid, receipt_number, receipt_date, vat)",
+          {
+            count: "exact",
+          }
+        )
         .order("entry_date", { ascending: false })
         .limit(500);
 

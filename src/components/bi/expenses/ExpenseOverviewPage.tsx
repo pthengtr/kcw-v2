@@ -5,6 +5,7 @@ import {
   Building2,
   Layers3,
   Loader2,
+  MinusCircle,
   Receipt,
   RefreshCcw,
   Users,
@@ -45,6 +46,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import ExpenseCategorySplitTable from "./ExpenseCategorySplitTable";
 import ExpenseGroupChart from "./ExpenseGroupChart";
 import ExpenseItemTable from "./ExpenseItemTable";
 import ExpenseMonthCompareTable from "./ExpenseMonthCompareTable";
@@ -156,9 +158,14 @@ export default function ExpenseOverviewPage() {
 
   const sourceChartRows = useMemo(() => {
     if (!overview) return [];
+    const labels: Record<string, string> = {
+      ENTRIES: "บริษัท",
+      GENERAL: "ทั่วไป",
+      OFFSET: "หักส่วนตัว",
+    };
     return overview.by_source.map((row) => ({
       key: row.key,
-      label: row.key === "ENTRIES" ? "บริษัท" : "ทั่วไป",
+      label: labels[row.key] ?? row.key,
       amount: row.amount,
     }));
   }, [overview]);
@@ -183,7 +190,7 @@ export default function ExpenseOverviewPage() {
               ภาพรวมค่าใช้จ่าย
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              จากแอปค่าใช้จ่าย · บริษัท + ทั่วไป · ก่อน VAT/หลังหัก ณ ที่จ่ายตามสูตรบิล
+              จากแอปค่าใช้จ่าย · บริษัท + ทั่วไป · รวมหักส่วนตัวจากบิลบริษัท
             </p>
             <p className="mt-2 text-xs text-slate-600 sm:text-sm">
               ช่วง{" "}
@@ -379,8 +386,8 @@ export default function ExpenseOverviewPage() {
       ) : null}
 
       {loading && !overview ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
@@ -388,7 +395,7 @@ export default function ExpenseOverviewPage() {
 
       {overview ? (
         <BiLoadingBody loading={loading}>
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <SalesKpiCard
               title="ยอดค่าใช้จ่าย"
               value={formatBahtCompact(overview.summary.amount)}
@@ -404,9 +411,21 @@ export default function ExpenseOverviewPage() {
             />
             <SalesKpiCard
               title="ทั่วไป"
-              value={formatBahtCompact(overview.summary.general_amount)}
-              hint={`${formatCount(overview.summary.general_count)} รายการ`}
+              value={formatBahtCompact(
+                overview.summary.general_amount -
+                  overview.summary.general_offset_amount
+              )}
+              hint={`${formatCount(
+                overview.summary.general_count -
+                  overview.summary.general_offset_count
+              )} รายการ`}
               icon={<Users className="h-4 w-4" />}
+            />
+            <SalesKpiCard
+              title="หักส่วนตัว"
+              value={formatBahtCompact(overview.summary.general_offset_amount)}
+              hint={`${formatCount(overview.summary.general_offset_count)} รายการ`}
+              icon={<MinusCircle className="h-4 w-4" />}
             />
             <SalesKpiCard
               title="ประเภทที่ใช้"
@@ -442,6 +461,10 @@ export default function ExpenseOverviewPage() {
               title="แยกตามหมวด"
               rows={categoryChartRows}
             />
+          </section>
+
+          <section>
+            <ExpenseCategorySplitTable rows={overview.by_category} />
           </section>
 
           <section>

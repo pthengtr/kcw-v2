@@ -316,6 +316,8 @@ export function deriveIncomeStatementFromVat(
       general_count: 0,
       entries_amount: vat.summary.expense_before,
       general_amount: 0,
+      general_offset_amount: 0,
+      general_offset_count: 0,
     },
     previous_summary: {
       amount: vat.previous_summary.expense_before,

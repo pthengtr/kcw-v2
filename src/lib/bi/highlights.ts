@@ -277,7 +277,7 @@ export function buildExpenseHighlights(overview: BiExpenseOverview): string[] {
   );
 
   lines.push(
-    `ยอดค่าใช้จ่าย ${formatBaht(total)} (${changePhrase(amountDelta)}) · บริษัท ${formatBaht(overview.summary.entries_amount)} · ทั่วไป ${formatBaht(overview.summary.general_amount)}`
+    `ยอดค่าใช้จ่าย ${formatBaht(total)} (${changePhrase(amountDelta)}) · บริษัท ${formatBaht(overview.summary.entries_amount)} · ทั่วไป ${formatBaht(overview.summary.general_amount - overview.summary.general_offset_amount)} · หักส่วนตัว ${formatBaht(overview.summary.general_offset_amount)}`
   );
 
   const topItem = overview.top_items[0];

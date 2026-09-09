@@ -4,6 +4,7 @@ import ExpenseCommonReceiptSummary from "../ExpenseCommonReceiptSummary";
 import { ExpenseContext, ExpenseContextType } from "../ExpenseProvider";
 import ExpenseEntryTable from "./ExpenseEntryTable";
 import ExpenseCommonReceiptSummaryDebug from "../ExpenseCommonReceiptSummaryDebug";
+import ExpenseReceiptLinkedOffsets from "./ExpenseReceiptLinkedOffsets";
 import { getMyCookie } from "@/app/(root)/action";
 import { defaultReceiptEntryColumnVisibility } from "./ExpenseEntryColumn";
 
@@ -69,6 +70,9 @@ export default function ExpenseSummaryDetail() {
             />
           </div>
         </div>
+      )}
+      {selectedReceipt && columnVisibility && paginationPageSize && (
+        <ExpenseReceiptLinkedOffsets receipt={selectedReceipt} />
       )}
     </div>
   );
