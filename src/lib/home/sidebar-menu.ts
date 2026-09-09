@@ -1,7 +1,6 @@
 import {
   canAccessAnyBi,
   canAccessAdminRbac,
-  canAccessPoStatus,
   canAccessStatementSync,
   canAccessStockAudit,
   canAccessTigerPay,
@@ -13,8 +12,6 @@ export function canAccessHomeMenuItem(
   pageKeys: string[]
 ): boolean {
   switch (key) {
-    case "po":
-      return canAccessPoStatus(pageKeys);
     case "stockAudit":
       return canAccessStockAudit(pageKeys);
     case "bankStatement":

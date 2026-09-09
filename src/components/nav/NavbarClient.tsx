@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import {
   canAccessAdminRbac,
   canAccessAnyBi,
-  canAccessPoStatus,
   canAccessStatementSync,
   canAccessTigerPay,
 } from "@/lib/auth/client-permissions";
@@ -137,7 +136,6 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
   );
   const showTigerPay = pageKeys ? canAccessTigerPay(pageKeys) : false;
   const showStatementSync = pageKeys ? canAccessStatementSync(pageKeys) : false;
-  const showPoStatus = pageKeys ? canAccessPoStatus(pageKeys) : false;
   const showAdminRbac = pageKeys ? canAccessAdminRbac(pageKeys) : false;
 
   return (
@@ -225,15 +223,6 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     onNavigate={closeSheet}
                   />
                 ) : null}
-                {showPoStatus ? (
-                  <NavLinkButton
-                    href="/po"
-                    label="PO"
-                    icon={Menu}
-                    active={pathname === "/po" || pathname.startsWith("/po/")}
-                    onNavigate={closeSheet}
-                  />
-                ) : null}
                 {showAdminRbac ? (
                   <NavLinkButton
                     href="/admin/rbac"
@@ -306,17 +295,6 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     label="Bank Statement"
                     icon={Menu}
                     active={pathname === "/bank-statement-sync"}
-                    className="whitespace-nowrap px-2.5"
-                  />
-                </NavigationMenuItem>
-              ) : null}
-              {showPoStatus ? (
-                <NavigationMenuItem>
-                  <NavLinkButton
-                    href="/po"
-                    label="PO"
-                    icon={Menu}
-                    active={pathname === "/po" || pathname.startsWith("/po/")}
                     className="whitespace-nowrap px-2.5"
                   />
                 </NavigationMenuItem>
