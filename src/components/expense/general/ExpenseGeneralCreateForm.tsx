@@ -31,6 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -84,7 +85,10 @@ const formSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["unit_price"],
-          message: "กรุณาใส่จำนวนที่หัก",
+          message:
+            val.unit_price < 0
+              ? "ใส่เป็นจำนวนบวก ไม่ต้องใส่เครื่องหมายลบ"
+              : "กรุณาใส่จำนวนที่หัก",
         });
       }
     } else {
@@ -313,6 +317,7 @@ export default function ExpenseGeneralCreateForm({
             <div className="text-sm font-medium">หักจากบิลบริษัท</div>
             <p className="text-xs text-muted-foreground">
               ส่วนที่เคลม VAT แล้ว แต่บริษัทไม่ได้จ่ายจริง
+              ใส่จำนวนที่หักเป็นจำนวนบวก ระบบจะบันทึกเป็นยอดติดลบให้
             </p>
           </div>
           <Switch
@@ -447,19 +452,36 @@ export default function ExpenseGeneralCreateForm({
         <FormField
           control={form.control}
           name="unit_price"
-          render={({ field }) => (
-            <FormItem className="w-full">
-              <FormLabel>{isOffset ? "จำนวนที่หัก" : "ราคาต่อหน่วย"}</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  {...form.register("unit_price", { valueAsNumber: true })}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const amount = Number(form.watch("unit_price"));
+            const showOffsetHint = isOffset && Number.isFinite(amount) && amount > 0;
+            return (
+              <FormItem className="w-full">
+                <FormLabel>{isOffset ? "จำนวนที่หัก" : "ราคาต่อหน่วย"}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={isOffset ? 0 : undefined}
+                    step="0.01"
+                    placeholder={isOffset ? "1070" : undefined}
+                    {...field}
+                    {...form.register("unit_price", { valueAsNumber: true })}
+                  />
+                </FormControl>
+                {isOffset ? (
+                  <FormDescription>
+                    ใส่จำนวนบวกเท่านั้น ไม่ต้องใส่เครื่องหมายลบ
+                    หักบางส่วนให้พิมพ์ยอดที่ต้องการหัก
+                    หักทั้งบิลกดปุ่มด้านบนหรือใส่ยอดคงเหลือ
+                    {showOffsetHint
+                      ? ` จะบันทึกเป็น -${formatBaht(amount)}`
+                      : ""}
+                  </FormDescription>
+                ) : null}
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
 
         {isOffset ? null : (
