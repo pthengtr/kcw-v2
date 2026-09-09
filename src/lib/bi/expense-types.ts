@@ -8,6 +8,8 @@ export type BiExpenseSummary = {
   general_count: number;
   entries_amount: number;
   general_amount: number;
+  general_offset_amount: number;
+  general_offset_count: number;
 };
 
 export type BiExpensePreviousSummary = {
@@ -29,6 +31,9 @@ export type BiExpenseCategoryRow = {
   amount: number;
   item_count: number;
   line_count: number;
+  entries_amount: number;
+  general_amount: number;
+  offset_amount: number;
 };
 
 export type BiExpenseItemRow = {
@@ -39,6 +44,7 @@ export type BiExpenseItemRow = {
   line_count: number;
   entries_amount: number;
   general_amount: number;
+  offset_amount: number;
 };
 
 export type BiExpenseTrendRow = {
@@ -47,6 +53,7 @@ export type BiExpenseTrendRow = {
   line_count: number;
   entries_amount: number;
   general_amount: number;
+  offset_amount: number;
 };
 
 export type BiExpenseItemMonthRow = {

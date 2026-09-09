@@ -339,6 +339,8 @@ describe("BI highlight builders", () => {
         general_count: 80,
         entries_amount: 300_000,
         general_amount: 200_000,
+        general_offset_amount: 0,
+        general_offset_count: 0,
       },
       previous_summary: {
         amount: 450_000,
@@ -361,6 +363,9 @@ describe("BI highlight builders", () => {
           amount: 120_000,
           item_count: 4,
           line_count: 20,
+          entries_amount: 100_000,
+          general_amount: 20_000,
+          offset_amount: 0,
         },
       ],
       top_items: [
@@ -372,6 +377,7 @@ describe("BI highlight builders", () => {
           line_count: 5,
           entries_amount: 70_000,
           general_amount: 10_000,
+          offset_amount: 0,
         },
       ],
       trend_monthly: [],
@@ -383,6 +389,7 @@ describe("BI highlight builders", () => {
     const lines = buildExpenseHighlights(expenseBase);
     expect(lines[0]).toContain("ยอดค่าใช้จ่าย");
     expect(lines[0]).toContain("บริษัท");
+    expect(lines[0]).toContain("หักส่วนตัว");
     expect(lines.some((l) => l.includes("ค่าไฟ"))).toBe(true);
     expect(lines.some((l) => l.includes("สาธารณูปโภค"))).toBe(true);
     expect(lines.some((l) => l.includes("สำนักงานใหญ่"))).toBe(true);

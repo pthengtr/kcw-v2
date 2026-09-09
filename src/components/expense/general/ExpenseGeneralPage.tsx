@@ -63,10 +63,20 @@ export default function ExpenseGeneralPage() {
                   branch_uuid: selectedGeneralEntry.branch_uuid,
                   item_uuid: selectedGeneralEntry.item_uuid,
                   description: selectedGeneralEntry.description,
-                  unit_price: selectedGeneralEntry.unit_price,
-                  quantity: selectedGeneralEntry.quantity,
+                  unit_price: selectedGeneralEntry.ref_receipt_uuid
+                    ? Math.abs(
+                        selectedGeneralEntry.unit_price *
+                          selectedGeneralEntry.quantity
+                      )
+                    : selectedGeneralEntry.unit_price,
+                  quantity: selectedGeneralEntry.ref_receipt_uuid
+                    ? 1
+                    : selectedGeneralEntry.quantity,
                   payment_uuid: selectedGeneralEntry.payment_uuid,
                   remark: selectedGeneralEntry.remark,
+                  is_offset: Boolean(selectedGeneralEntry.ref_receipt_uuid),
+                  ref_receipt_uuid:
+                    selectedGeneralEntry.ref_receipt_uuid ?? "",
                 }}
               />
               <ExpenseGeneralDeleteDialog />

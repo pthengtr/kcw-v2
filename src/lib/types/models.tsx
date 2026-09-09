@@ -77,9 +77,14 @@ export type ExpenseGeneralType = {
   unit_price: number;
   quantity: number;
   remark: string;
+  ref_receipt_uuid?: UUID | null;
   payment_method: PaymentMethodType;
   branch: BranchType;
   expense_item: ExpenseItemType;
+  expense_receipt?: Pick<
+    ExpenseReceiptType,
+    "receipt_uuid" | "receipt_number" | "receipt_date" | "vat"
+  > | null;
 };
 
 export type SkuCatalogRowType = {

@@ -50,7 +50,7 @@ export default function ExpenseGroupChart({
 
   const total = chartRows.reduce((sum, r) => sum + r.amount, 0);
   const data = chartRows
-    .filter((r) => r.amount !== 0)
+    .filter((r) => r.amount > 0)
     .map((r) => ({
       key: r.key,
       name: r.label,

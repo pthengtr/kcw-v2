@@ -66,6 +66,7 @@ export default function ExpenseGeneralFormDialog({
         )}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-4 sm:px-12">
           <ExpenseGeneralCreateForm
+            key={`${update}-${open}`}
             defaultValues={defaultValues}
             update={update}
           />

@@ -70,9 +70,12 @@ export default function ExpenseGeneralSearchForm({
     console.log(searchData);
     let query = supabase
       .from("expense_general")
-      .select("*,  branch(*), payment_method(*), expense_item(*)", {
-        count: "exact",
-      })
+      .select(
+        "*, branch(*), payment_method(*), expense_item(*), expense_receipt:ref_receipt_uuid(receipt_uuid, receipt_number, receipt_date, vat)",
+        {
+          count: "exact",
+        }
+      )
       .order("entry_date", { ascending: false })
       .limit(500);
 

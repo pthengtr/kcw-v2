@@ -54,6 +54,9 @@ function parseCategoryRows(value: unknown): BiExpenseCategoryRow[] {
       amount: asNumber(r.amount),
       item_count: asNumber(r.item_count),
       line_count: asNumber(r.line_count),
+      entries_amount: asNumber(r.entries_amount),
+      general_amount: asNumber(r.general_amount),
+      offset_amount: asNumber(r.offset_amount),
     };
   });
 }
@@ -70,6 +73,7 @@ function parseItemRows(value: unknown): BiExpenseItemRow[] {
       line_count: asNumber(r.line_count),
       entries_amount: asNumber(r.entries_amount),
       general_amount: asNumber(r.general_amount),
+      offset_amount: asNumber(r.offset_amount),
     };
   });
 }
@@ -84,6 +88,7 @@ function parseTrendRows(value: unknown): BiExpenseTrendRow[] {
       line_count: asNumber(r.line_count),
       entries_amount: asNumber(r.entries_amount),
       general_amount: asNumber(r.general_amount),
+      offset_amount: asNumber(r.offset_amount),
     };
   });
 }
@@ -146,6 +151,8 @@ export function normalizeExpenseOverview(raw: unknown): BiExpenseOverview {
       general_count: asNumber(summary.general_count),
       entries_amount: asNumber(summary.entries_amount),
       general_amount: asNumber(summary.general_amount),
+      general_offset_amount: asNumber(summary.general_offset_amount),
+      general_offset_count: asNumber(summary.general_offset_count),
     },
     previous_summary: {
       amount: asNumber(previous.amount),

@@ -1,5 +1,7 @@
 -- Expense BI overview from public app tables (not raw_kcw).
 -- Amount rules match fn_item_year_summary_all / entries / general.
+-- Personal offsets: expense_general.ref_receipt_uuid + negative amount.
+-- They reduce overall totals; VAT BI / taxed P&L ignore general.
 -- See docs/bi/kcw-expense-data-dictionary.md.
 
 CREATE OR REPLACE FUNCTION public.fn_bi_expense_overview(
@@ -104,7 +106,8 @@ BEGIN
             * (entry_net - (entry_net / receipt_net_sum) * receipt_discount)
             * factor
         ELSE 0
-      END AS amount
+      END AS amount,
+      false AS is_offset
     FROM entry_shares
   ),
   general_effective AS (
@@ -115,11 +118,12 @@ BEGIN
       i.item_name,
       c.category_uuid,
       c.category_name,
-      NULL::uuid AS receipt_uuid,
+      g.ref_receipt_uuid AS receipt_uuid,
       g.branch_uuid,
       b.branch_name,
       (g.entry_date AT TIME ZONE p_timezone)::date AS expense_date,
-      (g.unit_price * g.quantity)::double precision AS amount
+      (g.unit_price * g.quantity)::double precision AS amount,
+      (g.ref_receipt_uuid IS NOT NULL AND (g.unit_price * g.quantity) < 0) AS is_offset
     FROM public.expense_general g
     JOIN public.expense_item i ON i.item_uuid = g.item_uuid
     JOIN public.expense_category c ON c.category_uuid = i.category_uuid
@@ -200,7 +204,9 @@ BEGIN
       COUNT(DISTINCT receipt_uuid) FILTER (WHERE source = 'ENTRIES')::int AS receipt_count,
       COUNT(*) FILTER (WHERE source = 'GENERAL')::int AS general_count,
       COALESCE(SUM(amount) FILTER (WHERE source = 'ENTRIES'), 0) AS entries_amount,
-      COALESCE(SUM(amount) FILTER (WHERE source = 'GENERAL'), 0) AS general_amount
+      COALESCE(SUM(amount) FILTER (WHERE source = 'GENERAL'), 0) AS general_amount,
+      COALESCE(SUM(amount) FILTER (WHERE is_offset), 0) AS general_offset_amount,
+      COUNT(*) FILTER (WHERE is_offset)::int AS general_offset_count
     FROM combined
   ),
   prev_summary AS (
@@ -212,7 +218,11 @@ BEGIN
   ),
   by_source AS (
     SELECT
-      source AS key,
+      CASE
+        WHEN source = 'ENTRIES' THEN 'ENTRIES'
+        WHEN is_offset THEN 'OFFSET'
+        ELSE 'GENERAL'
+      END AS key,
       SUM(amount) AS amount,
       COUNT(*)::int AS line_count
     FROM combined
@@ -233,7 +243,10 @@ BEGIN
       MAX(category_name) AS label,
       SUM(amount) AS amount,
       COUNT(DISTINCT item_uuid)::int AS item_count,
-      COUNT(*)::int AS line_count
+      COUNT(*)::int AS line_count,
+      COALESCE(SUM(amount) FILTER (WHERE source = 'ENTRIES'), 0) AS entries_amount,
+      COALESCE(SUM(amount) FILTER (WHERE source = 'GENERAL' AND NOT is_offset), 0) AS general_amount,
+      COALESCE(SUM(amount) FILTER (WHERE is_offset), 0) AS offset_amount
     FROM combined
     GROUP BY category_uuid
   ),
@@ -245,7 +258,8 @@ BEGIN
       SUM(amount) AS amount,
       COUNT(*)::int AS line_count,
       COALESCE(SUM(amount) FILTER (WHERE source = 'ENTRIES'), 0) AS entries_amount,
-      COALESCE(SUM(amount) FILTER (WHERE source = 'GENERAL'), 0) AS general_amount
+      COALESCE(SUM(amount) FILTER (WHERE source = 'GENERAL' AND NOT is_offset), 0) AS general_amount,
+      COALESCE(SUM(amount) FILTER (WHERE is_offset), 0) AS offset_amount
     FROM combined
     GROUP BY item_uuid
   ),
@@ -261,7 +275,8 @@ BEGIN
       SUM(amount) AS amount,
       COUNT(*)::int AS line_count,
       COALESCE(SUM(amount) FILTER (WHERE source = 'ENTRIES'), 0) AS entries_amount,
-      COALESCE(SUM(amount) FILTER (WHERE source = 'GENERAL'), 0) AS general_amount
+      COALESCE(SUM(amount) FILTER (WHERE source = 'GENERAL' AND NOT is_offset), 0) AS general_amount,
+      COALESCE(SUM(amount) FILTER (WHERE is_offset), 0) AS offset_amount
     FROM combined
     GROUP BY 1
   ),
@@ -316,7 +331,9 @@ BEGIN
         'receipt_count', receipt_count,
         'general_count', general_count,
         'entries_amount', entries_amount,
-        'general_amount', general_amount
+        'general_amount', general_amount,
+        'general_offset_amount', general_offset_amount,
+        'general_offset_count', general_offset_count
       ) FROM summary
     ),
     'previous_summary', (
@@ -349,7 +366,10 @@ BEGIN
         'label', label,
         'amount', amount,
         'item_count', item_count,
-        'line_count', line_count
+        'line_count', line_count,
+        'entries_amount', entries_amount,
+        'general_amount', general_amount,
+        'offset_amount', offset_amount
       ) ORDER BY amount DESC)
       FROM by_category
     ), '[]'::jsonb),
@@ -361,7 +381,8 @@ BEGIN
         'amount', amount,
         'line_count', line_count,
         'entries_amount', entries_amount,
-        'general_amount', general_amount
+        'general_amount', general_amount,
+        'offset_amount', offset_amount
       ) ORDER BY amount DESC, label)
       FROM top_items
     ), '[]'::jsonb),
@@ -371,7 +392,8 @@ BEGIN
         'amount', amount,
         'line_count', line_count,
         'entries_amount', entries_amount,
-        'general_amount', general_amount
+        'general_amount', general_amount,
+        'offset_amount', offset_amount
       ) ORDER BY period)
       FROM trend_monthly
     ), '[]'::jsonb),
@@ -403,6 +425,6 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fn_bi_expense_overview(date, date, uuid, text, integer, text) IS
-  'Expense BI from public.expense_*: company entries + general; same amount rules as year-summary RPCs.';
+  'Expense BI from public.expense_*: company entries + general; personal offsets (linked negative general) split as OFFSET.';
 
 GRANT EXECUTE ON FUNCTION public.fn_bi_expense_overview(date, date, uuid, text, integer, text) TO service_role;
