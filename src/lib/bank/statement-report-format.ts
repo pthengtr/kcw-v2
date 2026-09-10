@@ -72,8 +72,6 @@ const CHEQUE_NO_KEYS = [
   "หมายเลขเช็ค",
 ] as const;
 
-const DONE_MATCH_STATUSES = new Set(["matched", "manual", "resolved"]);
-
 const UNMATCHED_NOTE = "ยังไม่พบรายการจับคู่";
 
 /** Short human-readable document / reconciliation type for ประเภท. */

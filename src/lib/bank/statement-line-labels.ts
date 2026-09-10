@@ -4,7 +4,7 @@ import {
 } from "@/lib/bank/statement-report-format";
 import { attachMatchedPartyAndBills } from "@/lib/bank/statement-report-party-lookup";
 
-type LineForLabel = {
+export type LineForLabel = {
   account_no?: string | null;
   bank_name?: string | null;
   txn_date?: string | null;

@@ -4,7 +4,10 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
-import { decorateStatementLineLabels } from "@/lib/bank/statement-line-labels";
+import {
+  decorateStatementLineLabels,
+  type LineForLabel,
+} from "@/lib/bank/statement-line-labels";
 
 const QuerySchema = z.object({
   account_no: z.string().trim().min(1),
@@ -114,10 +117,16 @@ export async function GET(req: Request) {
     );
   }
 
-  const labeled = await decorateStatementLineLabels(data ?? [], supabase);
+  const labeled = await decorateStatementLineLabels(
+    (data ?? []) as LineForLabel[],
+    supabase,
+  );
   const rows = labeled.map((row) => {
-    const { raw_json: _rawJson, debit: _debit, credit: _credit, value_date: _valueDate, ...rest } =
-      row;
+    const rest: Record<string, unknown> = { ...row };
+    delete rest.raw_json;
+    delete rest.debit;
+    delete rest.credit;
+    delete rest.value_date;
     return rest;
   });
 

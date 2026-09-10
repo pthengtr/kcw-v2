@@ -3,7 +3,8 @@ import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/auth/requirePermission";
-import { decorateStatementLineLabels } from "@/lib/bank/statement-line-labels";
+import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { decorateStatementLineLabels, type LineForLabel } from "@/lib/bank/statement-line-labels";
 import {
   BANK_MATCH_STATUSES,
   canOperatorEditMatchFields,
@@ -47,7 +48,10 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const [labeled] = await decorateStatementLineLabels([data], supabase);
+  const [labeled] = await decorateStatementLineLabels(
+    [data as LineForLabel],
+    supabase,
+  );
   return NextResponse.json({ row: labeled });
 }
 
@@ -236,7 +240,7 @@ export async function PATCH(
   }
 
   const [labeled] = data
-    ? await decorateStatementLineLabels([data], supabase)
+    ? await decorateStatementLineLabels([data as LineForLabel], supabase)
     : [];
   return NextResponse.json({ ok: true, row: labeled ?? data });
 }
