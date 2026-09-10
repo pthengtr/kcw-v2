@@ -10,6 +10,14 @@ Account **064-8-92039-3** (Kasikorn, ends **0393**) is the **SYP / สี่แ�
 - **Outbound** ≈ app payment vouchers (**PV / 3PV**) from `public.expense_*` (not PARTS9 `raw_kcw` PVMAS)
 - From **July 2026**, most direct OpEx payments moved to account **233-1-18475-9** (ends 4759, payment text `กสิกร xxxxxx4759`). Keep matching `%0393%` receipts here when they appear; do **not** pull `%4759%` receipts onto this account
 
+## Monthly Excel report labels
+
+The monthly workbook derives **รายการ / ชื่อบริษัท** at report time. Keep refs so it can label:
+
+- Thai QR (`รับเงินจากการขายด้วย Thai QR Payment`) → that exact phrase, no company suffix
+- Narumon / นฤมล cash deposits matched to **3TR** → `ขายเงินสด 3TR DD/MM/YYYY` using the matched bill date
+- Internal sweeps → `โอนไป` / `รับโอน` + `KBANK` or `KTB` + compact counterpart digits (`matched_ref_id` = full account no.)
+
 ## Job scope
 
 - Account: `{{account_no}}`
@@ -85,6 +93,32 @@ Notes:
 
 `matched_ref_type = tr_bill` | `tr_bundle` | `tr_remainder`  
 `matched_ref_id = <BILLNO>` or comma-separated BILLNOs for bundles / remainders
+
+Thai QR bank rows use `รายการ` / `description` = **รับเงินจากการขายด้วย Thai QR Payment**. The Excel item name is that phrase only (do not expect `รายละเอียด` company text to be appended).
+
+### 1b) Cash front-store deposits — เงินสดหน้าร้าน (Narumon)
+
+Detect via `raw_json->>'รายละเอียด'` (not just `description`):
+
+- `X2446` / `NARUMON WITHAYAPAL` / `นฤมล วิทยผโลทัย`
+- `X8740` / `MISS NARUMON`
+
+Matching:
+
+- Amount = one **3TR** bill or a small same-`BILLDATE` 3TR bundle (same allocation rules as §1)
+- Typical lag: bank `txn_date` = bill date **+ 1** (sometimes +2 for weekend / multi-bill)
+- Auto-`matched` when unique on T+1; else relaxed `review` within T+1 .. T+5
+- Do **not** treat these as internal transfers (personal KTB, not a KCW company account)
+- Do **not** use `ขายเงินสด` when the same Narumon transfer is actually a **3TAR−3CNTAR** net — that stays on the daily-net sales label
+
+| Kind | `matched_ref_type` | `match_status` | `match_reason` (Thai) |
+|---|---|---|---|
+| Cash → 1 3TR | `tr_bill` | `matched` / `review` | `เงินสดหน้าร้าน (บิลโอน 3TR)` |
+| Cash → several 3TR | `tr_bundle` | `matched` / `review` | `เงินสดหน้าร้าน (บิลโอน 3TR รวมหลายใบ)` |
+
+`matched_ref_id` = bill no. (comma-separated for bundles). Mention X2446/X8740 and **bill dates** in `match_notes`.
+
+The monthly report item name is **`ขายเงินสด 3TR [วันที่บิล]`** (e.g. `ขายเงินสด 3TR 09/09/2026`).
 
 ### 2) Daily net 3TAR − 3CNTAR
 
@@ -186,7 +220,7 @@ Notes from May/June probe:
 
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
-| Internal sweep out | `internal_transfer` | `matched` | **Always classify** large transfers to X6184 / X4759 / X7236 / other KCW accounts when counterpart is clear from `raw_json` or same-day sister-account inflow — do not leave `pending`/`unmatched` | `โอนภายใน` |
+| Internal sweep out | `internal_transfer` | `matched` | **Always classify** large transfers to X6184 / X4759 / X7236 / other KCW accounts when counterpart is clear from `raw_json` or same-day sister-account inflow — do not leave `pending`/`unmatched`. Report label: `โอนไป KTB 2486006184` / `โอนไป KBANK …` from `matched_ref_id` | `โอนภายใน` |
 | Director parts reimbursement | `expense_pv` or best available | `matched` / `review` | Transfers to Narumon X2446 that settle branch parts paid via `3RV…` (not always a same-day `%0393%` PV) — populate refs when unique; else `review` with Thai note | `คืนเงินอะไหล่สาขา (กรรมการ)` |
 | 3CTAR / sales adjustment refund | — | `review` | Small transfer to X2446 that exactly equals a same-day 3TAR shortfall / 3CTAR adjustment — explain both legs in `match_notes` | `โอนคืนปรับปรุงยอดขาย` |
 | No unique expense | — | `unmatched` / `review` | Do not invent blind subset-sums across many receipts | `ยังไม่พบใบสำคัญจ่าย` |

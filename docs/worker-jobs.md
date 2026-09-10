@@ -137,7 +137,7 @@ New features almost never need new queue tables — only new `job_type` values a
 ### Bank statement monthly report from `/bank-statement-sync` (kcw-v2) — **not** a PC worker job
 
 - UI **สร้างรายงาน** → browser calls Supabase Edge Function `generate-bank-statement-report` with JSON `{ year, month }` (default = Bangkok today − 10 days).
-- Builds the VAT-style multi-account Excel (one sheet per account) with simplified operator columns (`#` / วันที่ / รายการ·ชื่อบริษัท / เลขที่บิล / ถอน·ฝาก / ยอดคงเหลือ / หมายเหตุ) from live matches + source masters, then uploads to Storage `bank-statements/reports/{year}/{mm}/…` and returns a signed download URL. **No Google Drive.**
+- Builds the VAT-style multi-account Excel (one sheet per account) with simplified operator columns (`#` / วันที่ / รายการ·ชื่อบริษัท / ประเภท / เลขที่บิล / ถอน·ฝาก / ยอดคงเหลือ / หมายเหตุ) from live matches + source masters, then uploads to Storage `bank-statements/reports/{year}/{mm}/…` and returns a signed download URL. **No Google Drive.** The KTB `248-6-00618-4` sheet adds `เลขที่เช็ค`. Item names override for Thai QR, Narumon cash→TR/3TR (`ขายเงินสด …`), and internal transfers (`โอนไป` / `รับโอน` + KBANK|KTB + account digits).
 - Source: [`supabase/functions/generate-bank-statement-report/`](../supabase/functions/generate-bank-statement-report/).
 - Auth: same RBAC gate as import (`bank_statement_sync` or `admin`). Client helper: `src/lib/bank/statement-report.ts` + `StatementReportDialog`.
 - Docs: [bank-statement-upload.md](./bank-statement-upload.md).

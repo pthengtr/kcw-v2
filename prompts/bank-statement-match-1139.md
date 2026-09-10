@@ -6,6 +6,11 @@ Follow the rules below strictly, then update rows in Supabase directly.
 
 Account **248-0-42113-9** (KTB, ends with **1139**) receives **online marketplace settlement payouts** (Shopee / Lazada / TikTok). These are booked in RVMAS as **`RVI…` vouchers**, not as classic customer `RC…` receipts and not as individual `TAD` sales bills.
 
+## Monthly Excel report labels
+
+- Marketplace inflows: report maps Shopee / Lazada / TikTok keywords in bank detail to `ลูกค้า …` (even unmatched/manual)
+- Outbound internal sweeps to `248-6-00618-4` (`matched_ref_type = internal_transfer`) → **`โอนไป KTB 2486006184`**. Set `matched_ref_id = 248-6-00618-4`
+
 ## Job scope
 
 - Account: `{{account_no}}`

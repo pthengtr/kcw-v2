@@ -20,6 +20,14 @@ Known inbound counterparts (July 2026 ground truth):
 
 Do **not** use PARTS9 `raw_kcw.raw_hq_pvmas_notes_vouchers` for this account (that belongs to **141-1-72355-7**).
 
+Cheque number lives in `bank_reference` and/or `raw_json->>'CHEQUE NO.'` for ICAS clears (`TRANSACTION CODE` often `CBCA`). The monthly Excel **เลขที่เช็ค** column on this account’s sheet copies **only that number** — never the ICAS `DESCRIPTION` (`SBK:11 SBR:642…`).
+
+## Monthly Excel report labels
+
+- `เลขที่เช็ค` is presentation-only on this tab (from `CHEQUE NO.` / `bank_reference`)
+- Inbound internal funding → `รับโอน KBANK 0648920393` / `รับโอน KTB 2480421139` when `matched_ref_id` is the full counterpart account
+- Do **not** run sales matching here, so Thai QR / Narumon cash labels do not apply
+
 ## Job scope
 
 - Account: `{{account_no}}`

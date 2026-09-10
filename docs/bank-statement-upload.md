@@ -29,7 +29,15 @@ A single workbook may contain several account tabs. Each tab is parsed independe
 
 Upstream Drive BAT (thin uploader → this Edge Function): [kcw-analytics `docs/bank_statement_upload.md`](https://github.com/pthengtr/kcw-analytics/blob/main/docs/bank_statement_upload.md).
 
-Report Excel columns (operator-facing): `#`, `วันที่`, `รายการ / ชื่อบริษัท`, `ประเภท`, `เลขที่บิล`, `ถอนเงิน`, `ฝากเงิน`, `ยอดคงเหลือ`, `หมายเหตุ` (from operator `report_remark` on each line). Company/bill fields are resolved at report time from live matches + source masters; matched daily net sales (`tar_cntar_net`) show `ยอดขายสุทธิรายวัน (TAR|3TAR …) ของวันที่ DD/MM/YYYY` using the sales date in `matched_ref_id`. On account `KTB_248-0-42113-9`, Shopee/Lazada/TikTok keywords in bank detail map to `ลูกค้า …` even when unmatched/manual. Raw bank columns stay in `bank.statement_lines` for reconciliation.
+Report Excel columns (operator-facing): `#`, `วันที่`, `รายการ / ชื่อบริษัท`, `ประเภท`, `เลขที่บิล`, `ถอนเงิน`, `ฝากเงิน`, `ยอดคงเหลือ`, `หมายเหตุ` (from operator `report_remark` on each line). The **KTB `248-6-00618-4`** sheet also has **`เลขที่เช็ค`**, filled only with the cheque number from `raw_json` `CHEQUE NO.` / `bank_reference` (never the full ICAS narrative). Company/bill fields are resolved at report time from live matches + source masters. Item-name overrides:
+
+- Thai QR (`รับเงินจากการขายด้วย Thai QR Payment` in bank `รายการ` / detail) → that exact phrase, with no company or payer suffix
+- Internal transfer among the six KCW accounts → `โอนไป` / `รับโอน` + `KBANK|KTB` + compact account digits (e.g. `โอนไป KTB 2486006184`)
+- Narumon / นฤมล cash deposit matched to TR / 3TR → `ขายเงินสด TR|3TR DD/MM/YYYY` using the matched bill date
+- Matched daily net sales (`tar_cntar_net`) → `ยอดขายสุทธิรายวัน (TAR|3TAR …) ของวันที่ DD/MM/YYYY`
+- On account `KTB_248-0-42113-9`, Shopee/Lazada/TikTok keywords in bank detail map to `ลูกค้า …` even when unmatched/manual
+
+Raw bank columns stay in `bank.statement_lines` for reconciliation.
 
 ## UI
 
@@ -66,7 +74,7 @@ const { data, error } = await supabase.functions.invoke(
 ```
 
 Source of the Edge Function: [`supabase/functions/generate-bank-statement-report/`](../supabase/functions/generate-bank-statement-report/) (Deno; excluded from the Next.js `tsconfig` so `npm:` imports are not typechecked by `next build`).
-When Management API / CLI deploy is unavailable, production may run a tiny Storage-backed loader (`reports/_bundles/generate-bank-statement-report-v18.js`) built via `node supabase/functions/generate-bank-statement-report/build-storage-bundle.mjs --upload`. Prefer `supabase functions deploy generate-bank-statement-report` when credentials allow.
+When Management API / CLI deploy is unavailable, production may run a tiny Storage-backed loader (`reports/_bundles/generate-bank-statement-report-v20.js`) built via `node supabase/functions/generate-bank-statement-report/build-storage-bundle.mjs --upload`. Prefer `supabase functions deploy generate-bank-statement-report` when credentials allow.
   
 No Google Drive write — operators download from the signed URL (or Storage path under the private `bank-statements` bucket).  
 Rows with `match_status = ignored` (operator ไม่ใช้) are **omitted** from the Excel; response includes `ignored_skipped`.

@@ -6,6 +6,10 @@ Follow the rules below strictly, then update rows in Supabase directly.
 
 Account **141-1-72355-7** (Kasikorn, ends **3557**) is primarily a **payment / outflow** account. Match **outbound** rows first.
 
+## Monthly Excel report labels
+
+Inbound funding from sister KCW accounts (`matched_ref_type = internal_transfer`) shows as **`รับโอน KBANK 0648917236`** (or the counterpart’s KBANK/KTB + compact digits). Set `matched_ref_id` to the full dashed account no.
+
 ## Job scope
 
 - Account: `{{account_no}}`
