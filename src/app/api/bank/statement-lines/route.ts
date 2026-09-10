@@ -4,6 +4,10 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import {
+  decorateStatementLineLabels,
+  type LineForLabel,
+} from "@/lib/bank/statement-line-labels";
 
 const QuerySchema = z.object({
   account_no: z.string().trim().min(1),
@@ -83,9 +87,11 @@ export async function GET(req: Request) {
         "report_remark",
         "matched_at",
         "matched_by",
-        "source_sheet_name",
-        "source_row_number",
         "source_file_id",
+        "raw_json",
+        "debit",
+        "credit",
+        "value_date",
       ].join(","),
       { count: "exact" }
     )
@@ -111,8 +117,21 @@ export async function GET(req: Request) {
     );
   }
 
+  const labeled = await decorateStatementLineLabels(
+    (data ?? []) as LineForLabel[],
+    supabase,
+  );
+  const rows = labeled.map((row) => {
+    const rest: Record<string, unknown> = { ...row };
+    delete rest.raw_json;
+    delete rest.debit;
+    delete rest.credit;
+    delete rest.value_date;
+    return rest;
+  });
+
   return NextResponse.json({
-    rows: data ?? [],
+    rows,
     count: count ?? null,
     account_no,
     from,
