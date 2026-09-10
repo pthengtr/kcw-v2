@@ -33,9 +33,11 @@ export type StatementLineRow = {
   report_remark: string | null;
   matched_at: string | null;
   matched_by: string | null;
-  source_sheet_name: string | null;
-  source_row_number: number | null;
+  source_sheet_name?: string | null;
+  source_row_number?: number | null;
   source_file_id: string | null;
+  /** Same รายการ / ชื่อบริษัท text as the monthly Excel report. */
+  item_label?: string | null;
 };
 
 export type {

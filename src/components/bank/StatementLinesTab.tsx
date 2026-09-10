@@ -45,6 +45,12 @@ type BankAccountOption = {
   bank_name: string | null;
 };
 
+function itemLabel(row: StatementLineRow): string {
+  const label = row.item_label?.trim();
+  if (label) return label;
+  return row.description?.trim() || "";
+}
+
 function prettyJson(value: unknown) {
   try {
     return JSON.stringify(value, null, 2);
@@ -647,7 +653,7 @@ export default function StatementLinesTab({
         ...exportRows.map((r) =>
           [
             r.txn_date,
-            r.description,
+            itemLabel(r) || r.description,
             r.amount,
             r.direction,
             r.match_status,
@@ -695,7 +701,9 @@ export default function StatementLinesTab({
         header: "รายละเอียด",
         className: "min-w-[12rem] max-w-[20rem]",
         render: (r) => (
-          <span className="line-clamp-2 break-words">{r.description ?? ""}</span>
+          <span className="line-clamp-2 break-words">
+            {itemLabel(r) || "—"}
+          </span>
         ),
       },
       {
@@ -775,18 +783,6 @@ export default function StatementLinesTab({
           </span>
         ),
       },
-      {
-        key: "source_sheet_name",
-        header: "ชีทต้นทาง",
-        className: "hidden xl:table-cell whitespace-nowrap",
-        render: (r) => r.source_sheet_name ?? "",
-      },
-      {
-        key: "source_row_number",
-        header: "แถวต้นทาง",
-        className: "text-right whitespace-nowrap hidden xl:table-cell",
-        render: (r) => r.source_row_number ?? "",
-      },
     ],
     []
   );
@@ -808,7 +804,7 @@ export default function StatementLinesTab({
           <div>
             <div className="text-xs text-muted-foreground">รายละเอียด</div>
             <div className="text-sm break-words">
-              {row.description || "—"}
+              {itemLabel(row) || "—"}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -1047,7 +1043,7 @@ export default function StatementLinesTab({
             <DialogTitle>รายละเอียดรายการเดินบัญชี</DialogTitle>
             <DialogDescription>
               {selected
-                ? `${selected.txn_date} • ${selected.description ?? ""}`
+                ? `${selected.txn_date} • ${itemLabel(selected) || selected.description || ""}`
                 : ""}
             </DialogDescription>
           </DialogHeader>
