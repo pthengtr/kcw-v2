@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/auth/requirePermission";
+import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { decorateStatementLineLabels } from "@/lib/bank/statement-line-labels";
 
 const QuerySchema = z.object({
