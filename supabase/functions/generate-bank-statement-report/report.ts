@@ -11,6 +11,7 @@ import {
   COMPANY_ADDRESS,
   COMPANY_NAME,
   TAX_ID,
+  columnsForAccount,
   type EnrichedRow,
   type ReportColumn,
 } from "./report-format.ts";
@@ -60,7 +61,11 @@ export async function buildWorkbookBuffer(
 
   for (const [sheetName, rows] of entries) {
     const ws = wb.addWorksheet(sheetName.slice(0, 31));
-    const lastCol = Math.max(COLUMN_ORDER.length, 8);
+    const sample = rows[0];
+    const columns: readonly ReportColumn[] = sample
+      ? columnsForAccount(sample.bank_name, sample.account_no)
+      : COLUMN_ORDER;
+    const lastCol = Math.max(columns.length, 8);
     const endLetter = colLetter(lastCol);
 
     ws.mergeCells(`A1:${endLetter}1`);
@@ -89,7 +94,7 @@ export async function buildWorkbookBuffer(
 
     const startRow = 7;
     const headerRow = ws.getRow(startRow);
-    COLUMN_ORDER.forEach((col, idx) => {
+    columns.forEach((col, idx) => {
       const cell = headerRow.getCell(idx + 1);
       cell.value = col;
       cell.font = { bold: true };
@@ -108,7 +113,7 @@ export async function buildWorkbookBuffer(
       debitSum += debit || 0;
       creditSum += credit || 0;
 
-      COLUMN_ORDER.forEach((col, idx) => {
+      columns.forEach((col, idx) => {
         const cell = excelRow.getCell(idx + 1);
         const value = row[col];
         if (col === "วันที่" && value instanceof Date) {
@@ -149,7 +154,7 @@ export async function buildWorkbookBuffer(
     // Total row
     const totalRowIdx = startRow + 1 + rows.length;
     const totalRow = ws.getRow(totalRowIdx);
-    COLUMN_ORDER.forEach((col, idx) => {
+    columns.forEach((col, idx) => {
       const cell = totalRow.getCell(idx + 1);
       if (col === "รายการ / ชื่อบริษัท") cell.value = "รวม";
       else if (col === "ถอนเงิน") {
@@ -180,13 +185,14 @@ export async function buildWorkbookBuffer(
       "รายการ / ชื่อบริษัท": 36,
       ประเภท: 16,
       เลขที่บิล: 16,
+      เลขที่เช็ค: 14,
       ถอนเงิน: 14,
       ฝากเงิน: 14,
       ยอดคงเหลือ: 14,
       หมายเหตุ: 18,
     };
 
-    COLUMN_ORDER.forEach((col, idx) => {
+    columns.forEach((col, idx) => {
       let maxLen = Math.max(String(col).length, defaultWidths[col] ?? 10);
       for (const row of rows) {
         const v = row[col];

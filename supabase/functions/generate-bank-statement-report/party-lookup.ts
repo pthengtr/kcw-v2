@@ -12,7 +12,19 @@ import {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-type NameBill = { name: string; bill: string };
+type NameBill = { name: string; bill: string; date: string };
+
+function normalizeBillDate(value: unknown): string {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const dmy = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text);
+  if (dmy) {
+    return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  }
+  return "";
+}
 
 function normalizeRefType(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
@@ -33,6 +45,7 @@ async function fetchNameMapByKeys(
   keyField: string,
   nameField: string,
   billField?: string,
+  dateField?: string,
 ): Promise<Map<string, NameBill>> {
   const map = new Map<string, NameBill>();
   const { data, error } = await query();
@@ -45,8 +58,9 @@ async function fetchNameMapByKeys(
     if (!key) continue;
     const name = normalizePartyDisplayName(String(row[nameField] ?? "").trim());
     const bill = String(row[billField ?? keyField] ?? key).trim();
+    const date = dateField ? normalizeBillDate(row[dateField]) : "";
     if (!map.has(key)) {
-      map.set(key, { name, bill });
+      map.set(key, { name, bill, date });
     }
   }
   return map;
@@ -83,19 +97,22 @@ async function lookupBillAcctNames(
   schema: "raw_kcw" | "curated_kcw",
   table: string,
   keys: string[],
+  dateField?: string,
 ): Promise<Map<string, NameBill>> {
   const map = new Map<string, NameBill>();
+  const select = dateField ? `BILLNO,ACCTNAME,${dateField}` : "BILLNO,ACCTNAME";
   for (const batch of chunk(keys, 200)) {
     const partial = await fetchNameMapByKeys(
       () =>
         admin
           .schema(schema)
           .from(table)
-          .select("BILLNO,ACCTNAME")
+          .select(select)
           .in("BILLNO", batch),
       "BILLNO",
       "ACCTNAME",
       "BILLNO",
+      dateField,
     );
     for (const [k, v] of partial) map.set(k, v);
   }
@@ -126,7 +143,7 @@ async function lookupExpenseReceipts(
         String(partyObj?.party_name ?? "").trim(),
       );
       const bill = String(row.receipt_number ?? "").trim();
-      map.set(id, { name, bill });
+      map.set(id, { name, bill, date: "" });
     }
   }
   return map;
@@ -174,11 +191,13 @@ function collectIdsByType(
 function pickNamesBills(
   ids: string[],
   lookup: Map<string, NameBill>,
-): { name: string; bills: string } {
+): { name: string; bills: string; date: string } {
   const names: string[] = [];
   const bills: string[] = [];
+  const dates: string[] = [];
   const seenName = new Set<string>();
   const seenBill = new Set<string>();
+  const seenDate = new Set<string>();
 
   for (const id of ids) {
     const hit = lookup.get(id);
@@ -193,11 +212,17 @@ function pickNamesBills(
       seenBill.add(billOut);
       bills.push(billOut);
     }
+    const date = hit?.date?.trim() ?? "";
+    if (date && !seenDate.has(date)) {
+      seenDate.add(date);
+      dates.push(date);
+    }
   }
 
   return {
     name: names[0] ?? "",
     bills: bills.join(", "),
+    date: dates[0] ?? "",
   };
 }
 
@@ -238,6 +263,7 @@ export async function attachMatchedPartyAndBills(
       "curated_kcw",
       "fact_sales_bills_all",
       [...buckets.sales],
+      "BILLDATE",
     ),
     lookupExpenseReceipts(admin, [...buckets.expense]),
   ]);
@@ -247,7 +273,7 @@ export async function attachMatchedPartyAndBills(
     const ids = splitRefIds(row.matched_ref_id);
     if (!t || ids.length === 0) return row;
 
-    let picked = { name: "", bills: "" };
+    let picked = { name: "", bills: "", date: "" };
     if (t === "rvmas" || t === "rvi") {
       picked = pickNamesBills(ids, rvmas);
     } else if (t === "pvmas") {
@@ -269,6 +295,7 @@ export async function attachMatchedPartyAndBills(
       ...row,
       matched_party_name: picked.name || row.matched_party_name || null,
       matched_bill_nos: picked.bills || row.matched_bill_nos || null,
+      matched_bill_date: picked.date || row.matched_bill_date || null,
     };
   });
 }

@@ -21,7 +21,56 @@ export const COLUMN_ORDER = [
   "หมายเหตุ",
 ] as const;
 
-export type ReportColumn = (typeof COLUMN_ORDER)[number];
+/** Extra cheque-number column — only the KTB 248-6-00618-4 sheet. */
+export const CHEQUE_ACCOUNT_COLUMN_ORDER = [
+  "#",
+  "วันที่",
+  "รายการ / ชื่อบริษัท",
+  "ประเภท",
+  "เลขที่บิล",
+  "เลขที่เช็ค",
+  "ถอนเงิน",
+  "ฝากเงิน",
+  "ยอดคงเหลือ",
+  "หมายเหตุ",
+] as const;
+
+export type ReportColumn =
+  | (typeof COLUMN_ORDER)[number]
+  | (typeof CHEQUE_ACCOUNT_COLUMN_ORDER)[number];
+
+export const THAI_QR_PAYMENT_LABEL = "รับเงินจากการขายด้วย Thai QR Payment";
+
+export const KTB_CHEQUE_ACCOUNT_NO = "248-6-00618-4";
+export const KTB_CHEQUE_ACCOUNT_DIGITS = "2486006184";
+
+type KcwBankCode = "KBANK" | "KTB";
+
+export type KcwCompanyAccount = {
+  account_no: string;
+  digits: string;
+  last4: string;
+  bank: KcwBankCode;
+};
+
+/** The six KCW operating accounts used for internal-transfer labels. */
+export const KCW_COMPANY_ACCOUNTS: readonly KcwCompanyAccount[] = [
+  { account_no: "064-8-91723-6", digits: "0648917236", last4: "7236", bank: "KBANK" },
+  { account_no: "141-1-72355-7", digits: "1411723557", last4: "3557", bank: "KBANK" },
+  { account_no: "064-8-92039-3", digits: "0648920393", last4: "0393", bank: "KBANK" },
+  { account_no: "233-1-18475-9", digits: "2331184759", last4: "4759", bank: "KBANK" },
+  { account_no: "248-0-42113-9", digits: "2480421139", last4: "1139", bank: "KTB" },
+  { account_no: "248-6-00618-4", digits: "2486006184", last4: "6184", bank: "KTB" },
+];
+
+const CHEQUE_NO_KEYS = [
+  "CHEQUE NO.",
+  "CHEQUE NO",
+  "Cheque No.",
+  "Cheque No",
+  "เลขที่เช็ค",
+  "หมายเลขเช็ค",
+] as const;
 
 const DONE_MATCH_STATUSES = new Set(["matched", "manual", "resolved"]);
 
@@ -115,6 +164,8 @@ export type StatementLineRow = {
   matched_party_name?: string | null;
   /** Optional human bill numbers resolved at report time (e.g. expense receipt_number). */
   matched_bill_nos?: string | null;
+  /** Optional ISO sales/bill date resolved at report time (TR / 3TR BILLDATE). */
+  matched_bill_date?: string | null;
 };
 
 export type EnrichedRow = Record<ReportColumn, string | number | Date | null> & {
@@ -327,7 +378,7 @@ export function parseSalesDateFromRefId(
   const token = splitRefIds(refId)[0] ?? "";
   if (!token) return null;
 
-  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(token);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(token);
   if (iso) {
     const d = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3], 12));
     return Number.isNaN(d.getTime()) ? null : d;
@@ -397,10 +448,200 @@ export function formatDailyNetSalesDescription(
 /** KTB marketplace settlement account (sheet `KTB_248-0-42113-9`). */
 const KTB_MARKETPLACE_ACCOUNT_NO = "248-0-42113-9";
 
+export function accountDigits(accountNo: string | null | undefined): string {
+  return String(accountNo ?? "").replace(/\D/g, "");
+}
+
+export function isKtbChequeAccount(
+  row: Pick<StatementLineRow, "account_no" | "bank_name">,
+): boolean {
+  const bankName = String(row.bank_name ?? "").trim().toUpperCase();
+  if (bankName !== "KTB") return false;
+  const accountNo = String(row.account_no ?? "").trim();
+  const digits = accountDigits(accountNo);
+  return accountNo === KTB_CHEQUE_ACCOUNT_NO || digits === KTB_CHEQUE_ACCOUNT_DIGITS;
+}
+
 export function isKtbMarketplaceAccount(row: StatementLineRow): boolean {
   const accountNo = String(row.account_no ?? "").trim();
   const bankName = String(row.bank_name ?? "").trim().toUpperCase();
   return accountNo === KTB_MARKETPLACE_ACCOUNT_NO && bankName === "KTB";
+}
+
+export function columnsForAccount(
+  bankName: string,
+  accountNo: string,
+): readonly ReportColumn[] {
+  if (isKtbChequeAccount({ account_no: accountNo, bank_name: bankName })) {
+    return CHEQUE_ACCOUNT_COLUMN_ORDER;
+  }
+  return COLUMN_ORDER;
+}
+
+function looksLikeChequeNumber(value: string): boolean {
+  return /^\d{6,12}$/.test(value.trim());
+}
+
+/**
+ * Cheque number only — never the full ICAS / transfer narrative.
+ * Used solely on the KTB 248-6-00618-4 sheet.
+ */
+export function extractChequeNumber(row: StatementLineRow): string {
+  if (!isKtbChequeAccount(row)) return "";
+
+  const raw = parseRawJson(row.raw_json);
+  const fromRaw = pickRawValue(raw, CHEQUE_NO_KEYS, true).trim();
+  if (looksLikeChequeNumber(fromRaw)) return fromRaw;
+
+  const ref = String(row.bank_reference ?? "").trim();
+  if (looksLikeChequeNumber(ref)) return ref;
+
+  const { detail } = extractRawFields(row.raw_json);
+  const haystack = `${detail}\n${row.description ?? ""}`;
+  const labeled = haystack.match(
+    /(?:เลขที่เช็ค|หมายเลขเช็ค|CHEQUE\s*NO\.?)\s*[:.]?\s*(\d{6,12})/i,
+  );
+  if (labeled?.[1] && looksLikeChequeNumber(labeled[1])) return labeled[1];
+
+  return "";
+}
+
+function statementHaystack(row: StatementLineRow): string {
+  const { txnType, detail } = extractRawFields(row.raw_json);
+  return `${txnType}\n${detail}\n${row.description ?? ""}\n${row.bank_reference ?? ""}`;
+}
+
+/** True when the bank row is a Thai QR Payment credit (KBANK `รายการ` text). */
+export function isThaiQrPayment(row: StatementLineRow): boolean {
+  return statementHaystack(row).includes(THAI_QR_PAYMENT_LABEL);
+}
+
+export function formatThaiQrPaymentDescription(row: StatementLineRow): string | null {
+  if (!isThaiQrPayment(row)) return null;
+  return THAI_QR_PAYMENT_LABEL;
+}
+
+export function isNarumonCashDeposit(row: StatementLineRow): boolean {
+  const direction = String(row.direction ?? "").trim().toLowerCase();
+  if (direction && direction !== "in") return false;
+  const hay = statementHaystack(row);
+  if (/นฤมล|วิทยผโลทัย/u.test(hay)) return true;
+  if (/narumon|withayapal/i.test(hay)) return true;
+  return false;
+}
+
+const TR_REF_TYPES = new Set(["tr_bill", "tr_bundle", "tr_remainder", "3tr_bill"]);
+
+export function inferMatchedTrKind(
+  row: StatementLineRow,
+): "TR" | "3TR" | null {
+  const kinds = new Set<"TR" | "3TR">();
+  for (const id of splitRefIds(row.matched_ref_id)) {
+    if (/^3TR/i.test(id)) kinds.add("3TR");
+    else if (/^TR/i.test(id)) kinds.add("TR");
+  }
+  if (kinds.size === 1) return [...kinds][0];
+  if (kinds.has("3TR")) return "3TR";
+  if (kinds.has("TR")) return "TR";
+
+  const digits = accountDigits(row.account_no);
+  if (digits.endsWith("0393")) return "3TR";
+  if (digits.endsWith("7236")) return "TR";
+  return null;
+}
+
+function parseBillDateFromNotes(notes: string | null | undefined): Date | null {
+  if (!notes) return null;
+  const patterns = [
+    /วันที่บิล(?:ที่จับคู่ได้)?\s*(\d{1,2}\/\d{1,2}\/\d{4})/u,
+    /บิลวันที่\s*(\d{1,2}\/\d{1,2}\/\d{4})/u,
+    /(?:3?TR[A-Z0-9-]*)\s+วันที่\s*(\d{1,2}\/\d{1,2}\/\d{4})/u,
+  ];
+  for (const rx of patterns) {
+    const labeled = notes.match(rx);
+    if (!labeled?.[1]) continue;
+    const dmy = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(labeled[1]);
+    if (!dmy) continue;
+    const d = new Date(Date.UTC(+dmy[3], +dmy[2] - 1, +dmy[1], 12));
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return null;
+}
+
+export function resolveMatchedBillDate(row: StatementLineRow): Date | null {
+  const fromLookup = parseSalesDateFromRefId(row.matched_bill_date);
+  if (fromLookup) return fromLookup;
+  const fromNotes = parseBillDateFromNotes(row.match_notes);
+  if (fromNotes) return fromNotes;
+  return null;
+}
+
+/**
+ * Front-store cash deposited by Narumon and matched to a TR / 3TR bill.
+ * Example: `ขายเงินสด TR 09/09/2026`
+ */
+export function formatNarumonCashSalesDescription(
+  row: StatementLineRow,
+): string | null {
+  if (!isNarumonCashDeposit(row)) return null;
+
+  const refType = (row.matched_ref_type ?? "").trim().toLowerCase();
+  if (!TR_REF_TYPES.has(refType)) return null;
+
+  const status = normalizeMatchStatus(row.match_status);
+  if (status === "pending" || status === "unmatched" || status === "ignored") {
+    return null;
+  }
+
+  const kind = inferMatchedTrKind(row);
+  const billDate = resolveMatchedBillDate(row);
+  if (!kind || !billDate) return null;
+  return `ขายเงินสด ${kind} ${formatDateDdMmYyyy(billDate)}`;
+}
+
+export function findKcwCompanyAccount(
+  value: string | null | undefined,
+): KcwCompanyAccount | null {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const digits = accountDigits(text);
+  const upper = text.toUpperCase();
+
+  for (const acct of KCW_COMPANY_ACCOUNTS) {
+    if (text.includes(acct.account_no)) return acct;
+    if (digits && digits.includes(acct.digits)) return acct;
+  }
+  const last4 = upper.match(/\bX(\d{4})\b/);
+  if (last4?.[1]) {
+    return KCW_COMPANY_ACCOUNTS.find((acct) => acct.last4 === last4[1]) ?? null;
+  }
+  return null;
+}
+
+export function resolveInternalTransferCounterpart(
+  row: StatementLineRow,
+): KcwCompanyAccount | null {
+  const fromRef = findKcwCompanyAccount(row.matched_ref_id);
+  if (fromRef) return fromRef;
+  return findKcwCompanyAccount(statementHaystack(row));
+}
+
+/**
+ * Internal company-account sweep label.
+ * Out: `โอนไป KBANK 0648917236` / In: `รับโอน KTB 2486006184`
+ */
+export function formatInternalTransferDescription(
+  row: StatementLineRow,
+): string | null {
+  const refType = (row.matched_ref_type ?? "").trim().toLowerCase();
+  if (refType !== "internal_transfer") return null;
+
+  const counterpart = resolveInternalTransferCounterpart(row);
+  if (!counterpart) return null;
+
+  const direction = String(row.direction ?? "").trim().toLowerCase();
+  const verb = direction === "out" ? "โอนไป" : "รับโอน";
+  return `${verb} ${counterpart.bank} ${counterpart.digits}`;
 }
 
 /**
@@ -451,8 +692,17 @@ export function formatReportRemark(row: StatementLineRow): string {
 }
 
 export function resolveDescriptionColumn(row: StatementLineRow): string {
+  const thaiQr = formatThaiQrPaymentDescription(row);
+  if (thaiQr) return thaiQr;
+
+  const internal = formatInternalTransferDescription(row);
+  if (internal) return internal;
+
   const marketplace = formatMarketplaceCustomerDescription(row);
   if (marketplace) return marketplace;
+
+  const narumonCash = formatNarumonCashSalesDescription(row);
+  if (narumonCash) return narumonCash;
 
   const dailyNet = formatDailyNetSalesDescription(row);
   if (dailyNet) return dailyNet;
@@ -506,6 +756,7 @@ export function enrichStatementRows(rows: StatementLineRow[]): EnrichedRow[] {
       "รายการ / ชื่อบริษัท": resolveDescriptionColumn(row),
       ประเภท: formatReportRemark(row),
       เลขที่บิล: formatBillNumbers(row),
+      เลขที่เช็ค: extractChequeNumber(row),
       ถอนเงิน: debit,
       ฝากเงิน: credit,
       ยอดคงเหลือ: moneyOrBlank(row.balance_after),
