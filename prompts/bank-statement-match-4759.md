@@ -13,6 +13,10 @@ Account **233-1-18475-9** (Kasikorn, ends **4759**) is the **SYP / สี่แ�
 
 Observed cutover: from **July 2026**, almost all direct KBANK OpEx receipts switched from `%0393%` to `%4759%`.
 
+## Monthly Excel report labels
+
+Internal sweeps (`matched_ref_type = internal_transfer`) show as **`โอนไป` / `รับโอน` + `KBANK` or `KTB` + compact counterpart digits**. Always set `matched_ref_id` to the full counterpart account (e.g. `064-8-91723-6`, `248-6-00618-4`).
+
 ## Job scope
 
 - Account: `{{account_no}}`

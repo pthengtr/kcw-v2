@@ -104,7 +104,8 @@ export default function StatementReportDialog({
           <DialogTitle>สร้างรายงานเดินบัญชี</DialogTitle>
           <DialogDescription>
             สร้างไฟล์ Excel หลายชีต (บัญชีละชีต) คอลัมน์แบบรายงานเดินบัญชี
-            (วันที่ / ชื่อบริษัท / เลขที่บิล / ถอน–ฝาก / ยอดคงเหลือ / หมายเหตุ)
+            (วันที่ / ชื่อบริษัท / เลขที่บิล / ถอน–ฝาก / ยอดคงเหลือ / หมายเหตุ;
+            แท็บ KTB 248-6-00618-4 มีคอลัมน์เลขที่เช็คด้วย)
             แล้วดาวน์โหลดจาก Storage — ไม่ใช้ Google Drive
           </DialogDescription>
         </DialogHeader>

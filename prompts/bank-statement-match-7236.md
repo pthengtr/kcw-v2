@@ -11,6 +11,14 @@ Account **064-8-91723-6** (Kasikorn, ends **7236**) is the **HQ** operating / in
 
 KBANK narrative detail often lives in `raw_json->>'รายละเอียด'` while `description` is only `โอนเงิน` / `รับโอนเงิน`. Always read `raw_json` when classifying transfers.
 
+## Monthly Excel report labels
+
+The monthly workbook (`generate-bank-statement-report`) derives **รายการ / ชื่อบริษัท** at report time. Matching still writes `match_*` / `matched_*` only — do **not** rewrite bank `description`. Keep refs so the report can label:
+
+- Thai QR rows whose `รายการ` / `description` is **รับเงินจากการขายด้วย Thai QR Payment** show that exact phrase (no company / payer suffix from `รายละเอียด` or the matched TR customer)
+- Narumon / นฤมล / `NARUMON WITHAYAPAL` cash deposits matched to TR → `ขายเงินสด TR DD/MM/YYYY` using the **bill date** (`BILLDATE`), not the bank `txn_date`
+- Internal sweeps (`matched_ref_type = internal_transfer`) → `โอนไป` / `รับโอน` + `KBANK` or `KTB` + compact counterpart digits. Always set `matched_ref_id` to the full counterpart account (e.g. `141-1-72355-7`)
+
 ## Job scope
 
 - Account: `{{account_no}}`
@@ -81,6 +89,7 @@ Notes:
 - Auto-`matched` only on same calendar day (`BILLDATE = txn_date`)
 - If same-day fails but a unique bill/bundle/remainder fits on **T+1 .. T+5**, set `review` with matched refs and `⚠️ วันที่ไม่ตรงช่วงปกติ:` in `match_notes` — do not leave `unmatched` when a plausible late transfer exists
 - **Thai QR remainder may include unclaimed RC + TR** from that day (July: RC6907-001 + TR6907-001 → Thai QR). Prefer same-day TR remainder first; if RC vouchers clearly fill the gap and are not already claimed elsewhere, include them in the remainder note / refs
+- Report item name for these bank rows is **รับเงินจากการขายด้วย Thai QR Payment** only — do not expect the Excel to append the company name from `รายละเอียด` (`เกียรติชัยอะไหล่ยนต์ 2007`) or the matched TR customer
 
 ### 1b) Cash front-store deposits — เงินสดหน้าร้าน (Narumon)
 
@@ -104,6 +113,8 @@ Matching:
 | Cash → several TR | `tr_bundle` | `matched` / `review` | `เงินสดหน้าร้าน (บิลโอน TR รวมหลายใบ)` |
 
 `matched_ref_id` = bill no. (comma-separated for bundles). Mention X2446/X8822 and bill dates in `match_notes`.
+
+The monthly report item name for these rows is **`ขายเงินสด TR [วันที่บิล]`** (e.g. `ขายเงินสด TR 09/09/2026`). NARUMON TAR−CNTAR nets stay on the daily-net sales label — do **not** use `ขายเงินสด` unless the match is TR / TR bundle.
 
 ### 2) Daily net TAR − CNTAR
 
@@ -199,6 +210,8 @@ How to detect (any one is enough):
 
 `matched_ref_id` = counterpart full account no. when known (e.g. `141-1-72355-7`), else the `X####` from `รายละเอียด`.  
 Confidence: **1.0** when counterpart account is clear from `raw_json` or same-day sister-account inflow.
+
+The monthly report shows `โอนไป KBANK 1411723557` / `รับโอน KTB 2486006184` (bank code + compact digits) from `matched_ref_id`. Prefer the dashed full account no. so the report can pick KBANK vs KTB.
 
 July 2026 examples (do not hard-code; pattern only):
 
