@@ -10,7 +10,7 @@ Branch operators count stock on the **LAN stock-check app** (LINE → `/stock-ch
 | RPCs | `fn_stock_audit_overview`, `fn_stock_audit_lookup`, `fn_stock_work_kpi` (service_role) |
 
 SQL: `docs/bi/sql/fn_stock_audit_ops.sql`, `docs/bi/sql/fn_stock_work_kpi.sql`  
-Migrations: `supabase/migrations/20260804180000_stock_audit_ops.sql`, `20260804193000_stock_audit_overview_charts.sql`, `20260810192359_stock_audit_operator_marks.sql`, `20260811043000_drop_obsolete_stock_audit_workbench_rpcs.sql`, `20260813040000_stock_work_kpi.sql`  
+Migrations: `supabase/migrations/20260804180000_stock_audit_ops.sql`, `20260804193000_stock_audit_overview_charts.sql`, `20260810192359_stock_audit_operator_marks.sql`, `20260811043000_drop_obsolete_stock_audit_workbench_rpcs.sql`, `20260813040000_stock_work_kpi.sql`, `20260919120000_stock_work_kpi_as_of.sql`  
 (kcw-api also ships `20260813020000_stock_work_event.sql` for the table.)
 
 ## Work KPI (`stock.work_event`)
@@ -27,7 +27,7 @@ Event types from branch stock-check:
 
 **Completed counts** (daily target progress) = `count_correct + count_variance`.
 
-RPC `fn_stock_work_kpi(p_branch)` returns `summary_today` / `summary_week`, 14-day `daily`, and per-operator today/week breakdowns. API: `GET /api/stock-audit/work-kpi?branch=HQ|SYP`.
+RPC `fn_stock_work_kpi(p_branch, p_as_of)` returns `summary_today` / `summary_week`, 14-day `daily`, and per-operator today/week breakdowns, all relative to `p_as_of` (Bangkok calendar date; default today). API: `GET /api/stock-audit/work-kpi?branch=HQ|SYP&as_of=YYYY-MM-DD`.
 
 ## What counts as “last audited”?
 
@@ -39,7 +39,7 @@ POS ICMAS `DATEAUDIT` is **reference only** — not used for buckets or priority
 
 ## Features (status UI)
 
-1. **งานตรวจนับวันนี้** — progress strip (completed counts vs soft target 30), event-type KPIs, work daily bars, **per-operator work breakdown**
+1. **งานตรวจนับ** — date picker (and clickable daily bars) to load a day's report: progress strip (completed counts vs soft target 30), event-type KPIs, work daily bars, **per-operator work breakdown**
 2. **ความสดของสต็อก** — never / freshness pie, bucket list from `fn_stock_audit_overview`
 3. **ค้นหารหัส** — read-only BCODE lookup (no mark)
 4. Soft daily target of 30 (`STOCK_AUDIT_DAILY_TARGET`) for HQ progress on home (from work KPI completed counts)

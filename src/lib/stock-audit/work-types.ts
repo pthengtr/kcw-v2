@@ -1,3 +1,22 @@
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Accept YYYY-MM-DD calendar dates; reject impossible days like 2026-02-31. */
+export function parseStockWorkAsOf(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!ISO_DATE_RE.test(trimmed)) return undefined;
+  const [year, month, day] = trimmed.split("-").map(Number);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  if (
+    utc.getUTCFullYear() !== year ||
+    utc.getUTCMonth() !== month - 1 ||
+    utc.getUTCDate() !== day
+  ) {
+    return undefined;
+  }
+  return trimmed;
+}
+
 export type StockWorkEventType =
   | "count_correct"
   | "count_variance"

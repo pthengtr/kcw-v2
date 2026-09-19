@@ -1,12 +1,26 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { StockAuditBranch } from "./types";
-import type {
-  StockWorkCounts,
-  StockWorkDaily,
-  StockWorkKpi,
-  StockWorkOperator,
+import {
+  parseStockWorkAsOf,
+  type StockWorkCounts,
+  type StockWorkDaily,
+  type StockWorkKpi,
+  type StockWorkOperator,
 } from "./work-types";
+
+export { parseStockWorkAsOf } from "./work-types";
+
+export function stockWorkKpiRpcParams(
+  opts: { branch?: StockAuditBranch; asOf?: string } = {}
+): { p_branch: StockAuditBranch; p_as_of?: string } {
+  const params: { p_branch: StockAuditBranch; p_as_of?: string } = {
+    p_branch: opts.branch ?? "HQ",
+  };
+  const asOf = parseStockWorkAsOf(opts.asOf);
+  if (asOf) params.p_as_of = asOf;
+  return params;
+}
 
 function asNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -97,11 +111,12 @@ export function parseStockWorkKpi(value: unknown): StockWorkKpi {
 
 export async function fetchStockWorkKpi(
   supabase: SupabaseClient,
-  opts: { branch?: StockAuditBranch } = {}
+  opts: { branch?: StockAuditBranch; asOf?: string } = {}
 ): Promise<StockWorkKpi> {
-  const { data, error } = await supabase.rpc("fn_stock_work_kpi", {
-    p_branch: opts.branch ?? "HQ",
-  });
+  const { data, error } = await supabase.rpc(
+    "fn_stock_work_kpi",
+    stockWorkKpiRpcParams(opts)
+  );
   if (error) throw new Error(error.message || "fn_stock_work_kpi failed");
   return parseStockWorkKpi(data);
 }

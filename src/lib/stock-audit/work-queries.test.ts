@@ -1,6 +1,42 @@
 import { describe, expect, it } from "vitest";
 
-import { parseStockWorkCounts, parseStockWorkKpi } from "./work-queries";
+import { parseStockWorkAsOf } from "./work-types";
+import {
+  parseStockWorkCounts,
+  parseStockWorkKpi,
+  stockWorkKpiRpcParams,
+} from "./work-queries";
+
+describe("parseStockWorkAsOf", () => {
+  it("accepts real YYYY-MM-DD dates", () => {
+    expect(parseStockWorkAsOf("2026-09-16")).toBe("2026-09-16");
+    expect(parseStockWorkAsOf(" 2026-09-16 ")).toBe("2026-09-16");
+  });
+
+  it("rejects missing, malformed, or impossible dates", () => {
+    expect(parseStockWorkAsOf(undefined)).toBeUndefined();
+    expect(parseStockWorkAsOf("")).toBeUndefined();
+    expect(parseStockWorkAsOf("16/09/2026")).toBeUndefined();
+    expect(parseStockWorkAsOf("2026-02-31")).toBeUndefined();
+  });
+});
+
+describe("stockWorkKpiRpcParams", () => {
+  it("omits p_as_of when no date is selected", () => {
+    expect(stockWorkKpiRpcParams({ branch: "SYP" })).toEqual({
+      p_branch: "SYP",
+    });
+  });
+
+  it("passes a valid as-of date through to the RPC", () => {
+    expect(
+      stockWorkKpiRpcParams({ branch: "HQ", asOf: "2026-09-16" })
+    ).toEqual({
+      p_branch: "HQ",
+      p_as_of: "2026-09-16",
+    });
+  });
+});
 
 describe("parseStockWorkCounts", () => {
   it("parses counts and derives completed when missing", () => {

@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,6 +19,9 @@ type Props = {
   series: StockWorkDaily[];
   completedToday: number;
   completedWeek: number;
+  selectedDate?: string;
+  dayLabel?: string;
+  onSelectDate?: (date: string) => void;
 };
 
 function shortDay(iso: string): string {
@@ -30,6 +34,9 @@ export default function StockAuditWorkDailyChart({
   series,
   completedToday,
   completedWeek,
+  selectedDate,
+  dayLabel = "วันนี้",
+  onSelectDate,
 }: Props) {
   const data = series.map((d) => ({
     ...d,
@@ -44,8 +51,9 @@ export default function StockAuditWorkDailyChart({
           จำนวนนับเสร็จต่อวัน
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          วันนี้ {formatCount(completedToday)} · 7 วันล่าสุด{" "}
+          {dayLabel} {formatCount(completedToday)} · 7 วันย้อนหลัง{" "}
           {formatCount(completedWeek)} (นับตรง+คลาด)
+          {onSelectDate ? " · กดแท่งกราฟเพื่อดูวันนั้น" : null}
         </p>
       </CardHeader>
       <CardContent>
@@ -92,10 +100,24 @@ export default function StockAuditWorkDailyChart({
                 />
                 <Bar
                   dataKey="completed_counts"
-                  fill="#2563eb"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={28}
-                />
+                  cursor={onSelectDate ? "pointer" : undefined}
+                  onClick={(entry) => {
+                    const row = entry as
+                      | { date?: string; payload?: { date?: string } }
+                      | undefined;
+                    const date = row?.date ?? row?.payload?.date;
+                    if (date && onSelectDate) onSelectDate(date);
+                  }}
+                >
+                  {data.map((d) => (
+                    <Cell
+                      key={d.date}
+                      fill={d.date === selectedDate ? "#1e40af" : "#2563eb"}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
