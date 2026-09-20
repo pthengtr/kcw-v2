@@ -78,7 +78,9 @@ export type TigerPayDailyException = {
 export type TigerPayDailyRollup = {
   date: string;
   billed: number;
+  billedNet: number;
   posBilled: number;
+  posNet: number;
   cashFloorRemainder: number;
   flooredBills: TigerPayDailyFloor[];
   cashIn: number;
@@ -387,11 +389,19 @@ export function rollupTigerPayDay(input: {
   const voucherCancelled = voucherRows.filter(
     (row) => isVoucherCancelledStatus(row.status) && !row.superseded
   );
+  const voucherUsedAmount = roundMoney(
+    voucherUsed.reduce((sum, row) => sum + row.amount, 0)
+  );
+  // Cancelled CN never moved cash. Only used/redeemed vouchers reduce the day total.
+  const billedNet = roundMoney(billed - voucherUsedAmount);
+  const posNet = roundMoney(posBilled - voucherUsedAmount);
 
   return {
     date: input.date,
     billed,
+    billedNet,
     posBilled,
+    posNet,
     cashFloorRemainder,
     flooredBills,
     cashIn,
@@ -416,7 +426,7 @@ export function rollupTigerPayDay(input: {
     exceptions,
     vouchers: voucherRows.sort((a, b) => (b.at ?? "").localeCompare(a.at ?? "")),
     voucherUsedCount: voucherUsed.length,
-    voucherUsedAmount: voucherUsed.reduce((sum, row) => sum + row.amount, 0),
+    voucherUsedAmount,
     voucherCancelledCount: voucherCancelled.length,
     voucherPendingCount: voucherPending.length,
   };

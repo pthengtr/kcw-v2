@@ -158,7 +158,9 @@ describe("Tiger Pay daily rollup", () => {
     });
 
     expect(rollup.billed).toBe(2898);
+    expect(rollup.billedNet).toBe(2718);
     expect(rollup.posBilled).toBe(2898.1);
+    expect(rollup.posNet).toBe(2718.1);
     expect(rollup.cashFloorRemainder).toBe(0.1);
     expect(rollup.flooredBills).toEqual([
       {
@@ -245,12 +247,44 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.voucherUsedCount).toBe(3);
     expect(rollup.voucherUsedAmount).toBe(925);
     expect(rollup.voucherCancelledCount).toBe(0);
+    expect(rollup.billed).toBe(0);
+    expect(rollup.billedNet).toBe(-925);
+    expect(rollup.posNet).toBe(-925);
     expect(
       rollup.vouchers.find((row) => row.voucherNum === "527032262695")?.superseded
     ).toBe(true);
     expect(
       rollup.vouchers.find((row) => row.voucherNum === "554434252406")?.superseded
     ).toBe(false);
+  });
+
+  it("does not move the day total when a CN voucher is only cancelled", () => {
+    const rollup = rollupTigerPayDay({
+      date: "2026-09-20",
+      shopCode: "1",
+      transactions: [
+        txn({
+          tiger_payment_id: 40,
+          payment_no: "PA40",
+          amount: 1000,
+          total_pay: 1000,
+          payload: { payment: { cashList: [{ value: 1000, amount: 1 }] } },
+        }),
+      ],
+      vouchers: [
+        {
+          id: "v-cancel-only",
+          pos_bill_number: "KCN6908-0279",
+          amount: 620,
+          status: "cancelled",
+          created_at: "2026-09-20T07:06:13+07:00",
+        },
+      ],
+    });
+    expect(rollup.billed).toBe(1000);
+    expect(rollup.billedNet).toBe(1000);
+    expect(rollup.voucherUsedAmount).toBe(0);
+    expect(rollup.voucherCancelledCount).toBe(1);
   });
 });
 
