@@ -25,6 +25,8 @@ import {
   getUnknown,
   isRecord,
   maskAccountValue,
+  paymentCashList,
+  paymentChangeList,
   prettyJson,
   redactSensitive,
   shortId,
@@ -126,47 +128,44 @@ function JsonViewer({ value, collapsedDefault = true }: { value: unknown; collap
 }
 
 function CashDetails({ payment }: { payment: unknown }) {
-  const cashList = getUnknown(payment, "cashList");
+  const cashListRaw = getUnknown(payment, "cashList");
+  const inserted = paymentCashList(payment);
   const change = getUnknown(payment, "change");
-  const list = Array.isArray(cashList) ? cashList : [];
+  const changePieces = paymentChangeList(payment);
 
   return (
     <div className="grid gap-4">
       <Section title="Cash inserted">
-        {list.length === 0 ? (
+        {inserted.length === 0 ? (
           <div className="text-sm text-muted-foreground sm:col-span-2">
             No cash insertion details
           </div>
         ) : (
-          list.map((item, index) => (
-            <div
-              key={index}
-              className="rounded-md border p-3 grid gap-2 sm:col-span-2"
-            >
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Field
-                  label="Denomination"
-                  value={formatBaht(
-                    asString(getUnknown(item, "value")) ??
-                      asString(getUnknown(item, "denomination"))
-                  )}
-                />
-                <Field
-                  label="Quantity"
-                  value={displayValue(
-                    getUnknown(item, "amount") ?? getUnknown(item, "quantity")
-                  )}
-                />
-                <Field
-                  label="Inserted time"
-                  value={formatBangkokDateTime(
-                    asString(getUnknown(item, "insertedTime")) ??
-                      asString(getUnknown(item, "inserted_at"))
-                  )}
-                />
+          inserted.map((piece, index) => {
+            const raw = Array.isArray(cashListRaw) ? cashListRaw[index] : undefined;
+            return (
+              <div
+                key={`${piece.value}-${index}`}
+                className="rounded-md border p-3 grid gap-2 sm:col-span-2"
+              >
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field
+                    label="Denomination"
+                    value={formatBaht(piece.value)}
+                  />
+                  <Field label="Quantity" value={displayValue(piece.amount)} />
+                  <Field
+                    label="Inserted time"
+                    value={formatBangkokDateTime(
+                      asString(getUnknown(raw, "createdAt")) ??
+                        asString(getUnknown(raw, "insertedTime")) ??
+                        asString(getUnknown(raw, "inserted_at"))
+                    )}
+                  />
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </Section>
 
@@ -183,39 +182,30 @@ function CashDetails({ payment }: { payment: unknown }) {
             label="Required change"
             value={formatBaht(
               asString(getUnknown(change, "requiredChange")) ??
-                asString(getUnknown(change, "required"))
+                asString(getUnknown(change, "required")) ??
+                asString(getUnknown(change, "amount"))
             )}
           />
           <Field
             label="Dispensed change"
             value={formatBaht(
               asString(getUnknown(change, "dispensedChange")) ??
-                asString(getUnknown(change, "dispensed"))
+                asString(getUnknown(change, "dispensed")) ??
+                asString(getUnknown(change, "amount"))
             )}
           />
           <div className="sm:col-span-2 grid gap-2">
             <div className="text-xs text-muted-foreground">
               Change denominations
             </div>
-            {Array.isArray(getUnknown(change, "changeList")) ||
-            Array.isArray(getUnknown(change, "denominationList")) ? (
-              (
-                (getUnknown(change, "changeList") as unknown[]) ||
-                (getUnknown(change, "denominationList") as unknown[])
-              ).map((item, index) => (
-                <div key={index} className="text-sm">
-                  {formatBaht(
-                    asString(getUnknown(item, "value")) ??
-                      asString(getUnknown(item, "denomination"))
-                  )}{" "}
-                  ×{" "}
-                  {displayValue(
-                    getUnknown(item, "amount") ?? getUnknown(item, "quantity")
-                  )}
+            {changePieces.length === 0 ? (
+              <div className="text-sm">—</div>
+            ) : (
+              changePieces.map((piece, index) => (
+                <div key={`${piece.value}-${index}`} className="text-sm">
+                  {formatBaht(piece.value)} × {displayValue(piece.amount)}
                 </div>
               ))
-            ) : (
-              <div className="text-sm">—</div>
             )}
           </div>
         </Section>

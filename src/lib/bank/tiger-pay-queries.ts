@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  mapCashSnapshot,
+  mapDailyClose,
+  type TigerPayCashSnapshot,
+  type TigerPayDailyClose,
+} from "@/lib/bank/tiger-pay-daily";
 import { isNumericSearch } from "@/lib/bank/tiger-pay-format";
 import {
   KNOWN_PAYMENT_TYPES,
@@ -227,4 +233,144 @@ export async function getTigerPaySummary(
     cancelled,
     totalPaid,
   };
+}
+
+export async function getTigerPayTransactionsForWindow(
+  supabase: SupabaseClient,
+  input: { fromIso: string; toIso: string; shopCode?: string }
+): Promise<TigerPayTransaction[]> {
+  let query = tigerPay(supabase)
+    .from("payment_transaction")
+    .select(TIGER_PAY_TRANSACTION_COLUMNS)
+    .gte("last_received_at", input.fromIso)
+    .lt("last_received_at", input.toIso)
+    .order("last_received_at", { ascending: true })
+    .limit(2000);
+
+  if (input.shopCode) {
+    query = query.eq("shop_code", input.shopCode);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown) as TigerPayTransaction[];
+}
+
+export async function getTigerPayAttemptsForWindow(
+  supabase: SupabaseClient,
+  input: { fromIso: string; toIso: string }
+): Promise<
+  Array<{
+    tiger_payment_id: number | null;
+    pos_bill_number: string | null;
+    submitted_by_name: string | null;
+    created_at: string | null;
+  }>
+> {
+  const { data, error } = await tigerPay(supabase)
+    .from("payment_attempt")
+    .select("tiger_payment_id,pos_bill_number,submitted_by_name,created_at")
+    .gte("created_at", input.fromIso)
+    .lt("created_at", input.toIso)
+    .limit(2000);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{
+    tiger_payment_id: number | null;
+    pos_bill_number: string | null;
+    submitted_by_name: string | null;
+    created_at: string | null;
+  }>;
+}
+
+export async function getTigerPayVouchersForWindow(
+  supabase: SupabaseClient,
+  input: { fromIso: string; toIso: string }
+): Promise<
+  Array<{
+    amount: number | string | null;
+    status: string | null;
+    created_at: string | null;
+  }>
+> {
+  const { data, error } = await tigerPay(supabase)
+    .from("voucher_attempt")
+    .select("amount,status,created_at")
+    .gte("created_at", input.fromIso)
+    .lt("created_at", input.toIso)
+    .limit(200);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{
+    amount: number | string | null;
+    status: string | null;
+    created_at: string | null;
+  }>;
+}
+
+export async function getLatestCashSnapshot(
+  supabase: SupabaseClient,
+  shopCode: string
+): Promise<TigerPayCashSnapshot | null> {
+  const { data, error } = await tigerPay(supabase)
+    .from("cash_snapshot")
+    .select(
+      "id,captured_at,biz_day,trigger,change_ready,change_level,change_reasons,items,total_baht,shop_code"
+    )
+    .eq("shop_code", shopCode)
+    .order("captured_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapCashSnapshot(data);
+}
+
+export async function getDailyClose(
+  supabase: SupabaseClient,
+  input: { date: string; shopCode: string }
+): Promise<TigerPayDailyClose | null> {
+  const { data, error } = await tigerPay(supabase)
+    .from("daily_close")
+    .select(
+      "biz_day,shop_code,closed_at,trigger,opening_snapshot_id,closing_snapshot_id,report,locked"
+    )
+    .eq("biz_day", input.date)
+    .eq("shop_code", input.shopCode)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapDailyClose(data);
+}
+
+export async function insertCashCommand(
+  supabase: SupabaseClient,
+  input: {
+    command: "refresh" | "close";
+    shopCode: string;
+    date?: string;
+    requestedBy?: string | null;
+  }
+) {
+  const { data, error } = await tigerPay(supabase)
+    .from("cash_command")
+    .insert({
+      command: input.command,
+      shop_code: input.shopCode,
+      biz_day: input.date ?? null,
+      requested_by: input.requestedBy ?? null,
+    })
+    .select("id,command,status,requested_at,error,snapshot_id")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function getCashCommand(
+  supabase: SupabaseClient,
+  id: string
+) {
+  const { data, error } = await tigerPay(supabase)
+    .from("cash_command")
+    .select("id,command,status,requested_at,started_at,finished_at,error,snapshot_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
 }

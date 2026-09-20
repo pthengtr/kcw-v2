@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 
 import {
   FAVORITES_COOKIE_KEY,
@@ -99,5 +101,15 @@ describe("home workspace todos helpers", () => {
   it("keeps the stock-audit daily target aligned with the operator page", () => {
     expect(STOCK_AUDIT_DAILY_TARGET).toBe(30);
     expect(sharedTarget).toBe(STOCK_AUDIT_DAILY_TARGET);
+  });
+
+  it("includes a Tiger hopper fill reminder", () => {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), "src/lib/home/workspace-todos.ts"),
+      "utf8"
+    );
+    expect(source).toContain("tiger-pay-hopper");
+    expect(source).toContain("/tiger-pay");
+    expect(source).toContain("getLatestCashSnapshot");
   });
 });

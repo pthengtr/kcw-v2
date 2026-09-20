@@ -40,6 +40,47 @@ export function asNumber(value: unknown): number | null {
   return null;
 }
 
+export type TigerPayDenomPiece = {
+  value: number;
+  amount: number;
+  kind: string;
+};
+
+export function parseDenomList(raw: unknown): TigerPayDenomPiece[] {
+  if (!Array.isArray(raw)) return [];
+  const pieces: TigerPayDenomPiece[] = [];
+  for (const item of raw) {
+    const value =
+      asNumber(getUnknown(item, "value")) ??
+      asNumber(getUnknown(item, "denomination"));
+    const amount =
+      asNumber(getUnknown(item, "amount")) ??
+      asNumber(getUnknown(item, "quantity"));
+    if (value == null || amount == null) continue;
+    const kind =
+      asString(getUnknown(item, "type")) ?? (value >= 20 ? "Banknote" : "Coin");
+    pieces.push({ value, amount, kind });
+  }
+  return pieces;
+}
+
+export function paymentObject(payload: unknown): unknown {
+  return getUnknown(payload, "payment") ?? payload;
+}
+
+export function paymentCashList(payment: unknown): TigerPayDenomPiece[] {
+  return parseDenomList(getUnknown(payment, "cashList"));
+}
+
+export function paymentChangeList(payment: unknown): TigerPayDenomPiece[] {
+  const change = getUnknown(payment, "change");
+  return parseDenomList(
+    getUnknown(change, "cashList") ??
+      getUnknown(change, "changeList") ??
+      getUnknown(change, "denominationList")
+  );
+}
+
 export function displayValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "string") {

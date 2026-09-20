@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { STOCK_AUDIT_DAILY_TARGET } from "@/lib/stock-audit/daily-target";
 import { fetchStockWorkKpi } from "@/lib/stock-audit/work-queries";
+import { getLatestCashSnapshot } from "@/lib/bank/tiger-pay-queries";
+import type { TigerPayCashSnapshot } from "@/lib/bank/tiger-pay-daily";
 
 export { STOCK_AUDIT_DAILY_TARGET };
 
@@ -115,6 +117,46 @@ function stockAuditTodo(markedToday: number): WorkspaceTodoItem {
   };
 }
 
+function hopperTodo(snapshot: TigerPayCashSnapshot | null): WorkspaceTodoItem {
+  if (!snapshot) {
+    return {
+      id: "tiger-pay-hopper",
+      title: "เติมเงินทอนเครื่อง Tiger",
+      description: "สถานะเงินทอนในเครื่องรับชำระ HQ",
+      href: "/tiger-pay",
+      status: "unknown",
+      primaryValue: "ยังไม่มี snapshot",
+      secondaryValue: "รอ kcw-api อ่านเครื่อง",
+    };
+  }
+
+  const status: WorkspaceTodoStatus =
+    snapshot.change_ready === false || snapshot.change_level === "red"
+      ? "urgent"
+      : snapshot.change_level === "orange"
+        ? "attention"
+        : "ok";
+
+  const primaryValue =
+    status === "urgent"
+      ? "ต้องเติมด่วน"
+      : status === "attention"
+        ? "เริ่มน้อย"
+        : "พร้อมทอน";
+
+  return {
+    id: "tiger-pay-hopper",
+    title: "เติมเงินทอนเครื่อง Tiger",
+    description: "สถานะเงินทอนในเครื่องรับชำระ HQ",
+    href: "/tiger-pay",
+    status,
+    primaryValue,
+    secondaryValue:
+      snapshot.change_reasons.slice(0, 3).join(" · ") ||
+      (snapshot.change_ready === false ? "เครื่องทอนไม่ได้" : undefined),
+  };
+}
+
 function unknownTodo(
   id: string,
   title: string,
@@ -139,7 +181,7 @@ export async function fetchWorkspaceTodos(params: {
 }): Promise<WorkspaceTodoItem[]> {
   const today = params.today ?? bangkokTodayIsoDate();
 
-  const [reminderResult, stockResult] = await Promise.allSettled([
+  const [reminderResult, stockResult, hopperResult] = await Promise.allSettled([
     (async () => {
       const [unpaidTotal, unpaidDueToday, unpaidOverdue] = await Promise.all([
         countPaymentReminders(params.userClient, { unpaidOnly: true }),
@@ -160,6 +202,10 @@ export async function fetchWorkspaceTodos(params: {
       });
       return stockAuditTodo(kpi.summary_today.completed_counts);
     })(),
+    (async () => {
+      const snapshot = await getLatestCashSnapshot(params.adminClient, "1");
+      return hopperTodo(snapshot);
+    })(),
   ]);
 
   return [
@@ -178,6 +224,14 @@ export async function fetchWorkspaceTodos(params: {
           "เป้าหมายตรวจนับรายวัน",
           "/stock-audit",
           `เป้าสาขา ${STOCK_AUDIT_DAILY_TARGET} รายการ/วัน (HQ · นับผ่าน LINE)`
+        ),
+    hopperResult.status === "fulfilled"
+      ? hopperResult.value
+      : unknownTodo(
+          "tiger-pay-hopper",
+          "เติมเงินทอนเครื่อง Tiger",
+          "/tiger-pay",
+          "สถานะเงินทอนในเครื่องรับชำระ HQ"
         ),
   ];
 }
