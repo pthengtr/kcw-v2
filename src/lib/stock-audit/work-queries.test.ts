@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseStockWorkAsOf } from "./work-types";
+import { parseStockWorkAsOf, stockWorkChartClickDate } from "./work-types";
 import {
   parseStockWorkCounts,
   parseStockWorkKpi,
@@ -18,6 +18,25 @@ describe("parseStockWorkAsOf", () => {
     expect(parseStockWorkAsOf("")).toBeUndefined();
     expect(parseStockWorkAsOf("16/09/2026")).toBeUndefined();
     expect(parseStockWorkAsOf("2026-02-31")).toBeUndefined();
+  });
+});
+
+describe("stockWorkChartClickDate", () => {
+  const dates = ["2026-09-10", "2026-09-11", "2026-09-16"];
+
+  it("resolves Recharts 3 activeIndex to a calendar date", () => {
+    expect(stockWorkChartClickDate(dates, { activeIndex: 1 })).toBe(
+      "2026-09-11"
+    );
+    expect(stockWorkChartClickDate(dates, { activeTooltipIndex: "2" })).toBe(
+      "2026-09-16"
+    );
+  });
+
+  it("ignores missing or out-of-range indexes", () => {
+    expect(stockWorkChartClickDate(dates, {})).toBeUndefined();
+    expect(stockWorkChartClickDate(dates, { activeIndex: -1 })).toBeUndefined();
+    expect(stockWorkChartClickDate(dates, { activeIndex: 9 })).toBeUndefined();
   });
 });
 

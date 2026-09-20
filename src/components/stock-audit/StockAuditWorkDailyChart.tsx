@@ -12,7 +12,10 @@ import {
 } from "recharts";
 
 import { formatCount } from "@/lib/bi/sales-format";
-import type { StockWorkDaily } from "@/lib/stock-audit/work-types";
+import {
+  stockWorkChartClickDate,
+  type StockWorkDaily,
+} from "@/lib/stock-audit/work-types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Props = {
@@ -73,11 +76,10 @@ export default function StockAuditWorkDailyChart({
                 data={data}
                 margin={{ top: 8, right: 4, left: -12, bottom: 0 }}
                 onClick={(state) => {
-                  const date = (
-                    state as
-                      | { activePayload?: { payload?: { date?: string } }[] }
-                      | undefined
-                  )?.activePayload?.[0]?.payload?.date;
+                  const date = stockWorkChartClickDate(
+                    data.map((d) => d.date),
+                    state
+                  );
                   if (date && onSelectDate) onSelectDate(date);
                 }}
               >
@@ -111,6 +113,12 @@ export default function StockAuditWorkDailyChart({
                   radius={[4, 4, 0, 0]}
                   maxBarSize={28}
                   cursor={onSelectDate ? "pointer" : undefined}
+                  onClick={(entry) => {
+                    const date = (
+                      entry as { payload?: { date?: string } } | undefined
+                    )?.payload?.date;
+                    if (date && onSelectDate) onSelectDate(date);
+                  }}
                 >
                   {data.map((d) => (
                     <Cell

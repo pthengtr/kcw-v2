@@ -17,6 +17,20 @@ export function parseStockWorkAsOf(value?: string | null): string | undefined {
   return trimmed;
 }
 
+/** Recharts 3 chart clicks expose activeIndex, not the old activePayload array. */
+export function stockWorkChartClickDate(
+  dates: string[],
+  state: {
+    activeIndex?: number | string | null;
+    activeTooltipIndex?: number | string | null;
+  }
+): string | undefined {
+  const raw = state.activeIndex ?? state.activeTooltipIndex;
+  const index = typeof raw === "string" ? Number(raw) : raw;
+  if (index == null || !Number.isFinite(index) || index < 0) return undefined;
+  return dates[index];
+}
+
 export type StockWorkEventType =
   | "count_correct"
   | "count_variance"
