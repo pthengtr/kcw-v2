@@ -91,6 +91,7 @@ describe("Tiger Pay query schema usage", () => {
     expect(queries).toContain(
       "id,pos_bill_number,voucher_num,amount,status,raw_status,raw_last_show,submitted_by_name,created_at,updated_at"
     );
+    expect(queries).toContain('.gte("updated_at"');
   });
 
   it("exposes daily and hopper-command API routes", () => {

@@ -302,16 +302,31 @@ export async function getTigerPayVouchersForWindow(
     updated_at: string | null;
   }>
 > {
-  const { data, error } = await tigerPay(supabase)
-    .from("voucher_attempt")
-    .select(
-      "id,pos_bill_number,voucher_num,amount,status,raw_status,raw_last_show,submitted_by_name,created_at,updated_at"
-    )
-    .gte("created_at", input.fromIso)
-    .lt("created_at", input.toIso)
-    .limit(200);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Array<{
+  const columns =
+    "id,pos_bill_number,voucher_num,amount,status,raw_status,raw_last_show,submitted_by_name,created_at,updated_at";
+  const [created, updated] = await Promise.all([
+    tigerPay(supabase)
+      .from("voucher_attempt")
+      .select(columns)
+      .gte("created_at", input.fromIso)
+      .lt("created_at", input.toIso)
+      .limit(200),
+    tigerPay(supabase)
+      .from("voucher_attempt")
+      .select(columns)
+      .gte("updated_at", input.fromIso)
+      .lt("updated_at", input.toIso)
+      .limit(200),
+  ]);
+  if (created.error) throw new Error(created.error.message);
+  if (updated.error) throw new Error(updated.error.message);
+  const byId = new Map<string, (typeof created.data)[number]>();
+  for (const row of [...(created.data ?? []), ...(updated.data ?? [])]) {
+    const id = (row as { id?: string | null }).id;
+    if (id) byId.set(id, row);
+  }
+  const data = [...byId.values()];
+  return data as Array<{
     id: string | null;
     pos_bill_number: string | null;
     voucher_num: string | null;
