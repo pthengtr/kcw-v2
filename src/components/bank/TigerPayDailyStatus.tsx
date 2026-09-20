@@ -245,6 +245,32 @@ export default function TigerPayDailyStatus({
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <SalesKpiCard
+              title="ยอดสุทธิวันนี้"
+              value={formatBahtBi(today.billedNet, true)}
+              deltaPct={pctChange(today.billedNet, previous?.billedNet ?? 0)}
+              hint={`ชำระสำเร็จ ${formatBahtBi(today.billed, true)}${
+                today.cashFloorRemainder > 0
+                  ? ` · POS ${formatBahtBi(today.posBilled, true)} ปัดลง ${formatBahtBi(today.cashFloorRemainder, true)}`
+                  : ""
+              }${
+                today.voucherUsedAmount > 0
+                  ? ` − CN ใช้แล้ว ${formatBahtBi(today.voucherUsedAmount, true)}`
+                  : ""
+              }`}
+            />
+            <SalesKpiCard
+              title="ปัดลงเงินสด"
+              value={formatBahtBi(today.cashFloorRemainder, true)}
+              className={
+                today.cashFloorRemainder > 0 ? "border-amber-300 bg-amber-50/60" : undefined
+              }
+              hint={
+                today.flooredBills.length > 0
+                  ? `${formatCount(today.flooredBills.length)} บิลสตางค์ (ส่วนใหญ่ TR)`
+                  : "ไม่มีสตางค์ถูกปัดวันนี้"
+              }
+            />
+            <SalesKpiCard
               title="ยอดชำระสำเร็จ"
               value={formatBahtBi(today.billed, true)}
               deltaPct={pctChange(today.billed, previous?.billed ?? 0)}
@@ -280,9 +306,9 @@ export default function TigerPayDailyStatus({
             <SalesKpiCard
               title="จ่ายคืน CN (redeem)"
               value={formatBahtBi(today.voucherUsedAmount, true)}
-              hint={`${formatCount(today.voucherUsedCount)} ใช้แล้ว${
+              hint={`${formatCount(today.voucherUsedCount)} ใช้แล้ว · หักจากยอดสุทธิ${
                 today.voucherCancelledCount
-                  ? ` · ยกเลิก ${today.voucherCancelledCount}`
+                  ? ` · ยกเลิก ${today.voucherCancelledCount} ไม่ขยับยอด`
                   : ""
               }${
                 today.voucherPendingCount
@@ -302,26 +328,36 @@ export default function TigerPayDailyStatus({
             />
           </div>
 
-          {today.cashFloorRemainder > 0 ? (
-            <section className="rounded-md border border-amber-200 bg-amber-50/40 p-3">
-              <div className="text-sm font-semibold">
-                ปัดลงเงินสด {formatBahtBi(today.cashFloorRemainder, true)}
+          <section
+            className={cn(
+              "rounded-md border p-3",
+              today.cashFloorRemainder > 0
+                ? "border-amber-200 bg-amber-50/40"
+                : "border-slate-200"
+            )}
+          >
+            <div className="text-sm font-semibold">
+              ปัดลงเงินสด {formatBahtBi(today.cashFloorRemainder, true)}
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              เครื่องรับเงินสดเป็นบาทเต็ม บิล VAT เงินสด (TR) ที่มียอดสตางค์ถูกปัดลงตอนส่ง
+              Open API — ยอดสุทธิหักเฉพาะ CN ที่จ่ายแล้ว ใบที่ยกเลิกไม่ขยับยอด
+            </p>
+            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                ตามบิล POS {formatBahtBi(today.posBilled, true)}
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                เครื่องรับเงินสดเป็นบาทเต็ม บิล VAT เงินสด (TR) ที่มียอดสตางค์ถูกปัดลงตอนส่ง
-                Open API — ยอดชำระสำเร็จด้านบนเป็นยอดที่เครื่องรับ ไม่หัก CN
-              </p>
-              <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-                <div>
-                  ตามบิล POS {formatBahtBi(today.posBilled, true)}
-                </div>
-                <div>
-                  ปัดลง {formatBahtBi(today.cashFloorRemainder, true)}
-                </div>
-                <div>
-                  ยอดที่เครื่อง {formatBahtBi(today.billed, true)}
-                </div>
+              <div>
+                ปัดลง {formatBahtBi(today.cashFloorRemainder, true)}
               </div>
+              <div>
+                ยอดที่เครื่อง {formatBahtBi(today.billed, true)}
+              </div>
+              <div>
+                สุทธิหลัง CN {formatBahtBi(today.posNet, true)}
+              </div>
+            </div>
+            {today.flooredBills.length > 0 ? (
               <ul className="mt-2 space-y-1 text-sm">
                 {today.flooredBills.map((row) => (
                   <li key={`${row.paymentNo}-${row.posBillNumber ?? ""}`}>
@@ -332,11 +368,15 @@ export default function TigerPayDailyStatus({
                     {" · "}
                     {formatBahtBi(row.posAmount, true)} →{" "}
                     {formatBahtBi(row.tigerAmount, true)}
+                    {" · ปัดลง "}
+                    {formatBahtBi(row.remainder, true)}
                   </li>
                 ))}
               </ul>
-            </section>
-          ) : null}
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">ไม่มีบิลที่ถูกปัดลงวันนี้</p>
+            )}
+          </section>
 
           {today.methodMix.length > 0 ? (
             <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
