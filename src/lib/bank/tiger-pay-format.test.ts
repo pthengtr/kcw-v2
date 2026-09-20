@@ -38,14 +38,16 @@ describe("Tiger Pay integration placement", () => {
   it("appears as a top-level page beside Bank Statement Sync", () => {
     const page = read("src/components/bank/TigerPayPage.tsx");
     expect(page).toContain("TigerPayTab");
+    expect(page).toContain("TigerPayDailyStatus");
+    expect(page).toContain("สรุปรายวัน");
     expect(page).toContain("Tiger Pay");
 
     const route = read("src/app/(root)/tiger-pay/page.tsx");
     expect(route).toContain("TigerPayPage");
 
-    const home = read("src/app/(root)/home/page.tsx");
-    expect(home).toMatch(/href(?:=|:)\s*"\/tiger-pay"/);
-    expect(home).toContain("Tiger Pay");
+    const menu = read("src/lib/home/menu.ts");
+    expect(menu).toContain('href: "/tiger-pay"');
+    expect(menu).toContain("Tiger Pay");
   });
 
   it("is not nested inside Bank Statement Sync", () => {
@@ -63,6 +65,13 @@ describe("Tiger Pay integration placement", () => {
     expect(tab).toContain("MobileTransactionCard");
     expect(tab).toContain("hidden md:block");
   });
+
+  it("uses the shared cashList parser in the transaction drawer", () => {
+    const detail = read("src/components/bank/TigerPayTransactionDetail.tsx");
+    expect(detail).toContain("paymentCashList");
+    expect(detail).toContain("paymentChangeList");
+    expect(detail).toContain("createdAt");
+  });
 });
 
 describe("Tiger Pay query schema usage", () => {
@@ -71,6 +80,23 @@ describe("Tiger Pay query schema usage", () => {
     expect(queries).toContain('.schema("tiger_pay")');
     expect(queries).toContain('.from("payment_transaction")');
     expect(queries).toContain('.from("webhook_event")');
+    expect(queries).toContain('.from("cash_snapshot")');
+    expect(queries).toContain('.from("daily_close")');
+    expect(queries).toContain('.from("cash_command")');
+  });
+
+  it("exposes daily and hopper-command API routes", () => {
+    expect(
+      fs.existsSync(path.join(ROOT, "src/app/api/bank/tiger-pay/daily/route.ts"))
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(ROOT, "src/app/api/bank/tiger-pay/cash-command/route.ts")
+      )
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(ROOT, "src/app/api/bank/tiger-pay/hopper/route.ts"))
+    ).toBe(true);
   });
 });
 
