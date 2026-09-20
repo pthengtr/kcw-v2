@@ -126,6 +126,13 @@ describe("Tiger Pay daily rollup", () => {
           tiger_payment_id: 29,
           pos_bill_number: "6K69-0011200",
           submitted_by_name: "Aon",
+          amount: "220.00",
+        },
+        {
+          tiger_payment_id: 28,
+          pos_bill_number: "TR6909-039",
+          submitted_by_name: "Aon",
+          amount: "2188.10",
         },
       ],
       vouchers: [
@@ -151,6 +158,17 @@ describe("Tiger Pay daily rollup", () => {
     });
 
     expect(rollup.billed).toBe(2898);
+    expect(rollup.posBilled).toBe(2898.1);
+    expect(rollup.cashFloorRemainder).toBe(0.1);
+    expect(rollup.flooredBills).toEqual([
+      {
+        posBillNumber: "TR6909-039",
+        paymentNo: "PA2609200028",
+        posAmount: 2188.1,
+        tigerAmount: 2188,
+        remainder: 0.1,
+      },
+    ]);
     expect(rollup.cashIn).toBe(3188);
     expect(rollup.changeOut).toBe(780);
     expect(rollup.cashNet).toBe(2408);
@@ -162,6 +180,11 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.bills[0]?.posBillNumber ?? rollup.bills.find((b) => b.paymentNo === "PA2609200029")?.posBillNumber).toBe(
       "6K69-0011200"
     );
+    expect(rollup.bills.find((b) => b.posBillNumber === "TR6909-039")).toMatchObject({
+      amount: 2188,
+      posAmount: 2188.1,
+      cashFloorRemainder: 0.1,
+    });
     expect(rollup.exceptions.some((row) => row.paymentNo === "PA2609200028")).toBe(
       true
     );
@@ -172,6 +195,62 @@ describe("Tiger Pay daily rollup", () => {
       "KCN6908-0282",
       "KCN6908-0280",
     ]);
+  });
+
+  it("does not net +cancel then −redeem on the same CN", () => {
+    const rollup = rollupTigerPayDay({
+      date: "2026-09-20",
+      shopCode: "1",
+      transactions: [],
+      vouchers: [
+        {
+          id: "v-cancel-95",
+          pos_bill_number: "KCN6908-0280",
+          voucher_num: "527032262695",
+          amount: 95,
+          status: "cancelled",
+          created_at: "2026-09-20T09:32:11+07:00",
+          updated_at: "2026-09-20T09:37:56+07:00",
+        },
+        {
+          id: "v-used-95",
+          pos_bill_number: "KCN6908-0280",
+          voucher_num: "554434252406",
+          amount: 95,
+          status: "used",
+          created_at: "2026-09-20T09:39:20+07:00",
+          updated_at: "2026-09-20T10:49:59+07:00",
+        },
+        {
+          id: "v-used-650",
+          pos_bill_number: "KCN6908-0281",
+          voucher_num: "919306979112",
+          amount: 650,
+          status: "used",
+          created_at: "2026-09-20T09:46:18+07:00",
+          updated_at: "2026-09-20T10:59:08+07:00",
+        },
+        {
+          id: "v-used-180",
+          pos_bill_number: "KCN6908-0282",
+          voucher_num: "922676492477",
+          amount: 180,
+          status: "used",
+          created_at: "2026-09-20T10:41:40+07:00",
+          updated_at: "2026-09-20T10:44:25+07:00",
+        },
+      ],
+    });
+
+    expect(rollup.voucherUsedCount).toBe(3);
+    expect(rollup.voucherUsedAmount).toBe(925);
+    expect(rollup.voucherCancelledCount).toBe(0);
+    expect(
+      rollup.vouchers.find((row) => row.voucherNum === "527032262695")?.superseded
+    ).toBe(true);
+    expect(
+      rollup.vouchers.find((row) => row.voucherNum === "554434252406")?.superseded
+    ).toBe(false);
   });
 });
 

@@ -248,7 +248,11 @@ export default function TigerPayDailyStatus({
               title="ยอดชำระสำเร็จ"
               value={formatBahtBi(today.billed, true)}
               deltaPct={pctChange(today.billed, previous?.billed ?? 0)}
-              hint={`${formatCount(today.successCount)} บิล`}
+              hint={`${formatCount(today.successCount)} บิล${
+                today.cashFloorRemainder > 0
+                  ? ` · ตามบิล POS ${formatBahtBi(today.posBilled, true)}`
+                  : ""
+              }`}
             />
             <SalesKpiCard
               title="เงินสดรับเข้า"
@@ -297,6 +301,42 @@ export default function TigerPayDailyStatus({
               hint={`สำเร็จ ${today.successCount} · ยกเลิก ${today.cancelCount} · ล้มเหลว ${today.failCount} · ค้าง ${today.pendingCount}`}
             />
           </div>
+
+          {today.cashFloorRemainder > 0 ? (
+            <section className="rounded-md border border-amber-200 bg-amber-50/40 p-3">
+              <div className="text-sm font-semibold">
+                ปัดลงเงินสด {formatBahtBi(today.cashFloorRemainder, true)}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                เครื่องรับเงินสดเป็นบาทเต็ม บิล VAT เงินสด (TR) ที่มียอดสตางค์ถูกปัดลงตอนส่ง
+                Open API — ยอดชำระสำเร็จด้านบนเป็นยอดที่เครื่องรับ ไม่หัก CN
+              </p>
+              <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+                <div>
+                  ตามบิล POS {formatBahtBi(today.posBilled, true)}
+                </div>
+                <div>
+                  ปัดลง {formatBahtBi(today.cashFloorRemainder, true)}
+                </div>
+                <div>
+                  ยอดที่เครื่อง {formatBahtBi(today.billed, true)}
+                </div>
+              </div>
+              <ul className="mt-2 space-y-1 text-sm">
+                {today.flooredBills.map((row) => (
+                  <li key={`${row.paymentNo}-${row.posBillNumber ?? ""}`}>
+                    {row.posBillNumber ?? row.paymentNo}
+                    {row.posBillNumber?.toUpperCase().startsWith("TR")
+                      ? " · VAT เงินสด (TR)"
+                      : ""}
+                    {" · "}
+                    {formatBahtBi(row.posAmount, true)} →{" "}
+                    {formatBahtBi(row.tigerAmount, true)}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {today.methodMix.length > 0 ? (
             <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
@@ -408,9 +448,11 @@ export default function TigerPayDailyStatus({
                           ? "ใช้แล้ว"
                           : row.status === "pending"
                             ? "ค้าง"
-                            : row.status === "cancelled" || row.status === "cancel"
-                              ? "ยกเลิก"
-                              : row.status}
+                            : row.superseded
+                              ? "ยกเลิก (มีใบใหม่)"
+                              : row.status === "cancelled" || row.status === "cancel"
+                                ? "ยกเลิก"
+                                : row.status}
                       </td>
                       <td className="px-3 py-1.5 whitespace-nowrap">
                         {formatBangkokDateTime(row.at)}
@@ -501,6 +543,12 @@ export default function TigerPayDailyStatus({
                       </td>
                       <td className="px-3 py-1.5 text-right">
                         {formatBaht(bill.amount)}
+                        {bill.cashFloorRemainder > 0 ? (
+                          <div className="text-xs text-amber-800">
+                            POS {formatBaht(bill.posAmount)} · ปัดลง{" "}
+                            {formatBaht(bill.cashFloorRemainder)}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="px-3 py-1.5 text-right">
                         {formatBaht(bill.totalPay)} / {formatBaht(bill.changeAmount)}

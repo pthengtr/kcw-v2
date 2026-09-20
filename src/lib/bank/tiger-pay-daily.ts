@@ -18,6 +18,8 @@ export type TigerPayDailyBill = {
   paymentType: string;
   status: string;
   amount: number;
+  posAmount: number | null;
+  cashFloorRemainder: number;
   totalPay: number;
   changeAmount: number;
   posBillNumber: string | null;
@@ -25,11 +27,20 @@ export type TigerPayDailyBill = {
   at: string | null;
 };
 
+export type TigerPayDailyFloor = {
+  posBillNumber: string | null;
+  paymentNo: string;
+  posAmount: number;
+  tigerAmount: number;
+  remainder: number;
+};
+
 type DailyAttempt = {
   tiger_payment_id: number | null;
   pos_bill_number: string | null;
   submitted_by_name: string | null;
   created_at?: string | null;
+  amount?: number | string | null;
 };
 
 type DailyVoucher = {
@@ -51,6 +62,8 @@ export type TigerPayDailyVoucher = {
   amount: number;
   submittedByName: string | null;
   at: string | null;
+  /** Cancelled QR on a CN that later redeemed — do not net +amount then −amount. */
+  superseded: boolean;
 };
 
 export type TigerPayDailyException = {
@@ -65,6 +78,9 @@ export type TigerPayDailyException = {
 export type TigerPayDailyRollup = {
   date: string;
   billed: number;
+  posBilled: number;
+  cashFloorRemainder: number;
+  flooredBills: TigerPayDailyFloor[];
   cashIn: number;
   changeOut: number;
   cashNet: number;
@@ -155,6 +171,42 @@ function money(value: unknown): number {
   return n == null ? 0 : n;
 }
 
+function roundMoney(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function attemptPosAmount(attempt: DailyAttempt | undefined): number | null {
+  if (!attempt) return null;
+  return asNumber(attempt.amount);
+}
+
+function isVoucherUsedStatus(status: string): boolean {
+  return status === "used" || status === "success";
+}
+
+function isVoucherCancelledStatus(status: string): boolean {
+  return status === "cancel" || status === "cancelled";
+}
+
+/** Cancelled codes on a bill that later redeemed are history, not a second ±amount. */
+export function markSupersededVouchers(
+  rows: TigerPayDailyVoucher[]
+): TigerPayDailyVoucher[] {
+  const redeemedBills = new Set(
+    rows
+      .filter((row) => isVoucherUsedStatus(row.status) && row.posBillNumber)
+      .map((row) => row.posBillNumber as string)
+  );
+  return rows.map((row) => ({
+    ...row,
+    superseded: Boolean(
+      row.posBillNumber &&
+        redeemedBills.has(row.posBillNumber) &&
+        isVoucherCancelledStatus(row.status)
+    ),
+  }));
+}
+
 function bump(map: Record<string, number>, key: string, by: number) {
   map[key] = (map[key] ?? 0) + by;
 }
@@ -195,8 +247,11 @@ export function rollupTigerPayDay(input: {
   }));
   const bills: TigerPayDailyBill[] = [];
   const exceptions: TigerPayDailyException[] = [];
+  const flooredBills: TigerPayDailyFloor[] = [];
 
   let billed = 0;
+  let posBilled = 0;
+  let cashFloorRemainder = 0;
   let cashIn = 0;
   let changeOut = 0;
   let qrPromptpayIn = 0;
@@ -214,10 +269,13 @@ export function rollupTigerPayDay(input: {
     const amount = money(row.amount);
     const totalPay = money(row.total_pay);
     const changeAmount = money(row.change_amount);
+    const attempt = attemptByPayment.get(row.tiger_payment_id);
+    const posAmount = attemptPosAmount(attempt);
     const payment = paymentObject(row.payload);
     const inserted = paymentCashList(payment);
     const changePieces = paymentChangeList(payment);
     const listedIn = inserted.reduce((sum, piece) => sum + piece.value * piece.amount, 0);
+    let billFloorRemainder = 0;
 
     if (status === "success") successCount += 1;
     else if (status === "cancel" || status === "cancelled") cancelCount += 1;
@@ -228,6 +286,21 @@ export function rollupTigerPayDay(input: {
 
     if (status === "success") {
       billed += amount;
+      posBilled += posAmount ?? amount;
+      if (paymentType === "cash" && posAmount != null) {
+        const remainder = roundMoney(posAmount - amount);
+        if (remainder > 0.0001) {
+          billFloorRemainder = remainder;
+          cashFloorRemainder = roundMoney(cashFloorRemainder + remainder);
+          flooredBills.push({
+            posBillNumber: attempt?.pos_bill_number ?? null,
+            paymentNo: row.payment_no,
+            posAmount,
+            tigerAmount: amount,
+            remainder,
+          });
+        }
+      }
       const mix = methodMap.get(paymentType) ?? { count: 0, baht: 0 };
       mix.count += 1;
       mix.baht += amount;
@@ -275,13 +348,14 @@ export function rollupTigerPayDay(input: {
       });
     }
 
-    const attempt = attemptByPayment.get(row.tiger_payment_id);
     bills.push({
       tigerPaymentId: row.tiger_payment_id,
       paymentNo: row.payment_no,
       paymentType,
       status,
       amount,
+      posAmount,
+      cashFloorRemainder: billFloorRemainder,
       totalPay,
       changeAmount,
       posBillNumber: attempt?.pos_bill_number ?? null,
@@ -296,26 +370,30 @@ export function rollupTigerPayDay(input: {
       bizDayOf({ created_at: row.updated_at ?? null }) === input.date
     );
   });
-  const voucherRows: TigerPayDailyVoucher[] = vouchersForDay.map((row, index) => ({
-    id: row.id ?? `voucher-${index}`,
-    posBillNumber: row.pos_bill_number ?? null,
-    voucherNum: row.voucher_num ?? null,
-    status: (row.status ?? "").trim().toLowerCase() || "unknown",
-    amount: money(row.amount),
-    submittedByName: row.submitted_by_name ?? null,
-    at: row.updated_at || row.created_at || null,
-  }));
-  const voucherUsed = voucherRows.filter(
-    (row) => row.status === "used" || row.status === "success"
+  const voucherRows: TigerPayDailyVoucher[] = markSupersededVouchers(
+    vouchersForDay.map((row, index) => ({
+      id: row.id ?? `voucher-${index}`,
+      posBillNumber: row.pos_bill_number ?? null,
+      voucherNum: row.voucher_num ?? null,
+      status: (row.status ?? "").trim().toLowerCase() || "unknown",
+      amount: money(row.amount),
+      submittedByName: row.submitted_by_name ?? null,
+      at: row.updated_at || row.created_at || null,
+      superseded: false,
+    }))
   );
+  const voucherUsed = voucherRows.filter((row) => isVoucherUsedStatus(row.status));
   const voucherPending = voucherRows.filter((row) => row.status === "pending");
   const voucherCancelled = voucherRows.filter(
-    (row) => row.status === "cancel" || row.status === "cancelled"
+    (row) => isVoucherCancelledStatus(row.status) && !row.superseded
   );
 
   return {
     date: input.date,
     billed,
+    posBilled,
+    cashFloorRemainder,
+    flooredBills,
     cashIn,
     changeOut,
     cashNet: cashIn - changeOut,
