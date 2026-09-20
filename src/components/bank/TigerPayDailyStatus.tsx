@@ -245,16 +245,27 @@ export default function TigerPayDailyStatus({
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <SalesKpiCard
-              title="ยอดสุทธิวันนี้"
+              title="สุทธิที่เครื่อง"
               value={formatBahtBi(today.billedNet, true)}
               deltaPct={pctChange(today.billedNet, previous?.billedNet ?? 0)}
-              hint={`ชำระสำเร็จ ${formatBahtBi(today.billed, true)}${
-                today.cashFloorRemainder > 0
-                  ? ` · POS ${formatBahtBi(today.posBilled, true)} ปัดลง ${formatBahtBi(today.cashFloorRemainder, true)}`
+              hint={`รับ ${formatBahtBi(today.billed, true)} − จ่าย CN ${formatBahtBi(today.voucherUsedAmount, true)}`}
+            />
+            <SalesKpiCard
+              title="เครื่องรับแล้ว"
+              value={formatBahtBi(today.billed, true)}
+              deltaPct={pctChange(today.billed, previous?.billed ?? 0)}
+              hint={`${formatCount(today.successCount)} บิลสำเร็จ · เงินสด+QR ที่เครื่องยืนยัน`}
+            />
+            <SalesKpiCard
+              title="จ่าย CN จริง"
+              value={formatBahtBi(today.voucherUsedAmount, true)}
+              hint={`${formatCount(today.voucherUsedCount)} ใบที่เครื่องจ่ายแล้ว${
+                today.voucherCancelledCount
+                  ? ` · ยกเลิก ${today.voucherCancelledCount} จ่าย ฿0`
                   : ""
               }${
-                today.voucherUsedAmount > 0
-                  ? ` − CN ใช้แล้ว ${formatBahtBi(today.voucherUsedAmount, true)}`
+                today.voucherPendingCount
+                  ? ` · ค้าง ${today.voucherPendingCount}`
                   : ""
               }`}
             />
@@ -266,19 +277,9 @@ export default function TigerPayDailyStatus({
               }
               hint={
                 today.flooredBills.length > 0
-                  ? `${formatCount(today.flooredBills.length)} บิลสตางค์ (ส่วนใหญ่ TR)`
-                  : "ไม่มีสตางค์ถูกปัดวันนี้"
+                  ? `${formatCount(today.flooredBills.length)} บิล · POS ขอ ${formatBahtBi(today.posBilled, true)}`
+                  : "เครื่องรับบาทเต็ม — ไม่มีสตางค์ถูกปัด"
               }
-            />
-            <SalesKpiCard
-              title="ยอดชำระสำเร็จ"
-              value={formatBahtBi(today.billed, true)}
-              deltaPct={pctChange(today.billed, previous?.billed ?? 0)}
-              hint={`${formatCount(today.successCount)} บิล${
-                today.cashFloorRemainder > 0
-                  ? ` · ตามบิล POS ${formatBahtBi(today.posBilled, true)}`
-                  : ""
-              }`}
             />
             <SalesKpiCard
               title="เงินสดรับเข้า"
@@ -298,23 +299,11 @@ export default function TigerPayDailyStatus({
             <SalesKpiCard
               title="เงินสดสุทธิเข้าเครื่อง"
               value={formatBahtBi(today.cashNet, true)}
+              hint="รับเข้า − ทอน จากบิลสำเร็จ ยังไม่รวมจ่าย CN"
             />
             <SalesKpiCard
               title="QR / PromptPay"
               value={formatBahtBi(today.qrPromptpayIn, true)}
-            />
-            <SalesKpiCard
-              title="จ่ายคืน CN (redeem)"
-              value={formatBahtBi(today.voucherUsedAmount, true)}
-              hint={`${formatCount(today.voucherUsedCount)} ใช้แล้ว · หักจากยอดสุทธิ${
-                today.voucherCancelledCount
-                  ? ` · ยกเลิก ${today.voucherCancelledCount} ไม่ขยับยอด`
-                  : ""
-              }${
-                today.voucherPendingCount
-                  ? ` · ค้าง ${today.voucherPendingCount}`
-                  : ""
-              }`}
             />
             <SalesKpiCard
               title="จำนวนบิล"
@@ -340,21 +329,18 @@ export default function TigerPayDailyStatus({
               ปัดลงเงินสด {formatBahtBi(today.cashFloorRemainder, true)}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              เครื่องรับเงินสดเป็นบาทเต็ม บิล VAT เงินสด (TR) ที่มียอดสตางค์ถูกปัดลงตอนส่ง
-              Open API — ยอดสุทธิหักเฉพาะ CN ที่จ่ายแล้ว ใบที่ยกเลิกไม่ขยับยอด
+              ตัวเลขนี้ไม่ใช่เงินที่เครื่องขยับ — เป็นส่วนต่าง POS กับยอดที่เครื่องรับจริง
+              (เงินสดถูกปัดลงเป็นบาทเต็ม)
             </p>
-            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
               <div>
-                ตามบิล POS {formatBahtBi(today.posBilled, true)}
+                POS ขอ {formatBahtBi(today.posBilled, true)}
+              </div>
+              <div>
+                เครื่องรับ {formatBahtBi(today.billed, true)}
               </div>
               <div>
                 ปัดลง {formatBahtBi(today.cashFloorRemainder, true)}
-              </div>
-              <div>
-                ยอดที่เครื่อง {formatBahtBi(today.billed, true)}
-              </div>
-              <div>
-                สุทธิหลัง CN {formatBahtBi(today.posNet, true)}
               </div>
             </div>
             {today.flooredBills.length > 0 ? (
@@ -476,7 +462,8 @@ export default function TigerPayDailyStatus({
                     <th className="px-3 py-2">เวลา</th>
                     <th className="px-3 py-2">บิล CN</th>
                     <th className="px-3 py-2">Voucher</th>
-                    <th className="px-3 py-2 text-right">ยอดจ่ายคืน</th>
+                    <th className="px-3 py-2 text-right">มูลค่าใบ</th>
+                    <th className="px-3 py-2 text-right">เครื่องจ่าย</th>
                     <th className="px-3 py-2">ผู้ส่ง</th>
                   </tr>
                 </thead>
@@ -484,14 +471,14 @@ export default function TigerPayDailyStatus({
                   {today.vouchers.map((row) => (
                     <tr key={row.id} className="border-t">
                       <td className="px-3 py-1.5">
-                        {row.status === "used" || row.status === "success"
-                          ? "ใช้แล้ว"
+                        {row.cashMoved > 0
+                          ? "จ่ายแล้ว"
                           : row.status === "pending"
-                            ? "ค้าง"
+                            ? "ค้าง · ยังไม่จ่าย"
                             : row.superseded
-                              ? "ยกเลิก (มีใบใหม่)"
+                              ? "ยกเลิก · ไม่จ่าย (มีใบใหม่)"
                               : row.status === "cancelled" || row.status === "cancel"
-                                ? "ยกเลิก"
+                                ? "ยกเลิก · ไม่จ่าย"
                                 : row.status}
                       </td>
                       <td className="px-3 py-1.5 whitespace-nowrap">
@@ -500,6 +487,7 @@ export default function TigerPayDailyStatus({
                       <td className="px-3 py-1.5">{row.posBillNumber ?? "—"}</td>
                       <td className="px-3 py-1.5">{row.voucherNum ?? "—"}</td>
                       <td className="px-3 py-1.5 text-right">{formatBaht(row.amount)}</td>
+                      <td className="px-3 py-1.5 text-right">{formatBaht(row.cashMoved)}</td>
                       <td className="px-3 py-1.5">{row.submittedByName ?? "—"}</td>
                     </tr>
                   ))}
