@@ -265,13 +265,15 @@ export async function getTigerPayAttemptsForWindow(
     pos_bill_number: string | null;
     submitted_by_name: string | null;
     created_at: string | null;
+    amount: number | string | null;
   }>
 > {
   const { data, error } = await tigerPay(supabase)
     .from("payment_attempt")
-    .select("tiger_payment_id,pos_bill_number,submitted_by_name,created_at")
+    .select("tiger_payment_id,pos_bill_number,submitted_by_name,created_at,amount")
     .gte("created_at", input.fromIso)
     .lt("created_at", input.toIso)
+    .order("created_at", { ascending: false })
     .limit(2000);
   if (error) throw new Error(error.message);
   return (data ?? []) as Array<{
@@ -279,6 +281,7 @@ export async function getTigerPayAttemptsForWindow(
     pos_bill_number: string | null;
     submitted_by_name: string | null;
     created_at: string | null;
+    amount: number | string | null;
   }>;
 }
 

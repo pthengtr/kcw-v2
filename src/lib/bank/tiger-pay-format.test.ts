@@ -84,6 +84,9 @@ describe("Tiger Pay query schema usage", () => {
     expect(queries).toContain('.from("daily_close")');
     expect(queries).toContain('.from("cash_command")');
     expect(queries).toContain('.from("payment_attempt")');
+    expect(queries).toContain(
+      "tiger_payment_id,pos_bill_number,submitted_by_name,created_at,amount"
+    );
     expect(queries).toContain('.from("voucher_attempt")');
   });
 
