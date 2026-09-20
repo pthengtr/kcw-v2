@@ -295,6 +295,8 @@ export async function getTigerPayVouchersForWindow(
     voucher_num: string | null;
     amount: number | string | null;
     status: string | null;
+    raw_status: string | null;
+    raw_last_show: unknown;
     submitted_by_name: string | null;
     created_at: string | null;
     updated_at: string | null;
@@ -303,7 +305,7 @@ export async function getTigerPayVouchersForWindow(
   const { data, error } = await tigerPay(supabase)
     .from("voucher_attempt")
     .select(
-      "id,pos_bill_number,voucher_num,amount,status,submitted_by_name,created_at,updated_at"
+      "id,pos_bill_number,voucher_num,amount,status,raw_status,raw_last_show,submitted_by_name,created_at,updated_at"
     )
     .gte("created_at", input.fromIso)
     .lt("created_at", input.toIso)
@@ -315,6 +317,8 @@ export async function getTigerPayVouchersForWindow(
     voucher_num: string | null;
     amount: number | string | null;
     status: string | null;
+    raw_status: string | null;
+    raw_last_show: unknown;
     submitted_by_name: string | null;
     created_at: string | null;
     updated_at: string | null;

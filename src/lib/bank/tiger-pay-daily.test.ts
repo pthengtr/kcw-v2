@@ -10,6 +10,7 @@ import {
   hopperItemCounts,
   mapCashSnapshot,
   rollupTigerPayDay,
+  voucherCashMoved,
 } from "@/lib/bank/tiger-pay-daily";
 import type { TigerPayTransaction } from "@/lib/bank/tiger-pay-types";
 
@@ -160,7 +161,6 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.billed).toBe(2898);
     expect(rollup.billedNet).toBe(2718);
     expect(rollup.posBilled).toBe(2898.1);
-    expect(rollup.posNet).toBe(2718.1);
     expect(rollup.cashFloorRemainder).toBe(0.1);
     expect(rollup.flooredBills).toEqual([
       {
@@ -193,6 +193,12 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.voucherUsedCount).toBe(1);
     expect(rollup.voucherUsedAmount).toBe(180);
     expect(rollup.voucherCancelledCount).toBe(1);
+    expect(rollup.vouchers.find((row) => row.voucherNum === "527032262695")?.cashMoved).toBe(
+      0
+    );
+    expect(rollup.vouchers.find((row) => row.voucherNum === "922676492477")?.cashMoved).toBe(
+      180
+    );
     expect(rollup.vouchers.map((row) => row.posBillNumber)).toEqual([
       "KCN6908-0282",
       "KCN6908-0280",
@@ -211,6 +217,10 @@ describe("Tiger Pay daily rollup", () => {
           voucher_num: "527032262695",
           amount: 95,
           status: "cancelled",
+          raw_status: "cancelled",
+          raw_last_show: {
+            voucher: { note: "cancelled", used: 1, amount: 95, balance: 95 },
+          },
           created_at: "2026-09-20T09:32:11+07:00",
           updated_at: "2026-09-20T09:37:56+07:00",
         },
@@ -220,6 +230,15 @@ describe("Tiger Pay daily rollup", () => {
           voucher_num: "554434252406",
           amount: 95,
           status: "used",
+          raw_status: "1",
+          raw_last_show: {
+            voucher: {
+              note: "CN bill KCN6908-0280",
+              used: 1,
+              amount: 95,
+              balance: 0,
+            },
+          },
           created_at: "2026-09-20T09:39:20+07:00",
           updated_at: "2026-09-20T10:49:59+07:00",
         },
@@ -249,13 +268,14 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.voucherCancelledCount).toBe(0);
     expect(rollup.billed).toBe(0);
     expect(rollup.billedNet).toBe(-925);
-    expect(rollup.posNet).toBe(-925);
-    expect(
-      rollup.vouchers.find((row) => row.voucherNum === "527032262695")?.superseded
-    ).toBe(true);
-    expect(
-      rollup.vouchers.find((row) => row.voucherNum === "554434252406")?.superseded
-    ).toBe(false);
+    expect(rollup.vouchers.find((row) => row.voucherNum === "527032262695")).toMatchObject({
+      cashMoved: 0,
+      superseded: true,
+    });
+    expect(rollup.vouchers.find((row) => row.voucherNum === "554434252406")).toMatchObject({
+      cashMoved: 95,
+      superseded: false,
+    });
   });
 
   it("does not move the day total when a CN voucher is only cancelled", () => {
@@ -285,6 +305,35 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.billedNet).toBe(1000);
     expect(rollup.voucherUsedAmount).toBe(0);
     expect(rollup.voucherCancelledCount).toBe(1);
+    expect(rollup.vouchers[0]?.cashMoved).toBe(0);
+  });
+});
+
+describe("voucher cashbox payout", () => {
+  it("treats Tiger used=1 + note=cancelled as no cash moved", () => {
+    expect(
+      voucherCashMoved({
+        amount: 95,
+        status: "cancelled",
+        raw_status: "cancelled",
+        raw_last_show: {
+          voucher: { note: "cancelled", used: 1, amount: 95, balance: 95 },
+        },
+      })
+    ).toBe(0);
+  });
+
+  it("treats used=1 and balance 0 as cash paid", () => {
+    expect(
+      voucherCashMoved({
+        amount: 95,
+        status: "used",
+        raw_status: "1",
+        raw_last_show: {
+          voucher: { note: "CN bill KCN6908-0280", used: 1, amount: 95, balance: 0 },
+        },
+      })
+    ).toBe(95);
   });
 });
 

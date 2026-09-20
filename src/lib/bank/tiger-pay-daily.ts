@@ -49,6 +49,8 @@ type DailyVoucher = {
   voucher_num?: string | null;
   amount: number | string | null;
   status: string | null;
+  raw_status?: string | null;
+  raw_last_show?: unknown;
   submitted_by_name?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -60,9 +62,10 @@ export type TigerPayDailyVoucher = {
   voucherNum: string | null;
   status: string;
   amount: number;
+  /** Baht the cashbox actually paid. Cancelled / unused codes are 0. */
+  cashMoved: number;
   submittedByName: string | null;
   at: string | null;
-  /** Cancelled QR on a CN that later redeemed — do not net +amount then −amount. */
   superseded: boolean;
 };
 
@@ -80,7 +83,6 @@ export type TigerPayDailyRollup = {
   billed: number;
   billedNet: number;
   posBilled: number;
-  posNet: number;
   cashFloorRemainder: number;
   flooredBills: TigerPayDailyFloor[];
   cashIn: number;
@@ -190,20 +192,50 @@ function isVoucherCancelledStatus(status: string): boolean {
   return status === "cancel" || status === "cancelled";
 }
 
-/** Cancelled codes on a bill that later redeemed are history, not a second ±amount. */
+function voucherShowRecord(raw: unknown): Record<string, unknown> | null {
+  if (!isRecord(raw)) return null;
+  if (isRecord(raw.voucher)) return raw.voucher;
+  return raw;
+}
+
+/** Cash the cashbox paid for this QR. Cancelled codes (used=1 but note=cancelled) are 0. */
+export function voucherCashMoved(row: {
+  amount: number;
+  status: string;
+  raw_status?: string | null;
+  raw_last_show?: unknown;
+}): number {
+  const show = voucherShowRecord(row.raw_last_show);
+  const note = (asString(show?.note) ?? "").trim().toLowerCase();
+  const rawStatus = (row.raw_status ?? "").trim().toLowerCase();
+  if (
+    isVoucherCancelledStatus(row.status) ||
+    isVoucherCancelledStatus(note) ||
+    isVoucherCancelledStatus(rawStatus)
+  ) {
+    return 0;
+  }
+  const balance = show ? asNumber(show.balance) : null;
+  if (balance === 0) return row.amount;
+  if (isVoucherUsedStatus(row.status)) return row.amount;
+  return 0;
+}
+
+/** Cancelled codes on a bill that later paid out are history, not a second cash move. */
 export function markSupersededVouchers(
   rows: TigerPayDailyVoucher[]
 ): TigerPayDailyVoucher[] {
-  const redeemedBills = new Set(
+  const paidBills = new Set(
     rows
-      .filter((row) => isVoucherUsedStatus(row.status) && row.posBillNumber)
+      .filter((row) => row.cashMoved > 0 && row.posBillNumber)
       .map((row) => row.posBillNumber as string)
   );
   return rows.map((row) => ({
     ...row,
     superseded: Boolean(
       row.posBillNumber &&
-        redeemedBills.has(row.posBillNumber) &&
+        paidBills.has(row.posBillNumber) &&
+        row.cashMoved === 0 &&
         isVoucherCancelledStatus(row.status)
     ),
   }));
@@ -373,35 +405,43 @@ export function rollupTigerPayDay(input: {
     );
   });
   const voucherRows: TigerPayDailyVoucher[] = markSupersededVouchers(
-    vouchersForDay.map((row, index) => ({
-      id: row.id ?? `voucher-${index}`,
-      posBillNumber: row.pos_bill_number ?? null,
-      voucherNum: row.voucher_num ?? null,
-      status: (row.status ?? "").trim().toLowerCase() || "unknown",
-      amount: money(row.amount),
-      submittedByName: row.submitted_by_name ?? null,
-      at: row.updated_at || row.created_at || null,
-      superseded: false,
-    }))
+    vouchersForDay.map((row, index) => {
+      const status = (row.status ?? "").trim().toLowerCase() || "unknown";
+      const amount = money(row.amount);
+      return {
+        id: row.id ?? `voucher-${index}`,
+        posBillNumber: row.pos_bill_number ?? null,
+        voucherNum: row.voucher_num ?? null,
+        status,
+        amount,
+        cashMoved: voucherCashMoved({
+          amount,
+          status,
+          raw_status: row.raw_status,
+          raw_last_show: row.raw_last_show,
+        }),
+        submittedByName: row.submitted_by_name ?? null,
+        at: row.updated_at || row.created_at || null,
+        superseded: false,
+      };
+    })
   );
-  const voucherUsed = voucherRows.filter((row) => isVoucherUsedStatus(row.status));
+  const voucherUsed = voucherRows.filter((row) => row.cashMoved > 0);
   const voucherPending = voucherRows.filter((row) => row.status === "pending");
   const voucherCancelled = voucherRows.filter(
     (row) => isVoucherCancelledStatus(row.status) && !row.superseded
   );
   const voucherUsedAmount = roundMoney(
-    voucherUsed.reduce((sum, row) => sum + row.amount, 0)
+    voucherUsed.reduce((sum, row) => sum + row.cashMoved, 0)
   );
-  // Cancelled CN never moved cash. Only used/redeemed vouchers reduce the day total.
+  // Cashbox confirmed in (success payments) minus cashbox confirmed CN out.
   const billedNet = roundMoney(billed - voucherUsedAmount);
-  const posNet = roundMoney(posBilled - voucherUsedAmount);
 
   return {
     date: input.date,
     billed,
     billedNet,
     posBilled,
-    posNet,
     cashFloorRemainder,
     flooredBills,
     cashIn,
