@@ -72,6 +72,14 @@ export default function StockAuditWorkDailyChart({
               <BarChart
                 data={data}
                 margin={{ top: 8, right: 4, left: -12, bottom: 0 }}
+                onClick={(state) => {
+                  const date = (
+                    state as
+                      | { activePayload?: { payload?: { date?: string } }[] }
+                      | undefined
+                  )?.activePayload?.[0]?.payload?.date;
+                  if (date && onSelectDate) onSelectDate(date);
+                }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
@@ -103,13 +111,6 @@ export default function StockAuditWorkDailyChart({
                   radius={[4, 4, 0, 0]}
                   maxBarSize={28}
                   cursor={onSelectDate ? "pointer" : undefined}
-                  onClick={(entry) => {
-                    const row = entry as
-                      | { date?: string; payload?: { date?: string } }
-                      | undefined;
-                    const date = row?.date ?? row?.payload?.date;
-                    if (date && onSelectDate) onSelectDate(date);
-                  }}
                 >
                   {data.map((d) => (
                     <Cell
