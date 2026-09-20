@@ -128,6 +128,26 @@ describe("Tiger Pay daily rollup", () => {
           submitted_by_name: "Aon",
         },
       ],
+      vouchers: [
+        {
+          id: "v-used",
+          pos_bill_number: "KCN6908-0282",
+          voucher_num: "922676492477",
+          amount: 180,
+          status: "used",
+          submitted_by_name: "หนุ่ย",
+          created_at: "2026-09-20T10:41:40+07:00",
+          updated_at: "2026-09-20T10:44:25+07:00",
+        },
+        {
+          id: "v-cancel",
+          pos_bill_number: "KCN6908-0280",
+          voucher_num: "527032262695",
+          amount: 95,
+          status: "cancelled",
+          created_at: "2026-09-20T09:32:11+07:00",
+        },
+      ],
     });
 
     expect(rollup.billed).toBe(2898);
@@ -145,6 +165,13 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.exceptions.some((row) => row.paymentNo === "PA2609200028")).toBe(
       true
     );
+    expect(rollup.voucherUsedCount).toBe(1);
+    expect(rollup.voucherUsedAmount).toBe(180);
+    expect(rollup.voucherCancelledCount).toBe(1);
+    expect(rollup.vouchers.map((row) => row.posBillNumber)).toEqual([
+      "KCN6908-0282",
+      "KCN6908-0280",
+    ]);
   });
 });
 
