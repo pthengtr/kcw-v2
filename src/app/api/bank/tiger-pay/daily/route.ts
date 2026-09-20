@@ -58,10 +58,26 @@ export async function GET(req: Request) {
           toIso: to,
           shopCode: shop,
         }),
-        getTigerPayAttemptsForWindow(supabase, { fromIso: from, toIso: to }),
-        getTigerPayVouchersForWindow(supabase, { fromIso: from, toIso: to }),
-        getLatestCashSnapshot(supabase, shop),
-        getDailyClose(supabase, { date, shopCode: shop }),
+        getTigerPayAttemptsForWindow(supabase, { fromIso: from, toIso: to }).catch(
+          (error) => {
+            console.error("tiger-pay daily attempts", error);
+            return [];
+          }
+        ),
+        getTigerPayVouchersForWindow(supabase, { fromIso: from, toIso: to }).catch(
+          (error) => {
+            console.error("tiger-pay daily vouchers", error);
+            return [];
+          }
+        ),
+        getLatestCashSnapshot(supabase, shop).catch((error) => {
+          console.error("tiger-pay daily hopper", error);
+          return null;
+        }),
+        getDailyClose(supabase, { date, shopCode: shop }).catch((error) => {
+          console.error("tiger-pay daily close", error);
+          return null;
+        }),
       ]);
 
     const today = rollupTigerPayDay({

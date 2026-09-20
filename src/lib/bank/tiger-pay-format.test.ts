@@ -83,6 +83,8 @@ describe("Tiger Pay query schema usage", () => {
     expect(queries).toContain('.from("cash_snapshot")');
     expect(queries).toContain('.from("daily_close")');
     expect(queries).toContain('.from("cash_command")');
+    expect(queries).toContain('.from("payment_attempt")');
+    expect(queries).toContain('.from("voucher_attempt")');
   });
 
   it("exposes daily and hopper-command API routes", () => {
