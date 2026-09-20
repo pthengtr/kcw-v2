@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 
 import { formatCount } from "@/lib/bi/sales-format";
+import { bangkokTodayIso, formatThaiDateRange } from "@/lib/bi/sales-periods";
 import {
   STOCK_AUDIT_BUCKETS,
   bucketMeta,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/stock-audit/types";
 import { STOCK_AUDIT_DAILY_TARGET } from "@/lib/stock-audit/daily-target";
 import {
+  parseStockWorkAsOf,
   STOCK_WORK_EVENT_META,
   type StockWorkKpi,
 } from "@/lib/stock-audit/work-types";
@@ -77,7 +79,9 @@ export default function StockAuditPage() {
   const [offset, setOffset] = useState(0);
   const [overview, setOverview] = useState<StockAuditOverview | null>(null);
   const [workKpi, setWorkKpi] = useState<StockWorkKpi | null>(null);
+  const [asOf, setAsOf] = useState(() => bangkokTodayIso());
   const [loading, setLoading] = useState(true);
+  const [workLoading, setWorkLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [lookupBcode, setLookupBcode] = useState("");
@@ -97,30 +101,20 @@ export default function StockAuditPage() {
         });
         if (bucket !== "ALL") params.set("bucket", bucket);
 
-        const workParams = new URLSearchParams({ branch });
-
-        const [overviewRes, workRes] = await Promise.all([
-          fetch(`/api/stock-audit/overview?${params}`, { signal }),
-          fetch(`/api/stock-audit/work-kpi?${workParams}`, { signal }),
-        ]);
+        const overviewRes = await fetch(`/api/stock-audit/overview?${params}`, {
+          signal,
+        });
 
         const overviewData = await overviewRes.json();
         if (!overviewRes.ok) {
           throw new Error(overviewData.error || "load overview failed");
         }
 
-        const workData = await workRes.json();
-        if (!workRes.ok) {
-          throw new Error(workData.error || "load work kpi failed");
-        }
-
         setOverview(overviewData.overview as StockAuditOverview);
-        setWorkKpi(workData.kpi as StockWorkKpi);
       } catch (e) {
         if (signal?.aborted) return;
         setError(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
         setOverview(null);
-        setWorkKpi(null);
       } finally {
         if (!signal?.aborted) setLoading(false);
       }
@@ -128,11 +122,44 @@ export default function StockAuditPage() {
     [branch, withStockOnly, bucket, offset]
   );
 
+  const loadWorkKpi = useCallback(
+    async (signal?: AbortSignal) => {
+      setWorkLoading(true);
+      try {
+        const workParams = new URLSearchParams({ branch });
+        const selected = parseStockWorkAsOf(asOf);
+        if (selected) workParams.set("as_of", selected);
+
+        const workRes = await fetch(`/api/stock-audit/work-kpi?${workParams}`, {
+          signal,
+        });
+        const workData = await workRes.json();
+        if (!workRes.ok) {
+          throw new Error(workData.error || "load work kpi failed");
+        }
+        setWorkKpi(workData.kpi as StockWorkKpi);
+      } catch (e) {
+        if (signal?.aborted) return;
+        setError(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
+        setWorkKpi(null);
+      } finally {
+        if (!signal?.aborted) setWorkLoading(false);
+      }
+    },
+    [branch, asOf]
+  );
+
   useEffect(() => {
     const ac = new AbortController();
     void loadOverview(ac.signal);
     return () => ac.abort();
   }, [loadOverview]);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    void loadWorkKpi(ac.signal);
+    return () => ac.abort();
+  }, [loadWorkKpi]);
 
   async function runLookup() {
     const bcode = lookupBcode.trim();
@@ -152,12 +179,25 @@ export default function StockAuditPage() {
     }
   }
 
+  const todayIso = bangkokTodayIso();
+  const selectedAsOf = parseStockWorkAsOf(asOf) ?? todayIso;
+  const isToday = selectedAsOf === todayIso;
+  const dayLabel = isToday
+    ? "วันนี้"
+    : formatThaiDateRange(selectedAsOf, selectedAsOf);
   const todayDone = workKpi?.summary_today.completed_counts ?? 0;
   const weekDone = workKpi?.summary_week.completed_counts ?? 0;
   const todayProgress = Math.min(
     100,
     Math.round((100 * todayDone) / STOCK_AUDIT_DAILY_TARGET)
   );
+
+  function applyAsOf(next: string) {
+    const parsed = parseStockWorkAsOf(next);
+    if (!parsed) return;
+    const today = bangkokTodayIso();
+    setAsOf(parsed > today ? today : parsed);
+  }
 
   return (
     <main className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
@@ -216,14 +256,42 @@ export default function StockAuditPage() {
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1">
+          <Label htmlFor="stock-work-as-of">วันที่รายงาน</Label>
+          <Input
+            id="stock-work-as-of"
+            type="date"
+            className="w-[160px]"
+            value={selectedAsOf}
+            max={todayIso}
+            onChange={(e) => applyAsOf(e.target.value)}
+          />
+        </div>
+        {!isToday ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => applyAsOf(todayIso)}
+          >
+            วันนี้
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="outline"
           className="gap-1.5"
-          onClick={() => void loadOverview()}
-          disabled={loading}
+          onClick={() => {
+            void loadOverview();
+            void loadWorkKpi();
+          }}
+          disabled={loading || workLoading}
         >
-          <RefreshCcw className={cn("h-4 w-4", loading && "animate-spin")} />
+          <RefreshCcw
+            className={cn(
+              "h-4 w-4",
+              (loading || workLoading) && "animate-spin"
+            )}
+          />
           รีเฟรช
         </Button>
       </div>
@@ -231,7 +299,8 @@ export default function StockAuditPage() {
       <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="font-medium text-slate-800">
-            ความคืบหน้าวันนี้ · เป้า {STOCK_AUDIT_DAILY_TARGET}
+            ความคืบหน้า{isToday ? "วันนี้" : ` ${dayLabel}`} · เป้า{" "}
+            {STOCK_AUDIT_DAILY_TARGET}
           </span>
           <span className="tabular-nums text-muted-foreground">
             {formatCount(todayDone)} / {formatCount(STOCK_AUDIT_DAILY_TARGET)}
@@ -279,7 +348,7 @@ export default function StockAuditPage() {
 
       {tab === "status" ? (
         <section className="min-w-0 space-y-5">
-          {loading && !overview && !workKpi ? (
+          {loading && workLoading && !overview && !workKpi ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <Skeleton className="h-56 rounded-lg" />
               <Skeleton className="h-56 rounded-lg" />
@@ -290,7 +359,7 @@ export default function StockAuditPage() {
                 <div className="min-w-0 space-y-4">
                   <div>
                     <h2 className="mb-1 text-sm font-semibold text-slate-900">
-                      งานตรวจนับวันนี้
+                      งานตรวจนับ{isToday ? "วันนี้" : ` ${dayLabel}`}
                     </h2>
                     <p className="text-xs text-muted-foreground">
                       จากเหตุการณ์นับ/ตรวจใน LINE · นับเสร็จ = นับตรง + นับคลาด
@@ -299,7 +368,7 @@ export default function StockAuditPage() {
 
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <SalesKpiCard
-                      title="นับเสร็จวันนี้"
+                      title={isToday ? "นับเสร็จวันนี้" : `นับเสร็จ ${dayLabel}`}
                       value={`${formatCount(todayDone)} / ${formatCount(STOCK_AUDIT_DAILY_TARGET)}`}
                       hint="เป้าแนะนำต่อวัน (สาขา)"
                       icon={<CheckCircle2 className="h-4 w-4" />}
@@ -336,8 +405,14 @@ export default function StockAuditPage() {
                       series={workKpi.daily}
                       completedToday={todayDone}
                       completedWeek={weekDone}
+                      selectedDate={selectedAsOf}
+                      dayLabel={dayLabel}
+                      onSelectDate={applyAsOf}
                     />
-                    <StockAuditOperatorTable rows={workKpi.operators} />
+                    <StockAuditOperatorTable
+                      rows={workKpi.operators}
+                      dayLabel={dayLabel}
+                    />
                   </div>
                 </div>
               ) : null}

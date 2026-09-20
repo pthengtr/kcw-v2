@@ -1,6 +1,61 @@
 import { describe, expect, it } from "vitest";
 
-import { parseStockWorkCounts, parseStockWorkKpi } from "./work-queries";
+import { parseStockWorkAsOf, stockWorkChartClickDate } from "./work-types";
+import {
+  parseStockWorkCounts,
+  parseStockWorkKpi,
+  stockWorkKpiRpcParams,
+} from "./work-queries";
+
+describe("parseStockWorkAsOf", () => {
+  it("accepts real YYYY-MM-DD dates", () => {
+    expect(parseStockWorkAsOf("2026-09-16")).toBe("2026-09-16");
+    expect(parseStockWorkAsOf(" 2026-09-16 ")).toBe("2026-09-16");
+  });
+
+  it("rejects missing, malformed, or impossible dates", () => {
+    expect(parseStockWorkAsOf(undefined)).toBeUndefined();
+    expect(parseStockWorkAsOf("")).toBeUndefined();
+    expect(parseStockWorkAsOf("16/09/2026")).toBeUndefined();
+    expect(parseStockWorkAsOf("2026-02-31")).toBeUndefined();
+  });
+});
+
+describe("stockWorkChartClickDate", () => {
+  const dates = ["2026-09-10", "2026-09-11", "2026-09-16"];
+
+  it("resolves Recharts 3 activeIndex to a calendar date", () => {
+    expect(stockWorkChartClickDate(dates, { activeIndex: 1 })).toBe(
+      "2026-09-11"
+    );
+    expect(stockWorkChartClickDate(dates, { activeTooltipIndex: "2" })).toBe(
+      "2026-09-16"
+    );
+  });
+
+  it("ignores missing or out-of-range indexes", () => {
+    expect(stockWorkChartClickDate(dates, {})).toBeUndefined();
+    expect(stockWorkChartClickDate(dates, { activeIndex: -1 })).toBeUndefined();
+    expect(stockWorkChartClickDate(dates, { activeIndex: 9 })).toBeUndefined();
+  });
+});
+
+describe("stockWorkKpiRpcParams", () => {
+  it("omits p_as_of when no date is selected", () => {
+    expect(stockWorkKpiRpcParams({ branch: "SYP" })).toEqual({
+      p_branch: "SYP",
+    });
+  });
+
+  it("passes a valid as-of date through to the RPC", () => {
+    expect(
+      stockWorkKpiRpcParams({ branch: "HQ", asOf: "2026-09-16" })
+    ).toEqual({
+      p_branch: "HQ",
+      p_as_of: "2026-09-16",
+    });
+  });
+});
 
 describe("parseStockWorkCounts", () => {
   it("parses counts and derives completed when missing", () => {

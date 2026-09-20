@@ -1,3 +1,36 @@
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Accept YYYY-MM-DD calendar dates; reject impossible days like 2026-02-31. */
+export function parseStockWorkAsOf(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!ISO_DATE_RE.test(trimmed)) return undefined;
+  const [year, month, day] = trimmed.split("-").map(Number);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  if (
+    utc.getUTCFullYear() !== year ||
+    utc.getUTCMonth() !== month - 1 ||
+    utc.getUTCDate() !== day
+  ) {
+    return undefined;
+  }
+  return trimmed;
+}
+
+/** Recharts 3 chart clicks expose activeIndex, not the old activePayload array. */
+export function stockWorkChartClickDate(
+  dates: string[],
+  state: {
+    activeIndex?: number | string | null;
+    activeTooltipIndex?: number | string | null;
+  }
+): string | undefined {
+  const raw = state.activeIndex ?? state.activeTooltipIndex;
+  const index = typeof raw === "string" ? Number(raw) : raw;
+  if (index == null || !Number.isFinite(index) || index < 0) return undefined;
+  return dates[index];
+}
+
 export type StockWorkEventType =
   | "count_correct"
   | "count_variance"

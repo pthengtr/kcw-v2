@@ -8,20 +8,25 @@ import {
 
 type Props = {
   rows: StockWorkOperator[];
+  dayLabel?: string;
 };
 
-export default function StockAuditOperatorTable({ rows }: Props) {
+export default function StockAuditOperatorTable({
+  rows,
+  dayLabel = "วันนี้",
+}: Props) {
   return (
     <div className="min-w-0 w-full rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
       <div className="mb-3">
         <h2 className="text-sm font-semibold text-slate-900">ผู้ปฏิบัติงาน (สาขา)</h2>
         <p className="text-xs text-muted-foreground">
-          จาก stock.work_event · วันนี้ / 7 วัน (นับตรง+คลาด = งานนับเสร็จ)
+          จาก stock.work_event · {dayLabel} / 7 วันย้อนหลัง (นับตรง+คลาด =
+          งานนับเสร็จ)
         </p>
       </div>
       {rows.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
-          ยังไม่มีงานตรวจใน 7 วันที่ผ่านมา
+          ยังไม่มีงานตรวจในช่วงนี้
         </p>
       ) : (
         <div className="-mx-1 max-w-full min-w-0 overflow-x-auto overscroll-x-contain px-1 touch-pan-x">
@@ -30,7 +35,7 @@ export default function StockAuditOperatorTable({ rows }: Props) {
               <tr className="border-b border-slate-100 text-xs text-muted-foreground">
                 <th className="whitespace-nowrap pb-2 pr-3 font-medium">ชื่อ</th>
                 <th className="whitespace-nowrap pb-2 pr-2 text-right font-medium">
-                  นับเสร็จวันนี้
+                  นับเสร็จ{dayLabel === "วันนี้" ? "วันนี้" : ` ${dayLabel}`}
                 </th>
                 {STOCK_WORK_EVENT_META.map((m) => (
                   <th

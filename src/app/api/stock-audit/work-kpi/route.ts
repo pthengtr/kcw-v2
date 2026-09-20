@@ -10,6 +10,7 @@ export const maxDuration = 30;
 
 const QuerySchema = z.object({
   branch: z.enum(["HQ", "SYP"]).optional(),
+  as_of: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 export async function GET(req: Request) {
@@ -24,6 +25,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const parsed = QuerySchema.safeParse({
     branch: url.searchParams.get("branch") || undefined,
+    as_of: url.searchParams.get("as_of") || undefined,
   });
 
   if (!parsed.success) {
@@ -34,6 +36,7 @@ export async function GET(req: Request) {
     const supabase = createAdminClient();
     const kpi = await fetchStockWorkKpi(supabase, {
       branch: parsed.data.branch ?? "HQ",
+      asOf: parsed.data.as_of,
     });
     return NextResponse.json({ kpi });
   } catch (error) {
