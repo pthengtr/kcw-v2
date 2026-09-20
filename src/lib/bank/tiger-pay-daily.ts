@@ -33,9 +33,24 @@ type DailyAttempt = {
 };
 
 type DailyVoucher = {
+  id?: string | null;
+  pos_bill_number?: string | null;
+  voucher_num?: string | null;
   amount: number | string | null;
   status: string | null;
+  submitted_by_name?: string | null;
   created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type TigerPayDailyVoucher = {
+  id: string;
+  posBillNumber: string | null;
+  voucherNum: string | null;
+  status: string;
+  amount: number;
+  submittedByName: string | null;
+  at: string | null;
 };
 
 export type TigerPayDailyException = {
@@ -67,8 +82,10 @@ export type TigerPayDailyRollup = {
   hourly: { hour: number; billed: number; count: number }[];
   bills: TigerPayDailyBill[];
   exceptions: TigerPayDailyException[];
+  vouchers: TigerPayDailyVoucher[];
   voucherUsedCount: number;
   voucherUsedAmount: number;
+  voucherCancelledCount: number;
   voucherPendingCount: number;
 };
 
@@ -273,15 +290,27 @@ export function rollupTigerPayDay(input: {
     });
   }
 
-  const vouchers = (input.vouchers ?? []).filter(
-    (row) => bizDayOf({ created_at: row.created_at ?? null }) === input.date
-  );
-  const voucherUsed = vouchers.filter((row) => {
-    const status = (row.status ?? "").toLowerCase();
-    return status === "used" || status === "success";
+  const vouchersForDay = (input.vouchers ?? []).filter((row) => {
+    return (
+      bizDayOf({ created_at: row.created_at ?? null }) === input.date ||
+      bizDayOf({ created_at: row.updated_at ?? null }) === input.date
+    );
   });
-  const voucherPending = vouchers.filter(
-    (row) => (row.status ?? "").toLowerCase() === "pending"
+  const voucherRows: TigerPayDailyVoucher[] = vouchersForDay.map((row, index) => ({
+    id: row.id ?? `voucher-${index}`,
+    posBillNumber: row.pos_bill_number ?? null,
+    voucherNum: row.voucher_num ?? null,
+    status: (row.status ?? "").trim().toLowerCase() || "unknown",
+    amount: money(row.amount),
+    submittedByName: row.submitted_by_name ?? null,
+    at: row.updated_at || row.created_at || null,
+  }));
+  const voucherUsed = voucherRows.filter(
+    (row) => row.status === "used" || row.status === "success"
+  );
+  const voucherPending = voucherRows.filter((row) => row.status === "pending");
+  const voucherCancelled = voucherRows.filter(
+    (row) => row.status === "cancel" || row.status === "cancelled"
   );
 
   return {
@@ -307,8 +336,10 @@ export function rollupTigerPayDay(input: {
     hourly,
     bills: bills.sort((a, b) => (b.at ?? "").localeCompare(a.at ?? "")),
     exceptions,
+    vouchers: voucherRows.sort((a, b) => (b.at ?? "").localeCompare(a.at ?? "")),
     voucherUsedCount: voucherUsed.length,
-    voucherUsedAmount: voucherUsed.reduce((sum, row) => sum + money(row.amount), 0),
+    voucherUsedAmount: voucherUsed.reduce((sum, row) => sum + row.amount, 0),
+    voucherCancelledCount: voucherCancelled.length,
     voucherPendingCount: voucherPending.length,
   };
 }

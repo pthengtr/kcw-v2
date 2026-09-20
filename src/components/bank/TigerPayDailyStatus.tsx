@@ -274,6 +274,19 @@ export default function TigerPayDailyStatus({
               value={formatBahtBi(today.qrPromptpayIn, true)}
             />
             <SalesKpiCard
+              title="จ่ายคืน CN (redeem)"
+              value={formatBahtBi(today.voucherUsedAmount, true)}
+              hint={`${formatCount(today.voucherUsedCount)} ใช้แล้ว${
+                today.voucherCancelledCount
+                  ? ` · ยกเลิก ${today.voucherCancelledCount}`
+                  : ""
+              }${
+                today.voucherPendingCount
+                  ? ` · ค้าง ${today.voucherPendingCount}`
+                  : ""
+              }`}
+            />
+            <SalesKpiCard
               title="จำนวนบิล"
               value={formatCount(
                 today.successCount +
@@ -371,14 +384,46 @@ export default function TigerPayDailyStatus({
             </section>
           ) : null}
 
-          {today.voucherUsedCount > 0 || today.voucherPendingCount > 0 ? (
-            <p className="text-sm text-muted-foreground">
-              ใบลดหนี้: ใช้แล้ว {today.voucherUsedCount} (
-              {formatBaht(today.voucherUsedAmount)})
-              {today.voucherPendingCount
-                ? ` · ค้าง ${today.voucherPendingCount}`
-                : ""}
-            </p>
+          {(today.vouchers ?? []).length > 0 ? (
+            <section className="rounded-md border overflow-x-auto">
+              <div className="border-b px-3 py-2 text-sm font-semibold">
+                ใบลดหนี้ / redeem
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted-foreground">
+                    <th className="px-3 py-2">สถานะ</th>
+                    <th className="px-3 py-2">เวลา</th>
+                    <th className="px-3 py-2">บิล CN</th>
+                    <th className="px-3 py-2">Voucher</th>
+                    <th className="px-3 py-2 text-right">ยอดจ่ายคืน</th>
+                    <th className="px-3 py-2">ผู้ส่ง</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {today.vouchers.map((row) => (
+                    <tr key={row.id} className="border-t">
+                      <td className="px-3 py-1.5">
+                        {row.status === "used" || row.status === "success"
+                          ? "ใช้แล้ว"
+                          : row.status === "pending"
+                            ? "ค้าง"
+                            : row.status === "cancelled" || row.status === "cancel"
+                              ? "ยกเลิก"
+                              : row.status}
+                      </td>
+                      <td className="px-3 py-1.5 whitespace-nowrap">
+                        {formatBangkokDateTime(row.at)}
+                      </td>
+                      <td className="px-3 py-1.5">{row.posBillNumber ?? "—"}</td>
+                      <td className="px-3 py-1.5">{row.voucherNum ?? "—"}</td>
+                      <td className="px-3 py-1.5 text-right">{formatBaht(row.amount)}</td>
+                      <td className="px-3 py-1.5">{row.submittedByName ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
           ) : null}
 
           {data?.dailyClose ? <ZReportPanel close={data.dailyClose} /> : null}

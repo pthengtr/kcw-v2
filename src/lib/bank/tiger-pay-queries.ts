@@ -287,22 +287,34 @@ export async function getTigerPayVouchersForWindow(
   input: { fromIso: string; toIso: string }
 ): Promise<
   Array<{
+    id: string | null;
+    pos_bill_number: string | null;
+    voucher_num: string | null;
     amount: number | string | null;
     status: string | null;
+    submitted_by_name: string | null;
     created_at: string | null;
+    updated_at: string | null;
   }>
 > {
   const { data, error } = await tigerPay(supabase)
     .from("voucher_attempt")
-    .select("amount,status,created_at")
+    .select(
+      "id,pos_bill_number,voucher_num,amount,status,submitted_by_name,created_at,updated_at"
+    )
     .gte("created_at", input.fromIso)
     .lt("created_at", input.toIso)
     .limit(200);
   if (error) throw new Error(error.message);
   return (data ?? []) as Array<{
+    id: string | null;
+    pos_bill_number: string | null;
+    voucher_num: string | null;
     amount: number | string | null;
     status: string | null;
+    submitted_by_name: string | null;
     created_at: string | null;
+    updated_at: string | null;
   }>;
 }
 
