@@ -247,7 +247,8 @@ export default function TigerPayDailyStatus({
             <div>
               <div className="text-sm font-semibold">เงินที่เครื่องขยับวันนี้</div>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                นับเฉพาะรายการที่เงินสดเข้าหรือออกจากเครื่อง — ยกเลิก QR ที่ยังไม่จ่ายไม่นับ
+                นับเฉพาะรายการที่เงินสดเข้าหรือออกจากเครื่อง — ยกเลิกก่อนใช้
+                voucher ไม่มีเงินเข้าเครื่อง
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -271,20 +272,14 @@ export default function TigerPayDailyStatus({
                 hint={`${formatCount(today.voucherUsedCount)} ใบที่เครื่องจ่ายแล้ว (used และยอดเหลือ 0)`}
               />
               <SalesKpiCard
-                title="ยกเลิก CN ที่ขยับเงิน"
-                value={formatBahtBi(today.voucherCancelledCashAmount, true)}
-                hint={
-                  today.voucherCancelledCashCount > 0
-                    ? `${formatCount(today.voucherCancelledCashCount)} ใบที่เครื่องรับเงินกลับ`
-                    : today.voucherCancelledCount > 0
-                      ? `${formatCount(today.voucherCancelledCount)} ใบยกเลิกโดยไม่จ่าย — ไม่ขยับเงิน`
-                      : "ยังไม่มีรายการที่ยกเลิกแล้วเงินขยับ"
-                }
+                title="ยกเลิกก่อนจ่าย"
+                value={formatCount(today.voucherCancelledCount)}
+                hint="ยกเลิกก่อนใช้ voucher — เงินไม่เข้าเครื่อง"
               />
               <SalesKpiCard
                 title="เงินสดสุทธิในเครื่อง"
                 value={formatBahtBi(today.cashNet, true)}
-                hint="รับเข้า − ทอน − จ่าย CN + รับคืนยกเลิก CN"
+                hint="รับเข้า − ทอน − จ่าย CN"
               />
               <SalesKpiCard
                 title="QR / PromptPay"
@@ -295,11 +290,8 @@ export default function TigerPayDailyStatus({
             <p className="text-xs text-muted-foreground">
               รับเข้า {formatBahtBi(today.cashIn, true)} − ทอน{" "}
               {formatBahtBi(today.changeOut, true)} − จ่าย CN{" "}
-              {formatBahtBi(today.voucherUsedAmount, true)}
-              {today.voucherCancelledCashAmount > 0
-                ? ` + รับคืน CN ${formatBahtBi(today.voucherCancelledCashAmount, true)}`
-                : ""}{" "}
-              = สุทธิ {formatBahtBi(today.cashNet, true)}
+              {formatBahtBi(today.voucherUsedAmount, true)} = สุทธิ{" "}
+              {formatBahtBi(today.cashNet, true)}
             </p>
           </section>
 
@@ -390,14 +382,10 @@ export default function TigerPayDailyStatus({
               <div className="text-sm font-semibold">
                 ใบเงินรับเข้า / ทอนออก / ในเครื่อง
               </div>
-              {today.voucherUsedAmount > 0 || today.voucherCancelledCashAmount > 0 ? (
+              {today.voucherUsedAmount > 0 ? (
                 <p className="text-xs text-muted-foreground">
                   รายใบมาจากบิลเงินสดเท่านั้น — จ่าย CN{" "}
-                  {formatBahtBi(today.voucherUsedAmount, true)}
-                  {today.voucherCancelledCashAmount > 0
-                    ? ` · รับคืน CN ${formatBahtBi(today.voucherCancelledCashAmount, true)}`
-                    : ""}{" "}
-                  ไม่แยกรายใบ
+                  {formatBahtBi(today.voucherUsedAmount, true)} ไม่แยกรายใบ
                 </p>
               ) : null}
             </div>
@@ -475,10 +463,10 @@ export default function TigerPayDailyStatus({
           {(today.vouchers ?? []).length > 0 ? (
             <section className="rounded-md border overflow-x-auto">
               <div className="border-b px-3 py-2">
-                <div className="text-sm font-semibold">ใบลดหนี้ที่ขยับเงิน</div>
+                <div className="text-sm font-semibold">ใบลดหนี้ / voucher</div>
                 <p className="text-xs text-muted-foreground">
-                  จ่ายแล้ว = เงินออกจากเครื่อง · รับคืน = เงินกลับเข้าเครื่อง ·
-                  ยกเลิกโดยไม่จ่ายไม่รวมใน KPI
+                  จ่ายแล้ว = เงินออกจากเครื่อง · ยกเลิกก่อนจ่าย = ยังไม่ใช้
+                  voucher ไม่มีเงินเข้าเครื่อง
                 </p>
               </div>
               <table className="w-full text-sm">
@@ -495,25 +483,18 @@ export default function TigerPayDailyStatus({
                 </thead>
                 <tbody>
                   {today.vouchers.map((row) => {
-                    const moved = row.cashMoved > 0 || row.cashReturned > 0;
+                    const moved = row.cashMoved > 0;
                     const label =
                       row.cashMoved > 0
                         ? "จ่ายแล้ว · เงินออก"
-                        : row.cashReturned > 0
-                          ? "ยกเลิก CN · เงินเข้า"
-                          : row.status === "pending"
-                            ? "ค้าง · ยังไม่จ่าย"
-                            : row.superseded
-                              ? "ยกเลิก · ไม่จ่าย (มีใบใหม่)"
-                              : row.status === "cancelled" || row.status === "cancel"
-                                ? "ยกเลิก · ไม่จ่าย"
-                                : row.status;
-                    const movedBaht =
-                      row.cashMoved > 0
-                        ? -row.cashMoved
-                        : row.cashReturned > 0
-                          ? row.cashReturned
-                          : 0;
+                        : row.status === "pending"
+                          ? "ค้าง · ยังไม่จ่าย"
+                          : row.superseded
+                            ? "ยกเลิกก่อนจ่าย (มีใบใหม่)"
+                            : row.status === "cancelled" || row.status === "cancel"
+                              ? "ยกเลิกก่อนจ่าย"
+                              : row.status;
+                    const movedBaht = row.cashMoved > 0 ? -row.cashMoved : 0;
                     return (
                       <tr
                         key={row.id}

@@ -56,7 +56,7 @@ type DailyVoucher = {
   updated_at?: string | null;
 };
 
-export type VoucherCashDirection = "out" | "in" | "none";
+export type VoucherCashDirection = "out" | "none";
 
 export type TigerPayDailyVoucher = {
   id: string;
@@ -66,8 +66,6 @@ export type TigerPayDailyVoucher = {
   amount: number;
   /** Baht the cashbox paid out (CN redeem). Cancelled / unused codes are 0. */
   cashMoved: number;
-  /** Baht the cashbox took back on a cancel-CN that actually consumed the voucher. */
-  cashReturned: number;
   cashDirection: VoucherCashDirection;
   submittedByName: string | null;
   at: string | null;
@@ -111,8 +109,6 @@ export type TigerPayDailyRollup = {
   voucherUsedCount: number;
   voucherUsedAmount: number;
   voucherCancelledCount: number;
-  voucherCancelledCashAmount: number;
-  voucherCancelledCashCount: number;
   voucherPendingCount: number;
 };
 
@@ -223,9 +219,8 @@ function isCancelledVoucher(row: {
 /**
  * Cash the cashbox actually moved for a voucher QR.
  * Redeem: used=1 and balance=0, note is not cancelled → cash OUT.
- * Cancel CN: note/status cancelled AND used=1 AND balance=0 → cash IN
- * (Tiger consumed the voucher as a reverse). used=1 + note=cancelled +
- * leftover balance is a voided code and moves ฿0.
+ * Cancel always means the code was voided before redeem — no cash in or out,
+ * even when Tiger later shows used=1 with note=cancelled.
  */
 export function classifyVoucherCash(row: {
   amount: number;
@@ -237,16 +232,11 @@ export function classifyVoucherCash(row: {
   const show = voucherShowRecord(row.raw_last_show);
   const usedFlag = show ? asNumber(show.used) : null;
   const balance = show ? asNumber(show.balance) : null;
-  const cancelled = isCancelledVoucher(row);
-  const consumed = usedFlag === 1 && balance === 0 && amount > 0;
-
-  if (cancelled) {
-    return consumed
-      ? { direction: "in", amount }
-      : { direction: "none", amount: 0 };
+  if (isCancelledVoucher(row)) {
+    return { direction: "none", amount: 0 };
   }
   if (show) {
-    return consumed
+    return usedFlag === 1 && balance === 0 && amount > 0
       ? { direction: "out", amount }
       : { direction: "none", amount: 0 };
   }
@@ -282,7 +272,6 @@ export function markSupersededVouchers(
       row.posBillNumber &&
         paidBills.has(row.posBillNumber) &&
         row.cashMoved === 0 &&
-        row.cashReturned === 0 &&
         isVoucherCancelledStatus(row.status)
     ),
   }));
@@ -468,7 +457,6 @@ export function rollupTigerPayDay(input: {
         status,
         amount,
         cashMoved: move.direction === "out" ? move.amount : 0,
-        cashReturned: move.direction === "in" ? move.amount : 0,
         cashDirection: move.direction,
         submittedByName: row.submitted_by_name ?? null,
         at: row.updated_at || row.created_at || null,
@@ -478,25 +466,16 @@ export function rollupTigerPayDay(input: {
   );
   const voucherUsed = voucherRows.filter((row) => row.cashMoved > 0);
   const voucherPending = voucherRows.filter((row) => row.status === "pending");
-  const voucherCancelledCash = voucherRows.filter((row) => row.cashReturned > 0);
   const voucherCancelled = voucherRows.filter(
-    (row) =>
-      (isVoucherCancelledStatus(row.status) || row.cashDirection === "in") &&
-      !row.superseded
+    (row) => isVoucherCancelledStatus(row.status) && !row.superseded
   );
   const voucherUsedAmount = roundMoney(
     voucherUsed.reduce((sum, row) => sum + row.cashMoved, 0)
   );
-  const voucherCancelledCashAmount = roundMoney(
-    voucherCancelledCash.reduce((sum, row) => sum + row.cashReturned, 0)
-  );
   // Cashbox confirmed in (success payments) minus cashbox confirmed CN out.
-  const billedNet = roundMoney(
-    billed - voucherUsedAmount + voucherCancelledCashAmount
-  );
-  const cashNet = roundMoney(
-    cashIn - changeOut - voucherUsedAmount + voucherCancelledCashAmount
-  );
+  // Cancelled CN is always pre-redeem — never cash in.
+  const billedNet = roundMoney(billed - voucherUsedAmount);
+  const cashNet = roundMoney(cashIn - changeOut - voucherUsedAmount);
 
   return {
     date: input.date,
@@ -529,8 +508,6 @@ export function rollupTigerPayDay(input: {
     voucherUsedCount: voucherUsed.length,
     voucherUsedAmount,
     voucherCancelledCount: voucherCancelled.length,
-    voucherCancelledCashAmount,
-    voucherCancelledCashCount: voucherCancelledCash.length,
     voucherPendingCount: voucherPending.length,
   };
 }

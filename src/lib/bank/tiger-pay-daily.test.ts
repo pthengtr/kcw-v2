@@ -175,7 +175,6 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.cashIn).toBe(3188);
     expect(rollup.changeOut).toBe(780);
     expect(rollup.cashNet).toBe(2228);
-    expect(rollup.voucherCancelledCashAmount).toBe(0);
     expect(rollup.qrPromptpayIn).toBe(490);
     expect(rollup.denomIn["1000"]).toBe(1);
     expect(rollup.denomOut["100"]).toBe(2);
@@ -197,12 +196,10 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.voucherCancelledCount).toBe(1);
     expect(rollup.vouchers.find((row) => row.voucherNum === "527032262695")).toMatchObject({
       cashMoved: 0,
-      cashReturned: 0,
       cashDirection: "none",
     });
     expect(rollup.vouchers.find((row) => row.voucherNum === "922676492477")).toMatchObject({
       cashMoved: 180,
-      cashReturned: 0,
       cashDirection: "out",
     });
     expect(rollup.vouchers.map((row) => row.posBillNumber)).toEqual([
@@ -272,18 +269,15 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.voucherUsedCount).toBe(3);
     expect(rollup.voucherUsedAmount).toBe(925);
     expect(rollup.voucherCancelledCount).toBe(0);
-    expect(rollup.voucherCancelledCashAmount).toBe(0);
     expect(rollup.billed).toBe(0);
     expect(rollup.billedNet).toBe(-925);
     expect(rollup.cashNet).toBe(-925);
     expect(rollup.vouchers.find((row) => row.voucherNum === "527032262695")).toMatchObject({
       cashMoved: 0,
-      cashReturned: 0,
       superseded: true,
     });
     expect(rollup.vouchers.find((row) => row.voucherNum === "554434252406")).toMatchObject({
       cashMoved: 95,
-      cashReturned: 0,
       superseded: false,
     });
   });
@@ -396,13 +390,11 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.voucherUsedCount).toBe(4);
     expect(rollup.voucherUsedAmount).toBe(1765);
     expect(rollup.voucherCancelledCount).toBe(2);
-    expect(rollup.voucherCancelledCashAmount).toBe(0);
-    expect(rollup.voucherCancelledCashCount).toBe(0);
     expect(rollup.billedNet).toBe(-765);
     expect(rollup.cashNet).toBe(-765);
   });
 
-  it("treats cancel-CN with used=1 and balance 0 as cash back in", () => {
+  it("never treats a cancelled CN as cash back into the machine", () => {
     const rollup = rollupTigerPayDay({
       date: "2026-09-20",
       shopCode: "1",
@@ -417,7 +409,7 @@ describe("Tiger Pay daily rollup", () => {
       ],
       vouchers: [
         {
-          id: "v-cancel-in",
+          id: "v-cancel-before-voucher",
           pos_bill_number: "KCN6908-0299",
           amount: 200,
           status: "cancelled",
@@ -430,10 +422,13 @@ describe("Tiger Pay daily rollup", () => {
       ],
     });
     expect(rollup.voucherUsedAmount).toBe(0);
-    expect(rollup.voucherCancelledCashAmount).toBe(200);
-    expect(rollup.voucherCancelledCashCount).toBe(1);
-    expect(rollup.cashNet).toBe(1200);
-    expect(rollup.billedNet).toBe(1200);
+    expect(rollup.voucherCancelledCount).toBe(1);
+    expect(rollup.cashNet).toBe(1000);
+    expect(rollup.billedNet).toBe(1000);
+    expect(rollup.vouchers[0]).toMatchObject({
+      cashMoved: 0,
+      cashDirection: "none",
+    });
   });
 
   it("does not move the day total when a CN voucher is only cancelled", () => {
@@ -504,7 +499,7 @@ describe("voucher cashbox payout", () => {
     ).toEqual({ direction: "out", amount: 95 });
   });
 
-  it("treats cancel-CN that consumed the voucher as cash in", () => {
+  it("treats any cancelled CN as no cash, including used=1 leftovers", () => {
     expect(
       classifyVoucherCash({
         amount: 200,
@@ -513,7 +508,7 @@ describe("voucher cashbox payout", () => {
           voucher: { note: "cancelled", used: 1, amount: 200, balance: 0 },
         },
       })
-    ).toEqual({ direction: "in", amount: 200 });
+    ).toEqual({ direction: "none", amount: 0 });
   });
 });
 
