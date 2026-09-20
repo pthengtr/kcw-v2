@@ -243,67 +243,77 @@ export default function TigerPayDailyStatus({
 
       {today ? (
         <>
+          <section className="grid gap-3">
+            <div>
+              <div className="text-sm font-semibold">เงินที่เครื่องขยับวันนี้</div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                นับเฉพาะรายการที่เงินสดเข้าหรือออกจากเครื่อง — ยกเลิก QR ที่ยังไม่จ่ายไม่นับ
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <SalesKpiCard
+                title="เงินสดรับเข้า"
+                value={formatBahtBi(today.cashIn, true)}
+                hint={
+                  today.unspecifiedIn > 0
+                    ? `บิลสำเร็จ · ไม่ระบุใบ ${formatBahtBi(today.unspecifiedIn, true)}`
+                    : "บิลเงินสดสำเร็จที่ลูกค้าใส่เงิน"
+                }
+              />
+              <SalesKpiCard
+                title="เงินทอนออก"
+                value={formatBahtBi(today.changeOut, true)}
+                hint={`${formatCount(today.changeBillCount)} บิลที่ทอน`}
+              />
+              <SalesKpiCard
+                title="จ่ายคืน CN"
+                value={formatBahtBi(today.voucherUsedAmount, true)}
+                hint={`${formatCount(today.voucherUsedCount)} ใบที่เครื่องจ่ายแล้ว (used และยอดเหลือ 0)`}
+              />
+              <SalesKpiCard
+                title="ยกเลิก CN ที่ขยับเงิน"
+                value={formatBahtBi(today.voucherCancelledCashAmount, true)}
+                hint={
+                  today.voucherCancelledCashCount > 0
+                    ? `${formatCount(today.voucherCancelledCashCount)} ใบที่เครื่องรับเงินกลับ`
+                    : today.voucherCancelledCount > 0
+                      ? `${formatCount(today.voucherCancelledCount)} ใบยกเลิกโดยไม่จ่าย — ไม่ขยับเงิน`
+                      : "ยังไม่มีรายการที่ยกเลิกแล้วเงินขยับ"
+                }
+              />
+              <SalesKpiCard
+                title="เงินสดสุทธิในเครื่อง"
+                value={formatBahtBi(today.cashNet, true)}
+                hint="รับเข้า − ทอน − จ่าย CN + รับคืนยกเลิก CN"
+              />
+              <SalesKpiCard
+                title="QR / PromptPay"
+                value={formatBahtBi(today.qrPromptpayIn, true)}
+                hint="เงินโอนเข้า ไม่ผ่าน hopper"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              รับเข้า {formatBahtBi(today.cashIn, true)} − ทอน{" "}
+              {formatBahtBi(today.changeOut, true)} − จ่าย CN{" "}
+              {formatBahtBi(today.voucherUsedAmount, true)}
+              {today.voucherCancelledCashAmount > 0
+                ? ` + รับคืน CN ${formatBahtBi(today.voucherCancelledCashAmount, true)}`
+                : ""}{" "}
+              = สุทธิ {formatBahtBi(today.cashNet, true)}
+            </p>
+          </section>
+
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <SalesKpiCard
-              title="สุทธิที่เครื่อง"
-              value={formatBahtBi(today.billedNet, true)}
-              deltaPct={pctChange(today.billedNet, previous?.billedNet ?? 0)}
-              hint={`รับ ${formatBahtBi(today.billed, true)} − จ่าย CN ${formatBahtBi(today.voucherUsedAmount, true)}`}
-            />
-            <SalesKpiCard
-              title="เครื่องรับแล้ว"
+              title="ยอดรับสำเร็จ"
               value={formatBahtBi(today.billed, true)}
               deltaPct={pctChange(today.billed, previous?.billed ?? 0)}
-              hint={`${formatCount(today.successCount)} บิลสำเร็จ · เงินสด+QR ที่เครื่องยืนยัน`}
+              hint={`${formatCount(today.successCount)} บิล · เงินสด+QR ที่เครื่องยืนยัน`}
             />
             <SalesKpiCard
-              title="จ่าย CN จริง"
-              value={formatBahtBi(today.voucherUsedAmount, true)}
-              hint={`${formatCount(today.voucherUsedCount)} ใบที่เครื่องจ่ายแล้ว${
-                today.voucherCancelledCount
-                  ? ` · ยกเลิก ${today.voucherCancelledCount} จ่าย ฿0`
-                  : ""
-              }${
-                today.voucherPendingCount
-                  ? ` · ค้าง ${today.voucherPendingCount}`
-                  : ""
-              }`}
-            />
-            <SalesKpiCard
-              title="ปัดลงเงินสด"
-              value={formatBahtBi(today.cashFloorRemainder, true)}
-              className={
-                today.cashFloorRemainder > 0 ? "border-amber-300 bg-amber-50/60" : undefined
-              }
-              hint={
-                today.flooredBills.length > 0
-                  ? `${formatCount(today.flooredBills.length)} บิล · POS ขอ ${formatBahtBi(today.posBilled, true)}`
-                  : "เครื่องรับบาทเต็ม — ไม่มีสตางค์ถูกปัด"
-              }
-            />
-            <SalesKpiCard
-              title="เงินสดรับเข้า"
-              value={formatBahtBi(today.cashIn, true)}
-              deltaPct={pctChange(today.cashIn, previous?.cashIn ?? 0)}
-              hint={
-                today.unspecifiedIn > 0
-                  ? `ไม่ระบุใบ ${formatBahtBi(today.unspecifiedIn, true)}`
-                  : undefined
-              }
-            />
-            <SalesKpiCard
-              title="เงินทอน"
-              value={formatBahtBi(today.changeOut, true)}
-              hint={`${formatCount(today.changeBillCount)} บิลที่ทอน`}
-            />
-            <SalesKpiCard
-              title="เงินสดสุทธิเข้าเครื่อง"
-              value={formatBahtBi(today.cashNet, true)}
-              hint="รับเข้า − ทอน จากบิลสำเร็จ ยังไม่รวมจ่าย CN"
-            />
-            <SalesKpiCard
-              title="QR / PromptPay"
-              value={formatBahtBi(today.qrPromptpayIn, true)}
+              title="สุทธิหลังจ่าย CN"
+              value={formatBahtBi(today.billedNet, true)}
+              hint={`รับ ${formatBahtBi(today.billed, true)} − จ่าย CN ${formatBahtBi(today.voucherUsedAmount, true)}`}
             />
             <SalesKpiCard
               title="จำนวนบิล"
@@ -376,8 +386,20 @@ export default function TigerPayDailyStatus({
           ) : null}
 
           <section className="rounded-md border overflow-x-auto">
-            <div className="border-b px-3 py-2 text-sm font-semibold">
-              ใบเงินรับเข้า / ทอนออก / ในเครื่อง
+            <div className="border-b px-3 py-2">
+              <div className="text-sm font-semibold">
+                ใบเงินรับเข้า / ทอนออก / ในเครื่อง
+              </div>
+              {today.voucherUsedAmount > 0 || today.voucherCancelledCashAmount > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  รายใบมาจากบิลเงินสดเท่านั้น — จ่าย CN{" "}
+                  {formatBahtBi(today.voucherUsedAmount, true)}
+                  {today.voucherCancelledCashAmount > 0
+                    ? ` · รับคืน CN ${formatBahtBi(today.voucherCancelledCashAmount, true)}`
+                    : ""}{" "}
+                  ไม่แยกรายใบ
+                </p>
+              ) : null}
             </div>
             <table className="w-full text-sm">
               <thead>
@@ -452,8 +474,12 @@ export default function TigerPayDailyStatus({
 
           {(today.vouchers ?? []).length > 0 ? (
             <section className="rounded-md border overflow-x-auto">
-              <div className="border-b px-3 py-2 text-sm font-semibold">
-                ใบลดหนี้ / redeem
+              <div className="border-b px-3 py-2">
+                <div className="text-sm font-semibold">ใบลดหนี้ที่ขยับเงิน</div>
+                <p className="text-xs text-muted-foreground">
+                  จ่ายแล้ว = เงินออกจากเครื่อง · รับคืน = เงินกลับเข้าเครื่อง ·
+                  ยกเลิกโดยไม่จ่ายไม่รวมใน KPI
+                </p>
               </div>
               <table className="w-full text-sm">
                 <thead>
@@ -463,34 +489,50 @@ export default function TigerPayDailyStatus({
                     <th className="px-3 py-2">บิล CN</th>
                     <th className="px-3 py-2">Voucher</th>
                     <th className="px-3 py-2 text-right">มูลค่าใบ</th>
-                    <th className="px-3 py-2 text-right">เครื่องจ่าย</th>
+                    <th className="px-3 py-2 text-right">เงินขยับ</th>
                     <th className="px-3 py-2">ผู้ส่ง</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {today.vouchers.map((row) => (
-                    <tr key={row.id} className="border-t">
-                      <td className="px-3 py-1.5">
-                        {row.cashMoved > 0
-                          ? "จ่ายแล้ว"
+                  {today.vouchers.map((row) => {
+                    const moved = row.cashMoved > 0 || row.cashReturned > 0;
+                    const label =
+                      row.cashMoved > 0
+                        ? "จ่ายแล้ว · เงินออก"
+                        : row.cashReturned > 0
+                          ? "ยกเลิก CN · เงินเข้า"
                           : row.status === "pending"
                             ? "ค้าง · ยังไม่จ่าย"
                             : row.superseded
                               ? "ยกเลิก · ไม่จ่าย (มีใบใหม่)"
                               : row.status === "cancelled" || row.status === "cancel"
                                 ? "ยกเลิก · ไม่จ่าย"
-                                : row.status}
-                      </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap">
-                        {formatBangkokDateTime(row.at)}
-                      </td>
-                      <td className="px-3 py-1.5">{row.posBillNumber ?? "—"}</td>
-                      <td className="px-3 py-1.5">{row.voucherNum ?? "—"}</td>
-                      <td className="px-3 py-1.5 text-right">{formatBaht(row.amount)}</td>
-                      <td className="px-3 py-1.5 text-right">{formatBaht(row.cashMoved)}</td>
-                      <td className="px-3 py-1.5">{row.submittedByName ?? "—"}</td>
-                    </tr>
-                  ))}
+                                : row.status;
+                    const movedBaht =
+                      row.cashMoved > 0
+                        ? -row.cashMoved
+                        : row.cashReturned > 0
+                          ? row.cashReturned
+                          : 0;
+                    return (
+                      <tr
+                        key={row.id}
+                        className={cn("border-t", !moved && "text-muted-foreground")}
+                      >
+                        <td className="px-3 py-1.5">{label}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap">
+                          {formatBangkokDateTime(row.at)}
+                        </td>
+                        <td className="px-3 py-1.5">{row.posBillNumber ?? "—"}</td>
+                        <td className="px-3 py-1.5">{row.voucherNum ?? "—"}</td>
+                        <td className="px-3 py-1.5 text-right">{formatBaht(row.amount)}</td>
+                        <td className="px-3 py-1.5 text-right">
+                          {moved ? formatBaht(movedBaht) : "฿0"}
+                        </td>
+                        <td className="px-3 py-1.5">{row.submittedByName ?? "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </section>
