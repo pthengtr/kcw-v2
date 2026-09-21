@@ -83,7 +83,7 @@ describe("bank statement report columns", () => {
     expect(resolveDescriptionColumn(row)).toContain("168 เทรลเลอร์ทรานสปอร์ต");
   });
 
-  it("falls back to cleaned bank description when unmatched", () => {
+  it("falls back to bank narrative detail when unmatched", () => {
     const row = baseRow({
       match_status: "pending",
       match_reason: null,
@@ -92,8 +92,10 @@ describe("bank statement report columns", () => {
       matched_ref_id: null,
       matched_party_name: null,
     });
-    expect(cleanedBankDescription(row)).toBe("รับโอนเงิน");
-    expect(resolveDescriptionColumn(row)).toBe("รับโอนเงิน");
+    expect(cleanedBankDescription(row)).toBe("จาก SCB X3875 นางสาว ธัญญพัทธ์ ท++");
+    expect(resolveDescriptionColumn(row)).toBe(
+      "จาก SCB X3875 นางสาว ธัญญพัทธ์ ท++",
+    );
   });
 
   it("shows matched bill numbers and blanks non-document refs", () => {
@@ -231,7 +233,47 @@ describe("bank statement report columns", () => {
       ),
     ).toBe("ลูกค้า TikTok");
 
-    // Other accounts keep bank text even if keyword appears.
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "248-0-42113-9",
+          bank_name: "KTB",
+          description: "004-1521670041",
+          match_status: "manual",
+          match_reason: "TikTok",
+          match_notes: "ยอด 23,838.16 บาท วันที่ 09/09/2026 มาจาก TikTok",
+          matched_ref_type: "rvi",
+          matched_ref_id: null,
+          matched_party_name: null,
+          raw_json: {
+            DESCRIPTION: "004-1521670041",
+            "TRANSACTION CODE": "IORSDT",
+          },
+        }),
+      ),
+    ).toBe("ลูกค้า TikTok");
+
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "248-0-42113-9",
+          bank_name: "KTB",
+          description: "024-6993647915 Future Amount: 35070.58",
+          match_status: "unmatched",
+          match_reason: null,
+          match_notes: null,
+          matched_ref_type: null,
+          matched_ref_id: null,
+          matched_party_name: null,
+          raw_json: {
+            DESCRIPTION: "024-6993647915 Future Amount: 35070.58",
+            "TRANSACTION CODE": "IORSDT",
+          },
+        }),
+      ),
+    ).toBe("ลูกค้า TikTok");
+
+    // Other accounts keep bank narrative even if a marketplace keyword appears.
     expect(
       resolveDescriptionColumn(
         baseRow({
@@ -247,7 +289,62 @@ describe("bank statement report columns", () => {
           raw_json: { รายการ: "รับโอนเงิน", รายละเอียด: "Shopee" },
         }),
       ),
-    ).toBe("รับโอนเงิน");
+    ).toBe("Shopee");
+  });
+
+  it("labels PIMAS vendor names from match_notes when lookup is missing", () => {
+    expect(
+      extractCompanyFromNotes(
+        "จับคู่กับบิลซื้อ 9033541 บริษัท คูโบต้า ก.แสงยนต์ 5,022.00 บาท วันที่บิล 03/09/2026 ตรงยอดและคู่ค้า",
+      ),
+    ).toBe("บริษัท คูโบต้า ก.แสงยนต์");
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "141-1-72355-7",
+          bank_name: "KBANK",
+          direction: "out",
+          description: "โอนเงิน",
+          match_status: "matched",
+          match_reason: "บิลซื้อ PIMAS (วันเดียวกัน)",
+          match_notes:
+            "จับคู่กับบิลซื้อ 9033541 บริษัท คูโบต้า ก.แสงยนต์ 5,022.00 บาท วันที่บิล 03/09/2026 ตรงยอดและคู่ค้า",
+          matched_ref_type: "pimas",
+          matched_ref_id: "9033541",
+          matched_party_name: null,
+          debit: 5022,
+          credit: null,
+          raw_json: {
+            รายการ: "โอนเงิน",
+            รายละเอียด: "โอนไป SCB X7654 บริษัท คูโบต้า ก.แ++",
+          },
+        }),
+      ),
+    ).toBe("บริษัท คูโบต้า ก.แสงยนต์");
+
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "141-1-72355-7",
+          bank_name: "KBANK",
+          direction: "out",
+          description: "โอนเงิน",
+          match_status: "matched",
+          match_reason: "บิลซื้อ PIMAS (วันเดียวกัน)",
+          match_notes:
+            "จับคู่กับบิลซื้อ SCT0448/09-69 หจก.ซีลเซ็นเตอร์ จำนวน 290.33 บาท วันที่ 02/09/2026 ตรงยอดและชื่อคู่ค้า",
+          matched_ref_type: "pimas",
+          matched_ref_id: "SCT0448/09-69",
+          matched_party_name: null,
+          debit: 290.33,
+          credit: null,
+          raw_json: {
+            รายการ: "โอนเงิน",
+            รายละเอียด: "โอนไป X3992 หจก. ซีลเซ็นเตอ++",
+          },
+        }),
+      ),
+    ).toBe("หจก.ซีลเซ็นเตอร์");
   });
 
   it("enriches the example RC6908-003 row into the simplified layout", () => {
@@ -283,6 +380,11 @@ describe("bank statement report columns", () => {
         "บริษัท ไทยไม้ซุง จำกัด  (สำนักงานใหญ่)",
       ),
     ).toBe("บริษัท ไทยไม้ซุง จำกัด");
+    expect(
+      normalizePartyDisplayName(
+        "บริษัท คูโบต้า ก.แสงยนต์ ลูกแก-กาญจนบุรี จำกัด (สนญ.)",
+      ),
+    ).toBe("บริษัท คูโบต้า ก.แสงยนต์ ลูกแก-กาญจนบุรี จำกัด");
   });
 
   it("adds เลขที่เช็ค only on the KTB 248-6-00618-4 sheet", () => {

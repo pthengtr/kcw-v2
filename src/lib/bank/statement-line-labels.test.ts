@@ -63,4 +63,65 @@ describe("statement line display labels", () => {
     );
     expect(row.id).toBe("1");
   });
+
+  it("maps IORSDT TikTok settlement accounts to ลูกค้า TikTok", () => {
+    expect(
+      statementItemLabel({
+        account_no: "248-0-42113-9",
+        bank_name: "KTB",
+        direction: "in",
+        description: "004-1521670041",
+        match_status: "manual",
+        match_reason: "TikTok",
+        match_notes: "ยอด 23,838.16 บาท วันที่ 09/09/2026 มาจาก TikTok",
+        matched_ref_type: "rvi",
+        raw_json: {
+          DESCRIPTION: "004-1521670041",
+          "TRANSACTION CODE": "IORSDT",
+        },
+      }),
+    ).toBe("ลูกค้า TikTok");
+  });
+
+  it("keeps IORSDT customer receipts as the matched company, not TikTok", () => {
+    expect(
+      statementItemLabel({
+        account_no: "248-0-42113-9",
+        bank_name: "KTB",
+        direction: "in",
+        description: "011-4861074666",
+        match_status: "manual",
+        match_reason: "ใบสำคัญรับ",
+        match_notes:
+          "เงินเข้า 91,262.21 วันที่ 07/09/2026 ตรง RC6909-008 บริษัท อุตสาหกรรมไม้ กระแสบน จำกัด (สำนักงานใหญ่)  ลงวันที่ 08/09/2026",
+        matched_ref_type: "rvmas",
+        matched_ref_id: "RC6909-008",
+        raw_json: {
+          DESCRIPTION: "011-4861074666",
+          "TRANSACTION CODE": "IORSDT",
+        },
+      }),
+    ).toBe("บริษัท อุตสาหกรรมไม้ กระแสบน จำกัด");
+  });
+
+  it("replaces generic โอนเงิน with the vendor name from PIMAS match notes", () => {
+    expect(
+      statementItemLabel({
+        account_no: "141-1-72355-7",
+        bank_name: "KBANK",
+        direction: "out",
+        description: "โอนเงิน",
+        match_status: "matched",
+        match_reason: "บิลซื้อ PIMAS (วันเดียวกัน)",
+        match_notes:
+          "จับคู่กับบิลซื้อ SCT0448/09-69 หจก.ซีลเซ็นเตอร์ จำนวน 290.33 บาท วันที่ 02/09/2026 ตรงยอดและชื่อคู่ค้า",
+        matched_ref_type: "pimas",
+        matched_ref_id: "SCT0448/09-69",
+        raw_json: {
+          รายการ: "โอนเงิน",
+          รายละเอียด: "โอนไป X3992 หจก. ซีลเซ็นเตอ++",
+        },
+      }),
+    ).toBe("หจก.ซีลเซ็นเตอร์");
+  });
 });
