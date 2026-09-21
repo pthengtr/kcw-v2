@@ -13,19 +13,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TigerPayTab from "@/components/bank/TigerPayTab";
 import TigerPayDailyStatus from "@/components/bank/TigerPayDailyStatus";
 import TigerPayHopperButton from "@/components/bank/TigerPayHopperButton";
+import TigerPayReportHeader from "@/components/bank/TigerPayReportHeader";
 import { queueTigerPayCashCommand } from "@/lib/bank/tiger-pay-commands";
-import type { TigerPayCashSnapshot } from "@/lib/bank/tiger-pay-daily";
+import type {
+  TigerPayCashSnapshot,
+  TigerPayDailyClose,
+} from "@/lib/bank/tiger-pay-daily";
+import { bangkokTodayIso } from "@/lib/bi/sales-periods";
 
 const DEFAULT_SHOP = "1";
 
 export default function TigerPayPage() {
   const [refreshToken, setRefreshToken] = useState(0);
   const [tab, setTab] = useState("daily");
+  const [date, setDate] = useState(() => bangkokTodayIso());
   const [hopper, setHopper] = useState<TigerPayCashSnapshot | null>(null);
+  const [dailyClose, setDailyClose] = useState<TigerPayDailyClose | null>(null);
   const [hopperRefreshing, setHopperRefreshing] = useState(false);
+  const [zReportTick, setZReportTick] = useState(0);
 
   const refresh = useCallback(() => setRefreshToken((x) => x + 1), []);
-  const title = useMemo(() => "Tiger Pay", []);
+  const title = useMemo(() => "รายงาน Tiger Pay", []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -47,13 +55,13 @@ export default function TigerPayPage() {
   }, [refreshToken]);
 
   const runCommand = useCallback(
-    async (command: "refresh" | "close", date?: string) => {
+    async (command: "refresh" | "close", closeDate?: string) => {
       setHopperRefreshing(true);
       try {
         const result = await queueTigerPayCashCommand({
           command,
           shop: DEFAULT_SHOP,
-          date,
+          date: closeDate,
         });
         if (result.status === "done") {
           toast.success(
@@ -87,28 +95,45 @@ export default function TigerPayPage() {
       }
     >
       <div className="px-4 py-4 sm:px-8 sm:py-6">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="mb-3">
           <BackButton href="/home" />
-          <h2 className="flex-1 text-xl font-bold sm:text-2xl">{title}</h2>
-          <div className="flex flex-wrap gap-2">
-            <TigerPayHopperButton
-              hopper={hopper}
-              refreshing={hopperRefreshing}
-              onRefresh={() => runCommand("refresh")}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={refresh}
-              className="shrink-0 gap-1"
-            >
-              <RefreshCcw strokeWidth={1} className="h-4 w-4" />
-              <span>รีเฟรช</span>
-            </Button>
-          </div>
         </div>
+        <TigerPayReportHeader
+          date={date}
+          onDateChange={setDate}
+          dailyClose={dailyClose}
+          hopperRefreshing={hopperRefreshing}
+          onCloseDay={(closeDate) => runCommand("close", closeDate)}
+          onViewZReport={() => {
+            setTab("daily");
+            setZReportTick((tick) => tick + 1);
+          }}
+          showDateControls={tab === "daily"}
+          extraActions={
+            <>
+              <TigerPayHopperButton
+                hopper={hopper}
+                refreshing={hopperRefreshing}
+                onRefresh={() => runCommand("refresh")}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refresh}
+                className="h-9 shrink-0 gap-1 bg-white"
+              >
+                <RefreshCcw strokeWidth={1} className="h-4 w-4" />
+                <span>รีเฟรช</span>
+              </Button>
+            </>
+          }
+        />
 
-        <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-4">
+        <Tabs
+          value={tab}
+          onValueChange={setTab}
+          className="mt-5 flex flex-col gap-4"
+        >
           <TabsList className="w-fit">
             <TabsTrigger value="daily">สรุปรายวัน</TabsTrigger>
             <TabsTrigger value="list">รายการ</TabsTrigger>
@@ -117,9 +142,11 @@ export default function TigerPayPage() {
             <TigerPayDailyStatus
               refreshToken={refreshToken}
               shop={DEFAULT_SHOP}
+              date={date}
               onHopperChange={setHopper}
-              hopperRefreshing={hopperRefreshing}
-              onCloseDay={(date) => runCommand("close", date)}
+              onDailyCloseChange={setDailyClose}
+              onViewDetails={() => setTab("list")}
+              zReportTick={zReportTick}
             />
           </TabsContent>
           <TabsContent value="list" className="mt-0">

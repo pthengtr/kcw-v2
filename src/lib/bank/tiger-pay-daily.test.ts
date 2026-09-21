@@ -176,6 +176,9 @@ describe("Tiger Pay daily rollup", () => {
     expect(rollup.changeOut).toBe(780);
     expect(rollup.cashNet).toBe(2228);
     expect(rollup.qrPromptpayIn).toBe(490);
+    expect(rollup.settledNet).toBe(2718);
+    expect(rollup.cashSuccessCount).toBe(2);
+    expect(rollup.qrSuccessCount).toBe(1);
     expect(rollup.denomIn["1000"]).toBe(1);
     expect(rollup.denomOut["100"]).toBe(2);
     expect(rollup.unspecifiedIn).toBe(2188);
