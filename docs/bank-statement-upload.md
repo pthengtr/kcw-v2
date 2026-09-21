@@ -35,7 +35,7 @@ Report Excel columns (operator-facing): `#`, `วันที่`, `รายก
 - Internal transfer among the six KCW accounts → `โอนไป` / `รับโอน` + `KBANK|KTB` + compact account digits (e.g. `โอนไป KTB 2486006184`)
 - Narumon / นฤมล cash deposit matched to TR / 3TR → `ขายเงินสด TR|3TR DD/MM/YYYY` using the matched bill date
 - Matched daily net sales (`tar_cntar_net`) → `ยอดขายสุทธิรายวัน (TAR|3TAR …) ของวันที่ DD/MM/YYYY`
-- On account `KTB_248-0-42113-9`, Shopee/Lazada/TikTok keywords in bank detail map to `ลูกค้า …` even when unmatched/manual
+- On account `KTB_248-0-42113-9`, Shopee/Lazada/TikTok keywords **or settlement account numbers** (`004-8471012131` / `9825080752` → Shopee, `004-1521670041` / `024-6993647915` → TikTok) in bank detail map to `ลูกค้า …`, including when the KTB code is only `IORSDT`. Channel text in `match_reason` / `match_notes` is used if the bank text has no keyword. Applies even when unmatched/manual.
 
 Raw bank columns stay in `bank.statement_lines` for reconciliation.
 

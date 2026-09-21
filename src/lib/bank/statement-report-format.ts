@@ -290,12 +290,27 @@ export function normalizeMatchStatus(status: string | null | undefined): string 
   return s;
 }
 
+const GENERIC_TXN_LABEL_RE =
+  /^(โอนเงิน|รับโอนเงิน)$/u;
+const BANK_TXN_CODE_RE = /^[A-Z]{3,8}\d{0,4}$/;
+
+function isGenericTxnLabel(value: string): boolean {
+  const text = value.trim();
+  if (!text) return true;
+  if (GENERIC_TXN_LABEL_RE.test(text)) return true;
+  return BANK_TXN_CODE_RE.test(text);
+}
+
 export function cleanedBankDescription(row: StatementLineRow): string {
-  const { txnType } = extractRawFields(row.raw_json);
+  const { txnType, detail } = extractRawFields(row.raw_json);
+  // รายการ / TRANSACTION CODE is often just โอนเงิน or IORSDT.
+  // Prefer the bank narrative in รายละเอียด / Description when present.
+  if (detail && isGenericTxnLabel(txnType)) return detail;
   if (txnType) return txnType;
   if (!looksLikeTime(row.description) && row.description) {
     return String(row.description).trim();
   }
+  if (detail) return detail;
   return "";
 }
 
@@ -303,13 +318,26 @@ export function cleanedBankDescription(row: StatementLineRow): string {
 export function normalizePartyDisplayName(name: string): string {
   return name
     .replace(/\s*\(\s*สำนักงานใหญ่\s*\)\s*$/u, "")
+    .replace(/\s*\(\s*สนญ\.?\s*\)\s*$/u, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+const COMPANY_PREFIX_RE =
+  /(?:บริษัท|ห้างหุ้นส่วนจำกัด|ห้างหุ้นส่วน(?:จำกัด)?|หจก\.?|บจก\.?|บมจ\.?)/u;
+
+function stripTrailingNoteMeta(name: string): string {
+  return name
+    .replace(/\s+(?:จำนวน|เลขที่บิล|วันที่บิล|ลงวันที่|ยอด\s+\d).*$/u, "")
+    .replace(/\s+\d{1,3}(?:,\d{3})*(?:\.\d+)?\s*บาท.*$/u, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
 
 /**
  * Best-effort company/customer/vendor extraction from Thai match_notes.
- * Agents often append `— บริษัท …` or put names in parentheses.
+ * Agents often append `— บริษัท …`, put names in parentheses, or write
+ * `จับคู่กับบิลซื้อ <id> <name> <amount> บาท`.
  */
 export function extractCompanyFromNotes(notes: string | null | undefined): string {
   if (!notes) return "";
@@ -328,6 +356,24 @@ export function extractCompanyFromNotes(notes: string | null | undefined): strin
   );
   if (paren?.[1]) {
     return normalizePartyDisplayName(paren[1]);
+  }
+
+  const prefixed = text.match(
+    new RegExp(`(${COMPANY_PREFIX_RE.source}\\s*[^\\n]+)`, "u"),
+  );
+  if (prefixed?.[1]) {
+    const name = stripTrailingNoteMeta(prefixed[1]);
+    if (name.length >= 4) return normalizePartyDisplayName(name);
+  }
+
+  const afterBill = text.match(
+    /จับคู่กับบิลซื้อ\s+\S+\s+(.+?)(?:\s+จำนวน)?\s+\d{1,3}(?:,\d{3})*(?:\.\d+)?\s*บาท/u,
+  );
+  if (afterBill?.[1]) {
+    const name = stripTrailingNoteMeta(afterBill[1]);
+    if (name && !/^(จำนวน|ยอด)$/u.test(name)) {
+      return normalizePartyDisplayName(name);
+    }
   }
 
   return "";
@@ -642,9 +688,22 @@ export function formatInternalTransferDescription(
   return `${verb} ${counterpart.bank} ${counterpart.digits}`;
 }
 
+/** Settlement account numbers from KTB marketplace inflows (see match prompt 1139). */
+const MARKETPLACE_SHOPEE_RE = /shopee|004-?8471012131|9825080752/i;
+const MARKETPLACE_LAZADA_RE = /lazada/i;
+const MARKETPLACE_TIKTOK_RE = /tiktok|004-?1521670041|024-?6993647915/i;
+
+function marketplaceChannelLabel(haystack: string): string | null {
+  if (MARKETPLACE_SHOPEE_RE.test(haystack)) return "ลูกค้า Shopee";
+  if (MARKETPLACE_LAZADA_RE.test(haystack)) return "ลูกค้า Lazada";
+  if (MARKETPLACE_TIKTOK_RE.test(haystack)) return "ลูกค้า TikTok";
+  return null;
+}
+
 /**
- * For KTB_248-0-42113-9, map marketplace keywords in bank detail/description
- * to customer labels. Applies regardless of match status (including unmatched/manual).
+ * For KTB_248-0-42113-9, map marketplace keywords / settlement account numbers
+ * in bank detail, and channel text in match_reason/notes, to customer labels.
+ * Applies regardless of match status (including unmatched/manual).
  */
 export function formatMarketplaceCustomerDescription(
   row: StatementLineRow,
@@ -652,11 +711,14 @@ export function formatMarketplaceCustomerDescription(
   if (!isKtbMarketplaceAccount(row)) return null;
 
   const { detail } = extractRawFields(row.raw_json);
-  const haystack = `${detail}\n${row.description ?? ""}`.toLowerCase();
-  if (haystack.includes("shopee")) return "ลูกค้า Shopee";
-  if (haystack.includes("lazada")) return "ลูกค้า Lazada";
-  if (haystack.includes("tiktok")) return "ลูกค้า TikTok";
-  return null;
+  const fromBank = marketplaceChannelLabel(
+    `${detail}\n${row.description ?? ""}\n${row.bank_reference ?? ""}`,
+  );
+  if (fromBank) return fromBank;
+
+  return marketplaceChannelLabel(
+    `${row.match_reason ?? ""}\n${row.match_notes ?? ""}`,
+  );
 }
 
 export function shortenMatchReason(reason: string | null | undefined): string {
