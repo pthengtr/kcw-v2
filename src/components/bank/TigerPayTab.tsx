@@ -222,7 +222,7 @@ export default function TigerPayTab({
         setRows(data.rows ?? []);
         setCount(data.count ?? null);
       } catch (e) {
-        if (String(e).includes("AbortError")) return;
+        if (signal?.aborted || String(e).includes("AbortError")) return;
         setError("Unable to load Tiger Pay transactions");
         setRows([]);
         setCount(null);

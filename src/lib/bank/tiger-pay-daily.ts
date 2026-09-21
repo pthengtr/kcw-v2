@@ -92,6 +92,10 @@ export type TigerPayDailyRollup = {
   changeOut: number;
   cashNet: number;
   qrPromptpayIn: number;
+  /** cashIn + QR − change − paid CN */
+  settledNet: number;
+  cashSuccessCount: number;
+  qrSuccessCount: number;
   successCount: number;
   cancelCount: number;
   failCount: number;
@@ -325,6 +329,8 @@ export function rollupTigerPayDay(input: {
   let cashIn = 0;
   let changeOut = 0;
   let qrPromptpayIn = 0;
+  let cashSuccessCount = 0;
+  let qrSuccessCount = 0;
   let successCount = 0;
   let cancelCount = 0;
   let failCount = 0;
@@ -384,6 +390,7 @@ export function rollupTigerPayDay(input: {
         }
       }
       if (paymentType === "cash") {
+        cashSuccessCount += 1;
         cashIn += totalPay;
         changeOut += changeAmount;
         if (changeAmount > 0) changeBillCount += 1;
@@ -392,6 +399,7 @@ export function rollupTigerPayDay(input: {
         if (gap > 0.009) unspecifiedIn += gap;
         for (const piece of changePieces) bump(denomOut, String(piece.value), piece.amount);
       } else if (paymentType === "qr" || paymentType === "promptpay") {
+        qrSuccessCount += 1;
         qrPromptpayIn += totalPay;
       }
     } else if (inserted.length > 0 || changePieces.length > 0 || changeAmount > 0) {
@@ -476,6 +484,7 @@ export function rollupTigerPayDay(input: {
   // Cancelled CN is always pre-redeem — never cash in.
   const billedNet = roundMoney(billed - voucherUsedAmount);
   const cashNet = roundMoney(cashIn - changeOut - voucherUsedAmount);
+  const settledNet = roundMoney(cashNet + qrPromptpayIn);
 
   return {
     date: input.date,
@@ -488,6 +497,9 @@ export function rollupTigerPayDay(input: {
     changeOut,
     cashNet,
     qrPromptpayIn,
+    settledNet,
+    cashSuccessCount,
+    qrSuccessCount,
     successCount,
     cancelCount,
     failCount,

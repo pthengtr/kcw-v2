@@ -2,16 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   formatBaht as formatBahtBi,
   formatCount,
-  pctChange,
 } from "@/lib/bi/sales-format";
-import { bangkokTodayIso } from "@/lib/bi/sales-periods";
 import {
   formatBaht,
   formatBangkokDateTime,
@@ -26,6 +21,7 @@ import {
   type TigerPayDailyRollup,
 } from "@/lib/bank/tiger-pay-daily";
 import { TigerPayStatusBadge } from "@/components/bank/TigerPayStatusBadge";
+import TigerPayDailyReport from "@/components/bank/TigerPayDailyReport";
 import TigerPayTransactionDetail from "@/components/bank/TigerPayTransactionDetail";
 import type { TigerPayTransaction } from "@/lib/bank/tiger-pay-types";
 import { cn } from "@/lib/utils";
@@ -119,20 +115,26 @@ function ZReportPanel({ close }: { close: TigerPayDailyClose }) {
 export default function TigerPayDailyStatus({
   refreshToken,
   shop = "1",
+  date,
   onHopperChange,
-  hopperRefreshing,
-  onCloseDay,
+  onDailyCloseChange,
+  onViewDetails,
+  zReportTick = 0,
 }: {
   refreshToken: number;
   shop?: string;
+  date: string;
   onHopperChange?: (hopper: TigerPayCashSnapshot | null) => void;
-  hopperRefreshing?: boolean;
-  onCloseDay?: (date: string) => Promise<void> | void;
+  onDailyCloseChange?: (close: TigerPayDailyClose | null) => void;
+  onViewDetails?: () => void;
+  zReportTick?: number;
 }) {
   const hopperCb = useRef(onHopperChange);
   hopperCb.current = onHopperChange;
+  const closeCb = useRef(onDailyCloseChange);
+  closeCb.current = onDailyCloseChange;
+  const zReportRef = useRef<HTMLDivElement | null>(null);
 
-  const [date, setDate] = useState(() => bangkokTodayIso());
   const [data, setData] = useState<DailyResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -153,11 +155,13 @@ export default function TigerPayDailyStatus({
         const json = (await res.json()) as DailyResponse;
         setData(json);
         hopperCb.current?.(json.hopper);
+        closeCb.current?.(json.dailyClose);
       } catch (e) {
-        if (String(e).includes("AbortError")) return;
+        if (signal?.aborted || String(e).includes("AbortError")) return;
         setError("โหลดสรุปรายวันไม่สำเร็จ");
         setData(null);
         hopperCb.current?.(null);
+        closeCb.current?.(null);
       } finally {
         setLoading(false);
       }
@@ -171,8 +175,12 @@ export default function TigerPayDailyStatus({
     return () => controller.abort();
   }, [load, refreshToken]);
 
+  useEffect(() => {
+    if (!zReportTick) return;
+    zReportRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [zReportTick]);
+
   const today = data?.today;
-  const previous = data?.previous;
   const hopperCounts = hopperItemCounts(data?.hopper?.items);
   const denomRows = useMemo(() => {
     if (!today) return [];
@@ -200,42 +208,7 @@ export default function TigerPayDailyStatus({
       : [];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="grid gap-1 text-sm">
-          <span className="text-xs text-muted-foreground">วันที่ (กรุงเทพฯ)</span>
-          <Input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-[160px]"
-          />
-        </label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setDate(bangkokTodayIso())}
-        >
-          วันนี้
-        </Button>
-        {data?.dailyClose ? (
-          <Badge variant="secondary">
-            ปิดวันแล้ว {formatBangkokDateTime(data.dailyClose.closed_at)}
-          </Badge>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!onCloseDay || hopperRefreshing}
-            onClick={() => void onCloseDay?.(date)}
-          >
-            ปิดวัน (Z-report)
-          </Button>
-        )}
-      </div>
-
+    <div className="flex flex-col gap-5">
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {loading && !today ? (
         <div className="text-sm text-muted-foreground">กำลังโหลด…</div>
@@ -243,83 +216,13 @@ export default function TigerPayDailyStatus({
 
       {today ? (
         <>
-          <section className="grid gap-3">
-            <div>
-              <div className="text-sm font-semibold">เงินที่เครื่องขยับวันนี้</div>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                นับเฉพาะรายการที่เงินสดเข้าหรือออกจากเครื่อง — ยกเลิกก่อนใช้
-                voucher ไม่มีเงินเข้าเครื่อง
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <SalesKpiCard
-                title="เงินสดรับเข้า"
-                value={formatBahtBi(today.cashIn, true)}
-                hint={
-                  today.unspecifiedIn > 0
-                    ? `บิลสำเร็จ · ไม่ระบุใบ ${formatBahtBi(today.unspecifiedIn, true)}`
-                    : "บิลเงินสดสำเร็จที่ลูกค้าใส่เงิน"
-                }
-              />
-              <SalesKpiCard
-                title="เงินทอนออก"
-                value={formatBahtBi(today.changeOut, true)}
-                hint={`${formatCount(today.changeBillCount)} บิลที่ทอน`}
-              />
-              <SalesKpiCard
-                title="จ่ายคืน CN"
-                value={formatBahtBi(today.voucherUsedAmount, true)}
-                hint={`${formatCount(today.voucherUsedCount)} ใบที่เครื่องจ่ายแล้ว (used และยอดเหลือ 0)`}
-              />
-              <SalesKpiCard
-                title="ยกเลิกก่อนจ่าย"
-                value={formatCount(today.voucherCancelledCount)}
-                hint="ยกเลิกก่อนใช้ voucher — เงินไม่เข้าเครื่อง"
-              />
-              <SalesKpiCard
-                title="เงินสดสุทธิในเครื่อง"
-                value={formatBahtBi(today.cashNet, true)}
-                hint="รับเข้า − ทอน − จ่าย CN"
-              />
-              <SalesKpiCard
-                title="QR / PromptPay"
-                value={formatBahtBi(today.qrPromptpayIn, true)}
-                hint="เงินโอนเข้า ไม่ผ่าน hopper"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              รับเข้า {formatBahtBi(today.cashIn, true)} − ทอน{" "}
-              {formatBahtBi(today.changeOut, true)} − จ่าย CN{" "}
-              {formatBahtBi(today.voucherUsedAmount, true)} = สุทธิ{" "}
-              {formatBahtBi(today.cashNet, true)}
-            </p>
-          </section>
+          <TigerPayDailyReport today={today} onViewDetails={onViewDetails} />
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <SalesKpiCard
-              title="ยอดรับสำเร็จ"
-              value={formatBahtBi(today.billed, true)}
-              deltaPct={pctChange(today.billed, previous?.billed ?? 0)}
-              hint={`${formatCount(today.successCount)} บิล · เงินสด+QR ที่เครื่องยืนยัน`}
-            />
-            <SalesKpiCard
-              title="สุทธิหลังจ่าย CN"
-              value={formatBahtBi(today.billedNet, true)}
-              hint={`รับ ${formatBahtBi(today.billed, true)} − จ่าย CN ${formatBahtBi(today.voucherUsedAmount, true)}`}
-            />
-            <SalesKpiCard
-              title="จำนวนบิล"
-              value={formatCount(
-                today.successCount +
-                  today.cancelCount +
-                  today.failCount +
-                  today.pendingCount
-              )}
-              hint={`สำเร็จ ${today.successCount} · ยกเลิก ${today.cancelCount} · ล้มเหลว ${today.failCount} · ค้าง ${today.pendingCount}`}
-            />
-          </div>
-
-          <section
+          <div className="flex flex-col gap-4 pt-2">
+            <h3 className="text-sm font-semibold text-slate-800">
+              รายละเอียดเพิ่มเติม
+            </h3>
+            <section
             className={cn(
               "rounded-md border p-3",
               today.cashFloorRemainder > 0
@@ -519,7 +422,9 @@ export default function TigerPayDailyStatus({
             </section>
           ) : null}
 
-          {data?.dailyClose ? <ZReportPanel close={data.dailyClose} /> : null}
+          <div ref={zReportRef}>
+            {data?.dailyClose ? <ZReportPanel close={data.dailyClose} /> : null}
+          </div>
 
           {lateBills.length > 0 ? (
             <p className="text-sm text-amber-800">
@@ -611,6 +516,7 @@ export default function TigerPayDailyStatus({
               </tbody>
             </table>
           </section>
+          </div>
         </>
       ) : null}
 

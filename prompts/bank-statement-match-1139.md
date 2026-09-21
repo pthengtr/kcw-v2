@@ -8,7 +8,7 @@ Account **248-0-42113-9** (KTB, ends with **1139**) receives **online marketplac
 
 ## Monthly Excel report labels
 
-- Marketplace inflows: report maps Shopee / Lazada / TikTok keywords in bank detail to `ลูกค้า …` (even unmatched/manual)
+- Marketplace inflows: report maps Shopee / Lazada / TikTok keywords **or settlement account numbers** in bank detail (`004-1521670041` / `024-6993647915` → TikTok even when `TRANSACTION CODE` is only `IORSDT`; `004-8471012131` / `9825080752` → Shopee) to `ลูกค้า …`. Channel text in `match_reason` / `match_notes` is used when the bank text has no keyword (even unmatched/manual)
 - Outbound internal sweeps to `248-6-00618-4` (`matched_ref_type = internal_transfer`) → **`โอนไป KTB 2486006184`**. Set `matched_ref_id = 248-6-00618-4`
 
 ## Job scope
