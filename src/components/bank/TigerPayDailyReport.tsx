@@ -92,12 +92,12 @@ function FormulaCard({
 }) {
   const colors = TONE[tone];
   return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-1 items-start gap-3 rounded-2xl border px-4 py-3.5 shadow-sm",
-        colors.card
-      )}
-    >
+            <div
+              className={cn(
+                "flex min-w-0 flex-1 items-start gap-3 rounded-2xl border px-4 py-3.5 shadow-sm h-full",
+                colors.card
+              )}
+            >
       <div
         className={cn(
           "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",

@@ -138,7 +138,8 @@ export default function TigerPayPage() {
             <TabsTrigger value="daily">สรุปรายวัน</TabsTrigger>
             <TabsTrigger value="list">รายการ</TabsTrigger>
           </TabsList>
-          <TabsContent value="daily" className="mt-0">
+          <TabsContent value="daily" className="mt-0" forceMount>
+            <div className={tab === "daily" ? "contents" : "hidden"}>
             <TigerPayDailyStatus
               refreshToken={refreshToken}
               shop={DEFAULT_SHOP}
@@ -148,6 +149,7 @@ export default function TigerPayPage() {
               onViewDetails={() => setTab("list")}
               zReportTick={zReportTick}
             />
+            </div>
           </TabsContent>
           <TabsContent value="list" className="mt-0">
             <TigerPayTab refreshToken={refreshToken} />

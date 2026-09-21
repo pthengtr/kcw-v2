@@ -157,7 +157,7 @@ export default function TigerPayDailyStatus({
         hopperCb.current?.(json.hopper);
         closeCb.current?.(json.dailyClose);
       } catch (e) {
-        if (String(e).includes("AbortError")) return;
+        if (signal?.aborted || String(e).includes("AbortError")) return;
         setError("โหลดสรุปรายวันไม่สำเร็จ");
         setData(null);
         hopperCb.current?.(null);
