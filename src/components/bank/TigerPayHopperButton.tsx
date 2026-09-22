@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Coins, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ import { formatBaht, formatBangkokDateTime } from "@/lib/bank/tiger-pay-format";
 import type { TigerPayCashSnapshot } from "@/lib/bank/tiger-pay-daily";
 import { cn } from "@/lib/utils";
 
+/** Denominations used for change readiness (matches kcw-api TIGER_PAY_CHANGE_DENOMS). */
+const CHANGE_DENOMS = new Set([100, 50, 20, 10, 5, 1]);
+
 const LEVEL_CLASS: Record<string, string> = {
   green: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
   orange: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
@@ -26,6 +29,12 @@ function itemKindLabel(item: { type?: string; value: number }): string {
   return item.type === "Coin" || (item.type == null && item.value < 20)
     ? "เหรียญ"
     : "ธนบัตร";
+}
+
+function sortByValueDesc(
+  items: TigerPayCashSnapshot["items"]
+): TigerPayCashSnapshot["items"] {
+  return [...items].sort((a, b) => b.value - a.value);
 }
 
 function HopperItemsTable({
@@ -99,6 +108,15 @@ export default function TigerPayHopperButton({
   const items = hopper?.items ?? [];
   const reasons = hopper?.change_reasons ?? [];
 
+  const changeItems = useMemo(
+    () =>
+      sortByValueDesc(
+        items.filter((item) => CHANGE_DENOMS.has(Math.trunc(item.value)))
+      ),
+    [items]
+  );
+  const cashboxItems = useMemo(() => sortByValueDesc(items), [items]);
+
   return (
     <>
       <Button
@@ -127,11 +145,26 @@ export default function TigerPayHopperButton({
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue="change" className="flex flex-col gap-3">
+          <Tabs defaultValue="cashbox" className="flex flex-col gap-3">
             <TabsList className="w-fit">
-              <TabsTrigger value="change">เงินทอน</TabsTrigger>
               <TabsTrigger value="cashbox">เงินในตู้</TabsTrigger>
+              <TabsTrigger value="change">เงินทอน</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="cashbox" className="mt-0 grid gap-3">
+              <div className="rounded-md border bg-muted/40 px-3 py-3">
+                <div className="text-xs text-muted-foreground">
+                  เงินคงเหลือในตู้ (ทุกชนิด)
+                </div>
+                <div className="mt-1 text-2xl font-semibold tabular-nums">
+                  {hopper ? formatBaht(hopper.total_baht) : "—"}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                ยอดจาก inventory ในเครื่อง ไม่ใช่รับเข้า/ทอนออกของบิล
+              </p>
+              <HopperItemsTable items={cashboxItems} showLineTotal />
+            </TabsContent>
 
             <TabsContent value="change" className="mt-0 grid gap-3">
               {hopper?.change_ready === false ? (
@@ -150,17 +183,7 @@ export default function TigerPayHopperButton({
                   ไม่มีคำเตือนระดับเงินทอน
                 </p>
               ) : null}
-              <HopperItemsTable items={items} />
-            </TabsContent>
-
-            <TabsContent value="cashbox" className="mt-0 grid gap-3">
-              <div className="rounded-md border bg-muted/40 px-3 py-3">
-                <div className="text-xs text-muted-foreground">รวมเงินในตู้</div>
-                <div className="mt-1 text-2xl font-semibold tabular-nums">
-                  {hopper ? formatBaht(hopper.total_baht) : "—"}
-                </div>
-              </div>
-              <HopperItemsTable items={items} showLineTotal />
+              <HopperItemsTable items={changeItems} />
             </TabsContent>
           </Tabs>
 
