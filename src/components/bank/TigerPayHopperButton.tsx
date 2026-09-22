@@ -11,13 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatBaht, formatBangkokDateTime } from "@/lib/bank/tiger-pay-format";
+import { formatBangkokDateTime } from "@/lib/bank/tiger-pay-format";
 import type { TigerPayCashSnapshot } from "@/lib/bank/tiger-pay-daily";
 import { cn } from "@/lib/utils";
-
-/** Denominations used for change readiness (matches kcw-api TIGER_PAY_CHANGE_DENOMS). */
-const CHANGE_DENOMS = new Set([100, 50, 20, 10, 5, 1]);
 
 const LEVEL_CLASS: Record<string, string> = {
   green: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
@@ -29,58 +25,6 @@ function itemKindLabel(item: { type?: string; value: number }): string {
   return item.type === "Coin" || (item.type == null && item.value < 20)
     ? "เหรียญ"
     : "ธนบัตร";
-}
-
-function sortByValueDesc(
-  items: TigerPayCashSnapshot["items"]
-): TigerPayCashSnapshot["items"] {
-  return [...items].sort((a, b) => b.value - a.value);
-}
-
-function HopperItemsTable({
-  items,
-  showLineTotal = false,
-}: {
-  items: TigerPayCashSnapshot["items"];
-  showLineTotal?: boolean;
-}) {
-  const colCount = showLineTotal ? 4 : 3;
-  return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="text-left text-muted-foreground">
-          <th className="py-1">ชนิด</th>
-          <th className="py-1">มูลค่า</th>
-          <th className="py-1 text-right">จำนวน</th>
-          {showLineTotal ? (
-            <th className="py-1 text-right">รวม</th>
-          ) : null}
-        </tr>
-      </thead>
-      <tbody>
-        {items.length === 0 ? (
-          <tr>
-            <td colSpan={colCount} className="py-3 text-muted-foreground">
-              ไม่มีรายการ
-            </td>
-          </tr>
-        ) : (
-          items.map((item, index) => (
-            <tr key={`${item.value}-${index}`} className="border-t">
-              <td className="py-1">{itemKindLabel(item)}</td>
-              <td className="py-1">{item.value}</td>
-              <td className="py-1 text-right">{item.amount}</td>
-              {showLineTotal ? (
-                <td className="py-1 text-right tabular-nums">
-                  {formatBaht(item.value * item.amount)}
-                </td>
-              ) : null}
-            </tr>
-          ))
-        )}
-      </tbody>
-    </table>
-  );
 }
 
 export default function TigerPayHopperButton({
@@ -105,17 +49,12 @@ export default function TigerPayHopperButton({
             ? "เงินทอนพร้อม"
             : "สถานะเงินทอน";
 
-  const items = hopper?.items ?? [];
-  const reasons = hopper?.change_reasons ?? [];
-
-  const changeItems = useMemo(
+  const items = useMemo(
     () =>
-      sortByValueDesc(
-        items.filter((item) => CHANGE_DENOMS.has(Math.trunc(item.value)))
-      ),
-    [items]
+      [...(hopper?.items ?? [])].sort((a, b) => b.value - a.value),
+    [hopper?.items]
   );
-  const cashboxItems = useMemo(() => sortByValueDesc(items), [items]);
+  const reasons = hopper?.change_reasons ?? [];
 
   return (
     <>
@@ -137,56 +76,55 @@ export default function TigerPayHopperButton({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle>สถานะเงินในเครื่อง</DialogTitle>
+            <DialogTitle>สถานะเงินทอนในเครื่อง</DialogTitle>
             <DialogDescription>
               {hopper
                 ? `${formatBangkokDateTime(hopper.captured_at)} · ${hopper.trigger}`
                 : "ยังไม่มี snapshot จาก kcw-api"}
             </DialogDescription>
           </DialogHeader>
-
-          <Tabs defaultValue="cashbox" className="flex flex-col gap-3">
-            <TabsList className="w-fit">
-              <TabsTrigger value="cashbox">เงินในตู้</TabsTrigger>
-              <TabsTrigger value="change">เงินทอน</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="cashbox" className="mt-0 grid gap-3">
-              <div className="rounded-md border bg-muted/40 px-3 py-3">
-                <div className="text-xs text-muted-foreground">
-                  เงินคงเหลือในตู้ (ทุกชนิด)
-                </div>
-                <div className="mt-1 text-2xl font-semibold tabular-nums">
-                  {hopper ? formatBaht(hopper.total_baht) : "—"}
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                ยอดจาก inventory ในเครื่อง ไม่ใช่รับเข้า/ทอนออกของบิล
-              </p>
-              <HopperItemsTable items={cashboxItems} showLineTotal />
-            </TabsContent>
-
-            <TabsContent value="change" className="mt-0 grid gap-3">
-              {hopper?.change_ready === false ? (
-                <p className="text-sm text-rose-700">เครื่องแจ้งว่าทอนเงินไม่ได้</p>
-              ) : hopper ? (
-                <p className="text-sm text-muted-foreground">{label}</p>
-              ) : null}
-              {reasons.length > 0 ? (
-                <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                  {reasons.map((reason) => (
-                    <li key={reason}>{reason}</li>
-                  ))}
-                </ul>
-              ) : hopper ? (
-                <p className="text-sm text-muted-foreground">
-                  ไม่มีคำเตือนระดับเงินทอน
-                </p>
-              ) : null}
-              <HopperItemsTable items={changeItems} />
-            </TabsContent>
-          </Tabs>
-
+          {hopper?.change_ready === false ? (
+            <p className="text-sm text-rose-700">เครื่องแจ้งว่าทอนเงินไม่ได้</p>
+          ) : hopper ? (
+            <p className="text-sm text-muted-foreground">{label}</p>
+          ) : null}
+          {reasons.length > 0 ? (
+            <ul className="list-disc pl-5 text-sm text-muted-foreground">
+              {reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          ) : hopper ? (
+            <p className="text-sm text-muted-foreground">
+              ไม่มีคำเตือนระดับเงินทอน
+            </p>
+          ) : null}
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-muted-foreground">
+                <th className="py-1">ชนิด</th>
+                <th className="py-1">มูลค่า</th>
+                <th className="py-1 text-right">จำนวน</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="py-3 text-muted-foreground">
+                    ไม่มีรายการ
+                  </td>
+                </tr>
+              ) : (
+                items.map((item, index) => (
+                  <tr key={`${item.value}-${index}`} className="border-t">
+                    <td className="py-1">{itemKindLabel(item)}</td>
+                    <td className="py-1">{item.value}</td>
+                    <td className="py-1 text-right">{item.amount}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
           {onRefresh ? (
             <Button
               type="button"
