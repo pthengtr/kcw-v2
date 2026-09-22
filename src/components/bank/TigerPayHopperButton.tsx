@@ -11,7 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatBangkokDateTime } from "@/lib/bank/tiger-pay-format";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatBaht, formatBangkokDateTime } from "@/lib/bank/tiger-pay-format";
 import type { TigerPayCashSnapshot } from "@/lib/bank/tiger-pay-daily";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,58 @@ const LEVEL_CLASS: Record<string, string> = {
   orange: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
   red: "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100",
 };
+
+function itemKindLabel(item: { type?: string; value: number }): string {
+  return item.type === "Coin" || (item.type == null && item.value < 20)
+    ? "เหรียญ"
+    : "ธนบัตร";
+}
+
+function HopperItemsTable({
+  items,
+  showLineTotal = false,
+}: {
+  items: TigerPayCashSnapshot["items"];
+  showLineTotal?: boolean;
+}) {
+  const colCount = showLineTotal ? 4 : 3;
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="text-left text-muted-foreground">
+          <th className="py-1">ชนิด</th>
+          <th className="py-1">มูลค่า</th>
+          <th className="py-1 text-right">จำนวน</th>
+          {showLineTotal ? (
+            <th className="py-1 text-right">รวม</th>
+          ) : null}
+        </tr>
+      </thead>
+      <tbody>
+        {items.length === 0 ? (
+          <tr>
+            <td colSpan={colCount} className="py-3 text-muted-foreground">
+              ไม่มีรายการ
+            </td>
+          </tr>
+        ) : (
+          items.map((item, index) => (
+            <tr key={`${item.value}-${index}`} className="border-t">
+              <td className="py-1">{itemKindLabel(item)}</td>
+              <td className="py-1">{item.value}</td>
+              <td className="py-1 text-right">{item.amount}</td>
+              {showLineTotal ? (
+                <td className="py-1 text-right tabular-nums">
+                  {formatBaht(item.value * item.amount)}
+                </td>
+              ) : null}
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  );
+}
 
 export default function TigerPayHopperButton({
   hopper,
@@ -43,6 +96,9 @@ export default function TigerPayHopperButton({
             ? "เงินทอนพร้อม"
             : "สถานะเงินทอน";
 
+  const items = hopper?.items ?? [];
+  const reasons = hopper?.change_reasons ?? [];
+
   return (
     <>
       <Button
@@ -63,49 +119,51 @@ export default function TigerPayHopperButton({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle>สถานะเงินทอนในเครื่อง</DialogTitle>
+            <DialogTitle>สถานะเงินในเครื่อง</DialogTitle>
             <DialogDescription>
               {hopper
                 ? `${formatBangkokDateTime(hopper.captured_at)} · ${hopper.trigger}`
                 : "ยังไม่มี snapshot จาก kcw-api"}
             </DialogDescription>
           </DialogHeader>
-          {hopper?.change_ready === false ? (
-            <p className="text-sm text-rose-700">เครื่องแจ้งว่าทอนเงินไม่ได้</p>
-          ) : null}
-          {(hopper?.change_reasons ?? []).length > 0 ? (
-            <ul className="list-disc pl-5 text-sm text-muted-foreground">
-              {(hopper?.change_reasons ?? []).map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
-          ) : null}
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-muted-foreground">
-                <th className="py-1">ชนิด</th>
-                <th className="py-1">มูลค่า</th>
-                <th className="py-1 text-right">จำนวน</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(hopper?.items ?? []).length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="py-3 text-muted-foreground">
-                    ไม่มีรายการ
-                  </td>
-                </tr>
-              ) : (
-                (hopper?.items ?? []).map((item, index) => (
-                  <tr key={`${item.value}-${index}`} className="border-t">
-                    <td className="py-1">{item.type === "Coin" || (item.type == null && item.value < 20) ? "เหรียญ" : "ธนบัตร"}</td>
-                    <td className="py-1">{item.value}</td>
-                    <td className="py-1 text-right">{item.amount}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+
+          <Tabs defaultValue="change" className="flex flex-col gap-3">
+            <TabsList className="w-fit">
+              <TabsTrigger value="change">เงินทอน</TabsTrigger>
+              <TabsTrigger value="cashbox">เงินในตู้</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="change" className="mt-0 grid gap-3">
+              {hopper?.change_ready === false ? (
+                <p className="text-sm text-rose-700">เครื่องแจ้งว่าทอนเงินไม่ได้</p>
+              ) : hopper ? (
+                <p className="text-sm text-muted-foreground">{label}</p>
+              ) : null}
+              {reasons.length > 0 ? (
+                <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                  {reasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : hopper ? (
+                <p className="text-sm text-muted-foreground">
+                  ไม่มีคำเตือนระดับเงินทอน
+                </p>
+              ) : null}
+              <HopperItemsTable items={items} />
+            </TabsContent>
+
+            <TabsContent value="cashbox" className="mt-0 grid gap-3">
+              <div className="rounded-md border bg-muted/40 px-3 py-3">
+                <div className="text-xs text-muted-foreground">รวมเงินในตู้</div>
+                <div className="mt-1 text-2xl font-semibold tabular-nums">
+                  {hopper ? formatBaht(hopper.total_baht) : "—"}
+                </div>
+              </div>
+              <HopperItemsTable items={items} showLineTotal />
+            </TabsContent>
+          </Tabs>
+
           {onRefresh ? (
             <Button
               type="button"
