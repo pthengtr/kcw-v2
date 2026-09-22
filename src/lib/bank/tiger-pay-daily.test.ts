@@ -530,10 +530,31 @@ describe("Tiger Pay snapshot mapping", () => {
         { type: "Coin", value: 10, amount: 12 },
       ],
       total_baht: 220,
+      cash_box_items: [{ type: "Banknote", value: 1000, amount: 228 }],
+      cash_box_total_baht: 228000,
       shop_code: "1",
     });
     expect(snapshot?.change_level).toBe("orange");
     expect(hopperItemCounts(snapshot?.items)["20"]).toBe(5);
     expect(hopperItemCounts(snapshot?.items)["10"]).toBe(12);
+    expect(snapshot?.cash_box_total_baht).toBe(228000);
+    expect(hopperItemCounts(snapshot?.cash_box_items)["1000"]).toBe(228);
+  });
+
+  it("defaults missing cash_box fields to empty", () => {
+    const snapshot = mapCashSnapshot({
+      id: "snap-2",
+      captured_at: "2026-09-20T10:00:00+07:00",
+      biz_day: "2026-09-20",
+      trigger: "manual",
+      change_ready: true,
+      change_level: "green",
+      change_reasons: [],
+      items: [],
+      total_baht: 0,
+      shop_code: "1",
+    });
+    expect(snapshot?.cash_box_items).toEqual([]);
+    expect(snapshot?.cash_box_total_baht).toBe(0);
   });
 });
