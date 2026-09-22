@@ -124,8 +124,12 @@ export type TigerPayCashSnapshot = {
   change_ready: boolean | null;
   change_level: TigerPayChangeLevel;
   change_reasons: string[];
+  /** Open API recycler / change inventory (api/open/v2/payment/cash). */
   items: Array<{ type?: string; value: number; amount: number }>;
   total_baht: number;
+  /** Device drop-box inventory (api/cash_box via admin JWT). */
+  cash_box_items: Array<{ type?: string; value: number; amount: number }>;
+  cash_box_total_baht: number;
   shop_code: string;
 };
 
@@ -563,6 +567,21 @@ export function mapCashSnapshot(row: unknown): TigerPayCashSnapshot | null {
   const reasons = Array.isArray(row.change_reasons)
     ? row.change_reasons.map((reason) => String(reason))
     : [];
+  const cashBoxItems = Array.isArray(row.cash_box_items)
+    ? row.cash_box_items.flatMap((item) => {
+        if (!isRecord(item)) return [];
+        const value = asNumber(item.value);
+        const amount = asNumber(item.amount);
+        if (value == null || amount == null) return [];
+        return [
+          {
+            type: asString(item.type) ?? undefined,
+            value,
+            amount,
+          },
+        ];
+      })
+    : [];
   return {
     id,
     captured_at: capturedAt,
@@ -573,6 +592,8 @@ export function mapCashSnapshot(row: unknown): TigerPayCashSnapshot | null {
     change_reasons: reasons,
     items,
     total_baht: asNumber(row.total_baht) ?? 0,
+    cash_box_items: cashBoxItems,
+    cash_box_total_baht: asNumber(row.cash_box_total_baht) ?? 0,
     shop_code: asString(row.shop_code) ?? "1",
   };
 }

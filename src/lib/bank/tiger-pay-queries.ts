@@ -347,7 +347,7 @@ export async function getLatestCashSnapshot(
   const { data, error } = await tigerPay(supabase)
     .from("cash_snapshot")
     .select(
-      "id,captured_at,biz_day,trigger,change_ready,change_level,change_reasons,items,total_baht,shop_code"
+      "id,captured_at,biz_day,trigger,change_ready,change_level,change_reasons,items,total_baht,cash_box_items,cash_box_total_baht,shop_code"
     )
     .eq("shop_code", shopCode)
     .order("captured_at", { ascending: false })
