@@ -92,6 +92,8 @@ describe("Tiger Pay query schema usage", () => {
       "id,pos_bill_number,voucher_num,amount,status,raw_status,raw_last_show,submitted_by_name,created_at,updated_at"
     );
     expect(queries).toContain('.gte("updated_at"');
+    expect(queries).toContain("getTigerPayKbankQrMonthSum");
+    expect(queries).toContain('.eq("payment_type", "qr")');
   });
 
   it("exposes daily and hopper-command API routes", () => {
@@ -105,6 +107,11 @@ describe("Tiger Pay query schema usage", () => {
     ).toBe(true);
     expect(
       fs.existsSync(path.join(ROOT, "src/app/api/bank/tiger-pay/hopper/route.ts"))
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(ROOT, "src/app/api/bank/tiger-pay/kbank-qr-month/route.ts")
+      )
     ).toBe(true);
   });
 });

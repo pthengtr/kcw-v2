@@ -7,10 +7,13 @@ import {
   paymentObject,
 } from "@/lib/bank/tiger-pay-format";
 import {
+  bangkokMonthWindow,
   classifyVoucherCash,
+  formatThaiMonth,
   hopperItemCounts,
   mapCashSnapshot,
   rollupTigerPayDay,
+  sumKbankQrPaid,
   voucherCashMoved,
 } from "@/lib/bank/tiger-pay-daily";
 import type { TigerPayTransaction } from "@/lib/bank/tiger-pay-types";
@@ -556,5 +559,29 @@ describe("Tiger Pay snapshot mapping", () => {
     });
     expect(snapshot?.cash_box_items).toEqual([]);
     expect(snapshot?.cash_box_total_baht).toBe(0);
+  });
+});
+
+describe("KBANK QR month total", () => {
+  it("uses the Bangkok month of the selected day", () => {
+    expect(bangkokMonthWindow("2026-09-25")).toEqual({
+      yearMonth: "2026-09",
+      fromIso: "2026-09-01T00:00:00+07:00",
+      toIso: "2026-10-01T00:00:00+07:00",
+    });
+    expect(bangkokMonthWindow("2026-12-01").toIso).toBe(
+      "2027-01-01T00:00:00+07:00"
+    );
+  });
+
+  it("sums successful paid amounts and ignores missing total_pay", () => {
+    expect(
+      sumKbankQrPaid([
+        { total_pay: "100.50", amount: "1" },
+        { total_pay: null, amount: "20" },
+        { total_pay: "0.10", amount: "9" },
+      ])
+    ).toEqual({ total: 120.6, count: 3 });
+    expect(formatThaiMonth("2026-09")).toContain("2569");
   });
 });

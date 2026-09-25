@@ -181,6 +181,64 @@ export function addIsoDays(isoDate: string, days: number): string {
   return utc.toISOString().slice(0, 10);
 }
 
+/** Bangkok calendar month that contains `isoDate` (`YYYY-MM-DD`). */
+export function bangkokMonthWindow(isoDate: string): {
+  yearMonth: string;
+  fromIso: string;
+  toIso: string;
+} {
+  const match = /^(\d{4})-(\d{2})-\d{2}$/.exec(isoDate);
+  if (!match) {
+    throw new Error("Invalid date");
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const yearMonth = `${match[1]}-${match[2]}`;
+  const next =
+    month === 12
+      ? `${year + 1}-01-01`
+      : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  return {
+    yearMonth,
+    fromIso: `${yearMonth}-01T00:00:00+07:00`,
+    toIso: `${next}T00:00:00+07:00`,
+  };
+}
+
+const thaiMonthFmt = new Intl.DateTimeFormat("th-TH", {
+  timeZone: "UTC",
+  month: "long",
+  year: "numeric",
+});
+
+export function formatThaiMonth(yearMonth: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(yearMonth);
+  if (!match) return yearMonth;
+  return thaiMonthFmt.format(
+    new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1))
+  );
+}
+
+export type TigerPayKbankQrMonth = {
+  yearMonth: string;
+  total: number;
+  count: number;
+};
+
+/** Paid amount for successful KBANK QR rows (total_pay, else amount). */
+export function sumKbankQrPaid(
+  rows: Array<{
+    total_pay?: string | number | null;
+    amount?: string | number | null;
+  }>
+): Pick<TigerPayKbankQrMonth, "total" | "count"> {
+  let total = 0;
+  for (const row of rows) {
+    total += asNumber(row.total_pay) ?? asNumber(row.amount) ?? 0;
+  }
+  return { total: roundMoney(total), count: rows.length };
+}
+
 function money(value: unknown): number {
   const n = asNumber(value);
   return n == null ? 0 : n;
