@@ -1,10 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
+  bangkokMonthWindow,
   mapCashSnapshot,
   mapDailyClose,
+  sumKbankQrPaid,
   type TigerPayCashSnapshot,
   type TigerPayDailyClose,
+  type TigerPayKbankQrMonth,
 } from "@/lib/bank/tiger-pay-daily";
 import { isNumericSearch } from "@/lib/bank/tiger-pay-format";
 import {
@@ -407,4 +410,45 @@ export async function getCashCommand(
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data;
+}
+
+const KBANK_QR_PAGE = 1000;
+
+/**
+ * Successful Tiger Pay `qr` payments in the Bangkok month of `date`.
+ * Companion creates those with paymentGateway KBANK; PromptPay and cash
+ * are excluded so this can be checked against the bank QR API limit.
+ */
+export async function getTigerPayKbankQrMonthSum(
+  supabase: SupabaseClient,
+  input: { date: string; shopCode: string }
+): Promise<TigerPayKbankQrMonth> {
+  const window = bangkokMonthWindow(input.date);
+  const rows: Array<{
+    total_pay: string | number | null;
+    amount: string | number | null;
+  }> = [];
+
+  for (let page = 0; page < 20; page += 1) {
+    const from = page * KBANK_QR_PAGE;
+    const { data, error } = await tigerPay(supabase)
+      .from("payment_transaction")
+      .select("total_pay,amount")
+      .eq("shop_code", input.shopCode)
+      .eq("payment_type", "qr")
+      .eq("status", "success")
+      .gte("tiger_created_at", window.fromIso)
+      .lt("tiger_created_at", window.toIso)
+      .order("tiger_payment_id", { ascending: true })
+      .range(from, from + KBANK_QR_PAGE - 1);
+    if (error) throw new Error(error.message);
+    const batch = (data ?? []) as Array<{
+      total_pay: string | number | null;
+      amount: string | number | null;
+    }>;
+    rows.push(...batch);
+    if (batch.length < KBANK_QR_PAGE) break;
+  }
+
+  return { yearMonth: window.yearMonth, ...sumKbankQrPaid(rows) };
 }
