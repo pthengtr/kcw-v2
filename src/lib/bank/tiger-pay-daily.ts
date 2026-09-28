@@ -285,8 +285,10 @@ function isCancelledVoucher(row: {
 /**
  * Cash the cashbox actually moved for a voucher QR.
  * Redeem: used=1 and balance=0, note is not cancelled → cash OUT.
- * Cancel always means the code was voided before redeem — no cash in or out,
- * even when Tiger later shows used=1 with note=cancelled.
+ * A void before redeem stays at 0, even when Tiger later shows used=1
+ * with note=cancelled and the balance unchanged.
+ * If companion status was corrected to used, cash already left during that
+ * cancel and the stale Tiger note does not zero the payout.
  */
 export function classifyVoucherCash(row: {
   amount: number;
@@ -295,9 +297,17 @@ export function classifyVoucherCash(row: {
   raw_last_show?: unknown;
 }): { direction: VoucherCashDirection; amount: number } {
   const amount = row.amount > 0 ? row.amount : 0;
+  const status = (row.status ?? "").trim().toLowerCase();
   const show = voucherShowRecord(row.raw_last_show);
   const usedFlag = show ? asNumber(show.used) : null;
   const balance = show ? asNumber(show.balance) : null;
+  if (
+    isVoucherUsedStatus(status) &&
+    amount > 0 &&
+    isCancelledVoucher(row)
+  ) {
+    return { direction: "out", amount };
+  }
   if (isCancelledVoucher(row)) {
     return { direction: "none", amount: 0 };
   }
@@ -306,7 +316,7 @@ export function classifyVoucherCash(row: {
       ? { direction: "out", amount }
       : { direction: "none", amount: 0 };
   }
-  if (isVoucherUsedStatus(row.status) && amount > 0) {
+  if (isVoucherUsedStatus(status) && amount > 0) {
     return { direction: "out", amount };
   }
   return { direction: "none", amount: 0 };
