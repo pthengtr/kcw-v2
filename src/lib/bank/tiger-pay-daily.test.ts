@@ -505,6 +505,24 @@ describe("voucher cashbox payout", () => {
     ).toEqual({ direction: "out", amount: 95 });
   });
 
+  it("counts a used correction when Tiger still says cancelled", () => {
+    expect(
+      classifyVoucherCash({
+        amount: 1600,
+        status: "used",
+        raw_status: "used",
+        raw_last_show: {
+          voucher: {
+            note: "cancelled",
+            used: 1,
+            amount: 1600,
+            balance: 1600,
+          },
+        },
+      })
+    ).toEqual({ direction: "out", amount: 1600 });
+  });
+
   it("treats any cancelled CN as no cash, including used=1 leftovers", () => {
     expect(
       classifyVoucherCash({
