@@ -42,9 +42,33 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const orderIds = [
+    ...new Set(
+      (lineRes.data ?? [])
+        .map((line) => String(line.order_id ?? "").trim())
+        .filter(Boolean)
+    ),
+  ];
+  const receipts = [];
+  for (let i = 0; i < orderIds.length; i += 80) {
+    const chunk = orderIds.slice(i, i + 80);
+    const receiptRes = await schema
+      .from("online_peak_receipts")
+      .select(
+        "platform, order_id, receipt_no, receipt_date, receipt_status, receipt_amount, order_status, order_amount, shop_name"
+      )
+      .eq("platform", payoutRes.data.platform)
+      .in("order_id", chunk);
+    if (receiptRes.error) {
+      return NextResponse.json({ error: receiptRes.error.message }, { status: 500 });
+    }
+    receipts.push(...(receiptRes.data ?? []));
+  }
+
   return NextResponse.json({
     payout: payoutRes.data,
     lines: lineRes.data ?? [],
     bills: billRes.data ?? [],
+    receipts,
   });
 }

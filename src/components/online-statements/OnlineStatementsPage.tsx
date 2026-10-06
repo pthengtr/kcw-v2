@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Payout = {
   payout_key: string;
@@ -47,6 +54,15 @@ type Bill = {
   canceled: boolean;
 };
 
+type Receipt = {
+  order_id: string;
+  receipt_no: string | null;
+  receipt_date: string | null;
+  receipt_status: string | null;
+  receipt_amount: number | string | null;
+  shop_name: string | null;
+};
+
 type Job = {
   id: number;
   status: string;
@@ -82,12 +98,20 @@ function formatWhen(value: string | null): string {
   if (Number.isNaN(date.getTime())) return value.slice(0, 10);
   return new Intl.DateTimeFormat("th-TH", {
     dateStyle: "medium",
-    timeStyle: value.includes("T") && !value.endsWith("T00:00:00+07:00") ? "short" : undefined,
+    timeStyle:
+      value.includes("T") && !value.endsWith("T00:00:00+07:00") ? "short" : undefined,
   }).format(date);
 }
 
 function platformLabel(platform: string): string {
   return PLATFORMS.find((item) => item.id === platform)?.label ?? platform;
+}
+
+function feeText(fees: Fee[] | null): string {
+  return (fees ?? [])
+    .filter((fee) => num(fee.amount) < 0)
+    .map((fee) => `${fee.name} ${formatMoney(fee.amount)}`)
+    .join(", ");
 }
 
 export default function OnlineStatementsPage() {
@@ -97,8 +121,10 @@ export default function OnlineStatementsPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [onlyUnmatched, setOnlyUnmatched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -126,10 +152,12 @@ export default function OnlineStatementsPage() {
     if (!selectedKey) {
       setLines([]);
       setBills([]);
+      setReceipts([]);
       return;
     }
     let cancelled = false;
     setDetailLoading(true);
+    setOnlyUnmatched(false);
     const params = new URLSearchParams({ payout: selectedKey });
     void fetch(`/api/online-statements/detail?${params.toString()}`)
       .then(async (res) => {
@@ -138,10 +166,13 @@ export default function OnlineStatementsPage() {
         if (!cancelled) {
           setLines(json.lines ?? []);
           setBills(json.bills ?? []);
+          setReceipts(json.receipts ?? []);
         }
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "โหลดรายละเอียดไม่สำเร็จ");
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "โหลดรายละเอียดไม่สำเร็จ");
+        }
       })
       .finally(() => {
         if (!cancelled) setDetailLoading(false);
@@ -167,6 +198,12 @@ export default function OnlineStatementsPage() {
   }, [syncing, load]);
 
   const selected = payouts.find((row) => row.payout_key === selectedKey) ?? null;
+  const receiptsByOrder = useMemo(() => {
+    const map = new Map<string, Receipt>();
+    for (const receipt of receipts) map.set(receipt.order_id, receipt);
+    return map;
+  }, [receipts]);
+
   const billsByOrder = useMemo(() => {
     const map = new Map<string, Bill[]>();
     for (const bill of bills) {
@@ -176,6 +213,21 @@ export default function OnlineStatementsPage() {
     }
     return map;
   }, [bills]);
+
+  const unmatchedCount = useMemo(() => {
+    return lines.filter((line) => {
+      if (!line.order_id) return false;
+      return (billsByOrder.get(line.order_id) ?? []).length === 0;
+    }).length;
+  }, [lines, billsByOrder]);
+
+  const visibleLines = useMemo(() => {
+    if (!onlyUnmatched) return lines;
+    return lines.filter((line) => {
+      if (!line.order_id) return false;
+      return (billsByOrder.get(line.order_id) ?? []).length === 0;
+    });
+  }, [lines, billsByOrder, onlyUnmatched]);
 
   const totals = useMemo(() => {
     return payouts.reduce(
@@ -206,8 +258,12 @@ export default function OnlineStatementsPage() {
     }
   }
 
+  function openPayout(key: string) {
+    setSelectedKey(key);
+  }
+
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 sm:px-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-3 py-4 sm:px-6 sm:py-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">เงินเข้าออนไลน์</h1>
@@ -215,7 +271,12 @@ export default function OnlineStatementsPage() {
             ยอดที่โอนเข้าบัญชี แยกตามแพลตฟอร์ม แล้วไล่ไปออเดอร์ ค่าธรรมเนียม และบิล TAD
           </p>
         </div>
-        <Button type="button" onClick={() => void rebuild()} disabled={syncing}>
+        <Button
+          type="button"
+          className="w-full sm:w-auto"
+          onClick={() => void rebuild()}
+          disabled={syncing}
+        >
           {syncing ? "กำลังจับคู่..." : "สั่ง worker จับคู่ใหม่"}
         </Button>
       </div>
@@ -229,12 +290,13 @@ export default function OnlineStatementsPage() {
       ) : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {PLATFORMS.map((item) => (
           <Button
             key={item.id}
             type="button"
             size="sm"
+            className="shrink-0"
             variant={platform === item.id ? "default" : "outline"}
             onClick={() => {
               setPlatform(item.id);
@@ -247,6 +309,7 @@ export default function OnlineStatementsPage() {
         <Button
           type="button"
           size="sm"
+          className="shrink-0"
           variant={status === "transferred" ? "default" : "outline"}
           onClick={() => {
             setStatus("transferred");
@@ -258,6 +321,7 @@ export default function OnlineStatementsPage() {
         <Button
           type="button"
           size="sm"
+          className="shrink-0"
           variant={status === "pending" ? "default" : "outline"}
           onClick={() => {
             setStatus("pending");
@@ -268,119 +332,198 @@ export default function OnlineStatementsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         <Summary label="ยอดเงิน" value={formatMoney(totals.amount)} />
-        <Summary label="ค่าใช้จ่ายในชุดนี้" value={formatMoney(totals.expense)} />
+        <Summary label="ค่าใช้จ่าย" value={formatMoney(totals.expense)} />
         <Summary label="ออเดอร์" value={String(totals.orders)} />
-        <Summary label="จับคู่ TAD แล้ว" value={String(totals.matched)} />
+        <Summary label="จับคู่ TAD" value={String(totals.matched)} />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full min-w-[720px] text-sm">
-          <thead className="bg-slate-50 text-left">
-            <tr>
-              <th className="px-3 py-2 font-medium">วันที่</th>
-              <th className="px-3 py-2 font-medium">แพลตฟอร์ม</th>
-              <th className="px-3 py-2 font-medium">ร้าน</th>
-              <th className="px-3 py-2 text-right font-medium">ยอดเข้าบัญชี</th>
-              <th className="px-3 py-2 text-right font-medium">ออเดอร์</th>
-              <th className="px-3 py-2 text-right font-medium">ค่าใช้จ่าย</th>
-              <th className="px-3 py-2 text-right font-medium">TAD</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td className="px-3 py-6 text-muted-foreground" colSpan={7}>
-                  กำลังโหลด
-                </td>
-              </tr>
-            ) : payouts.length === 0 ? (
-              <tr>
-                <td className="px-3 py-6 text-muted-foreground" colSpan={7}>
-                  ยังไม่มีข้อมูลชุดนี้ กดสั่ง worker จับคู่ใหม่หลังวางไฟล์ statement แล้ว
-                </td>
-              </tr>
-            ) : (
-              payouts.map((row) => (
-                <tr
-                  key={row.payout_key}
-                  className={
-                    row.payout_key === selectedKey
-                      ? "cursor-pointer bg-violet-50"
-                      : "cursor-pointer hover:bg-slate-50"
-                  }
-                  onClick={() => setSelectedKey(row.payout_key)}
+      {loading ? (
+        <p className="px-1 py-6 text-sm text-muted-foreground">กำลังโหลด</p>
+      ) : payouts.length === 0 ? (
+        <p className="px-1 py-6 text-sm text-muted-foreground">
+          ยังไม่มีข้อมูลชุดนี้ กดสั่ง worker จับคู่ใหม่หลังวางไฟล์ statement แล้ว
+        </p>
+      ) : (
+        <>
+          <ul className="divide-y overflow-hidden rounded-lg border md:hidden">
+            {payouts.map((row) => (
+              <li key={row.payout_key}>
+                <button
+                  type="button"
+                  className="flex w-full flex-col gap-1 px-3 py-3 text-left active:bg-slate-50"
+                  onClick={() => openPayout(row.payout_key)}
                 >
-                  <td className="px-3 py-2">{formatWhen(row.payout_at)}</td>
-                  <td className="px-3 py-2">{platformLabel(row.platform)}</td>
-                  <td className="px-3 py-2">{row.shop}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{formatMoney(row.amount)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{row.order_count}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{formatMoney(row.expense_amount)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {row.matched_order_count}/{row.order_count}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-medium">
+                        {platformLabel(row.platform)} · {row.shop}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatWhen(row.payout_at)}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right font-semibold tabular-nums">
+                      {formatMoney(row.amount)}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                    <span>ออเดอร์ {row.order_count}</span>
+                    <span>ค่าใช้จ่าย {formatMoney(row.expense_amount)}</span>
+                    <span>
+                      TAD {row.matched_order_count}/{row.order_count}
+                    </span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
 
-      {selected ? (
-        <section className="flex flex-col gap-3 rounded-lg border p-4">
-          <div>
-            <h2 className="font-medium">
-              {platformLabel(selected.platform)} {selected.shop} · {formatMoney(selected.amount)} บาท
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {selected.reference}
-              {selected.note ? ` — ${selected.note}` : ""}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ยอดออเดอร์และรายการปรับในชุดนี้ {formatMoney(selected.component_net)} บาท
-              {selected.source_file ? ` · ${selected.source_file}` : ""}
-            </p>
-          </div>
-          {detailLoading ? <p className="text-sm text-muted-foreground">กำลังโหลดรายละเอียด</p> : null}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-sm">
-              <thead className="text-left">
+          <div className="hidden overflow-hidden rounded-lg border md:block">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-left">
                 <tr>
-                  <th className="px-2 py-1 font-medium">ออเดอร์</th>
-                  <th className="px-2 py-1 text-right font-medium">ก่อนหัก</th>
-                  <th className="px-2 py-1 text-right font-medium">ค่าใช้จ่าย</th>
-                  <th className="px-2 py-1 text-right font-medium">สุทธิ</th>
-                  <th className="px-2 py-1 font-medium">ค่าธรรมเนียม</th>
-                  <th className="px-2 py-1 font-medium">บิล TAD</th>
+                  <th className="px-3 py-2 font-medium">วันที่</th>
+                  <th className="px-3 py-2 font-medium">แพลตฟอร์ม</th>
+                  <th className="px-3 py-2 font-medium">ร้าน</th>
+                  <th className="px-3 py-2 text-right font-medium">ยอดเข้าบัญชี</th>
+                  <th className="px-3 py-2 text-right font-medium">ออเดอร์</th>
+                  <th className="px-3 py-2 text-right font-medium">ค่าใช้จ่าย</th>
+                  <th className="px-3 py-2 text-right font-medium">TAD</th>
                 </tr>
               </thead>
               <tbody>
-                {lines.map((line) => {
+                {payouts.map((row) => (
+                  <tr
+                    key={row.payout_key}
+                    className="cursor-pointer border-t hover:bg-slate-50"
+                    onClick={() => openPayout(row.payout_key)}
+                  >
+                    <td className="px-3 py-2">{formatWhen(row.payout_at)}</td>
+                    <td className="px-3 py-2">{platformLabel(row.platform)}</td>
+                    <td className="px-3 py-2">{row.shop}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {formatMoney(row.amount)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{row.order_count}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {formatMoney(row.expense_amount)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {row.matched_order_count}/{row.order_count}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      <Dialog
+        open={selectedKey !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedKey(null);
+        }}
+      >
+        <DialogContent className="left-0 top-0 flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(960px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg">
+          <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
+            <DialogTitle className="text-base sm:text-lg">
+              {selected
+                ? `${platformLabel(selected.platform)} ${selected.shop} · ${formatMoney(selected.amount)} บาท`
+                : "รายละเอียดยอดโอน"}
+            </DialogTitle>
+            <DialogDescription className="text-left">
+              {selected?.reference}
+              {selected?.note ? ` — ${selected.note}` : ""}
+            </DialogDescription>
+            {selected ? (
+              <p className="text-xs text-muted-foreground">
+                ยอดในชุดนี้ {formatMoney(selected.component_net)} บาท
+                {selected.source_file ? ` · ${selected.source_file}` : ""}
+              </p>
+            ) : null}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={onlyUnmatched ? "outline" : "default"}
+                onClick={() => setOnlyUnmatched(false)}
+              >
+                ทั้งหมด
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={onlyUnmatched ? "default" : "outline"}
+                onClick={() => setOnlyUnmatched(true)}
+              >
+                ยังไม่พบ PO ({unmatchedCount})
+              </Button>
+            </div>
+          </DialogHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
+            {detailLoading ? (
+              <p className="py-6 text-sm text-muted-foreground">กำลังโหลดรายละเอียด</p>
+            ) : visibleLines.length === 0 ? (
+              <p className="py-6 text-sm text-muted-foreground">ไม่มีรายการในมุมนี้</p>
+            ) : (
+              <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {visibleLines.map((line) => {
                   const linked = line.order_id ? billsByOrder.get(line.order_id) ?? [] : [];
-                  const feeText = (line.fees ?? [])
-                    .filter((fee) => num(fee.amount) < 0)
-                    .map((fee) => `${fee.name} ${formatMoney(fee.amount)}`)
-                    .join(", ");
+                  const receipt = line.order_id ? receiptsByOrder.get(line.order_id) : undefined;
+                  const fees = feeText(line.fees);
                   return (
-                    <tr key={line.line_no} className="border-t align-top">
-                      <td className="px-2 py-2">
-                        <div>{line.order_id || line.fee_name || "รายการปรับ"}</div>
-                        {line.detail && line.detail !== line.order_id ? (
-                          <div className="text-xs text-muted-foreground">{line.detail}</div>
-                        ) : null}
-                      </td>
-                      <td className="px-2 py-2 text-right tabular-nums">{formatMoney(line.gross_amount)}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">{formatMoney(line.expense_amount)}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">{formatMoney(line.net_amount)}</td>
-                      <td className="px-2 py-2 text-xs text-muted-foreground">{feeText || "—"}</td>
-                      <td className="px-2 py-2">
+                    <li key={line.line_no} className="rounded-lg border px-3 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 break-all text-sm font-medium">
+                          {line.order_id || line.fee_name || "รายการปรับ"}
+                        </div>
+                        <div className="shrink-0 text-right text-sm font-semibold tabular-nums">
+                          {formatMoney(line.net_amount)}
+                        </div>
+                      </div>
+                      {line.detail && line.detail !== line.order_id ? (
+                        <p className="mt-1 text-xs text-muted-foreground">{line.detail}</p>
+                      ) : null}
+                      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                        <dt className="text-muted-foreground">ก่อนหัก</dt>
+                        <dd className="text-right tabular-nums">{formatMoney(line.gross_amount)}</dd>
+                        <dt className="text-muted-foreground">ค่าใช้จ่าย</dt>
+                        <dd className="text-right tabular-nums">
+                          {formatMoney(line.expense_amount)}
+                        </dd>
+                      </dl>
+                      {fees ? (
+                        <p className="mt-2 text-xs leading-5 text-muted-foreground">{fees}</p>
+                      ) : null}
+                      {receipt ? (
+                        <p className="mt-2 text-sm">
+                          <span className="font-medium">
+                            {receipt.receipt_no
+                              ? `Peak ${receipt.receipt_no}`
+                              : `Peak ${receipt.receipt_status || "ยังไม่สร้างเอกสาร"}`}
+                          </span>
+                          {receipt.receipt_no ? (
+                            <span className="text-xs text-muted-foreground">
+                              {receipt.receipt_status ? ` · ${receipt.receipt_status}` : ""}
+                              {receipt.receipt_amount != null
+                                ? ` · ${formatMoney(receipt.receipt_amount)}`
+                                : ""}
+                            </span>
+                          ) : null}
+                        </p>
+                      ) : line.order_id && line.order_id !== "0" ? (
+                        <p className="mt-2 text-xs text-muted-foreground">ไม่มีใน Peak</p>
+                      ) : null}
+                      <div className="mt-2 text-sm">
                         {linked.length === 0 ? (
-                          <span className="text-muted-foreground">ยังไม่พบ PO</span>
+                          <span className="text-amber-700">ยังไม่พบ PO</span>
                         ) : (
                           linked.map((bill) => (
-                            <div key={bill.billno}>
+                            <div key={bill.billno} className="mt-1">
                               <span className="font-medium">{bill.billno}</span>
                               {bill.canceled ? " (ยกเลิก)" : ""}
                               <div className="text-xs text-muted-foreground">
@@ -390,15 +533,15 @@ export default function OnlineStatementsPage() {
                             </div>
                           ))
                         )}
-                      </td>
-                    </tr>
+                      </div>
+                    </li>
                   );
                 })}
-              </tbody>
-            </table>
+              </ul>
+            )}
           </div>
-        </section>
-      ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -407,7 +550,7 @@ function Summary({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border px-3 py-2">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-lg font-semibold tabular-nums">{value}</div>
+      <div className="text-base font-semibold tabular-nums sm:text-lg">{value}</div>
     </div>
   );
 }
