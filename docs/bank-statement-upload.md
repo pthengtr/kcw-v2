@@ -74,7 +74,7 @@ const { data, error } = await supabase.functions.invoke(
 ```
 
 Source of the Edge Function: [`supabase/functions/generate-bank-statement-report/`](../supabase/functions/generate-bank-statement-report/) (Deno; excluded from the Next.js `tsconfig` so `npm:` imports are not typechecked by `next build`).
-When Management API / CLI deploy is unavailable, production may run a tiny Storage-backed loader (`reports/_bundles/generate-bank-statement-report-v20.js`) built via `node supabase/functions/generate-bank-statement-report/build-storage-bundle.mjs --upload`. Prefer `supabase functions deploy generate-bank-statement-report` when credentials allow.
+When Management API / CLI deploy is unavailable, production may run a tiny Storage-backed loader (`reports/_bundles/generate-bank-statement-report-v21.js`) built via `node supabase/functions/generate-bank-statement-report/build-storage-bundle.mjs --upload`. Prefer `supabase functions deploy generate-bank-statement-report` when credentials allow.
   
 No Google Drive write — operators download from the signed URL (or Storage path under the private `bank-statements` bucket).  
 Rows with `match_status = ignored` (operator ไม่ใช้) are **omitted** from the Excel; response includes `ignored_skipped`.
