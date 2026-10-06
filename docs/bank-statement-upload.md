@@ -10,7 +10,7 @@ Fingerprint identity:
 account | date | amount | direction | normalized_stable_detail | bank_reference | balance_after
 ```
 
-Display description is excluded. KTB detail is normalized (strip trailing online transfer ids / `Tran:` / `Future Amount` noise) so old `DownLoadService` and new Thai Corporate Online exports of the same txn share one fingerprint.
+Display description is excluded. KTB detail is normalized (strip trailing online transfer ids / `Tran:` / `Future Amount` noise) so old `DownLoadService` and new Thai Corporate Online exports of the same txn share one fingerprint. KBANK `รายละเอียด` cut off with `++` drops that marker and the incomplete last word, so two weekly files that slice the payee at different widths (`ก.แ++` vs `ก.++`) stay one row. Import also skips a line when an existing row has that same normalized identity, even if the stored fingerprint was hashed before this rule.
 
 **Auth**
 

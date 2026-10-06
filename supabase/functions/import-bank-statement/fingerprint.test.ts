@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildTransactionFingerprint,
+  dropStableDuplicates,
+  normalizeStableTransactionDetail,
   sha256HexAsync,
 } from "./fingerprint.ts";
 
@@ -137,5 +139,59 @@ describe("buildTransactionFingerprint", () => {
       v1LikeDifferentDescriptions.map((s) => sha256HexAsync(s)),
     );
     expect(v1Hashes[0]).not.toBe(v1Hashes[1]);
+  });
+
+  it("folds KBANK ++ column-width cuts of the same transfer into one fingerprint", async () => {
+    const base = {
+      account_no: "141-1-72355-7",
+      txn_date: "2026-09-03",
+      direction: "out" as const,
+      amount: 5022,
+      balance_after: 390012.27,
+      bank_reference: null,
+    };
+    const narrow = "โอนไป SCB X7654 บริษัท คูโบต้า ก.แ++";
+    const wide = "โอนไป SCB X7654 บริษัท  คูโบต้า ก.++";
+    expect(normalizeStableTransactionDetail(narrow)).toBe(
+      normalizeStableTransactionDetail(wide),
+    );
+    const fpNarrow = await buildTransactionFingerprint({
+      ...base,
+      transaction_detail: narrow,
+    });
+    const fpWide = await buildTransactionFingerprint({
+      ...base,
+      transaction_detail: wide,
+    });
+    expect(fpNarrow).toBe(fpWide);
+
+    const { fresh, duplicateCount } = dropStableDuplicates(
+      [{ ...base, transaction_detail: wide }],
+      [{ ...base, transaction_detail: narrow }],
+    );
+    expect(duplicateCount).toBe(1);
+    expect(fresh).toHaveLength(0);
+  });
+
+  it("still separates two truncated payments with different balances", async () => {
+    const first = await buildTransactionFingerprint({
+      account_no: "141-1-72355-7",
+      txn_date: "2026-09-03",
+      direction: "out",
+      amount: 5022,
+      balance_after: 390012.27,
+      bank_reference: null,
+      transaction_detail: "โอนไป SCB X7654 บริษัท คูโบต้า ก.แ++",
+    });
+    const second = await buildTransactionFingerprint({
+      account_no: "141-1-72355-7",
+      txn_date: "2026-09-25",
+      direction: "out",
+      amount: 10854,
+      balance_after: 593858.63,
+      bank_reference: null,
+      transaction_detail: "โอนไป SCB X7654 บริษัท  คูโบต้า ก.++",
+    });
+    expect(first).not.toBe(second);
   });
 });
