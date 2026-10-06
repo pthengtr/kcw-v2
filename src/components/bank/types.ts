@@ -38,6 +38,11 @@ export type StatementLineRow = {
   source_file_id: string | null;
   /** Same รายการ / ชื่อบริษัท text as the monthly Excel report. */
   item_label?: string | null;
+  /** Marketplace statement week that sums to this credit, when one exists. */
+  online_platform?: string | null;
+  online_shop?: string | null;
+  online_period_from?: string | null;
+  online_period_to?: string | null;
 };
 
 export type {

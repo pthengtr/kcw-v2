@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +64,16 @@ type Receipt = {
   shop_name: string | null;
 };
 
+type Deposit = {
+  platform: string;
+  shop: string;
+  bank_date: string;
+  amount: number | string;
+  period_from: string;
+  period_to: string;
+  payout_count: number;
+};
+
 type Job = {
   id: number;
   status: string;
@@ -115,6 +126,9 @@ function feeText(fees: Fee[] | null): string {
 }
 
 export default function OnlineStatementsPage() {
+  const searchParams = useSearchParams();
+  const depositId = searchParams.get("deposit") ?? "";
+  const [deposit, setDeposit] = useState<Deposit | null>(null);
   const [platform, setPlatform] = useState("all");
   const [status, setStatus] = useState("transferred");
   const [payouts, setPayouts] = useState<Payout[]>([]);
@@ -132,17 +146,21 @@ export default function OnlineStatementsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const params = new URLSearchParams({ platform, status });
+    const params = new URLSearchParams(
+      depositId ? { deposit: depositId } : { platform, status }
+    );
     const res = await fetch(`/api/online-statements?${params.toString()}`);
     const json = await res.json();
     if (!res.ok) {
       setError(json.error ?? "โหลดรายการไม่สำเร็จ");
       setPayouts([]);
+      setDeposit(null);
     } else {
       setPayouts(json.payouts ?? []);
+      setDeposit(json.deposit ?? null);
     }
     setLoading(false);
-  }, [platform, status]);
+  }, [platform, status, depositId]);
 
   useEffect(() => {
     void load();
@@ -290,6 +308,23 @@ export default function OnlineStatementsPage() {
       ) : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
+      {deposit ? (
+        <div className="rounded-lg border px-3 py-3 text-sm">
+          <div className="font-medium">
+            รายการธนาคาร {formatWhen(deposit.bank_date)} · {platformLabel(deposit.platform)}{" "}
+            {deposit.shop} · {formatMoney(deposit.amount)} บาท
+          </div>
+          <p className="mt-1 text-muted-foreground">
+            รวมสเตทเมนต์ {formatWhen(deposit.period_from)} – {formatWhen(deposit.period_to)} (
+            {deposit.payout_count} วัน)
+          </p>
+          <a href="/online-statements" className="mt-2 inline-block text-xs underline">
+            ดูยอดทั้งหมด
+          </a>
+        </div>
+      ) : null}
+
+      {deposit ? null : (
       <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {PLATFORMS.map((item) => (
           <Button
@@ -331,6 +366,7 @@ export default function OnlineStatementsPage() {
           ยังไม่โอน
         </Button>
       </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         <Summary label="ยอดเงิน" value={formatMoney(totals.amount)} />

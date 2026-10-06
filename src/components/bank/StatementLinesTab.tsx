@@ -225,6 +225,30 @@ function formatMatchedRef(row: StatementLineRow) {
   return row.matched_ref_type ?? row.matched_ref_id ?? "";
 }
 
+function shortStatementDay(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(`${value.slice(0, 10)}T00:00:00+07:00`);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
+  return date.toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+}
+
+function OnlineDepositLink({ row }: { row: StatementLineRow }) {
+  if (!row.online_shop) return null;
+  const from = shortStatementDay(row.online_period_from);
+  const to = shortStatementDay(row.online_period_to);
+  const span = from && to && from !== to ? `${from}–${to}` : from || to;
+  return (
+    <a
+      href={`/online-statements?deposit=${row.id}`}
+      className="mt-1 inline-block text-xs font-medium text-sky-800 underline"
+      onClick={(event) => event.stopPropagation()}
+    >
+      เงินเข้าออนไลน์ {row.online_shop}
+      {span ? ` · ${span}` : ""}
+    </a>
+  );
+}
+
 function currentMonthValue(): string {
   const d = new Date();
   const y = d.getFullYear();
@@ -701,8 +725,11 @@ export default function StatementLinesTab({
         header: "รายละเอียด",
         className: "min-w-[12rem] max-w-[20rem]",
         render: (r) => (
-          <span className="line-clamp-2 break-words">
-            {itemLabel(r) || "—"}
+          <span className="block">
+            <span className="line-clamp-2 break-words">
+              {itemLabel(r) || "—"}
+            </span>
+            <OnlineDepositLink row={r} />
           </span>
         ),
       },
@@ -806,6 +833,7 @@ export default function StatementLinesTab({
             <div className="text-sm break-words">
               {itemLabel(row) || "—"}
             </div>
+            <OnlineDepositLink row={row} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1049,6 +1077,17 @@ export default function StatementLinesTab({
           </DialogHeader>
           {selected && (
             <div className="grid gap-3 rounded-md border p-3 text-sm">
+              {selected.online_shop ? (
+                <a
+                  href={`/online-statements?deposit=${selected.id}`}
+                  className="text-sm font-medium text-sky-800 underline"
+                >
+                  เปิดเงินเข้าออนไลน์ {selected.online_shop}
+                  {selected.online_period_from
+                    ? ` · ${shortStatementDay(selected.online_period_from)}–${shortStatementDay(selected.online_period_to)}`
+                    : ""}
+                </a>
+              ) : null}
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <div className="text-xs text-muted-foreground">สถานะจับคู่</div>
