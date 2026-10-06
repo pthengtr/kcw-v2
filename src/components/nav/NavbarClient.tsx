@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import {
   canAccessAdminRbac,
   canAccessAnyBi,
+  canAccessOnlineStatements,
   canAccessStatementSync,
   canAccessTigerPay,
 } from "@/lib/auth/client-permissions";
@@ -136,6 +137,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
   );
   const showTigerPay = pageKeys ? canAccessTigerPay(pageKeys) : false;
   const showStatementSync = pageKeys ? canAccessStatementSync(pageKeys) : false;
+  const showOnlineStatements = pageKeys ? canAccessOnlineStatements(pageKeys) : false;
   const showAdminRbac = pageKeys ? canAccessAdminRbac(pageKeys) : false;
 
   return (
@@ -223,6 +225,15 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     onNavigate={closeSheet}
                   />
                 ) : null}
+                {showOnlineStatements ? (
+                  <NavLinkButton
+                    href="/online-statements"
+                    label="เงินเข้าออนไลน์"
+                    icon={Menu}
+                    active={pathname === "/online-statements"}
+                    onNavigate={closeSheet}
+                  />
+                ) : null}
                 {showAdminRbac ? (
                   <NavLinkButton
                     href="/admin/rbac"
@@ -295,6 +306,17 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     label="Bank Statement"
                     icon={Menu}
                     active={pathname === "/bank-statement-sync"}
+                    className="whitespace-nowrap px-2.5"
+                  />
+                </NavigationMenuItem>
+              ) : null}
+              {showOnlineStatements ? (
+                <NavigationMenuItem>
+                  <NavLinkButton
+                    href="/online-statements"
+                    label="เงินเข้าออนไลน์"
+                    icon={Menu}
+                    active={pathname === "/online-statements"}
                     className="whitespace-nowrap px-2.5"
                   />
                 </NavigationMenuItem>
