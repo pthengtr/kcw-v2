@@ -121,12 +121,51 @@ export async function GET(req: Request) {
     (data ?? []) as LineForLabel[],
     supabase,
   );
+  const ids = labeled
+    .map((row) => String((row as { id?: string }).id ?? ""))
+    .filter(Boolean);
+  const depositById = new Map<
+    string,
+    {
+      platform: string;
+      shop: string;
+      period_from: string;
+      period_to: string;
+    }
+  >();
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100);
+    const depositRes = await supabase
+      .schema("curated_kcw")
+      .from("online_bank_deposits")
+      .select("statement_line_id, platform, shop, period_from, period_to")
+      .in("statement_line_id", chunk);
+    if (depositRes.error) {
+      return NextResponse.json(
+        { error: "Query failed", details: depositRes.error.message },
+        { status: 500 }
+      );
+    }
+    for (const deposit of depositRes.data ?? []) {
+      depositById.set(String(deposit.statement_line_id), {
+        platform: deposit.platform,
+        shop: deposit.shop,
+        period_from: deposit.period_from,
+        period_to: deposit.period_to,
+      });
+    }
+  }
   const rows = labeled.map((row) => {
     const rest: Record<string, unknown> = { ...row };
     delete rest.raw_json;
     delete rest.debit;
     delete rest.credit;
     delete rest.value_date;
+    const deposit = depositById.get(String(rest.id ?? ""));
+    rest.online_platform = deposit?.platform ?? null;
+    rest.online_shop = deposit?.shop ?? null;
+    rest.online_period_from = deposit?.period_from ?? null;
+    rest.online_period_to = deposit?.period_to ?? null;
     return rest;
   });
 

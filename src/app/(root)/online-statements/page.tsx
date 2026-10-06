@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import OnlineStatementsPage from "@/components/online-statements/OnlineStatementsPage";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
@@ -12,5 +14,9 @@ export default async function Page() {
     );
   }
 
-  return <OnlineStatementsPage />;
+  return (
+    <Suspense>
+      <OnlineStatementsPage />
+    </Suspense>
+  );
 }
