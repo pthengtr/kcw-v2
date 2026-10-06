@@ -49,6 +49,7 @@ const PAGE_KEY_LABELS: Record<string, string> = {
   bi_vat: "BI: ภาษีขาย / ภาษีซื้อ",
   bank_tiger_pay: "Bank: TigerPay",
   bank_statement_sync: "Bank: Statement Upload",
+  online_statements: "เงินเข้าออนไลน์ → บิล TAD",
   po_status: "PO: สถานะใบสั่งซื้อ (ยกเลิกแล้ว — ใช้โอนสินค้า)",
   stock_audit: "สถานะตรวจนับ (Stock Audit)",
 };

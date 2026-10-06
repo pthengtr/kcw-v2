@@ -1,6 +1,7 @@
 import {
   canAccessAnyBi,
   canAccessAdminRbac,
+  canAccessOnlineStatements,
   canAccessStatementSync,
   canAccessStockAudit,
   canAccessTigerPay,
@@ -16,6 +17,8 @@ export function canAccessHomeMenuItem(
       return canAccessStockAudit(pageKeys);
     case "bankStatement":
       return canAccessStatementSync(pageKeys);
+    case "onlineStatements":
+      return canAccessOnlineStatements(pageKeys);
     case "tigerPay":
       return canAccessTigerPay(pageKeys);
     case "bi":

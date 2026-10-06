@@ -19,6 +19,7 @@ export type HomeMenuKey =
   | "stockAudit"
   | "productImageKpi"
   | "bankStatement"
+  | "onlineStatements"
   | "tigerPay"
   | "party"
   | "relatedProducts"
@@ -86,6 +87,15 @@ export const HOME_MENU_ITEMS = {
     icon: ArrowRightLeft,
     iconClassName: "text-blue-600",
     iconSurfaceClassName: "bg-blue-50 ring-blue-100",
+  },
+  onlineStatements: {
+    key: "onlineStatements",
+    href: "/online-statements",
+    label: "เงินเข้าออนไลน์",
+    description: "จากยอดโอนเข้าบัญชีไปออเดอร์และบิล TAD",
+    icon: Wallet,
+    iconClassName: "text-violet-600",
+    iconSurfaceClassName: "bg-violet-50 ring-violet-100",
   },
   tigerPay: {
     key: "tigerPay",
@@ -173,7 +183,11 @@ export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
   },
   {
     title: "การเงินและรับชำระ",
-    items: [HOME_MENU_ITEMS.bankStatement, HOME_MENU_ITEMS.tigerPay],
+    items: [
+      HOME_MENU_ITEMS.bankStatement,
+      HOME_MENU_ITEMS.onlineStatements,
+      HOME_MENU_ITEMS.tigerPay,
+    ],
   },
   {
     title: "ข้อมูลและสินค้า",

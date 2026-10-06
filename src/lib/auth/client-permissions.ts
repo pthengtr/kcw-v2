@@ -29,6 +29,10 @@ export function canAccessStatementSync(pageKeys: string[]): boolean {
   return canAccessPage(pageKeys, BANK_PAGE_KEYS.statementSync);
 }
 
+export function canAccessOnlineStatements(pageKeys: string[]): boolean {
+  return canAccessPage(pageKeys, BANK_PAGE_KEYS.onlineStatements);
+}
+
 export function canAccessPoStatus(pageKeys: string[]): boolean {
   return canAccessPage(pageKeys, PO_PAGE_KEYS.status);
 }
