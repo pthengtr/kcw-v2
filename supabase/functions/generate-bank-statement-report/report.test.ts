@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { attachMatchedPartyAndBills } from "./party-lookup.ts";
 import {
   CHEQUE_ACCOUNT_COLUMN_ORDER,
   COLUMN_ORDER,
@@ -9,6 +10,7 @@ import {
   extractChequeNumber,
   extractCompanyFromNotes,
   formatBillNumbers,
+  splitRefIds,
   formatInternalTransferDescription,
   formatNarumonCashSalesDescription,
   formatReportRemark,
@@ -105,6 +107,14 @@ describe("bank statement report columns", () => {
         baseRow({ matched_ref_id: "TR6908-020,TR6908-021" }),
       ),
     ).toBe("TR6908-020, TR6908-021");
+    expect(splitRefIds("SCT0448/09-69")).toEqual(["SCT0448/09-69"]);
+    expect(splitRefIds("SO69/043224,SO69/043232")).toEqual([
+      "SO69/043224",
+      "SO69/043232",
+    ]);
+    expect(
+      formatBillNumbers(baseRow({ matched_ref_id: "SCT0448/09-69" })),
+    ).toBe("SCT0448/09-69");
     expect(isDocumentBillToken("2026-08-06")).toBe(false);
     expect(
       formatBillNumbers(
@@ -345,6 +355,80 @@ describe("bank statement report columns", () => {
         }),
       ),
     ).toBe("หจก.ซีลเซ็นเตอร์");
+
+    const [fromMaster] = enrichStatementRows([
+      baseRow({
+        account_no: "141-1-72355-7",
+        bank_name: "KBANK",
+        direction: "out",
+        description: "โอนเงิน",
+        match_status: "matched",
+        match_reason: "บิลซื้อ PIMAS (วันเดียวกัน)",
+        match_notes:
+          "จับคู่กับบิลซื้อ SCT0448/09-69 หจก.ซีลเซ็นเตอร์ จำนวน 290.33 บาท วันที่ 02/09/2026 ตรงยอดและชื่อคู่ค้า",
+        matched_ref_type: "pimas",
+        matched_ref_id: "SCT0448/09-69",
+        matched_party_name: "ห้างหุ้นส่วนจำกัด ซีลเซ็นเตอร์ (สำนักงานใหญ่)",
+        debit: 290.33,
+        credit: null,
+        raw_json: { รายการ: "โอนเงิน" },
+      }),
+    ]);
+    expect(fromMaster["รายการ / ชื่อบริษัท"]).toBe(
+      "ห้างหุ้นส่วนจำกัด ซีลเซ็นเตอร์",
+    );
+    expect(fromMaster["เลขที่บิล"]).toBe("SCT0448/09-69");
+  });
+
+  it("looks up PIMAS names for slash bill numbers instead of leaving โอนเงิน", async () => {
+    const seen: string[][] = [];
+    const query = {
+      in(column: string, keys: string[]) {
+        if (column === "BILLNO") seen.push(keys);
+        const hits =
+          column === "BILLNO"
+            ? [
+                {
+                  BILLNO: "SCT0448/09-69",
+                  ACCTNAME: "ห้างหุ้นส่วนจำกัด ซีลเซ็นเตอร์ (สำนักงานใหญ่)",
+                },
+              ].filter((row) => keys.includes(row.BILLNO))
+            : [];
+        return Promise.resolve({ data: hits, error: null });
+      },
+    };
+    const admin = {
+      schema: () => ({
+        from: () => ({
+          select: () => query,
+        }),
+      }),
+      from: () => ({
+        select: () => ({
+          in: () => Promise.resolve({ data: [], error: null }),
+        }),
+      }),
+    };
+
+    const [row] = await attachMatchedPartyAndBills(admin, [
+      baseRow({
+        account_no: "141-1-72355-7",
+        description: "โอนเงิน",
+        match_status: "matched",
+        match_reason: "บิลซื้อ PIMAS (วันเดียวกัน)",
+        matched_ref_type: "pimas",
+        matched_ref_id: "SCT0448/09-69",
+        debit: 290.33,
+        raw_json: { รายการ: "โอนเงิน" },
+      }),
+    ]);
+    expect(seen.some((keys) => keys.includes("SCT0448/09-69"))).toBe(true);
+    expect(seen.some((keys) => keys.includes("SCT0448"))).toBe(false);
+    const [enriched] = enrichStatementRows([row]);
+    expect(enriched["รายการ / ชื่อบริษัท"]).toBe(
+      "ห้างหุ้นส่วนจำกัด ซีลเซ็นเตอร์",
+    );
+    expect(enriched["เลขที่บิล"]).toBe("SCT0448/09-69");
   });
 
   it("enriches the example RC6908-003 row into the simplified layout", () => {

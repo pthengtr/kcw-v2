@@ -381,8 +381,11 @@ export function extractCompanyFromNotes(notes: string | null | undefined): strin
 
 export function splitRefIds(refId: string | null | undefined): string[] {
   if (!refId) return [];
+  // Comma / semicolon / pipe separate multiple refs. Slash stays inside a
+  // bill number (SCT0448/09-69, SO69/043224) so party lookup and เลขที่บิล
+  // keep the real document id.
   return refId
-    .split(/[,;|/]+/)
+    .split(/[,;|]+/)
     .map((s) => s.trim())
     .filter(Boolean);
 }
