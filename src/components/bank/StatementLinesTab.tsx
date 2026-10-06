@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
+import OnlineDepositDialog from "@/components/online-statements/OnlineDepositDialog";
 import type { StatementLineRow } from "@/components/bank/types";
 import {
   canOperatorEditMatchFields,
@@ -232,20 +233,29 @@ function shortStatementDay(value: string | null | undefined): string {
   return date.toLocaleDateString("th-TH", { day: "numeric", month: "short" });
 }
 
-function OnlineDepositLink({ row }: { row: StatementLineRow }) {
+function OnlineDepositLink({
+  row,
+  onOpen,
+}: {
+  row: StatementLineRow;
+  onOpen: (row: StatementLineRow) => void;
+}) {
   if (!row.online_shop) return null;
   const from = shortStatementDay(row.online_period_from);
   const to = shortStatementDay(row.online_period_to);
   const span = from && to && from !== to ? `${from}–${to}` : from || to;
   return (
-    <a
-      href={`/online-statements?deposit=${row.id}`}
-      className="mt-1 inline-block text-xs font-medium text-sky-800 underline"
-      onClick={(event) => event.stopPropagation()}
+    <button
+      type="button"
+      className="mt-1 inline-block text-left text-xs font-medium text-sky-800 underline"
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen(row);
+      }}
     >
       เงินเข้าออนไลน์ {row.online_shop}
       {span ? ` · ${span}` : ""}
-    </a>
+    </button>
   );
 }
 
@@ -324,6 +334,7 @@ export default function StatementLinesTab({
 
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<StatementLineRow | null>(null);
+  const [depositLine, setDepositLine] = useState<StatementLineRow | null>(null);
   const [selectedRawJson, setSelectedRawJson] = useState<unknown>(null);
   const [editReason, setEditReason] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -729,7 +740,7 @@ export default function StatementLinesTab({
             <span className="line-clamp-2 break-words">
               {itemLabel(r) || "—"}
             </span>
-            <OnlineDepositLink row={r} />
+            <OnlineDepositLink row={r} onOpen={setDepositLine} />
           </span>
         ),
       },
@@ -811,14 +822,21 @@ export default function StatementLinesTab({
         ),
       },
     ],
-    []
+    [setDepositLine]
   );
 
   function renderStatementMobileCard(row: StatementLineRow) {
     return (
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => void openRaw(row)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            void openRaw(row);
+          }
+        }}
         className="w-full rounded-md border bg-white p-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
       >
         <div className="flex items-start justify-between gap-2">
@@ -833,7 +851,7 @@ export default function StatementLinesTab({
             <div className="text-sm break-words">
               {itemLabel(row) || "—"}
             </div>
-            <OnlineDepositLink row={row} />
+            <OnlineDepositLink row={row} onOpen={setDepositLine} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -865,7 +883,7 @@ export default function StatementLinesTab({
             </div>
           ) : null}
         </div>
-      </button>
+      </div>
     );
   }
 
@@ -1078,15 +1096,16 @@ export default function StatementLinesTab({
           {selected && (
             <div className="grid gap-3 rounded-md border p-3 text-sm">
               {selected.online_shop ? (
-                <a
-                  href={`/online-statements?deposit=${selected.id}`}
-                  className="text-sm font-medium text-sky-800 underline"
+                <button
+                  type="button"
+                  className="text-left text-sm font-medium text-sky-800 underline"
+                  onClick={() => setDepositLine(selected)}
                 >
                   เปิดเงินเข้าออนไลน์ {selected.online_shop}
                   {selected.online_period_from
                     ? ` · ${shortStatementDay(selected.online_period_from)}–${shortStatementDay(selected.online_period_to)}`
                     : ""}
-                </a>
+                </button>
               ) : null}
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
@@ -1319,6 +1338,13 @@ export default function StatementLinesTab({
           </div>
         </DialogContent>
       </Dialog>
+      <OnlineDepositDialog
+        lineId={depositLine?.id ?? null}
+        open={depositLine !== null}
+        onOpenChange={(next) => {
+          if (!next) setDepositLine(null);
+        }}
+      />
     </div>
   );
 }
