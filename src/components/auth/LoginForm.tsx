@@ -37,7 +37,7 @@ function getFormInput(
   }
 }
 
-export default function LoginForm() {
+export default function LoginForm({ next }: { next?: string }) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
     const { email, password } = values;
@@ -45,6 +45,7 @@ export default function LoginForm() {
     const formData = new FormData();
     formData.append("email", email);
     formData.append("password", password);
+    if (next) formData.append("next", next);
     await login(formData);
   }
 

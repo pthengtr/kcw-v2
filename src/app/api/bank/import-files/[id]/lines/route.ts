@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/auth/requirePermission";
-import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { BANK_STATEMENT_READ_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 
 const QuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -13,7 +13,7 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(BANK_PAGE_KEYS.statementSync);
+  const permCheck = await requirePermission(BANK_STATEMENT_READ_PAGE_KEYS);
   if (!permCheck.ok) {
     return NextResponse.json(
       { error: permCheck.message },

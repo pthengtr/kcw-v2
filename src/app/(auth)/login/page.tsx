@@ -1,6 +1,12 @@
 import LoginForm from "@/components/auth/LoginForm";
 
-export default function Login() {
+type LoginPageProps = {
+  searchParams?: Promise<{ next?: string }>;
+};
+
+export default async function Login({ searchParams }: LoginPageProps) {
+  const params = (await searchParams) ?? {};
+
   return (
     <main className="h-full grid place-content-center">
       <header className="flex flex-col gap-2 items-center justify-center ">
@@ -8,7 +14,7 @@ export default function Login() {
         <p className="text-xs text-gray-600">เกียรติชัยอะไหล์ยนต์</p>
       </header>
 
-      <LoginForm />
+      <LoginForm next={params.next} />
     </main>
   );
 }

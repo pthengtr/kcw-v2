@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { loginDestination } from "@/lib/auth/external-portal";
 import { createClient } from "@/lib/supabase/server";
 
 export async function login(formData: FormData) {
@@ -15,15 +16,24 @@ export async function login(formData: FormData) {
     password: formData.get("password") as string,
   };
 
-  const { error } = await supabase.auth.signInWithPassword(data);
+  const { data: signInData, error } = await supabase.auth.signInWithPassword(data);
 
-  if (error) {
-    console.log(error.message);
+  if (error || !signInData.user) {
+    console.log(error?.message ?? "Login failed");
     redirect("/error");
   }
 
+  const { data: roles } = await supabase
+    .from("kcw_user_roles")
+    .select("role_key")
+    .eq("user_id", signInData.user.id);
+
+  const roleKeys = (roles ?? []).map((row) => row.role_key as string);
+  const nextRaw = formData.get("next");
+  const nextPath = typeof nextRaw === "string" ? nextRaw : null;
+
   revalidatePath("/home", "layout");
-  redirect("/home");
+  redirect(loginDestination(roleKeys, nextPath));
 }
 
 export async function logout() {

@@ -126,7 +126,11 @@ function feeText(fees: Fee[] | null): string {
     .join(", ");
 }
 
-export default function OnlineStatementsPage() {
+export default function OnlineStatementsPage({
+  readOnly = false,
+}: {
+  readOnly?: boolean;
+}) {
   const searchParams = useSearchParams();
   const depositId = searchParams.get("deposit") ?? "";
   const [deposit, setDeposit] = useState<Deposit | null>(null);
@@ -291,30 +295,34 @@ export default function OnlineStatementsPage() {
             ยอดที่โอนเข้าบัญชี แยกตามแพลตฟอร์ม แล้วไล่ไปออเดอร์ ค่าธรรมเนียม และบิล TAD
           </p>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full sm:w-auto"
-            onClick={() => setUploadOpen(true)}
-          >
-            อัปโหลดไฟล์
-          </Button>
-          <Button
-            type="button"
-            className="w-full sm:w-auto"
-            onClick={() => void rebuild()}
-            disabled={syncing}
-          >
-            {syncing ? "กำลังจับคู่..." : "สั่ง worker จับคู่ใหม่"}
-          </Button>
-        </div>
+        {readOnly ? null : (
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setUploadOpen(true)}
+            >
+              อัปโหลดไฟล์
+            </Button>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              onClick={() => void rebuild()}
+              disabled={syncing}
+            >
+              {syncing ? "กำลังจับคู่..." : "สั่ง worker จับคู่ใหม่"}
+            </Button>
+          </div>
+        )}
       </div>
-      <OnlineStatementUploadDialog
-        open={uploadOpen}
-        onOpenChange={setUploadOpen}
-        onUploaded={() => setSyncing(true)}
-      />
+      {readOnly ? null : (
+        <OnlineStatementUploadDialog
+          open={uploadOpen}
+          onOpenChange={setUploadOpen}
+          onUploaded={() => setSyncing(true)}
+        />
+      )}
 
       {job ? (
         <p className="text-sm text-muted-foreground">
