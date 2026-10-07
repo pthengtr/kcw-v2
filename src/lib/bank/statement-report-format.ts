@@ -448,7 +448,9 @@ export function formatDateDdMmYyyy(d: Date): string {
 }
 
 /** True when the match is SYP daily net (3TAR−3CNTAR), not HQ TAR−CNTAR. */
-export function isDailyNet3Tar(row: StatementLineRow): boolean {
+export function isDailyNet3Tar(
+  row: Pick<StatementLineRow, "match_reason" | "match_notes" | "account_no">,
+): boolean {
   const reason = row.match_reason ?? "";
   const notes = row.match_notes ?? "";
   if (/3TAR/i.test(reason) || /3TAR/i.test(notes) || /3CNTAR/i.test(notes)) {
