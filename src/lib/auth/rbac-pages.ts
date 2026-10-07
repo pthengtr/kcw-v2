@@ -3,6 +3,7 @@ export type RbacPageKey = string;
 export const ADMIN_RBAC_PAGE: RbacPageKey = "admin_rbac";
 export const ROLE_NORMAL = "normal";
 export const ROLE_ADMIN = "admin";
+export const ROLE_EXTERNAL = "external";
 
 export const BI_PAGE_KEYS = {
   income: "bi_income",
@@ -21,8 +22,21 @@ export const BI_PAGE_KEYS = {
 export const BANK_PAGE_KEYS = {
   tigerPay: "bank_tiger_pay",
   statementSync: "bank_statement_sync",
+  statementView: "bank_statement_view",
   onlineStatements: "online_statements",
+  onlineStatementsView: "online_statements_view",
 } as const;
+
+/** Read access: view-only external role, or the existing write key. */
+export const BANK_STATEMENT_READ_PAGE_KEYS = [
+  BANK_PAGE_KEYS.statementView,
+  BANK_PAGE_KEYS.statementSync,
+] as const;
+
+export const ONLINE_STATEMENT_READ_PAGE_KEYS = [
+  BANK_PAGE_KEYS.onlineStatementsView,
+  BANK_PAGE_KEYS.onlineStatements,
+] as const;
 
 export const PO_PAGE_KEYS = {
   status: "po_status",
@@ -46,7 +60,9 @@ export const RBAC_PROTECTED_PAGE_KEYS: RbacPageKey[] = [
   BI_PAGE_KEYS.vat,
   BANK_PAGE_KEYS.tigerPay,
   BANK_PAGE_KEYS.statementSync,
+  BANK_PAGE_KEYS.statementView,
   BANK_PAGE_KEYS.onlineStatements,
+  BANK_PAGE_KEYS.onlineStatementsView,
   PO_PAGE_KEYS.status,
   STOCK_AUDIT_PAGE_KEY,
 ];

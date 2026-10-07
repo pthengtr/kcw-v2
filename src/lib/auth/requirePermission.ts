@@ -6,7 +6,7 @@ export type RequirePermissionResult =
   | { ok: false; status: 401 | 403; message: string };
 
 export async function requirePermission(
-  pageKey: string
+  pageKey: string | readonly string[]
 ): Promise<RequirePermissionResult> {
   const supabase = await createClient();
 
@@ -42,12 +42,13 @@ export async function requirePermission(
     return { ok: false, status: 403, message: "Forbidden" };
   }
 
-  // Layer 2: page_key must be granted to one of the user's roles.
+  // Layer 2: one of the page keys must be granted to one of the user's roles.
+  const pageKeys = typeof pageKey === "string" ? [pageKey] : [...pageKey];
   const { data: allowed, error: allowedError } = await supabase
     .from("kcw_role_page_permissions")
     .select("page_key")
     .in("role_key", roleKeys)
-    .eq("page_key", pageKey)
+    .in("page_key", pageKeys)
     .limit(1);
 
   if (allowedError) {

@@ -303,8 +303,10 @@ function accountLabel(a: BankAccountOption) {
 
 export default function StatementLinesTab({
   refreshToken,
+  readOnly = false,
 }: {
   refreshToken: number;
+  readOnly?: boolean;
 }) {
   const [accounts, setAccounts] = useState<BankAccountOption[]>([]);
   const [accountsLoading, setAccountsLoading] = useState(true);
@@ -1137,7 +1139,7 @@ export default function StatementLinesTab({
                 </div>
               </div>
 
-              {canOperatorEditMatchFields(selected.match_status) ? (
+              {!readOnly && canOperatorEditMatchFields(selected.match_status) ? (
                 <div className="grid gap-3 border-t pt-3">
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div>

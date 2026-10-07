@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
-import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { ONLINE_STATEMENT_READ_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(req: Request) {
-  const permCheck = await requirePermission(BANK_PAGE_KEYS.onlineStatements);
+  const permCheck = await requirePermission(ONLINE_STATEMENT_READ_PAGE_KEYS);
   if (!permCheck.ok) {
     return NextResponse.json(
       { error: permCheck.message },

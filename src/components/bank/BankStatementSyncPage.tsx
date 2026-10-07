@@ -16,7 +16,13 @@ import StatementUploadDialog from "@/components/bank/StatementUploadDialog";
 import { formatBankStatementReportMessage } from "@/lib/bank/statement-report";
 import { formatBankStatementImportMessage } from "@/lib/bank/statement-upload";
 
-export default function BankStatementSyncPage() {
+export default function BankStatementSyncPage({
+  readOnly = false,
+  backHref = "/home",
+}: {
+  readOnly?: boolean;
+  backHref?: string;
+}) {
   const [tab, setTab] = useState<"import-files" | "statement-lines">(
     "statement-lines"
   );
@@ -38,7 +44,11 @@ export default function BankStatementSyncPage() {
 
   return (
     <PermissionGate
-      pageKey={BANK_PAGE_KEYS.statementSync}
+      pageKey={
+        readOnly
+          ? BANK_PAGE_KEYS.statementView
+          : BANK_PAGE_KEYS.statementSync
+      }
       fallback={
         <div className="px-4 py-4 sm:px-8 sm:py-6">
           <Card>
@@ -52,31 +62,36 @@ export default function BankStatementSyncPage() {
     >
       <div className="px-4 py-4 sm:px-8 sm:py-6">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <BackButton href="/home" />
+          <BackButton href={backHref} />
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
             <p className="text-sm text-muted-foreground">
-              อัปโหลด Excel statement (KBANK / KTB) แล้วจับคู่รายการ ·
-              ไฟล์หลายแท็บนำเข้าทุกบัญชี · สร้างรายงานเดินบัญชีจาก Storage
+              {readOnly
+                ? "ดูรายการเดินบัญชี"
+                : "อัปโหลด Excel statement (KBANK / KTB) แล้วจับคู่รายการ · ไฟล์หลายแท็บนำเข้าทุกบัญชี · สร้างรายงานเดินบัญชีจาก Storage"}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setUploadOpen(true)}
-            >
-              <Upload className="mr-1 h-4 w-4" />
-              อัปโหลด Statement
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setReportOpen(true)}
-            >
-              <FileSpreadsheet className="mr-1 h-4 w-4" />
-              สร้างรายงาน
-            </Button>
+            {readOnly ? null : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUploadOpen(true)}
+              >
+                <Upload className="mr-1 h-4 w-4" />
+                อัปโหลด Statement
+              </Button>
+            )}
+            {readOnly ? null : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setReportOpen(true)}
+              >
+                <FileSpreadsheet className="mr-1 h-4 w-4" />
+                สร้างรายงาน
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -104,7 +119,7 @@ export default function BankStatementSyncPage() {
           </TabsList>
 
           <TabsContent value="statement-lines" className="mt-4">
-            <StatementLinesTab refreshToken={refreshToken} />
+            <StatementLinesTab refreshToken={refreshToken} readOnly={readOnly} />
           </TabsContent>
           <TabsContent value="import-files" className="mt-4">
             <ImportFilesTab refreshToken={refreshToken} />

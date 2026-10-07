@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  externalPortalAccess,
+  isExternalPortalUser,
+} from "@/lib/auth/external-portal";
+
 // /liff is LINE WebView only (no Supabase login). Trust boundary stays in kcw-api webhook.
 const PUBLIC_PATH_PREFIXES = ["/login", "/auth", "/error", "/no-access", "/liff"];
 const PUBLIC_EXACT_PATHS = new Set(["/manifest.webmanifest", "/sw.js"]);
@@ -57,19 +62,24 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isApi && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    if (pathname === "/portal" || pathname.startsWith("/portal/")) {
+      url.searchParams.set("next", pathname);
+    }
     return NextResponse.redirect(url);
   }
 
   // Layer 1: signed-in users must have at least one role.
   // Layer 2 (page permissions) is enforced in requirePermission / UI.
+  // External users are limited to the statement portal.
   if (user && !isPublicPath(pathname)) {
     const { data: roles, error } = await supabase
       .from("kcw_user_roles")
       .select("role_key")
-      .eq("user_id", user.id)
-      .limit(1);
+      .eq("user_id", user.id);
 
-    const hasRole = !error && (roles?.length ?? 0) > 0;
+    const roleKeys = (roles ?? []).map((row) => row.role_key as string);
+    const hasRole = !error && roleKeys.length > 0;
 
     if (!hasRole) {
       if (isApi) {
@@ -81,6 +91,24 @@ export async function updateSession(request: NextRequest) {
 
       const url = request.nextUrl.clone();
       url.pathname = "/no-access";
+      return NextResponse.redirect(url);
+    }
+
+    if (isExternalPortalUser(roleKeys)) {
+      const access = externalPortalAccess(pathname, request.method);
+      if (access === "deny") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      if (access === "redirect") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/portal";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+    } else if (pathname === "/portal" || pathname.startsWith("/portal/")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/home";
+      url.search = "";
       return NextResponse.redirect(url);
     }
   }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/auth/requirePermission";
-import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { BANK_STATEMENT_READ_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import {
   listStatementAccounts,
   type BankAccountOption,
@@ -12,7 +12,7 @@ export type { BankAccountOption };
 
 export async function GET() {
   try {
-    const permCheck = await requirePermission(BANK_PAGE_KEYS.statementSync);
+    const permCheck = await requirePermission(BANK_STATEMENT_READ_PAGE_KEYS);
     if (!permCheck.ok) {
       return NextResponse.json(
         { error: permCheck.message },
