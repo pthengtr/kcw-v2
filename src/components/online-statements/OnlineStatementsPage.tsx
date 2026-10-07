@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import DialogPrintButton from "@/components/common/DialogPrintButton";
 import OnlineStatementUploadDialog from "@/components/online-statements/OnlineStatementUploadDialog";
 import SalesBillDetailDialog, {
   SalesBillNoButton,
@@ -522,7 +523,20 @@ export default function OnlineStatementsPage({
                 {selected.source_file ? ` · ${selected.source_file}` : ""}
               </p>
             ) : null}
-            <div className="flex gap-2">
+            <DialogPrintButton
+              disabled={detailLoading || visibleLines.length === 0}
+              documentTitle={
+                selected
+                  ? `${platformLabel(selected.platform)} ${selected.shop}`
+                  : "รายละเอียดยอดโอน"
+              }
+            />
+            {onlyUnmatched ? (
+              <p className="hidden text-xs text-muted-foreground print:block">
+                แสดงเฉพาะรายการที่ยังไม่พบ PO
+              </p>
+            ) : null}
+            <div className="flex gap-2 print:hidden">
               <Button
                 type="button"
                 size="sm"
