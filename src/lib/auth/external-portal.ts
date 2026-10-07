@@ -14,7 +14,8 @@ function isStatementReadApi(pathname: string): boolean {
     pathname.startsWith("/api/bank/import-files/") ||
     pathname === "/api/online-statements" ||
     pathname.startsWith("/api/online-statements/") ||
-    pathname === "/api/sales-bills/detail"
+    pathname === "/api/sales-bills/detail" ||
+    pathname.startsWith("/api/sales-bills/")
   );
 }
 

@@ -13,6 +13,7 @@ import {
 export type SalesBillTarget = {
   billno: string;
   docType?: string | null;
+  source?: "sales" | "purchase";
 };
 
 type SalesBillLine = {
@@ -64,11 +65,13 @@ function formatWhen(iso: string | null): string {
 export function SalesBillNoButton({
   billno,
   docType,
+  source = "sales",
   onOpen,
   className = "min-w-0 break-all text-left text-sm font-medium text-sky-800 underline",
 }: {
   billno: string;
   docType?: string | null;
+  source?: "sales" | "purchase";
   onOpen: (target: SalesBillTarget) => void;
   className?: string;
 }) {
@@ -78,7 +81,7 @@ export function SalesBillNoButton({
       className={className}
       onClick={(event) => {
         event.stopPropagation();
-        onOpen({ billno, docType });
+        onOpen({ billno, docType, source });
       }}
     >
       {billno}
@@ -97,7 +100,8 @@ export default function SalesBillDetailDialog({
 }) {
   const billno = target?.billno?.trim() ?? "";
   const docType = target?.docType?.trim() ?? "";
-  const requestKey = open && billno ? `${docType}|${billno}` : "";
+  const source = target?.source === "purchase" ? "purchase" : "sales";
+  const requestKey = open && billno ? `${source}|${docType}|${billno}` : "";
   const [loadedKey, setLoadedKey] = useState("");
   const [bill, setBill] = useState<SalesBill | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +111,8 @@ export default function SalesBillDetailDialog({
     let cancelled = false;
     const params = new URLSearchParams({ billno });
     if (docType) params.set("doc_type", docType);
-    void fetch(`/api/sales-bills/detail?${params.toString()}`)
+    const path = source === "purchase" ? "/api/sales-bills/purchase" : "/api/sales-bills/detail";
+    void fetch(`${path}?${params.toString()}`)
       .then(async (res) => {
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "โหลดรายละเอียดบิลไม่สำเร็จ");
@@ -127,7 +132,7 @@ export default function SalesBillDetailDialog({
     return () => {
       cancelled = true;
     };
-  }, [requestKey, billno, docType]);
+  }, [requestKey, billno, docType, source]);
 
   const loading = requestKey !== "" && loadedKey !== requestKey;
 
@@ -165,10 +170,14 @@ export default function SalesBillDetailDialog({
           ) : (
             <div className="flex flex-col gap-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <dl className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border px-3 py-3 text-sm">
-                <dt className="text-muted-foreground">ก่อนภาษี</dt>
-                <dd className="text-right tabular-nums">{formatMoney(bill.beforetax)}</dd>
-                <dt className="text-muted-foreground">ภาษี</dt>
-                <dd className="text-right tabular-nums">{formatMoney(bill.tax)}</dd>
+                {source === "sales" ? (
+                  <>
+                    <dt className="text-muted-foreground">ก่อนภาษี</dt>
+                    <dd className="text-right tabular-nums">{formatMoney(bill.beforetax)}</dd>
+                    <dt className="text-muted-foreground">ภาษี</dt>
+                    <dd className="text-right tabular-nums">{formatMoney(bill.tax)}</dd>
+                  </>
+                ) : null}
                 <dt className="font-medium">รวม</dt>
                 <dd className="text-right font-medium tabular-nums">
                   {formatMoney(bill.aftertax)}
