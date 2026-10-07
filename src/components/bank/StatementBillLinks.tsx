@@ -19,6 +19,7 @@ import {
   statementPurchaseBills,
   statementSalesBills,
   statementVoucherNo,
+  voucherListSummary,
 } from "@/lib/bank/statement-doc-links";
 
 const money = new Intl.NumberFormat("th-TH", {
@@ -27,7 +28,7 @@ const money = new Intl.NumberFormat("th-TH", {
 });
 
 type VoucherBill = {
-  source: "sales" | "purchase";
+  source: "sales" | "purchase" | "discount";
   doc_type: string;
   billno: string;
   bill_date: string | null;
@@ -224,7 +225,13 @@ export function VoucherBillsDialog({
   }, [requestKey]);
 
   const loading = requestKey !== "" && loadedKey !== requestKey;
-  const total = bills.reduce((sum, bill) => sum + (bill.canceled ? 0 : bill.amount), 0);
+  const summary = voucherListSummary(bills);
+  const discountText =
+    summary.discount < 0
+      ? ` · ส่วนลด ${money.format(Math.abs(summary.discount))}`
+      : summary.discount > 0
+        ? ` · ส่วนลด ${money.format(summary.discount)}`
+        : "";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -241,7 +248,9 @@ export function VoucherBillsDialog({
         <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
           <DialogTitle className="text-base sm:text-lg">ใบสำคัญ {voucherNo}</DialogTitle>
           <DialogDescription className="text-left">
-            {loading ? "กำลังโหลด" : `${bills.length} บิล · ${money.format(total)} บาท`}
+            {loading
+              ? "กำลังโหลด"
+              : `${summary.billCount} บิล${discountText} · ${money.format(summary.total)} บาท`}
           </DialogDescription>
           <DialogPrintButton
             disabled={loading || Boolean(error) || bills.length === 0}
@@ -257,29 +266,41 @@ export function VoucherBillsDialog({
             <p className="py-6 text-sm text-muted-foreground">ไม่พบบิลในใบสำคัญนี้</p>
           ) : (
             <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              {bills.map((bill) => (
-                <li
-                  key={`${bill.source}:${bill.billno}`}
-                  className="flex items-start justify-between gap-3 rounded-lg border px-3 py-3"
-                >
-                  <div className="min-w-0">
-                    <SalesBillNoButton
-                      billno={bill.billno}
-                      docType={bill.doc_type}
-                      source={bill.source}
-                      onOpen={onOpenBill}
-                    />
-                    {bill.canceled ? <span className="text-sm"> (ยกเลิก)</span> : null}
-                    <div className="text-xs text-muted-foreground">
-                      {bill.doc_type}
-                      {bill.acctname ? ` · ${bill.acctname}` : ""}
+              {bills.map((bill) =>
+                bill.source === "discount" ? (
+                  <li
+                    key="discount"
+                    className="flex items-start justify-between gap-3 rounded-lg border border-dashed px-3 py-3"
+                  >
+                    <div className="min-w-0 text-sm font-medium">ส่วนลด</div>
+                    <div className="shrink-0 text-sm font-semibold tabular-nums">
+                      {money.format(bill.amount)}
                     </div>
-                  </div>
-                  <div className="shrink-0 text-sm font-semibold tabular-nums">
-                    {money.format(bill.amount)}
-                  </div>
-                </li>
-              ))}
+                  </li>
+                ) : (
+                  <li
+                    key={`${bill.source}:${bill.billno}`}
+                    className="flex items-start justify-between gap-3 rounded-lg border px-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <SalesBillNoButton
+                        billno={bill.billno}
+                        docType={bill.doc_type}
+                        source={bill.source}
+                        onOpen={onOpenBill}
+                      />
+                      {bill.canceled ? <span className="text-sm"> (ยกเลิก)</span> : null}
+                      <div className="text-xs text-muted-foreground">
+                        {bill.doc_type}
+                        {bill.acctname ? ` · ${bill.acctname}` : ""}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-sm font-semibold tabular-nums">
+                      {money.format(bill.amount)}
+                    </div>
+                  </li>
+                )
+              )}
             </ul>
           )}
         </div>

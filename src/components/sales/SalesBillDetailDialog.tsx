@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import DialogPrintButton from "@/components/common/DialogPrintButton";
+import { billDiscountToShow } from "@/lib/sales/bill-detail";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ type SalesBill = {
   beforetax: number;
   tax: number;
   aftertax: number;
+  discount: number;
   canceled: boolean;
   lines: SalesBillLine[];
 };
@@ -175,60 +177,93 @@ export default function SalesBillDetailDialog({
           ) : !bill ? (
             <p className="py-6 text-sm text-muted-foreground">ไม่พบบิล</p>
           ) : (
-            <div className="flex flex-col gap-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border px-3 py-3 text-sm">
-                {source === "sales" ? (
-                  <>
-                    <dt className="text-muted-foreground">ก่อนภาษี</dt>
-                    <dd className="text-right tabular-nums">{formatMoney(bill.beforetax)}</dd>
-                    <dt className="text-muted-foreground">ภาษี</dt>
-                    <dd className="text-right tabular-nums">{formatMoney(bill.tax)}</dd>
-                  </>
-                ) : null}
-                <dt className="font-medium">รวม</dt>
-                <dd className="text-right font-medium tabular-nums">
-                  {formatMoney(bill.aftertax)}
-                </dd>
-              </dl>
-              <div className="overflow-auto rounded-md border print:overflow-visible print:border-0">
-                <table className="w-full min-w-[36rem] border-collapse text-sm print:min-w-0">
-                  <thead>
-                    <tr className="text-left">
-                      <th className="sticky top-0 z-10 border-b bg-muted p-2">BCODE</th>
-                      <th className="sticky top-0 z-10 border-b bg-muted p-2">รายละเอียด</th>
-                      <th className="sticky top-0 z-10 border-b bg-muted p-2">จำนวน</th>
-                      <th className="sticky top-0 z-10 border-b bg-muted p-2">ราคา</th>
-                      <th className="sticky top-0 z-10 border-b bg-muted p-2">จำนวนเงิน</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bill.lines.length === 0 ? (
-                      <tr>
-                        <td className="p-2 text-muted-foreground" colSpan={5}>
-                          ไม่มีรายการ
-                        </td>
-                      </tr>
-                    ) : (
-                      bill.lines.map((line, index) => (
-                        <tr key={`${line.bcode ?? "line"}-${index}`} className="border-b">
-                          <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
-                          <td className="p-2">{line.detail ?? "—"}</td>
-                          <td className="whitespace-nowrap p-2 tabular-nums">
-                            {formatQty(line.qty)}
-                            {line.ui ? ` ${line.ui}` : ""}
-                          </td>
-                          <td className="p-2 tabular-nums">{formatMoney(line.price)}</td>
-                          <td className="p-2 tabular-nums">{formatMoney(line.amount)}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <BillDetailBody bill={bill} source={source} />
           )}
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function BillDetailBody({
+  bill,
+  source,
+}: {
+  bill: SalesBill;
+  source: "sales" | "purchase";
+}) {
+  const lineSum = bill.lines.reduce((sum, line) => sum + line.amount, 0);
+  const discount = billDiscountToShow(lineSum, bill.beforetax, bill.discount ?? 0);
+
+  return (
+    <div className="flex flex-col gap-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border px-3 py-3 text-sm">
+        {source === "sales" ? (
+          <>
+            <dt className="text-muted-foreground">ก่อนภาษี</dt>
+            <dd className="text-right tabular-nums">{formatMoney(bill.beforetax)}</dd>
+            {discount ? (
+              <>
+                <dt className="text-muted-foreground">ส่วนลด</dt>
+                <dd className="text-right tabular-nums">{formatMoney(discount)}</dd>
+              </>
+            ) : null}
+            <dt className="text-muted-foreground">ภาษี</dt>
+            <dd className="text-right tabular-nums">{formatMoney(bill.tax)}</dd>
+          </>
+        ) : discount ? (
+          <>
+            <dt className="text-muted-foreground">ส่วนลด</dt>
+            <dd className="text-right tabular-nums">{formatMoney(discount)}</dd>
+          </>
+        ) : null}
+        <dt className="font-medium">รวม</dt>
+        <dd className="text-right font-medium tabular-nums">{formatMoney(bill.aftertax)}</dd>
+      </dl>
+      <div className="overflow-auto rounded-md border print:overflow-visible print:border-0">
+        <table className="w-full min-w-[36rem] border-collapse text-sm print:min-w-0">
+          <thead>
+            <tr className="text-left">
+              <th className="sticky top-0 z-10 border-b bg-muted p-2">BCODE</th>
+              <th className="sticky top-0 z-10 border-b bg-muted p-2">รายละเอียด</th>
+              <th className="sticky top-0 z-10 border-b bg-muted p-2">จำนวน</th>
+              <th className="sticky top-0 z-10 border-b bg-muted p-2">ราคา</th>
+              <th className="sticky top-0 z-10 border-b bg-muted p-2">จำนวนเงิน</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bill.lines.length === 0 ? (
+              <tr>
+                <td className="p-2 text-muted-foreground" colSpan={5}>
+                  ไม่มีรายการ
+                </td>
+              </tr>
+            ) : (
+              bill.lines.map((line, index) => (
+                <tr key={`${line.bcode ?? "line"}-${index}`} className="border-b">
+                  <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
+                  <td className="p-2">{line.detail ?? "—"}</td>
+                  <td className="whitespace-nowrap p-2 tabular-nums">
+                    {formatQty(line.qty)}
+                    {line.ui ? ` ${line.ui}` : ""}
+                  </td>
+                  <td className="p-2 tabular-nums">{formatMoney(line.price)}</td>
+                  <td className="p-2 tabular-nums">{formatMoney(line.amount)}</td>
+                </tr>
+              ))
+            )}
+            {discount ? (
+              <tr className="border-b">
+                <td className="p-2 font-mono">—</td>
+                <td className="p-2">ส่วนลด</td>
+                <td className="p-2">—</td>
+                <td className="p-2">—</td>
+                <td className="p-2 tabular-nums">{formatMoney(-discount)}</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

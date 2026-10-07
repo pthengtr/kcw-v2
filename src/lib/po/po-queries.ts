@@ -564,6 +564,8 @@ export type PiHeader = {
   acctname: string | null;
   po: string | null;
   aftertax: string | null;
+  beforetax: string | null;
+  discount: string | null;
   canceled: string | null;
   remarks: string | null;
   /** ICLOW RCVDNO when bill was resolved via left(BILLNO,12) or pattern */
@@ -605,7 +607,7 @@ export async function fetchPiDetail(params: {
 
   const exact = await db
     .from("raw_hq_pimas_purchase_bills")
-    .select('"BILLNO","BILLDATE","ACCTNO","PO","AFTERTAX","CANCELED","REMARKS"')
+    .select('"BILLNO","BILLDATE","ACCTNO","PO","BEFORETAX","AFTERTAX","DISCOUNT","CANCELED","REMARKS"')
     .eq("BILLNO", key)
     .maybeSingle();
   if (exact.error) throw exact.error;
@@ -616,7 +618,7 @@ export async function fetchPiDetail(params: {
     // match on left(btrim(BILLNO),12) — same rule as fn_po_pending_receive.
     const prefix = await db
       .from("raw_hq_pimas_purchase_bills")
-      .select('"BILLNO","BILLDATE","ACCTNO","PO","AFTERTAX","CANCELED","REMARKS"')
+      .select('"BILLNO","BILLDATE","ACCTNO","PO","BEFORETAX","AFTERTAX","DISCOUNT","CANCELED","REMARKS"')
       .like("BILLNO", `%${key12}%`)
       .neq("CANCELED", "Y")
       .limit(40);
@@ -699,6 +701,8 @@ export async function fetchPiDetail(params: {
       acctname: acctname ? String(acctname) : null,
       po: (bill.PO as string | null) ?? null,
       aftertax: bill.AFTERTAX == null ? null : String(bill.AFTERTAX),
+      beforetax: bill.BEFORETAX == null ? null : String(bill.BEFORETAX),
+      discount: bill.DISCOUNT == null ? null : String(bill.DISCOUNT),
       canceled: (bill.CANCELED as string | null) ?? null,
       remarks: (bill.REMARKS as string | null) ?? null,
       matched_rcvdno: matchedRcvdno,

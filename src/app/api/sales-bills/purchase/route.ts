@@ -45,15 +45,20 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "ไม่พบบิล" }, { status: 404 });
     }
     const aftertax = num(detail.header.aftertax);
+    const beforetax =
+      detail.header.beforetax == null || detail.header.beforetax === ""
+        ? aftertax
+        : num(detail.header.beforetax);
     return NextResponse.json({
       doc_type: "PIMAS",
       billno: detail.header.billno,
       bill_date: detail.header.billdate,
       acctname: detail.header.acctname,
       po: detail.header.po,
-      beforetax: aftertax,
+      beforetax,
       tax: 0,
       aftertax,
+      discount: num(detail.header.discount),
       canceled: detail.header.canceled === "Y",
       lines: detail.lines.map((line) => ({
         bcode: line.bcode,

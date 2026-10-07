@@ -51,7 +51,8 @@ export async function GET(req: Request) {
     amount?: number | string | null;
     canceled?: boolean;
   }) => ({
-    source: row.source === "purchase" ? "purchase" : "sales",
+    source:
+      row.source === "purchase" || row.source === "discount" ? row.source : "sales",
     doc_type: String(row.doc_type ?? ""),
     billno: String(row.billno ?? "").trim(),
     bill_date: row.bill_date ?? null,
