@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import OnlineStatementUploadDialog from "@/components/online-statements/OnlineStatementUploadDialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -142,6 +143,7 @@ export default function OnlineStatementsPage() {
   const [error, setError] = useState<string | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -289,15 +291,30 @@ export default function OnlineStatementsPage() {
             ยอดที่โอนเข้าบัญชี แยกตามแพลตฟอร์ม แล้วไล่ไปออเดอร์ ค่าธรรมเนียม และบิล TAD
           </p>
         </div>
-        <Button
-          type="button"
-          className="w-full sm:w-auto"
-          onClick={() => void rebuild()}
-          disabled={syncing}
-        >
-          {syncing ? "กำลังจับคู่..." : "สั่ง worker จับคู่ใหม่"}
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => setUploadOpen(true)}
+          >
+            อัปโหลดไฟล์
+          </Button>
+          <Button
+            type="button"
+            className="w-full sm:w-auto"
+            onClick={() => void rebuild()}
+            disabled={syncing}
+          >
+            {syncing ? "กำลังจับคู่..." : "สั่ง worker จับคู่ใหม่"}
+          </Button>
+        </div>
       </div>
+      <OnlineStatementUploadDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        onUploaded={() => setSyncing(true)}
+      />
 
       {job ? (
         <p className="text-sm text-muted-foreground">
