@@ -68,6 +68,7 @@ export async function GET(req: Request) {
     beforetax?: number | string | null;
     tax?: number | string | null;
     aftertax?: number | string | null;
+    discount?: number | string | null;
     canceled?: boolean;
     lines?: BillLine[];
   };
@@ -81,6 +82,7 @@ export async function GET(req: Request) {
     beforetax: num(bill.beforetax),
     tax: num(bill.tax),
     aftertax: num(bill.aftertax),
+    discount: num(bill.discount),
     canceled: Boolean(bill.canceled),
     lines: (bill.lines ?? []).map((line) => ({
       bcode: line.bcode ?? null,

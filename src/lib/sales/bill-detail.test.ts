@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeSalesBillDocType } from "./bill-detail";
+import { billDiscountToShow, normalizeSalesBillDocType } from "./bill-detail";
 
 describe("normalizeSalesBillDocType", () => {
   it("keeps an explicit doc type from the TAR day list", () => {
@@ -20,5 +20,16 @@ describe("normalizeSalesBillDocType", () => {
 
   it("treats an unknown number as a TAD lookup", () => {
     expect(normalizeSalesBillDocType("8K69-0013225")).toBe("TAD");
+  });
+});
+
+describe("billDiscountToShow", () => {
+  it("shows a header discount that the lines have not taken yet", () => {
+    expect(billDiscountToShow(6215, 6210, 5)).toBe(5);
+  });
+
+  it("skips a discount already inside the line amounts", () => {
+    expect(billDiscountToShow(2950, 2950, 1)).toBeNull();
+    expect(billDiscountToShow(2835.5, 2650, 0)).toBeNull();
   });
 });

@@ -4,6 +4,7 @@ import {
   statementPurchaseBills,
   statementSalesBills,
   statementVoucherNo,
+  voucherListSummary,
 } from "./statement-doc-links";
 
 const matched = { match_status: "matched" };
@@ -59,5 +60,15 @@ describe("statement document links", () => {
         matched_ref_id: "D-O-260800961",
       })
     ).toEqual(["D-O-260800961"]);
+  });
+
+  it("nets the voucher discount into the bill list total", () => {
+    expect(
+      voucherListSummary([
+        { source: "purchase", amount: 2835.5, canceled: false },
+        { source: "purchase", amount: 8384.42, canceled: false },
+        { source: "discount", amount: -897.6, canceled: false },
+      ])
+    ).toEqual({ billCount: 2, total: 10322.32, discount: -897.6 });
   });
 });

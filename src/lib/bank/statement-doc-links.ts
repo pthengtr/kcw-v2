@@ -53,3 +53,27 @@ export function statementPurchaseBills(row: StatementDocRow): string[] | null {
   const bills = documentIds(row);
   return bills.length > 0 ? bills : null;
 }
+
+export type VoucherListBill = {
+  source: string;
+  amount: number;
+  canceled: boolean;
+};
+
+/** Bill count excludes the voucher discount row. Total includes it. */
+export function voucherListSummary(bills: VoucherListBill[]): {
+  billCount: number;
+  total: number;
+  discount: number;
+} {
+  const documents = bills.filter((bill) => bill.source !== "discount");
+  const discount = bills
+    .filter((bill) => bill.source === "discount" && !bill.canceled)
+    .reduce((sum, bill) => sum + bill.amount, 0);
+  const total = bills.reduce((sum, bill) => sum + (bill.canceled ? 0 : bill.amount), 0);
+  return {
+    billCount: documents.length,
+    total: Math.round(total * 100) / 100,
+    discount: Math.round(discount * 100) / 100,
+  };
+}
