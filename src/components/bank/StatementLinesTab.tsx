@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import OnlineDepositDialog from "@/components/online-statements/OnlineDepositDialog";
+import TarDayDialog, { TarDayLink } from "@/components/bank/TarDayDialog";
 import type { StatementLineRow } from "@/components/bank/types";
 import {
   canOperatorEditMatchFields,
@@ -335,6 +336,7 @@ export default function StatementLinesTab({
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<StatementLineRow | null>(null);
   const [depositLine, setDepositLine] = useState<StatementLineRow | null>(null);
+  const [tarDayLine, setTarDayLine] = useState<StatementLineRow | null>(null);
   const [selectedRawJson, setSelectedRawJson] = useState<unknown>(null);
   const [editReason, setEditReason] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -741,6 +743,7 @@ export default function StatementLinesTab({
               {itemLabel(r) || "—"}
             </span>
             <OnlineDepositLink row={r} onOpen={setDepositLine} />
+            <TarDayLink row={r} onOpen={setTarDayLine} />
           </span>
         ),
       },
@@ -822,7 +825,7 @@ export default function StatementLinesTab({
         ),
       },
     ],
-    [setDepositLine]
+    [setDepositLine, setTarDayLine]
   );
 
   function renderStatementMobileCard(row: StatementLineRow) {
@@ -852,6 +855,7 @@ export default function StatementLinesTab({
               {itemLabel(row) || "—"}
             </div>
             <OnlineDepositLink row={row} onOpen={setDepositLine} />
+            <TarDayLink row={row} onOpen={setTarDayLine} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1107,6 +1111,11 @@ export default function StatementLinesTab({
                     : ""}
                 </button>
               ) : null}
+              <TarDayLink
+                row={selected}
+                onOpen={setTarDayLine}
+                className="block text-left text-sm font-medium text-sky-800 underline"
+              />
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <div className="text-xs text-muted-foreground">สถานะจับคู่</div>
@@ -1343,6 +1352,13 @@ export default function StatementLinesTab({
         open={depositLine !== null}
         onOpenChange={(next) => {
           if (!next) setDepositLine(null);
+        }}
+      />
+      <TarDayDialog
+        row={tarDayLine}
+        open={tarDayLine !== null}
+        onOpenChange={(next) => {
+          if (!next) setTarDayLine(null);
         }}
       />
     </div>
