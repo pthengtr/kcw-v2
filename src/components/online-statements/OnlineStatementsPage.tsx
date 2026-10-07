@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import OnlineStatementUploadDialog from "@/components/online-statements/OnlineStatementUploadDialog";
+import SalesBillDetailDialog, {
+  SalesBillNoButton,
+  type SalesBillTarget,
+} from "@/components/sales/SalesBillDetailDialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -148,6 +152,7 @@ export default function OnlineStatementsPage({
   const [job, setJob] = useState<Job | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [billTarget, setBillTarget] = useState<SalesBillTarget | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -204,6 +209,10 @@ export default function OnlineStatementsPage({
     return () => {
       cancelled = true;
     };
+  }, [selectedKey]);
+
+  useEffect(() => {
+    if (!selectedKey) setBillTarget(null);
   }, [selectedKey]);
 
   useEffect(() => {
@@ -488,7 +497,15 @@ export default function OnlineStatementsPage({
           if (!open) setSelectedKey(null);
         }}
       >
-        <DialogContent className="left-0 top-0 flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(960px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg">
+        <DialogContent
+          className="left-0 top-0 flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(960px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
+          onInteractOutside={(event) => {
+            if (billTarget) event.preventDefault();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (billTarget) event.preventDefault();
+          }}
+        >
           <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
             <DialogTitle className="text-base sm:text-lg">
               {selected
@@ -585,7 +602,7 @@ export default function OnlineStatementsPage({
                         ) : (
                           linked.map((bill) => (
                             <div key={bill.billno} className="mt-1">
-                              <span className="font-medium">{bill.billno}</span>
+                              <SalesBillNoButton billno={bill.billno} docType="TAD" onOpen={setBillTarget} />
                               {bill.canceled ? " (ยกเลิก)" : ""}
                               <div className="text-xs text-muted-foreground">
                                 PO {bill.po} · {bill.match_method} · {formatMoney(bill.aftertax)}
@@ -603,6 +620,13 @@ export default function OnlineStatementsPage({
           </div>
         </DialogContent>
       </Dialog>
+      <SalesBillDetailDialog
+        target={billTarget}
+        open={billTarget !== null}
+        onOpenChange={(next) => {
+          if (!next) setBillTarget(null);
+        }}
+      />
     </div>
   );
 }

@@ -38,6 +38,12 @@ export const ONLINE_STATEMENT_READ_PAGE_KEYS = [
   BANK_PAGE_KEYS.onlineStatements,
 ] as const;
 
+/** Bill line detail opened from a statement TAD or TAR number. */
+export const SALES_BILL_READ_PAGE_KEYS = [
+  ...BANK_STATEMENT_READ_PAGE_KEYS,
+  ...ONLINE_STATEMENT_READ_PAGE_KEYS,
+] as const;
+
 export const PO_PAGE_KEYS = {
   status: "po_status",
 } as const;

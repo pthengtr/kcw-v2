@@ -10,6 +10,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { StatementLineRow } from "@/components/bank/types";
+import SalesBillDetailDialog, {
+  SalesBillNoButton,
+  type SalesBillTarget,
+} from "@/components/sales/SalesBillDetailDialog";
 import {
   summarizeTarDayBills,
   tarDayLookup,
@@ -72,6 +76,7 @@ export default function TarDayDialog({
   const [loadedKey, setLoadedKey] = useState("");
   const [bills, setBills] = useState<TarDayBill[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [billTarget, setBillTarget] = useState<SalesBillTarget | null>(null);
 
   useEffect(() => {
     if (!requestKey || !billDate || !series) return;
@@ -99,6 +104,10 @@ export default function TarDayDialog({
     };
   }, [requestKey, billDate, series]);
 
+  useEffect(() => {
+    if (!open) setBillTarget(null);
+  }, [open]);
+
   const loading = requestKey !== "" && loadedKey !== requestKey;
 
   const totals = summarizeTarDayBills(bills);
@@ -110,8 +119,17 @@ export default function TarDayDialog({
   const creditBills = bills.filter((bill) => bill.doc_type === creditKind);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="left-0 top-0 z-[60] flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(640px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg">
+      <DialogContent
+        className="left-0 top-0 z-[60] flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(640px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
+        onInteractOutside={(event) => {
+          if (billTarget) event.preventDefault();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (billTarget) event.preventDefault();
+        }}
+      >
         <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
           <DialogTitle className="text-base sm:text-lg">
             {lookup ? lookup.label.replace(/^ดูบิล /, "") : "บิล TAR"}
@@ -146,17 +164,33 @@ export default function TarDayDialog({
                   </>
                 ) : null}
               </dl>
-              <BillList title={salesKind} bills={salesBills} />
-              <BillList title={creditKind} bills={creditBills} />
+              <BillList title={salesKind} bills={salesBills} onOpen={setBillTarget} />
+              <BillList title={creditKind} bills={creditBills} onOpen={setBillTarget} />
             </div>
           )}
         </div>
       </DialogContent>
     </Dialog>
+    <SalesBillDetailDialog
+      target={billTarget}
+      open={billTarget !== null}
+      onOpenChange={(next) => {
+        if (!next) setBillTarget(null);
+      }}
+    />
+    </>
   );
 }
 
-function BillList({ title, bills }: { title: string; bills: TarDayBill[] }) {
+function BillList({
+  title,
+  bills,
+  onOpen,
+}: {
+  title: string;
+  bills: TarDayBill[];
+  onOpen: (target: SalesBillTarget) => void;
+}) {
   if (bills.length === 0) return null;
   return (
     <section>
@@ -167,7 +201,7 @@ function BillList({ title, bills }: { title: string; bills: TarDayBill[] }) {
             key={`${bill.doc_type}:${bill.billno}`}
             className="flex items-start justify-between gap-3 rounded-lg border px-3 py-3"
           >
-            <div className="min-w-0 break-all text-sm font-medium">{bill.billno}</div>
+            <SalesBillNoButton billno={bill.billno} docType={bill.doc_type} onOpen={onOpen} />
             <div className="shrink-0 text-sm font-semibold tabular-nums">
               {formatMoney(bill.amount)}
             </div>
