@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import type { StatementLineRow } from "@/components/bank/types";
-import SalesBillDetailDialog, {
+import {
   SalesBillNoButton,
   type SalesBillTarget,
 } from "@/components/sales/SalesBillDetailDialog";
