@@ -38,6 +38,9 @@ describe("external portal access", () => {
     expect(externalPortalAccess("/api/online-statements", "GET")).toBe("allow");
     expect(externalPortalAccess("/api/sales-bills/detail", "GET")).toBe("allow");
     expect(externalPortalAccess("/api/sales-bills/detail", "POST")).toBe("deny");
+    expect(externalPortalAccess("/api/sales-bills/voucher", "GET")).toBe("allow");
+    expect(externalPortalAccess("/api/sales-bills/purchase", "GET")).toBe("allow");
+    expect(externalPortalAccess("/api/sales-bills/purchase", "POST")).toBe("deny");
     expect(externalPortalAccess("/api/bank/import-files", "GET")).toBe("allow");
     expect(externalPortalAccess("/api/bank/tiger-pay/daily", "GET")).toBe(
       "deny"

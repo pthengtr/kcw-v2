@@ -7,6 +7,12 @@ const DOC_TYPES = [
   "CNTAD",
   "3TAD",
   "TAD",
+  "3TR",
+  "TR",
+  "3TD",
+  "TD",
+  "3CN",
+  "CN",
 ] as const;
 
 export type SalesBillDocType = (typeof DOC_TYPES)[number];

@@ -26,6 +26,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import OnlineDepositDialog from "@/components/online-statements/OnlineDepositDialog";
 import TarDayDialog, { TarDayLink } from "@/components/bank/TarDayDialog";
+import {
+  StatementBillLinks,
+  StatementBillListDialog,
+  VoucherBillsDialog,
+} from "@/components/bank/StatementBillLinks";
+import SalesBillDetailDialog, {
+  type SalesBillTarget,
+} from "@/components/sales/SalesBillDetailDialog";
 import type { StatementLineRow } from "@/components/bank/types";
 import {
   canOperatorEditMatchFields,
@@ -339,6 +347,11 @@ export default function StatementLinesTab({
   const [selected, setSelected] = useState<StatementLineRow | null>(null);
   const [depositLine, setDepositLine] = useState<StatementLineRow | null>(null);
   const [tarDayLine, setTarDayLine] = useState<StatementLineRow | null>(null);
+  const [salesBill, setSalesBill] = useState<SalesBillTarget | null>(null);
+  const [billList, setBillList] = useState<{ title: string; bills: SalesBillTarget[] } | null>(
+    null
+  );
+  const [voucherNo, setVoucherNo] = useState<string | null>(null);
   const [selectedRawJson, setSelectedRawJson] = useState<unknown>(null);
   const [editReason, setEditReason] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -746,6 +759,12 @@ export default function StatementLinesTab({
             </span>
             <OnlineDepositLink row={r} onOpen={setDepositLine} />
             <TarDayLink row={r} onOpen={setTarDayLine} />
+            <StatementBillLinks
+              row={r}
+              onOpenSales={setSalesBill}
+              onOpenList={setBillList}
+              onOpenVoucher={setVoucherNo}
+            />
           </span>
         ),
       },
@@ -827,7 +846,7 @@ export default function StatementLinesTab({
         ),
       },
     ],
-    [setDepositLine, setTarDayLine]
+    [setDepositLine, setTarDayLine, setSalesBill, setBillList, setVoucherNo]
   );
 
   function renderStatementMobileCard(row: StatementLineRow) {
@@ -858,6 +877,12 @@ export default function StatementLinesTab({
             </div>
             <OnlineDepositLink row={row} onOpen={setDepositLine} />
             <TarDayLink row={row} onOpen={setTarDayLine} />
+            <StatementBillLinks
+              row={row}
+              onOpenSales={setSalesBill}
+              onOpenList={setBillList}
+              onOpenVoucher={setVoucherNo}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1118,6 +1143,13 @@ export default function StatementLinesTab({
                 onOpen={setTarDayLine}
                 className="block text-left text-sm font-medium text-sky-800 underline"
               />
+              <StatementBillLinks
+                row={selected}
+                linkClassName="block text-left text-sm font-medium text-sky-800 underline"
+                onOpenSales={setSalesBill}
+                onOpenList={setBillList}
+                onOpenVoucher={setVoucherNo}
+              />
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <div className="text-xs text-muted-foreground">สถานะจับคู่</div>
@@ -1361,6 +1393,32 @@ export default function StatementLinesTab({
         open={tarDayLine !== null}
         onOpenChange={(next) => {
           if (!next) setTarDayLine(null);
+        }}
+      />
+      <StatementBillListDialog
+        title={billList?.title ?? "บิล"}
+        bills={billList?.bills ?? []}
+        open={billList !== null}
+        detailOpen={salesBill !== null}
+        onOpenChange={(next) => {
+          if (!next) setBillList(null);
+        }}
+        onOpenBill={setSalesBill}
+      />
+      <VoucherBillsDialog
+        voucherNo={voucherNo}
+        open={voucherNo !== null}
+        detailOpen={salesBill !== null}
+        onOpenChange={(next) => {
+          if (!next) setVoucherNo(null);
+        }}
+        onOpenBill={setSalesBill}
+      />
+      <SalesBillDetailDialog
+        target={salesBill}
+        open={salesBill !== null}
+        onOpenChange={(next) => {
+          if (!next) setSalesBill(null);
         }}
       />
     </div>
