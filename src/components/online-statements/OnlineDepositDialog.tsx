@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import DialogPrintButton from "@/components/common/DialogPrintButton";
 import SalesBillDetailDialog, {
   SalesBillNoButton,
   type SalesBillTarget,
@@ -240,10 +241,35 @@ export default function OnlineDepositDialog({
                 ? `รายการธนาคาร ${formatWhen(deposit.bank_date)} · สเตทเมนต์ ${formatWhen(deposit.period_from)} – ${formatWhen(deposit.period_to)}`
                 : "ยอดที่โอนเข้าบัญชี"}
           </DialogDescription>
-          {selected ? (
-            <Button type="button" size="sm" variant="outline" onClick={() => setSelectedKey(null)}>
-              กลับไปรายการวัน
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <DialogPrintButton
+              disabled={
+                loading ||
+                Boolean(error) ||
+                (selectedKey ? detailLoading || visibleLines.length === 0 : payouts.length === 0)
+              }
+              documentTitle={
+                selected
+                  ? `${platformLabel(selected.platform)} ${selected.shop}`
+                  : title
+              }
+            />
+            {selected ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="print:hidden"
+                onClick={() => setSelectedKey(null)}
+              >
+                กลับไปรายการวัน
+              </Button>
+            ) : null}
+          </div>
+          {selected && onlyUnmatched ? (
+            <p className="hidden text-xs text-muted-foreground print:block">
+              แสดงเฉพาะรายการที่ยังไม่พบ PO
+            </p>
           ) : null}
         </DialogHeader>
 
@@ -257,7 +283,7 @@ export default function OnlineDepositDialog({
               <p className="py-6 text-sm text-muted-foreground">กำลังโหลดรายละเอียด</p>
             ) : (
               <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                <li className="flex gap-2">
+                <li className="flex gap-2 print:hidden">
                   <Button
                     type="button"
                     size="sm"

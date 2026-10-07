@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
+import DialogPrintButton from "@/components/common/DialogPrintButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1116,13 +1117,21 @@ export default function StatementLinesTab({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100vw-1.5rem)] max-w-4xl max-h-[90dvh] overflow-y-auto">
-          <DialogHeader>
+          <DialogHeader className="pr-8">
             <DialogTitle>รายละเอียดรายการเดินบัญชี</DialogTitle>
             <DialogDescription>
               {selected
                 ? `${selected.txn_date} • ${itemLabel(selected) || selected.description || ""}`
                 : ""}
             </DialogDescription>
+            <DialogPrintButton
+              disabled={!selected}
+              documentTitle={
+                selected
+                  ? `รายการเดินบัญชี ${selected.txn_date}`
+                  : "รายการเดินบัญชี"
+              }
+            />
           </DialogHeader>
           {selected && (
             <div className="grid gap-3 rounded-md border p-3 text-sm">
@@ -1172,7 +1181,7 @@ export default function StatementLinesTab({
               </div>
 
               {!readOnly && canOperatorEditMatchFields(selected.match_status) ? (
-                <div className="grid gap-3 border-t pt-3">
+                <div className="grid gap-3 border-t pt-3 print:hidden">
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">
@@ -1276,7 +1285,7 @@ export default function StatementLinesTab({
                   {saveMatchError ? (
                     <p className="text-sm text-red-600">{saveMatchError}</p>
                   ) : null}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 print:hidden">
                     <Button
                       type="button"
                       variant="outline"
@@ -1340,8 +1349,14 @@ export default function StatementLinesTab({
                     ) : null}
                   </div>
                 </div>
-              ) : (
-                <div className="grid gap-2 border-t pt-3 sm:grid-cols-2">
+              ) : null}
+              <div
+                className={
+                  !readOnly && canOperatorEditMatchFields(selected.match_status)
+                    ? "hidden gap-2 border-t pt-3 print:grid sm:grid-cols-2"
+                    : "grid gap-2 border-t pt-3 sm:grid-cols-2"
+                }
+              >
                   <div>
                     <div className="text-xs text-muted-foreground">
                       เหตุผลการจับคู่
@@ -1369,10 +1384,9 @@ export default function StatementLinesTab({
                     </div>
                   </div>
                 </div>
-              )}
             </div>
           )}
-          <div className="rounded-md border">
+          <div className="rounded-md border print:hidden">
             <ScrollArea className="h-[320px]">
               <pre className="text-xs p-3 whitespace-pre-wrap">
                 {prettyJson(selectedRawJson)}

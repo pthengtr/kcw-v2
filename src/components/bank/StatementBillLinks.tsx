@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import type { StatementLineRow } from "@/components/bank/types";
+import DialogPrintButton from "@/components/common/DialogPrintButton";
 import {
   SalesBillNoButton,
   type SalesBillTarget,
@@ -157,6 +158,7 @@ export function StatementBillListDialog({
         <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
           <DialogTitle className="text-base sm:text-lg">{title}</DialogTitle>
           <DialogDescription className="text-left">กดเลขที่บิลเพื่อดูรายการ</DialogDescription>
+          <DialogPrintButton disabled={bills.length === 0} documentTitle={title} />
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
           <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -241,6 +243,10 @@ export function VoucherBillsDialog({
           <DialogDescription className="text-left">
             {loading ? "กำลังโหลด" : `${bills.length} บิล · ${money.format(total)} บาท`}
           </DialogDescription>
+          <DialogPrintButton
+            disabled={loading || Boolean(error) || bills.length === 0}
+            documentTitle={voucherNo ? `ใบสำคัญ ${voucherNo}` : "ใบสำคัญ"}
+          />
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
           {loading ? (

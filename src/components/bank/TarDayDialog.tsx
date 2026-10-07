@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import DialogPrintButton from "@/components/common/DialogPrintButton";
 import {
   Dialog,
   DialogContent,
@@ -139,6 +140,10 @@ export default function TarDayDialog({
               ? `ยอดขายวันที่ ${formatWhen(lookup.date)} · เงินเข้าบัญชี ${formatWhen(row?.txn_date ?? lookup.date)} ${formatMoney(bankAmount)} บาท`
               : "ยอดที่โอนเข้าบัญชี"}
           </DialogDescription>
+          <DialogPrintButton
+            disabled={loading || Boolean(error) || bills.length === 0}
+            documentTitle={lookup ? lookup.label.replace(/^ดูบิล /, "") : "บิล TAR"}
+          />
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">

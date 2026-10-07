@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import DialogPrintButton from "@/components/common/DialogPrintButton";
 import {
   Dialog,
   DialogContent,
@@ -158,6 +159,12 @@ export default function SalesBillDetailDialog({
                   .join(" · ")
               : "รายการในบิล"}
           </DialogDescription>
+          <DialogPrintButton
+            disabled={loading || Boolean(error) || !bill}
+            documentTitle={
+              bill ? `${bill.doc_type} ${bill.billno}` : billno || "รายละเอียดบิล"
+            }
+          />
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
@@ -183,8 +190,8 @@ export default function SalesBillDetailDialog({
                   {formatMoney(bill.aftertax)}
                 </dd>
               </dl>
-              <div className="overflow-auto rounded-md border">
-                <table className="w-full min-w-[36rem] border-collapse text-sm">
+              <div className="overflow-auto rounded-md border print:overflow-visible print:border-0">
+                <table className="w-full min-w-[36rem] border-collapse text-sm print:min-w-0">
                   <thead>
                     <tr className="text-left">
                       <th className="sticky top-0 z-10 border-b bg-muted p-2">BCODE</th>
