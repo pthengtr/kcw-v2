@@ -132,3 +132,80 @@ export function compareSheets(a: string, b: string): number {
   if (ra !== rb) return ra - rb;
   return a.localeCompare(b, "th");
 }
+
+export type VatRegisterKpiKey =
+  | "missing_receipt"
+  | "missing_invoice"
+  | "unpaid"
+  | "complete";
+
+export type VatRegisterKpi = {
+  total: number;
+  missingReceipts: number;
+  missingReceiptAmount: number;
+  missingInvoices: number;
+  missingInvoiceAmount: number;
+  unpaid: number;
+  unpaidAmount: number;
+  complete: number;
+  /** Rounded percent of lines that have both an invoice and a receipt. */
+  completePct: number;
+};
+
+type VatRegisterKpiRow = Pick<
+  VatRegisterRow,
+  "invoice_count" | "receipt_count" | "paid_status" | "after_vat"
+>;
+
+export function vatRegisterKpiMatch(
+  row: Pick<VatRegisterRow, "invoice_count" | "receipt_count" | "paid_status">,
+  key: VatRegisterKpiKey
+): boolean {
+  switch (key) {
+    case "missing_receipt":
+      return row.receipt_count === 0;
+    case "missing_invoice":
+      return row.invoice_count === 0;
+    case "unpaid":
+      return row.paid_status !== "paid";
+    case "complete":
+      return row.invoice_count > 0 && row.receipt_count > 0;
+  }
+}
+
+/** Counts and net amounts for the lines currently in view. */
+export function summarizeVatRegister(rows: VatRegisterKpiRow[]): VatRegisterKpi {
+  const summary: VatRegisterKpi = {
+    total: rows.length,
+    missingReceipts: 0,
+    missingReceiptAmount: 0,
+    missingInvoices: 0,
+    missingInvoiceAmount: 0,
+    unpaid: 0,
+    unpaidAmount: 0,
+    complete: 0,
+    completePct: 0,
+  };
+
+  for (const row of rows) {
+    if (vatRegisterKpiMatch(row, "missing_receipt")) {
+      summary.missingReceipts += 1;
+      summary.missingReceiptAmount += row.after_vat;
+    }
+    if (vatRegisterKpiMatch(row, "missing_invoice")) {
+      summary.missingInvoices += 1;
+      summary.missingInvoiceAmount += row.after_vat;
+    }
+    if (vatRegisterKpiMatch(row, "unpaid")) {
+      summary.unpaid += 1;
+      summary.unpaidAmount += row.after_vat;
+    }
+    if (vatRegisterKpiMatch(row, "complete")) {
+      summary.complete += 1;
+    }
+  }
+
+  summary.completePct =
+    rows.length === 0 ? 0 : Math.round((summary.complete / rows.length) * 100);
+  return summary;
+}

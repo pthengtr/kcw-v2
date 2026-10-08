@@ -1,20 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { BadgeCheck, ChevronDown, FileText, Loader2, Receipt, Wallet } from "lucide-react";
 
-import { formatBaht } from "@/lib/bi/sales-format";
+import { formatBaht, formatCount } from "@/lib/bi/sales-format";
+import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import SalesBillDetailDialog, {
   type SalesBillTarget,
 } from "@/components/sales/SalesBillDetailDialog";
+import { cn } from "@/lib/utils";
 import {
   compareSheets,
+  summarizeVatRegister,
   vatBillDrill,
+  vatRegisterKpiMatch,
   vatReportingMonth,
   type VatExpenseImage,
   type VatFileKind,
   type VatPaidStatus,
   type VatRegisterFile,
+  type VatRegisterKpiKey,
   type VatRegisterRow,
   type VatRegisterSide,
 } from "@/lib/vat/register";
@@ -54,6 +59,8 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   const [branch, setBranch] = useState<BranchFilter>("ALL");
   const [side, setSide] = useState<SideFilter>("ALL");
   const [sheet, setSheet] = useState<string>("ALL");
+  const [kpiOpen, setKpiOpen] = useState(true);
+  const [kpi, setKpi] = useState<VatRegisterKpiKey | null>(null);
   const [rows, setRows] = useState<VatRegisterRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,9 +99,19 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
     if (sheet !== "ALL" && !sheets.includes(sheet)) setSheet("ALL");
   }, [sheet, sheets]);
 
-  const visible = useMemo(
+  const sheetRows = useMemo(
     () => (sheet === "ALL" ? rows : rows.filter((row) => row.sheet === sheet)),
     [rows, sheet]
+  );
+
+  const kpis = useMemo(() => summarizeVatRegister(sheetRows), [sheetRows]);
+
+  const visible = useMemo(
+    () =>
+      kpi == null
+        ? sheetRows
+        : sheetRows.filter((row) => vatRegisterKpiMatch(row, kpi)),
+    [sheetRows, kpi]
   );
 
   const totals = useMemo(
@@ -111,9 +128,13 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   );
 
   const headingSide: VatRegisterSide =
-    side === "purchase" || visible.every((row) => row.side === "purchase")
+    side === "purchase" || sheetRows.every((row) => row.side === "purchase")
       ? "purchase"
       : "sales";
+
+  function toggleKpi(key: VatRegisterKpiKey) {
+    setKpi((current) => (current === key ? null : key));
+  }
 
   function patchRow(lineKey: string, patch: Partial<VatRegisterRow>) {
     setRows((current) =>
@@ -167,6 +188,58 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
         />
       </div>
 
+      <section className="rounded-xl border border-slate-200 bg-white">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium text-slate-900"
+          aria-expanded={kpiOpen}
+          onClick={() => setKpiOpen((open) => !open)}
+        >
+          สรุปเดือนนี้
+          <ChevronDown
+            className={cn("h-4 w-4 text-slate-500 transition-transform", kpiOpen && "rotate-180")}
+          />
+        </button>
+        {kpiOpen ? (
+          <div className="grid gap-3 px-3 pb-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiFilterCard
+              title="ใบเสร็จที่ยังไม่มี"
+              value={formatCount(kpis.missingReceipts)}
+              hint={formatBaht(kpis.missingReceiptAmount, true)}
+              icon={<Receipt className="h-4 w-4" />}
+              pressed={kpi === "missing_receipt"}
+              alert={kpis.missingReceipts > 0}
+              onClick={() => toggleKpi("missing_receipt")}
+            />
+            <KpiFilterCard
+              title="ใบกำกับที่ยังไม่มี"
+              value={formatCount(kpis.missingInvoices)}
+              hint={formatBaht(kpis.missingInvoiceAmount, true)}
+              icon={<FileText className="h-4 w-4" />}
+              pressed={kpi === "missing_invoice"}
+              alert={kpis.missingInvoices > 0}
+              onClick={() => toggleKpi("missing_invoice")}
+            />
+            <KpiFilterCard
+              title="ยังไม่จ่าย"
+              value={formatCount(kpis.unpaid)}
+              hint={formatBaht(kpis.unpaidAmount, true)}
+              icon={<Wallet className="h-4 w-4" />}
+              pressed={kpi === "unpaid"}
+              onClick={() => toggleKpi("unpaid")}
+            />
+            <KpiFilterCard
+              title="เอกสารครบ"
+              value={`${kpis.completePct}%`}
+              hint={`${formatCount(kpis.complete)} / ${formatCount(kpis.total)} รายการ`}
+              icon={<BadgeCheck className="h-4 w-4" />}
+              pressed={kpi === "complete"}
+              onClick={() => toggleKpi("complete")}
+            />
+          </div>
+        ) : null}
+      </section>
+
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         <SheetButton active={sheet === "ALL"} onClick={() => setSheet("ALL")}>
           ทั้งหมด
@@ -186,7 +259,9 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         ) : visible.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-500">ไม่มีรายการในเดือนนี้</p>
+          <p className="py-10 text-center text-sm text-slate-500">
+            {kpi ? "ไม่มีรายการในกลุ่มนี้" : "ไม่มีรายการในเดือนนี้"}
+          </p>
         ) : (
           <>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
@@ -253,7 +328,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
             ) : visible.length === 0 ? (
               <tr>
                 <td colSpan={11} className="px-3 py-10 text-center text-slate-500">
-                  ไม่มีรายการในเดือนนี้
+                  {kpi ? "ไม่มีรายการในกลุ่มนี้" : "ไม่มีรายการในเดือนนี้"}
                 </td>
               </tr>
             ) : (
@@ -311,6 +386,52 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
         onSaved={patchRow}
       />
     </main>
+  );
+}
+
+function KpiFilterCard({
+  title,
+  value,
+  hint,
+  icon,
+  pressed,
+  alert = false,
+  onClick,
+}: {
+  title: string;
+  value: string;
+  hint: string;
+  icon: ReactNode;
+  pressed: boolean;
+  alert?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={pressed}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      className="cursor-pointer text-left"
+    >
+      <SalesKpiCard
+        title={title}
+        value={value}
+        hint={hint}
+        icon={icon}
+        className={cn(
+          "h-full",
+          alert && "border-rose-300",
+          pressed && "ring-2 ring-slate-900"
+        )}
+      />
+    </div>
   );
 }
 
