@@ -5,6 +5,7 @@ import {
   canAccessStatementSync,
   canAccessStockAudit,
   canAccessTigerPay,
+  canAccessVatRegister,
 } from "@/lib/auth/client-permissions";
 import { HOME_MENU_ITEMS, type HomeMenuItem, type HomeMenuKey } from "./menu";
 
@@ -19,6 +20,8 @@ export function canAccessHomeMenuItem(
       return canAccessStatementSync(pageKeys);
     case "onlineStatements":
       return canAccessOnlineStatements(pageKeys);
+    case "vatRegister":
+      return canAccessVatRegister(pageKeys);
     case "tigerPay":
       return canAccessTigerPay(pageKeys);
     case "bi":

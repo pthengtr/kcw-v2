@@ -47,7 +47,7 @@ const PAGE_KEY_LABELS: Record<string, string> = {
   bi_expenses: "BI: ภาพรวมค่าใช้จ่าย",
   bi_cashflow: "BI: กระแสเงินสด",
   bi_vat: "BI: ภาษีขาย / ภาษีซื้อ",
-  bi_vat_register: "BI: รายงานภาษี (รายใบ)",
+  bi_vat_register: "รายงานภาษี (รายใบ)",
   bank_tiger_pay: "Bank: TigerPay",
   bank_statement_sync: "Bank: Statement Upload",
   bank_statement_view: "Bank: Statement (ดูอย่างเดียว)",

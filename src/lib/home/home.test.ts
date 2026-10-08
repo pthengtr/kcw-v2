@@ -82,6 +82,13 @@ describe("home favorites", () => {
       "stockAudit",
       "productImageKpi",
     ]);
+    expect(HOME_MENU_GROUPS[2].items.map((item) => item.key)).toEqual([
+      "bankStatement",
+      "onlineStatements",
+      "vatRegister",
+      "tigerPay",
+    ]);
+    expect(HOME_MENU_ITEMS.vatRegister.href).toBe("/vat-register");
     expect(HOME_MENU_ITEMS.stockAudit.href).toBe("/stock-audit");
     expect(HOME_MENU_ITEMS.productImageKpi.href).toBe("/product-images/kpi");
     expect(HOME_MENU_ITEMS.productImages.href).toBe("/product-images");

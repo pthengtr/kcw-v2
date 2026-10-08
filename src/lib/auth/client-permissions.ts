@@ -4,6 +4,7 @@ import {
   BI_PAGE_KEYS,
   PO_PAGE_KEYS,
   STOCK_AUDIT_PAGE_KEY,
+  VAT_REGISTER_PAGE_KEY,
 } from "./rbac-pages";
 
 export function canAccessPage(pageKeys: string[], pageKey: string): boolean {
@@ -31,6 +32,10 @@ export function canAccessStatementSync(pageKeys: string[]): boolean {
 
 export function canAccessOnlineStatements(pageKeys: string[]): boolean {
   return canAccessPage(pageKeys, BANK_PAGE_KEYS.onlineStatements);
+}
+
+export function canAccessVatRegister(pageKeys: string[]): boolean {
+  return canAccessPage(pageKeys, VAT_REGISTER_PAGE_KEY);
 }
 
 export function canAccessPoStatus(pageKeys: string[]): boolean {

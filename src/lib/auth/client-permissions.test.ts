@@ -5,7 +5,7 @@ import {
   canAccessAnyBi,
   canAccessPage,
 } from "./client-permissions";
-import { ADMIN_RBAC_PAGE, BI_PAGE_KEYS } from "./rbac-pages";
+import { ADMIN_RBAC_PAGE, BI_PAGE_KEYS, VAT_REGISTER_PAGE_KEY } from "./rbac-pages";
 
 describe("client permission helpers", () => {
   it("treats * as full access", () => {
@@ -22,6 +22,7 @@ describe("client permission helpers", () => {
     expect(canAccessAnyBi([BI_PAGE_KEYS.customers])).toBe(true);
     expect(canAccessAnyBi([BI_PAGE_KEYS.productSales])).toBe(true);
     expect(canAccessAnyBi([])).toBe(false);
+    expect(canAccessAnyBi([VAT_REGISTER_PAGE_KEY])).toBe(false);
     expect(canAccessAdminRbac([ADMIN_RBAC_PAGE])).toBe(true);
   });
 });

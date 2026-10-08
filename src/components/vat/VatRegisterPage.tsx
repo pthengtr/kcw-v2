@@ -4,8 +4,12 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { Loader2 } from "lucide-react";
 
 import { formatBaht } from "@/lib/bi/sales-format";
+import SalesBillDetailDialog, {
+  type SalesBillTarget,
+} from "@/components/sales/SalesBillDetailDialog";
 import {
   compareSheets,
+  vatBillDrill,
   vatReportingMonth,
   type VatExpenseImage,
   type VatFileKind,
@@ -382,6 +386,10 @@ function LineDialog({
   const [expenseFiles, setExpenseFiles] = useState<VatExpenseImage[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [billTarget, setBillTarget] = useState<SalesBillTarget | null>(null);
+  const [expenseOpen, setExpenseOpen] = useState(false);
+  const detailOpen = billTarget !== null || expenseOpen;
+  const drill = row ? vatBillDrill(row) : null;
 
   const loadFiles = useCallback(async (lineKey: string, reportMonth: string) => {
     const params = new URLSearchParams({ month: reportMonth });
@@ -397,13 +405,19 @@ function LineDialog({
   }, []);
 
   useEffect(() => {
-    if (!row) return;
+    if (!row) {
+      setBillTarget(null);
+      setExpenseOpen(false);
+      return;
+    }
     setPaidStatus(row.paid_status);
     setPaidOn(row.paid_on ?? "");
     setNote(row.note ?? "");
     setMessage(null);
     setFiles([]);
     setExpenseFiles([]);
+    setBillTarget(null);
+    setExpenseOpen(false);
     void loadFiles(row.line_key, row.report_month).catch((err: unknown) => {
       setMessage(err instanceof Error ? err.message : "โหลดไฟล์ไม่สำเร็จ");
     });
@@ -501,8 +515,17 @@ function LineDialog({
   }
 
   return (
+    <>
     <Dialog open={row != null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] overflow-y-auto p-4 sm:max-w-xl sm:p-6">
+      <DialogContent
+        className="max-h-[90vh] w-[calc(100vw-1.5rem)] overflow-y-auto p-4 sm:max-w-xl sm:p-6"
+        onInteractOutside={(event) => {
+          if (detailOpen) event.preventDefault();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (detailOpen) event.preventDefault();
+        }}
+      >
         {row ? (
           <>
             <DialogHeader className="text-left">
@@ -531,6 +554,24 @@ function LineDialog({
               ) : null}
             </dl>
 
+            {drill ? (
+              <button
+                type="button"
+                className="text-left text-sm font-medium text-sky-800 underline"
+                onClick={() => setBillTarget(drill)}
+              >
+                ดูรายการในบิล
+              </button>
+            ) : row.source === "expense" ? (
+              <button
+                type="button"
+                className="text-left text-sm font-medium text-sky-800 underline"
+                onClick={() => setExpenseOpen(true)}
+              >
+                ดูรายการในบิล
+              </button>
+            ) : null}
+
             <div className="grid gap-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 <label className="grid gap-1 text-sm">
@@ -538,7 +579,7 @@ function LineDialog({
                   <Select
                     value={paidStatus}
                     onValueChange={(value) => setPaidStatus(value as VatPaidStatus)}
-                    disabled={readOnly || busy}
+                    disabled={readOnly || busy || row.paid_from_reminder}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -559,6 +600,9 @@ function LineDialog({
                   />
                 </label>
               </div>
+              {row.paid_from_reminder ? (
+                <p className="text-sm text-slate-600">สถานะจ่ายมาจากใบวางบิลที่จ่ายแล้ว</p>
+              ) : null}
               <label className="grid gap-1 text-sm">
                 <span>บันทึก</span>
                 <Textarea
@@ -613,6 +657,123 @@ function LineDialog({
             {message ? <p className="text-sm text-slate-600">{message}</p> : null}
           </>
         ) : null}
+      </DialogContent>
+    </Dialog>
+    <SalesBillDetailDialog
+      target={billTarget}
+      open={billTarget !== null}
+      onOpenChange={(open) => {
+        if (!open) setBillTarget(null);
+      }}
+    />
+    <ExpenseLinesDialog
+      lineKey={row?.line_key ?? ""}
+      month={row?.report_month ?? ""}
+      billNo={row?.display_bill_no ?? ""}
+      open={expenseOpen}
+      onOpenChange={setExpenseOpen}
+    />
+    </>
+  );
+}
+
+type ExpenseLine = {
+  id: string;
+  detail: string | null;
+  quantity: number;
+  price: number;
+  amount: number;
+};
+
+function ExpenseLinesDialog({
+  lineKey,
+  month,
+  billNo,
+  open,
+  onOpenChange,
+}: {
+  lineKey: string;
+  month: string;
+  billNo: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const requestKey = open && lineKey ? `${lineKey}|${month}` : "";
+  const [loadedKey, setLoadedKey] = useState("");
+  const [lines, setLines] = useState<ExpenseLine[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!requestKey) return;
+    let cancelled = false;
+    const params = new URLSearchParams({ month });
+    void fetch(`/api/vat/register/${lineKey}/lines?${params.toString()}`)
+      .then(async (res) => {
+        const json = (await res.json()) as { lines?: ExpenseLine[]; error?: string };
+        if (!res.ok) throw new Error(json.error || "โหลดรายการไม่สำเร็จ");
+        if (!cancelled) {
+          setLines(json.lines ?? []);
+          setError(null);
+          setLoadedKey(requestKey);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setLines([]);
+          setError(err instanceof Error ? err.message : "โหลดรายการไม่สำเร็จ");
+          setLoadedKey(requestKey);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [requestKey, lineKey, month]);
+
+  const loading = requestKey !== "" && loadedKey !== requestKey;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        overlayClassName="z-[80]"
+        className="left-0 top-0 z-[80] flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(840px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
+      >
+        <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
+          <DialogTitle className="text-base sm:text-lg">
+            {billNo || "รายการค่าใช้จ่าย"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
+          {loading ? (
+            <p className="py-6 text-sm text-slate-500">กำลังโหลด</p>
+          ) : error ? (
+            <p className="py-6 text-sm text-red-600">{error}</p>
+          ) : lines.length === 0 ? (
+            <p className="py-6 text-sm text-slate-500">ไม่มีรายการ</p>
+          ) : (
+            <div className="overflow-auto rounded-md border">
+              <table className="w-full min-w-[36rem] text-sm">
+                <thead>
+                  <tr className="text-left">
+                    <th className="border-b bg-slate-50 p-2 font-medium">รายละเอียด</th>
+                    <th className="border-b bg-slate-50 p-2 font-medium">จำนวน</th>
+                    <th className="border-b bg-slate-50 p-2 font-medium">ราคา</th>
+                    <th className="border-b bg-slate-50 p-2 font-medium">จำนวนเงิน</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((line) => (
+                    <tr key={line.id} className="border-b">
+                      <td className="p-2">{line.detail || "—"}</td>
+                      <td className="p-2 tabular-nums">{line.quantity}</td>
+                      <td className="p-2 tabular-nums">{formatBaht(line.price, true)}</td>
+                      <td className="p-2 tabular-nums">{formatBaht(line.amount, true)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

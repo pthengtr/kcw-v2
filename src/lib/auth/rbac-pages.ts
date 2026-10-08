@@ -17,8 +17,10 @@ export const BI_PAGE_KEYS = {
   expenses: "bi_expenses",
   cashflow: "bi_cashflow",
   vat: "bi_vat",
-  vatRegister: "bi_vat_register",
 } as const;
+
+/** Line-level VAT book. Kept as the existing grant so current roles still open it. */
+export const VAT_REGISTER_PAGE_KEY: RbacPageKey = "bi_vat_register";
 
 export const BANK_PAGE_KEYS = {
   tigerPay: "bank_tiger_pay",
@@ -39,10 +41,11 @@ export const ONLINE_STATEMENT_READ_PAGE_KEYS = [
   BANK_PAGE_KEYS.onlineStatements,
 ] as const;
 
-/** Bill line detail opened from a statement TAD or TAR number. */
+/** Bill line detail opened from a statement, online payout, or VAT book row. */
 export const SALES_BILL_READ_PAGE_KEYS = [
   ...BANK_STATEMENT_READ_PAGE_KEYS,
   ...ONLINE_STATEMENT_READ_PAGE_KEYS,
+  VAT_REGISTER_PAGE_KEY,
 ] as const;
 
 export const PO_PAGE_KEYS = {
@@ -65,7 +68,7 @@ export const RBAC_PROTECTED_PAGE_KEYS: RbacPageKey[] = [
   BI_PAGE_KEYS.expenses,
   BI_PAGE_KEYS.cashflow,
   BI_PAGE_KEYS.vat,
-  BI_PAGE_KEYS.vatRegister,
+  VAT_REGISTER_PAGE_KEY,
   BANK_PAGE_KEYS.tigerPay,
   BANK_PAGE_KEYS.statementSync,
   BANK_PAGE_KEYS.statementView,
