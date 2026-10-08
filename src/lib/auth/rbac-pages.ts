@@ -17,6 +17,7 @@ export const BI_PAGE_KEYS = {
   expenses: "bi_expenses",
   cashflow: "bi_cashflow",
   vat: "bi_vat",
+  vatRegister: "bi_vat_register",
 } as const;
 
 export const BANK_PAGE_KEYS = {
@@ -64,6 +65,7 @@ export const RBAC_PROTECTED_PAGE_KEYS: RbacPageKey[] = [
   BI_PAGE_KEYS.expenses,
   BI_PAGE_KEYS.cashflow,
   BI_PAGE_KEYS.vat,
+  BI_PAGE_KEYS.vatRegister,
   BANK_PAGE_KEYS.tigerPay,
   BANK_PAGE_KEYS.statementSync,
   BANK_PAGE_KEYS.statementView,

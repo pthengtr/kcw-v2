@@ -91,6 +91,13 @@ export const BI_REPORT_GROUPS: BiReportNavGroup[] = [
         available: true,
       },
       {
+        id: "vat-register",
+        href: "/bi/vat-register",
+        label: "รายงานภาษี (รายใบ)",
+        pageKey: BI_PAGE_KEYS.vatRegister,
+        available: true,
+      },
+      {
         id: "expenses",
         href: "/bi/expenses",
         label: "ภาพรวมค่าใช้จ่าย",
