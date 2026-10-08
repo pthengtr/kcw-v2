@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { compareSheets, vatLineKey, vatReportingMonth } from "./register";
+import {
+  compareSheets,
+  monthEndIso,
+  vatLineKey,
+  vatReportingMonth,
+} from "./register";
 
 describe("vat line key", () => {
   it("matches the postgres md5 of the natural key", () => {
@@ -24,6 +29,13 @@ describe("vat reporting month", () => {
     expect(vatReportingMonth(new Date("2026-10-20T04:00:00.000Z"))).toBe(
       "2026-10"
     );
+  });
+});
+
+describe("month bounds", () => {
+  it("ends on the last day of the month", () => {
+    expect(monthEndIso("2026-09-01")).toBe("2026-09-30");
+    expect(monthEndIso("2024-02-01")).toBe("2024-02-29");
   });
 });
 

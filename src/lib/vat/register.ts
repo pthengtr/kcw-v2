@@ -104,6 +104,13 @@ export function monthStartIso(month: string): string {
   return `${month}-01`;
 }
 
+/** Last calendar day of the month that monthStartIso (YYYY-MM-01) begins. */
+export function monthEndIso(monthStart: string): string {
+  const [year, month] = monthStart.slice(0, 7).split("-").map(Number);
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${monthStart.slice(0, 7)}-${String(last).padStart(2, "0")}`;
+}
+
 export function compareSheets(a: string, b: string): number {
   const ia = VAT_SHEET_ORDER.indexOf(a as (typeof VAT_SHEET_ORDER)[number]);
   const ib = VAT_SHEET_ORDER.indexOf(b as (typeof VAT_SHEET_ORDER)[number]);
