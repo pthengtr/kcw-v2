@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   compareSheets,
   monthEndIso,
+  summarizeVatRegister,
   vatBillDrill,
   vatLineKey,
+  vatRegisterKpiMatch,
   vatReportingMonth,
+  type VatRegisterKpiKey,
 } from "./register";
 
 describe("vat line key", () => {
@@ -81,5 +84,71 @@ describe("sheet order", () => {
   it("puts TAR before TD and credit purchases before cash", () => {
     expect(compareSheets("TD", "TAR")).toBeGreaterThan(0);
     expect(compareSheets("เครดิต", "สด")).toBeLessThan(0);
+  });
+});
+
+describe("vat register summary", () => {
+  const rows = [
+    { invoice_count: 1, receipt_count: 1, paid_status: "paid" as const, after_vat: 100 },
+    { invoice_count: 1, receipt_count: 0, paid_status: "unpaid" as const, after_vat: 40 },
+    { invoice_count: 0, receipt_count: 2, paid_status: "paid" as const, after_vat: 25 },
+    { invoice_count: 0, receipt_count: 0, paid_status: "unpaid" as const, after_vat: 10 },
+  ];
+
+  it("counts missing documents, unpaid lines, and complete lines", () => {
+    expect(summarizeVatRegister(rows)).toEqual({
+      total: 4,
+      missingReceipts: 2,
+      missingReceiptAmount: 50,
+      missingInvoices: 2,
+      missingInvoiceAmount: 35,
+      unpaid: 2,
+      unpaidAmount: 50,
+      complete: 1,
+      completePct: 25,
+    });
+  });
+
+  it("rounds the complete share to the nearest percent", () => {
+    const mostlyComplete = [
+      ...Array.from({ length: 6 }, () => rows[0]),
+      rows[1],
+    ];
+    expect(summarizeVatRegister(mostlyComplete).completePct).toBe(86);
+  });
+
+  it("returns zeros for an empty list", () => {
+    expect(summarizeVatRegister([])).toEqual({
+      total: 0,
+      missingReceipts: 0,
+      missingReceiptAmount: 0,
+      missingInvoices: 0,
+      missingInvoiceAmount: 0,
+      unpaid: 0,
+      unpaidAmount: 0,
+      complete: 0,
+      completePct: 0,
+    });
+  });
+
+  it("uses the same groups the summary counts", () => {
+    const keys: VatRegisterKpiKey[] = [
+      "missing_receipt",
+      "missing_invoice",
+      "unpaid",
+      "complete",
+    ];
+    const summary = summarizeVatRegister(rows);
+    const counts = {
+      missing_receipt: summary.missingReceipts,
+      missing_invoice: summary.missingInvoices,
+      unpaid: summary.unpaid,
+      complete: summary.complete,
+    };
+    for (const key of keys) {
+      expect(rows.filter((row) => vatRegisterKpiMatch(row, key)).length).toBe(
+        counts[key]
+      );
+    }
   });
 });
