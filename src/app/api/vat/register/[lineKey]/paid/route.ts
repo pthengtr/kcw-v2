@@ -15,6 +15,7 @@ const BodySchema = z.object({
   billNo: z.string().min(1).max(80),
   billDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   sourceRef: z.string().uuid().nullable().optional(),
+  reportMonth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   paidStatus: z.enum(["unpaid", "paid"]),
   paidOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
@@ -56,7 +57,11 @@ export async function PATCH(
 
   try {
     const supabase = createAdminClient();
-    const line = await findVatRegisterLine(supabase, lineKey);
+    const line = await findVatRegisterLine(
+      supabase,
+      lineKey,
+      parsed.data.reportMonth
+    );
     if (!line) {
       return NextResponse.json({ error: "Line not found" }, { status: 404 });
     }

@@ -383,8 +383,9 @@ function LineDialog({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const loadFiles = useCallback(async (lineKey: string) => {
-    const res = await fetch(`/api/vat/register/${lineKey}/files`);
+  const loadFiles = useCallback(async (lineKey: string, reportMonth: string) => {
+    const params = new URLSearchParams({ month: reportMonth });
+    const res = await fetch(`/api/vat/register/${lineKey}/files?${params}`);
     const json = (await res.json()) as {
       files?: VatRegisterFile[];
       expenseFiles?: VatExpenseImage[];
@@ -403,7 +404,7 @@ function LineDialog({
     setMessage(null);
     setFiles([]);
     setExpenseFiles([]);
-    void loadFiles(row.line_key).catch((err: unknown) => {
+    void loadFiles(row.line_key, row.report_month).catch((err: unknown) => {
       setMessage(err instanceof Error ? err.message : "โหลดไฟล์ไม่สำเร็จ");
     });
   }, [row, loadFiles]);
@@ -423,6 +424,7 @@ function LineDialog({
           billNo: row.bill_no,
           billDate: row.bill_date,
           sourceRef: row.source_ref,
+          reportMonth: row.report_month,
           paidStatus,
           paidOn: paidStatus === "paid" && paidOn ? paidOn : null,
           note,
@@ -451,13 +453,14 @@ function LineDialog({
       const body = new FormData();
       body.set("kind", kind);
       body.set("file", file);
+      body.set("reportMonth", row.report_month);
       const res = await fetch(`/api/vat/register/${row.line_key}/files`, {
         method: "POST",
         body,
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error || "อัปโหลดไม่สำเร็จ");
-      await loadFiles(row.line_key);
+      await loadFiles(row.line_key, row.report_month);
       const invoiceCount =
         kind === "invoice" ? row.invoice_count + 1 : row.invoice_count;
       const receiptCount =
@@ -483,7 +486,7 @@ function LineDialog({
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error || "ลบไฟล์ไม่สำเร็จ");
-      await loadFiles(row.line_key);
+      await loadFiles(row.line_key, row.report_month);
       onSaved(row.line_key, {
         invoice_count:
           kind === "invoice" ? Math.max(0, row.invoice_count - 1) : row.invoice_count,

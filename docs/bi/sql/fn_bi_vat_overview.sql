@@ -1,6 +1,6 @@
 -- VAT sales / purchase BI overview.
--- Line amounts and document classification come from curated_kcw.vw_vat_register
--- (the sale and purchase tax books). This function only aggregates them.
+-- Line amounts and document classification come from public.fn_vat_register
+-- (the sale and purchase tax books, limited to the chart window). This function only aggregates them.
 
 CREATE OR REPLACE FUNCTION public.fn_bi_vat_overview(
   p_from date,
@@ -73,9 +73,7 @@ BEGIN
       before_vat,
       vat AS vat_amount,
       after_vat
-    FROM curated_kcw.vw_vat_register
-    WHERE bill_date >= v_hist_from
-      AND bill_date <= p_to
+    FROM public.fn_vat_register(v_hist_from, p_to, 'receipt')
   ),
   sales_filtered AS (
     SELECT
@@ -437,7 +435,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fn_bi_vat_overview(date, date, text, date, text) IS
-  'VAT overview aggregated from curated_kcw.vw_vat_register, plus a mid-period run-rate forecast.';
+  'VAT overview aggregated from public.fn_vat_register, plus a mid-period run-rate forecast.';
 
 REVOKE ALL ON FUNCTION public.fn_bi_vat_overview(date, date, text, date, text) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.fn_bi_vat_overview(date, date, text, date, text) FROM anon, authenticated;

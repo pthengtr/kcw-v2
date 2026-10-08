@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireVatRegisterRead, requireVatRegisterWrite } from "@/lib/vat/access";
+import { monthStartIso } from "@/lib/vat/register";
 import { findVatRegisterLine } from "@/lib/vat/register-queries";
 import type { VatExpenseImage, VatFileKind, VatRegisterFile } from "@/lib/vat/register";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -67,9 +68,14 @@ export async function GET(
     return NextResponse.json({ error: "Invalid line" }, { status: 400 });
   }
 
+  const month = new URL(req.url).searchParams.get("month") ?? "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(month)) {
+    return NextResponse.json({ error: "Invalid month" }, { status: 400 });
+  }
+
   try {
     const supabase = createAdminClient();
-    const line = await findVatRegisterLine(supabase, lineKey);
+    const line = await findVatRegisterLine(supabase, lineKey, month);
     if (!line) {
       return NextResponse.json({ error: "Line not found" }, { status: 404 });
     }
@@ -152,6 +158,10 @@ export async function POST(
   const form = await req.formData().catch(() => null);
   const kindParsed = KindSchema.safeParse(form?.get("kind"));
   const file = form?.get("file");
+  const reportMonth = String(form?.get("reportMonth") ?? "");
+  if (!/^\d{4}-\d{2}(-\d{2})?$/.test(reportMonth)) {
+    return NextResponse.json({ error: "Invalid month" }, { status: 400 });
+  }
   if (!kindParsed.success || !(file instanceof File)) {
     return NextResponse.json({ error: "Invalid upload" }, { status: 400 });
   }
@@ -168,7 +178,11 @@ export async function POST(
 
   try {
     const supabase = createAdminClient();
-    const line = await findVatRegisterLine(supabase, lineKey);
+    const line = await findVatRegisterLine(
+      supabase,
+      lineKey,
+      reportMonth.length === 7 ? monthStartIso(reportMonth) : reportMonth
+    );
     if (!line) {
       return NextResponse.json({ error: "Line not found" }, { status: 404 });
     }
