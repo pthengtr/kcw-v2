@@ -28,6 +28,7 @@ import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTabl
 import OnlineDepositDialog from "@/components/online-statements/OnlineDepositDialog";
 import TarDayDialog, { TarDayLink } from "@/components/bank/TarDayDialog";
 import {
+  ExpenseVoucherDialog,
   StatementBillLinks,
   StatementBillListDialog,
   VoucherBillsDialog,
@@ -353,6 +354,7 @@ export default function StatementLinesTab({
     null
   );
   const [voucherNo, setVoucherNo] = useState<string | null>(null);
+  const [expenseReceipts, setExpenseReceipts] = useState<string[] | null>(null);
   const [selectedRawJson, setSelectedRawJson] = useState<unknown>(null);
   const [editReason, setEditReason] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -765,6 +767,7 @@ export default function StatementLinesTab({
               onOpenSales={setSalesBill}
               onOpenList={setBillList}
               onOpenVoucher={setVoucherNo}
+              onOpenExpense={setExpenseReceipts}
             />
           </span>
         ),
@@ -847,7 +850,7 @@ export default function StatementLinesTab({
         ),
       },
     ],
-    [setDepositLine, setTarDayLine, setSalesBill, setBillList, setVoucherNo]
+    [setDepositLine, setTarDayLine, setSalesBill, setBillList, setVoucherNo, setExpenseReceipts]
   );
 
   function renderStatementMobileCard(row: StatementLineRow) {
@@ -883,6 +886,7 @@ export default function StatementLinesTab({
               onOpenSales={setSalesBill}
               onOpenList={setBillList}
               onOpenVoucher={setVoucherNo}
+              onOpenExpense={setExpenseReceipts}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -1158,6 +1162,7 @@ export default function StatementLinesTab({
                 onOpenSales={setSalesBill}
                 onOpenList={setBillList}
                 onOpenVoucher={setVoucherNo}
+                onOpenExpense={setExpenseReceipts}
               />
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
@@ -1433,6 +1438,13 @@ export default function StatementLinesTab({
         open={salesBill !== null}
         onOpenChange={(next) => {
           if (!next) setSalesBill(null);
+        }}
+      />
+      <ExpenseVoucherDialog
+        receiptIds={expenseReceipts}
+        open={expenseReceipts !== null}
+        onOpenChange={(next) => {
+          if (!next) setExpenseReceipts(null);
         }}
       />
     </div>

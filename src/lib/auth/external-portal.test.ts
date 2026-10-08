@@ -40,6 +40,12 @@ describe("external portal access", () => {
     expect(externalPortalAccess("/api/sales-bills/detail", "POST")).toBe("deny");
     expect(externalPortalAccess("/api/sales-bills/voucher", "GET")).toBe("allow");
     expect(externalPortalAccess("/api/sales-bills/purchase", "GET")).toBe("allow");
+    expect(
+      externalPortalAccess("/api/bank/statement-lines/expense-receipt", "GET")
+    ).toBe("allow");
+    expect(
+      externalPortalAccess("/api/bank/statement-lines/expense-receipt", "POST")
+    ).toBe("deny");
     expect(externalPortalAccess("/api/sales-bills/purchase", "POST")).toBe("deny");
     expect(externalPortalAccess("/portal/vat", "GET")).toBe("allow");
     expect(externalPortalAccess("/api/vat/register", "GET")).toBe("allow");
