@@ -2,6 +2,10 @@ import { normalizeMatchStatus, splitRefIds, isDocumentBillToken } from "@/lib/ba
 
 const TR_REF_TYPES = new Set(["tr_bill", "tr_bundle", "tr_remainder", "3tr_bill"]);
 const PURCHASE_REF_TYPES = new Set(["pimas", "pimas_possible_bundle"]);
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+/** Counterpart nicknames such as X2446, stored when no voucher was found. */
+const ACCOUNT_ALIAS_RE = /^X\d+$/i;
 
 export type StatementDocRow = {
   match_status?: string | null;
@@ -52,6 +56,49 @@ export function statementPurchaseBills(row: StatementDocRow): string[] | null {
   if (!linkable(row) || !PURCHASE_REF_TYPES.has(refType(row))) return null;
   const bills = documentIds(row);
   return bills.length > 0 ? bills : null;
+}
+
+/** Expense receipt UUIDs or voucher numbers. Account aliases stay closed. */
+export function statementExpenseReceipts(row: StatementDocRow): string[] | null {
+  if (!linkable(row) || refType(row) !== "expense_pv") return null;
+  const ids = splitRefIds(row.matched_ref_id).filter((id) => {
+    if (UUID_RE.test(id)) return true;
+    if (ACCOUNT_ALIAS_RE.test(id)) return false;
+    return isDocumentBillToken(id);
+  });
+  return ids.length > 0 ? ids : null;
+}
+
+function roundMoney(value: number): number {
+  return Math.round((Number.isFinite(value) ? value : 0) * 100) / 100;
+}
+
+/** Same net as the expense voucher screen: lines, then VAT, then withholding. */
+export function expenseReceiptTotals(input: {
+  lineAmounts: number[];
+  discount: number;
+  taxExempt: number;
+  vatRate: number;
+  withholdingRate: number;
+}): {
+  beforeTax: number;
+  discount: number;
+  vatAmount: number;
+  withholdingAmount: number;
+  net: number;
+} {
+  const beforeTax = input.lineAmounts.reduce((sum, amount) => sum + amount, 0);
+  const discount = input.discount;
+  const taxable = beforeTax - discount - input.taxExempt;
+  const vatAmount = taxable * (input.vatRate / 100);
+  const withholdingAmount = taxable * (input.withholdingRate / 100);
+  return {
+    beforeTax: roundMoney(beforeTax),
+    discount: roundMoney(discount),
+    vatAmount: roundMoney(vatAmount),
+    withholdingAmount: roundMoney(withholdingAmount),
+    net: roundMoney(beforeTax - discount + vatAmount - withholdingAmount),
+  };
 }
 
 export type VoucherListBill = {

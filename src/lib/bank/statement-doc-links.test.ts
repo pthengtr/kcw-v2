@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  expenseReceiptTotals,
+  statementExpenseReceipts,
   statementPurchaseBills,
   statementSalesBills,
   statementVoucherNo,
@@ -60,6 +62,66 @@ describe("statement document links", () => {
         matched_ref_id: "D-O-260800961",
       })
     ).toEqual(["D-O-260800961"]);
+  });
+
+  it("opens an expense voucher and skips account aliases", () => {
+    const receipt = "cd579d46-38b1-4665-9d62-b1763e6ae63e";
+    expect(
+      statementExpenseReceipts({
+        ...matched,
+        matched_ref_type: "expense_pv",
+        matched_ref_id: receipt,
+      })
+    ).toEqual([receipt]);
+    expect(
+      statementExpenseReceipts({
+        ...matched,
+        matched_ref_type: "expense_pv",
+        matched_ref_id: "IV69080381",
+      })
+    ).toEqual(["IV69080381"]);
+    expect(
+      statementExpenseReceipts({
+        ...matched,
+        matched_ref_type: "expense_pv",
+        matched_ref_id: `${receipt},82722277-094b-4ee9-81f2-5879929f2c4b`,
+      })
+    ).toHaveLength(2);
+    expect(
+      statementExpenseReceipts({
+        ...matched,
+        matched_ref_type: "expense_pv",
+        matched_ref_id: "X2446",
+      })
+    ).toBeNull();
+    expect(
+      statementExpenseReceipts({
+        match_status: "unmatched",
+        matched_ref_type: "expense_pv",
+        matched_ref_id: receipt,
+      })
+    ).toBeNull();
+  });
+
+  it("nets an expense voucher the same way as the expense screen", () => {
+    expect(
+      expenseReceiptTotals({
+        lineAmounts: [1090],
+        discount: 0,
+        taxExempt: 0,
+        vatRate: 0,
+        withholdingRate: 0,
+      })
+    ).toMatchObject({ beforeTax: 1090, net: 1090 });
+    expect(
+      expenseReceiptTotals({
+        lineAmounts: [9690.72],
+        discount: 0,
+        taxExempt: 0,
+        vatRate: 0,
+        withholdingRate: 3,
+      }).net
+    ).toBe(9400);
   });
 
   it("nets the voucher discount into the bill list total", () => {
