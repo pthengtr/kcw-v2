@@ -3,15 +3,15 @@ import {
   requirePermission,
   type RequirePermissionResult,
 } from "@/lib/auth/requirePermission";
-import { BI_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { VAT_REGISTER_PAGE_KEY } from "@/lib/auth/rbac-pages";
 import { createClient } from "@/lib/supabase/server";
 
 export async function requireVatRegisterRead(): Promise<RequirePermissionResult> {
-  return requirePermission(BI_PAGE_KEYS.vatRegister);
+  return requirePermission(VAT_REGISTER_PAGE_KEY);
 }
 
 export async function requireVatRegisterWrite(): Promise<RequirePermissionResult> {
-  const perm = await requirePermission(BI_PAGE_KEYS.vatRegister);
+  const perm = await requirePermission(VAT_REGISTER_PAGE_KEY);
   if (!perm.ok) return perm;
 
   const supabase = await createClient();

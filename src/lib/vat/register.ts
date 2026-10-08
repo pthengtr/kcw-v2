@@ -52,6 +52,7 @@ export type VatRegisterRow = {
   remark: string | null;
   paid_status: VatPaidStatus;
   paid_on: string | null;
+  paid_from_reminder: boolean;
   note: string | null;
   invoice_count: number;
   receipt_count: number;
@@ -109,6 +110,18 @@ export function monthEndIso(monthStart: string): string {
   const [year, month] = monthStart.slice(0, 7).split("-").map(Number);
   const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
   return `${monthStart.slice(0, 7)}-${String(last).padStart(2, "0")}`;
+}
+
+/** Sales and purchase books open the shared bill dialog. Expense rows do not. */
+export function vatBillDrill(row: {
+  source: string;
+  side: VatRegisterSide;
+  sheet: string;
+  bill_no: string;
+}): { billno: string; docType?: string; source: "sales" | "purchase" } | null {
+  if (row.source === "expense" || row.bill_no.trim() === "") return null;
+  if (row.side === "purchase") return { billno: row.bill_no, source: "purchase" };
+  return { billno: row.bill_no, docType: row.sheet, source: "sales" };
 }
 
 export function compareSheets(a: string, b: string): number {

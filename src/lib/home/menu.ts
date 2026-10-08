@@ -9,6 +9,7 @@ import {
   Images,
   Link2,
   MessageCircleWarning,
+  Receipt,
   Wallet,
   Banknote,
 } from "lucide-react";
@@ -20,6 +21,7 @@ export type HomeMenuKey =
   | "productImageKpi"
   | "bankStatement"
   | "onlineStatements"
+  | "vatRegister"
   | "tigerPay"
   | "party"
   | "relatedProducts"
@@ -96,6 +98,15 @@ export const HOME_MENU_ITEMS = {
     icon: Wallet,
     iconClassName: "text-violet-600",
     iconSurfaceClassName: "bg-violet-50 ring-violet-100",
+  },
+  vatRegister: {
+    key: "vatRegister",
+    href: "/vat-register",
+    label: "รายงานภาษี",
+    description: "ภาษีขายและภาษีซื้อรายใบ พร้อมสถานะจ่าย",
+    icon: Receipt,
+    iconClassName: "text-teal-700",
+    iconSurfaceClassName: "bg-teal-50 ring-teal-100",
   },
   tigerPay: {
     key: "tigerPay",
@@ -186,6 +197,7 @@ export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
     items: [
       HOME_MENU_ITEMS.bankStatement,
       HOME_MENU_ITEMS.onlineStatements,
+      HOME_MENU_ITEMS.vatRegister,
       HOME_MENU_ITEMS.tigerPay,
     ],
   },

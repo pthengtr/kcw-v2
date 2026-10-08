@@ -68,6 +68,7 @@ export async function fetchVatRegister(
       remark: asNullable(row.remark),
       paid_status: status,
       paid_on: row.paid_on ? asString(row.paid_on).slice(0, 10) : null,
+      paid_from_reminder: row.paid_from_reminder === true,
       note: asNullable(row.note),
       invoice_count: asNumber(row.invoice_count),
       receipt_count: asNumber(row.receipt_count),
@@ -86,6 +87,7 @@ export async function findVatRegisterLine(
   sheet: string;
   bill_no: string;
   bill_date: string;
+  source: string;
   source_ref: string | null;
 } | null> {
   const { data, error } = await supabase.rpc("fn_vat_register_line", {
@@ -105,6 +107,7 @@ export async function findVatRegisterLine(
     sheet: asString(row.sheet),
     bill_no: asString(row.bill_no),
     bill_date: asString(row.bill_date).slice(0, 10),
+    source: asString(row.source),
     source_ref: asNullable(row.source_ref),
   };
 }

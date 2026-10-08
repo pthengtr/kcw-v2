@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   compareSheets,
   monthEndIso,
+  vatBillDrill,
   vatLineKey,
   vatReportingMonth,
 } from "./register";
@@ -36,6 +37,43 @@ describe("month bounds", () => {
   it("ends on the last day of the month", () => {
     expect(monthEndIso("2026-09-01")).toBe("2026-09-30");
     expect(monthEndIso("2024-02-01")).toBe("2024-02-29");
+  });
+});
+
+describe("bill drill-down", () => {
+  it("opens sales, TAR, and purchase bills, and skips expenses", () => {
+    expect(
+      vatBillDrill({
+        source: "parts9",
+        side: "sales",
+        sheet: "TD",
+        bill_no: "TD6901001",
+      })
+    ).toEqual({ billno: "TD6901001", docType: "TD", source: "sales" });
+    expect(
+      vatBillDrill({
+        source: "tar",
+        side: "sales",
+        sheet: "3TAR",
+        bill_no: "3TAR6901001",
+      })
+    ).toEqual({ billno: "3TAR6901001", docType: "3TAR", source: "sales" });
+    expect(
+      vatBillDrill({
+        source: "parts9",
+        side: "purchase",
+        sheet: "เครดิต",
+        bill_no: "B2607-1080",
+      })
+    ).toEqual({ billno: "B2607-1080", source: "purchase" });
+    expect(
+      vatBillDrill({
+        source: "expense",
+        side: "purchase",
+        sheet: "ค่าใช้จ่าย",
+        bill_no: "EXP-1",
+      })
+    ).toBeNull();
   });
 });
 

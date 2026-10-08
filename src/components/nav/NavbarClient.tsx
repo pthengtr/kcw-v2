@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShieldCheck } from "lucide-react";
+import { Menu, Receipt, ShieldCheck } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -28,6 +28,7 @@ import {
   canAccessOnlineStatements,
   canAccessStatementSync,
   canAccessTigerPay,
+  canAccessVatRegister,
 } from "@/lib/auth/client-permissions";
 import {
   EXPENSE_DROPDOWN_AFTER_INDEX,
@@ -138,6 +139,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
   const showTigerPay = pageKeys ? canAccessTigerPay(pageKeys) : false;
   const showStatementSync = pageKeys ? canAccessStatementSync(pageKeys) : false;
   const showOnlineStatements = pageKeys ? canAccessOnlineStatements(pageKeys) : false;
+  const showVatRegister = pageKeys ? canAccessVatRegister(pageKeys) : false;
   const showAdminRbac = pageKeys ? canAccessAdminRbac(pageKeys) : false;
 
   return (
@@ -234,6 +236,15 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     onNavigate={closeSheet}
                   />
                 ) : null}
+                {showVatRegister ? (
+                  <NavLinkButton
+                    href="/vat-register"
+                    label="รายงานภาษี"
+                    icon={Receipt}
+                    active={pathname === "/vat-register"}
+                    onNavigate={closeSheet}
+                  />
+                ) : null}
                 {showAdminRbac ? (
                   <NavLinkButton
                     href="/admin/rbac"
@@ -317,6 +328,17 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     label="เงินเข้าออนไลน์"
                     icon={Menu}
                     active={pathname === "/online-statements"}
+                    className="whitespace-nowrap px-2.5"
+                  />
+                </NavigationMenuItem>
+              ) : null}
+              {showVatRegister ? (
+                <NavigationMenuItem>
+                  <NavLinkButton
+                    href="/vat-register"
+                    label="รายงานภาษี"
+                    icon={Receipt}
+                    active={pathname === "/vat-register"}
                     className="whitespace-nowrap px-2.5"
                   />
                 </NavigationMenuItem>
