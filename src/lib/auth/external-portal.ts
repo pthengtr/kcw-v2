@@ -19,6 +19,13 @@ function isStatementReadApi(pathname: string): boolean {
   );
 }
 
+function isVatRegisterReadApi(pathname: string): boolean {
+  return (
+    pathname === "/api/vat/register" ||
+    pathname.startsWith("/api/vat/register/")
+  );
+}
+
 export type ExternalAccess = "allow" | "deny" | "redirect";
 
 /** Where an external (non-admin) user may go. Writes on statement APIs are denied. */
@@ -36,7 +43,7 @@ export function externalPortalAccess(
     return SAFE_METHODS.has(upper) ? "allow" : "deny";
   }
 
-  if (isStatementReadApi(pathname)) {
+  if (isStatementReadApi(pathname) || isVatRegisterReadApi(pathname)) {
     return SAFE_METHODS.has(upper) ? "allow" : "deny";
   }
 

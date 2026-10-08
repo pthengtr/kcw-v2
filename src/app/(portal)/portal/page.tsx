@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightLeft, Wallet } from "lucide-react";
+import { ArrowRightLeft, Receipt, Wallet } from "lucide-react";
 
 const LINKS = [
   {
@@ -14,13 +14,19 @@ const LINKS = [
     description: "ดูยอดโอนเข้าบัญชี ออเดอร์ และบิล TAD",
     icon: Wallet,
   },
+  {
+    href: "/portal/vat",
+    label: "รายงานภาษี",
+    description: "ดูรายงานภาษีขายและภาษีซื้อ พร้อมสถานะจ่ายและรูปเอกสาร",
+    icon: Receipt,
+  },
 ] as const;
 
 export default function PortalHomePage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-8">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">รายการเดินบัญชี</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">รายการที่เปิดให้ดู</h1>
         <p className="text-sm text-slate-600">ดูได้อย่างเดียว</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

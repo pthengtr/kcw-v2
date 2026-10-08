@@ -41,6 +41,17 @@ describe("external portal access", () => {
     expect(externalPortalAccess("/api/sales-bills/voucher", "GET")).toBe("allow");
     expect(externalPortalAccess("/api/sales-bills/purchase", "GET")).toBe("allow");
     expect(externalPortalAccess("/api/sales-bills/purchase", "POST")).toBe("deny");
+    expect(externalPortalAccess("/portal/vat", "GET")).toBe("allow");
+    expect(externalPortalAccess("/api/vat/register", "GET")).toBe("allow");
+    expect(
+      externalPortalAccess("/api/vat/register/abc/files", "GET")
+    ).toBe("allow");
+    expect(externalPortalAccess("/api/vat/register/abc/paid", "PATCH")).toBe(
+      "deny"
+    );
+    expect(externalPortalAccess("/api/vat/register/abc/files", "POST")).toBe(
+      "deny"
+    );
     expect(externalPortalAccess("/api/bank/import-files", "GET")).toBe("allow");
     expect(externalPortalAccess("/api/bank/tiger-pay/daily", "GET")).toBe(
       "deny"

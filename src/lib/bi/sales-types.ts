@@ -59,7 +59,8 @@ export type BiReportId =
   | "cash-flow"
   | "income"
   | "income-statement"
-  | "vat";
+  | "vat"
+  | "vat-register";
 
 export type BiReportGroupId = "sales" | "products" | "finance";
 

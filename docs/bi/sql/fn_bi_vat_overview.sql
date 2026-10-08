@@ -1,7 +1,6 @@
--- VAT sales / purchase BI overview (Thai tax-book logic from kcw-analytics notebooks 30–32).
--- See docs/bi/kcw-vat-data-dictionary.md.
--- Sources: fact_sales_bills_all (TD/TAD/TR/CN), billgen.fin_* (TAR/CNTAR),
---          raw_hq_pidet + raw_hq_pimas (VAT purchases), vw_expense_entry_flat_tax.
+-- VAT sales / purchase BI overview.
+-- Line amounts and document classification come from curated_kcw.vw_vat_register
+-- (the sale and purchase tax books). This function only aggregates them.
 
 CREATE OR REPLACE FUNCTION public.fn_bi_vat_overview(
   p_from date,
@@ -28,7 +27,6 @@ DECLARE
   v_days_range int;
   v_forecast_factor numeric;
   v_forecast_enabled boolean;
-  v_hq_branch_uuid uuid := 'c93efb5f-07c9-4229-b6b3-568ce1c0a9ab';
 BEGIN
   IF p_from IS NULL OR p_to IS NULL OR p_from > p_to THEN
     RAISE EXCEPTION 'Invalid date range';
@@ -65,180 +63,57 @@ BEGIN
   END;
 
   WITH
-  -- ─── Sales docs from curated bills (TD / TAD / TR / CN / CNTAD) ─────────────
-  sales_docs AS (
-    SELECT
-      left(b."BILLDATE", 10)::date AS bill_date,
-      CASE
-        WHEN b."BRANCH" = 'SYP' OR upper(btrim(b."BILLNO")) ~ '^3' THEN 'SYP'
-        ELSE 'HQ'
-      END AS branch,
-      CASE
-        WHEN upper(btrim(b."BILLNO")) ~ '^(3)?CNTAD' THEN 'CNTAD'
-        WHEN COALESCE(b."BILLTYPE_STD", '') = 'CN'
-          OR upper(btrim(b."BILLNO")) ~ '^3CN' THEN 'CN'
-        WHEN COALESCE(b."BILLTYPE_STD", '') = 'TAD'
-          OR upper(btrim(b."BILLNO")) ~ '^3TAD' THEN 'TAD'
-        WHEN COALESCE(b."BILLTYPE_STD", '') = 'TD'
-          OR upper(btrim(b."BILLNO")) ~ '^3TD' THEN 'TD'
-        WHEN COALESCE(b."BILLTYPE_STD", '') = 'TR'
-          OR upper(btrim(b."BILLNO")) ~ '^3TR' THEN 'TR'
-        ELSE NULL
-      END AS doc_type,
-      COALESCE(NULLIF(replace(b."BEFORETAX", ',', ''), '')::numeric, 0) AS beforetax,
-      COALESCE(NULLIF(replace(b."TAX", ',', ''), '')::numeric, 0) AS tax,
-      COALESCE(NULLIF(replace(b."AFTERTAX", ',', ''), '')::numeric, 0) AS aftertax
-    FROM curated_kcw.fact_sales_bills_all b
-    WHERE b."CANCELED" = 'N'
-      AND upper(COALESCE(b."BILLNO", '')) NOT LIKE '%TF%'
-      AND b."BILLDATE" >= (v_hist_from)::text
-      AND b."BILLDATE" < (p_to + 1)::text
-      AND (
-        COALESCE(b."BILLTYPE_STD", '') IN ('TD', 'TAD', 'TR', 'CN')
-        OR upper(btrim(b."BILLNO")) ~ '^(3TD|3TAD|3TR|3CN)'
-      )
-  ),
-  -- ─── TAR / CNTAR from billgen (always VAT-inclusive totals) ─────────────────
-  tar_bills AS (
-    SELECT
-      t.billdate AS bill_date,
-      'HQ'::text AS branch,
-      'TAR'::text AS doc_type,
-      t.billno AS bill_key,
-      SUM(t.amount)::numeric AS total_incl
-    FROM billgen.fin_tar_lines t
-    WHERE t.billdate >= v_hist_from
-      AND t.billdate <= p_to
-    GROUP BY t.billdate, t.billno
-  ),
-  tar3_bills AS (
-    SELECT
-      t.billdate AS bill_date,
-      'SYP'::text AS branch,
-      '3TAR'::text AS doc_type,
-      t.billno AS bill_key,
-      SUM(t.amount)::numeric AS total_incl
-    FROM billgen.fin_3tar_lines t
-    WHERE t.billdate >= v_hist_from
-      AND t.billdate <= p_to
-    GROUP BY t.billdate, t.billno
-  ),
-  cntar_bills AS (
-    SELECT
-      t.billdate AS bill_date,
-      'HQ'::text AS branch,
-      'CNTAR'::text AS doc_type,
-      COALESCE(NULLIF(btrim(t.new_billno), ''), t.billno) AS bill_key,
-      SUM(t.amount)::numeric AS total_incl
-    FROM billgen.fin_cntar_lines t
-    WHERE t.billdate >= v_hist_from
-      AND t.billdate <= p_to
-    GROUP BY t.billdate, COALESCE(NULLIF(btrim(t.new_billno), ''), t.billno)
-  ),
-  cntar3_bills AS (
-    SELECT
-      t.billdate AS bill_date,
-      'SYP'::text AS branch,
-      '3CNTAR'::text AS doc_type,
-      COALESCE(NULLIF(btrim(t.new_billno), ''), t.billno) AS bill_key,
-      SUM(t.amount)::numeric AS total_incl
-    FROM billgen.fin_3cntar_lines t
-    WHERE t.billdate >= v_hist_from
-      AND t.billdate <= p_to
-    GROUP BY t.billdate, COALESCE(NULLIF(btrim(t.new_billno), ''), t.billno)
-  ),
-  tar_docs AS (
+  register AS (
     SELECT
       bill_date,
       branch,
-      doc_type,
-      ROUND(total_incl / 1.07, 2) AS beforetax,
-      ROUND(total_incl - ROUND(total_incl / 1.07, 2), 2) AS tax,
-      ROUND(total_incl, 2) AS aftertax
-    FROM (
-      SELECT * FROM tar_bills
-      UNION ALL SELECT * FROM tar3_bills
-      UNION ALL SELECT * FROM cntar_bills
-      UNION ALL SELECT * FROM cntar3_bills
-    ) x
-  ),
-  all_sales AS (
-    SELECT bill_date, branch, doc_type, beforetax, tax, aftertax
-    FROM sales_docs
-    WHERE doc_type IS NOT NULL
-    UNION ALL
-    SELECT bill_date, branch, doc_type, beforetax, tax, aftertax
-    FROM tar_docs
+      side,
+      source,
+      sheet,
+      before_vat,
+      vat AS vat_amount,
+      after_vat
+    FROM curated_kcw.vw_vat_register
+    WHERE bill_date >= v_hist_from
+      AND bill_date <= p_to
   ),
   sales_filtered AS (
-    SELECT *
-    FROM all_sales
-    WHERE p_branch IS NULL OR branch = p_branch
-  ),
-  -- ─── Purchase VAT (HQ PIDET ISVAT=Y + PIMAS header tax) ─────────────────────
-  purchase_bills AS (
-    SELECT DISTINCT ON (upper(btrim(d."BILLNO")))
-      left(d."BILLDATE", 10)::date AS bill_date,
-      'HQ'::text AS branch,
-      CASE
-        WHEN nullif(btrim(p."BOOKNO"), '') IN ('1', '1_0') THEN 'เครดิต'
-        WHEN nullif(btrim(p."BOOKNO"), '') = '2' THEN 'สด'
-        WHEN nullif(btrim(p."BOOKNO"), '') = '5' THEN 'ลดหนี้ซื้อ'
-        WHEN nullif(btrim(p."BOOKNO"), '') = '6' THEN 'เพิ่มหนี้ซื้อ'
-        ELSE 'Unknown'
-      END AS book,
-      COALESCE(NULLIF(replace(p."BEFORETAX", ',', ''), '')::numeric, 0) AS beforetax,
-      COALESCE(NULLIF(replace(p."TAX", ',', ''), '')::numeric, 0) AS tax,
-      COALESCE(NULLIF(replace(p."AFTERTAX", ',', ''), '')::numeric, 0) AS aftertax
-    FROM raw_kcw.raw_hq_pidet_purchase_lines d
-    JOIN raw_kcw.raw_hq_pimas_purchase_bills p
-      ON upper(btrim(d."BILLNO")) = upper(btrim(p."BILLNO"))
-    WHERE d."ISVAT" = 'Y'
-      AND d."BILLDATE" >= (v_hist_from)::text
-      AND d."BILLDATE" < (p_to + 1)::text
-    ORDER BY upper(btrim(d."BILLNO")), d."BILLDATE"
-  ),
-  purchase_filtered AS (
-    SELECT *
-    FROM purchase_bills
-    -- Purchases are HQ-only in PARTS9; hide when filtering SYP.
-    WHERE p_branch IS NULL OR p_branch = 'HQ'
-  ),
-  -- ─── Expense VAT (app receipts with vat != 0) ───────────────────────────────
-  expense_receipts AS (
-    SELECT
-      v.receipt_day AS bill_date,
-      CASE
-        WHEN v.branch_uuid = v_hq_branch_uuid THEN 'HQ'
-        ELSE 'SYP'
-      END AS branch,
-      v.doc_type::text AS doc_type,
-      v.receipt_uuid,
-      SUM(v.signed_entry_amount)::numeric AS base_excl
-    FROM public.vw_expense_entry_flat_tax v
-    WHERE v.vat IS NOT NULL
-      AND v.vat <> 0
-      AND v.receipt_day >= v_hist_from
-      AND v.receipt_day <= p_to
-    GROUP BY v.receipt_day, v.branch_uuid, v.doc_type, v.receipt_uuid
-  ),
-  expense_docs AS (
     SELECT
       bill_date,
       branch,
-      CASE
-        WHEN doc_type = 'CREDIT_NOTE' THEN 'ลดหนี้ค่าใช้จ่าย'
-        ELSE 'ค่าใช้จ่าย'
-      END AS book,
-      ROUND(base_excl, 2) AS beforetax,
-      ROUND(base_excl * 0.07, 2) AS tax,
-      ROUND(base_excl * 1.07, 2) AS aftertax
-    FROM expense_receipts
+      sheet AS doc_type,
+      before_vat AS beforetax,
+      vat_amount AS tax,
+      after_vat AS aftertax
+    FROM register
+    WHERE side = 'sales'
+      AND (p_branch IS NULL OR branch = p_branch)
+  ),
+  purchase_filtered AS (
+    SELECT
+      bill_date,
+      branch,
+      sheet AS book,
+      before_vat AS beforetax,
+      vat_amount AS tax,
+      after_vat AS aftertax
+    FROM register
+    WHERE side = 'purchase'
+      AND source = 'parts9'
+      AND (p_branch IS NULL OR branch = p_branch)
   ),
   expense_filtered AS (
-    SELECT *
-    FROM expense_docs
-    WHERE p_branch IS NULL OR branch = p_branch
+    SELECT
+      bill_date,
+      branch,
+      sheet AS book,
+      before_vat AS beforetax,
+      vat_amount AS tax,
+      after_vat AS aftertax
+    FROM register
+    WHERE side = 'purchase'
+      AND source = 'expense'
+      AND (p_branch IS NULL OR branch = p_branch)
   ),
   -- ─── Period helpers ─────────────────────────────────────────────────────────
   cur_sales AS (
@@ -562,7 +437,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fn_bi_vat_overview(date, date, text, date, text) IS
-  'VAT sales/purchase/expense tax-book overview + mid-period run-rate forecast (kcw-analytics 31/32 logic).';
+  'VAT overview aggregated from curated_kcw.vw_vat_register, plus a mid-period run-rate forecast.';
 
 REVOKE ALL ON FUNCTION public.fn_bi_vat_overview(date, date, text, date, text) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.fn_bi_vat_overview(date, date, text, date, text) FROM anon, authenticated;
