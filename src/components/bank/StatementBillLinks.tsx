@@ -359,6 +359,17 @@ function formatWhen(iso: string | null): string {
   return new Intl.DateTimeFormat("th-TH", { dateStyle: "medium" }).format(date);
 }
 
+function expenseReceiptMeta(receipt: ExpenseReceiptDetail): string {
+  return [
+    formatWhen(receipt.receipt_date),
+    receipt.party_name,
+    receipt.payment_description,
+    receipt.voucher_description,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function ExpenseVoucherDialog({
   receiptIds,
   open,
@@ -373,6 +384,11 @@ export function ExpenseVoucherDialog({
   const [loadedKey, setLoadedKey] = useState("");
   const [receipts, setReceipts] = useState<ExpenseReceiptDetail[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [billId, setBillId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) setBillId(null);
+  }, [open]);
 
   useEffect(() => {
     if (!requestKey) return;
@@ -401,117 +417,171 @@ export function ExpenseVoucherDialog({
   }, [requestKey]);
 
   const loading = requestKey !== "" && loadedKey !== requestKey;
+  const bill = receipts.find((receipt) => receipt.receipt_uuid === billId) ?? null;
   const title =
     receipts.length === 1
       ? `ใบสำคัญจ่าย ${receipts[0].receipt_number}`
       : receipts.length > 1
         ? `ใบสำคัญจ่าย ${receipts.length} ใบ`
         : "ใบสำคัญจ่าย";
+  const summary =
+    receipts.length === 1
+      ? [formatWhen(receipts[0].receipt_date), receipts[0].party_name, receipts[0].payment_description]
+          .filter(Boolean)
+          .join(" · ")
+      : receipts.length > 1
+        ? receipts.map((receipt) => receipt.receipt_number).join(", ")
+        : "";
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          overlayClassName="z-[80]"
+          className="left-0 top-0 z-[80] flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(640px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
+          onInteractOutside={(event) => {
+            if (billId) event.preventDefault();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (billId) event.preventDefault();
+          }}
+        >
+          <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
+            <DialogTitle className="text-base sm:text-lg">{title}</DialogTitle>
+            <DialogDescription className="text-left">
+              {loading
+                ? "กำลังโหลด"
+                : [summary, receipts.length > 0 ? "กดเลขที่เอกสารเพื่อดูบิล" : "รายการในใบสำคัญจ่าย"]
+                    .filter(Boolean)
+                    .join(" · ")}
+            </DialogDescription>
+            <DialogPrintButton
+              disabled={loading || Boolean(error) || receipts.length === 0}
+              documentTitle={title}
+            />
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
+            {loading ? (
+              <p className="py-6 text-sm text-muted-foreground">กำลังโหลด</p>
+            ) : error ? (
+              <p className="py-6 text-sm text-red-600">{error}</p>
+            ) : receipts.length === 0 ? (
+              <p className="py-6 text-sm text-muted-foreground">ไม่พบใบสำคัญจ่าย</p>
+            ) : (
+              <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {receipts.map((receipt) => (
+                  <li
+                    key={receipt.receipt_uuid}
+                    className="flex items-start justify-between gap-3 rounded-lg border px-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <button
+                        type="button"
+                        className="min-w-0 break-all text-left text-sm font-medium text-sky-800 underline"
+                        onClick={() => setBillId(receipt.receipt_uuid)}
+                      >
+                        {receipt.receipt_number || "ไม่มีเลขที่เอกสาร"}
+                      </button>
+                      <div className="text-xs text-muted-foreground">
+                        {["เลขที่เอกสาร", expenseReceiptMeta(receipt)].filter(Boolean).join(" · ")}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-sm font-semibold tabular-nums">
+                      {money.format(receipt.net)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      <ExpenseBillDialog
+        receipt={bill}
+        open={billId !== null}
+        onOpenChange={(next) => {
+          if (!next) setBillId(null);
+        }}
+      />
+    </>
+  );
+}
+
+function ExpenseBillDialog({
+  receipt,
+  open,
+  onOpenChange,
+}: {
+  receipt: ExpenseReceiptDetail | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const title = receipt?.receipt_number ? `บิล ${receipt.receipt_number}` : "บิล";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        overlayClassName="z-[80]"
-        className="left-0 top-0 z-[80] flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(840px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
+        overlayClassName="z-[90]"
+        className="left-0 top-0 z-[90] flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(840px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
       >
         <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
           <DialogTitle className="text-base sm:text-lg">{title}</DialogTitle>
           <DialogDescription className="text-left">
-            {loading
-              ? "กำลังโหลด"
-              : receipts.length === 1
-                ? [
-                    formatWhen(receipts[0].receipt_date),
-                    receipts[0].party_name,
-                    receipts[0].payment_description,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
-                : receipts.length > 1
-                  ? receipts.map((receipt) => receipt.receipt_number).join(", ")
-                  : "รายการในใบสำคัญจ่าย"}
+            {receipt ? expenseReceiptMeta(receipt) || "รายการในบิล" : "รายการในบิล"}
           </DialogDescription>
-          <DialogPrintButton
-            disabled={loading || Boolean(error) || receipts.length === 0}
-            documentTitle={title}
-          />
+          <DialogPrintButton disabled={!receipt} documentTitle={title} />
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
-          {loading ? (
-            <p className="py-6 text-sm text-muted-foreground">กำลังโหลด</p>
-          ) : error ? (
-            <p className="py-6 text-sm text-red-600">{error}</p>
-          ) : receipts.length === 0 ? (
-            <p className="py-6 text-sm text-muted-foreground">ไม่พบใบสำคัญจ่าย</p>
+          {!receipt ? (
+            <p className="py-6 text-sm text-muted-foreground">ไม่พบบิล</p>
           ) : (
-            <div className="flex flex-col gap-6 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              {receipts.map((receipt) => (
-                <section key={receipt.receipt_uuid} className="flex flex-col gap-3">
-                  {receipts.length > 1 ? (
-                    <div>
-                      <div className="text-sm font-semibold">{receipt.receipt_number}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {[
-                          formatWhen(receipt.receipt_date),
-                          receipt.party_name,
-                          receipt.payment_description,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </div>
-                    </div>
-                  ) : null}
-                  {receipt.voucher_description ? (
-                    <p className="text-sm">{receipt.voucher_description}</p>
-                  ) : null}
-                  <div className="overflow-auto rounded-md border print:overflow-visible print:border-0">
-                    <table className="w-full min-w-[36rem] border-collapse text-sm print:min-w-0">
-                      <thead>
-                        <tr className="text-left">
-                          <th className="sticky top-0 z-10 border-b bg-muted p-2">รายการ</th>
-                          <th className="sticky top-0 z-10 border-b bg-muted p-2">รายละเอียด</th>
-                          <th className="sticky top-0 z-10 border-b bg-muted p-2">จำนวน</th>
-                          <th className="sticky top-0 z-10 border-b bg-muted p-2">ราคา</th>
-                          <th className="sticky top-0 z-10 border-b bg-muted p-2">จำนวนเงิน</th>
+            <div className="flex flex-col gap-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <div className="overflow-auto rounded-md border print:overflow-visible print:border-0">
+                <table className="w-full min-w-[36rem] border-collapse text-sm print:min-w-0">
+                  <thead>
+                    <tr className="text-left">
+                      <th className="sticky top-0 z-10 border-b bg-muted p-2">รายการ</th>
+                      <th className="sticky top-0 z-10 border-b bg-muted p-2">รายละเอียด</th>
+                      <th className="sticky top-0 z-10 border-b bg-muted p-2">จำนวน</th>
+                      <th className="sticky top-0 z-10 border-b bg-muted p-2">ราคา</th>
+                      <th className="sticky top-0 z-10 border-b bg-muted p-2">จำนวนเงิน</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {receipt.lines.length === 0 ? (
+                      <tr>
+                        <td className="p-2 text-muted-foreground" colSpan={5}>
+                          ไม่มีรายการ
+                        </td>
+                      </tr>
+                    ) : (
+                      receipt.lines.map((line, index) => (
+                        <tr key={`${receipt.receipt_uuid}-${index}`} className="border-b">
+                          <td className="p-2">{line.item_name ?? "—"}</td>
+                          <td className="p-2">{line.detail ?? "—"}</td>
+                          <td className="whitespace-nowrap p-2 tabular-nums">{line.qty}</td>
+                          <td className="p-2 tabular-nums">{money.format(line.price)}</td>
+                          <td className="p-2 tabular-nums">{money.format(line.amount)}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {receipt.lines.length === 0 ? (
-                          <tr>
-                            <td className="p-2 text-muted-foreground" colSpan={5}>
-                              ไม่มีรายการ
-                            </td>
-                          </tr>
-                        ) : (
-                          receipt.lines.map((line, index) => (
-                            <tr key={`${receipt.receipt_uuid}-${index}`} className="border-b">
-                              <td className="p-2">{line.item_name ?? "—"}</td>
-                              <td className="p-2">{line.detail ?? "—"}</td>
-                              <td className="whitespace-nowrap p-2 tabular-nums">{line.qty}</td>
-                              <td className="p-2 tabular-nums">{money.format(line.price)}</td>
-                              <td className="p-2 tabular-nums">{money.format(line.amount)}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border px-3 py-3 text-sm">
-                    <dt className="text-muted-foreground">ราคาก่อนภาษี</dt>
-                    <dd className="text-right tabular-nums">{money.format(receipt.beforeTax)}</dd>
-                    <dt className="text-muted-foreground">ส่วนลด</dt>
-                    <dd className="text-right tabular-nums">{money.format(receipt.discount)}</dd>
-                    <dt className="text-muted-foreground">ภาษี {receipt.vat_rate}%</dt>
-                    <dd className="text-right tabular-nums">{money.format(receipt.vatAmount)}</dd>
-                    <dt className="text-muted-foreground">หัก ณ ที่จ่าย {receipt.withholding_rate}%</dt>
-                    <dd className="text-right tabular-nums">
-                      {money.format(receipt.withholdingAmount)}
-                    </dd>
-                    <dt className="font-medium">ราคารวมสุทธิ</dt>
-                    <dd className="text-right font-medium tabular-nums">{money.format(receipt.net)}</dd>
-                  </dl>
-                </section>
-              ))}
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border px-3 py-3 text-sm">
+                <dt className="text-muted-foreground">ราคาก่อนภาษี</dt>
+                <dd className="text-right tabular-nums">{money.format(receipt.beforeTax)}</dd>
+                <dt className="text-muted-foreground">ส่วนลด</dt>
+                <dd className="text-right tabular-nums">{money.format(receipt.discount)}</dd>
+                <dt className="text-muted-foreground">ภาษี {receipt.vat_rate}%</dt>
+                <dd className="text-right tabular-nums">{money.format(receipt.vatAmount)}</dd>
+                <dt className="text-muted-foreground">หัก ณ ที่จ่าย {receipt.withholding_rate}%</dt>
+                <dd className="text-right tabular-nums">
+                  {money.format(receipt.withholdingAmount)}
+                </dd>
+                <dt className="font-medium">ราคารวมสุทธิ</dt>
+                <dd className="text-right font-medium tabular-nums">{money.format(receipt.net)}</dd>
+              </dl>
             </div>
           )}
         </div>
