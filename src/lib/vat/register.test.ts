@@ -8,6 +8,7 @@ import {
   vatLineKey,
   vatRegisterKpiMatch,
   vatReportingMonth,
+  vatTracksPayment,
   type VatRegisterKpiKey,
 } from "./register";
 
@@ -87,12 +88,25 @@ describe("sheet order", () => {
   });
 });
 
+describe("credit payment status", () => {
+  it("tracks sales credit books and purchase credit only", () => {
+    expect(vatTracksPayment("TD")).toBe(true);
+    expect(vatTracksPayment("3TAD")).toBe(true);
+    expect(vatTracksPayment("CNTAD")).toBe(true);
+    expect(vatTracksPayment("เครดิต")).toBe(true);
+    expect(vatTracksPayment("TAR")).toBe(false);
+    expect(vatTracksPayment("TR")).toBe(false);
+    expect(vatTracksPayment("สด")).toBe(false);
+    expect(vatTracksPayment("ค่าใช้จ่าย")).toBe(false);
+  });
+});
+
 describe("vat register summary", () => {
   const rows = [
-    { invoice_count: 1, receipt_count: 1, paid_status: "paid" as const, after_vat: 100 },
-    { invoice_count: 1, receipt_count: 0, paid_status: "unpaid" as const, after_vat: 40 },
-    { invoice_count: 0, receipt_count: 2, paid_status: "paid" as const, after_vat: 25 },
-    { invoice_count: 0, receipt_count: 0, paid_status: "unpaid" as const, after_vat: 10 },
+    { sheet: "TD", invoice_count: 1, receipt_count: 1, paid_status: "paid" as const, after_vat: 100 },
+    { sheet: "TAD", invoice_count: 1, receipt_count: 0, paid_status: "unpaid" as const, after_vat: 40 },
+    { sheet: "TAR", invoice_count: 0, receipt_count: 2, paid_status: "paid" as const, after_vat: 25 },
+    { sheet: "เครดิต", invoice_count: 0, receipt_count: 0, paid_status: "unpaid" as const, after_vat: 10 },
   ];
 
   it("counts missing documents, unpaid lines, and complete lines", () => {
@@ -129,6 +143,22 @@ describe("vat register summary", () => {
       complete: 0,
       completePct: 0,
     });
+  });
+
+  it("leaves cash and expense lines out of the unpaid total", () => {
+    expect(
+      summarizeVatRegister([
+        { sheet: "สด", invoice_count: 1, receipt_count: 1, paid_status: "unpaid" as const, after_vat: 80 },
+        { sheet: "TR", invoice_count: 1, receipt_count: 0, paid_status: "unpaid" as const, after_vat: 15 },
+        { sheet: "CNTAD", invoice_count: 1, receipt_count: 1, paid_status: "unpaid" as const, after_vat: 20 },
+      ])
+    ).toMatchObject({ unpaid: 1, unpaidAmount: 20 });
+    expect(
+      vatRegisterKpiMatch(
+        { sheet: "TAR", invoice_count: 0, receipt_count: 0, paid_status: "unpaid" },
+        "unpaid"
+      )
+    ).toBe(false);
   });
 
   it("uses the same groups the summary counts", () => {

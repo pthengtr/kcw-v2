@@ -15,6 +15,7 @@ import {
   vatBillDrill,
   vatRegisterKpiMatch,
   vatReportingMonth,
+  vatTracksPayment,
   type VatExpenseImage,
   type VatFileKind,
   type VatPaidStatus,
@@ -105,6 +106,11 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   );
 
   const kpis = useMemo(() => summarizeVatRegister(sheetRows), [sheetRows]);
+  const showPayment = sheet === "ALL" || vatTracksPayment(sheet);
+
+  useEffect(() => {
+    if (!showPayment && kpi === "unpaid") setKpi(null);
+  }, [showPayment, kpi]);
 
   const visible = useMemo(
     () =>
@@ -220,14 +226,16 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
               alert={kpis.missingInvoices > 0}
               onClick={() => toggleKpi("missing_invoice")}
             />
-            <KpiFilterCard
-              title="ยังไม่จ่าย"
-              value={formatCount(kpis.unpaid)}
-              hint={formatBaht(kpis.unpaidAmount, true)}
-              icon={<Wallet className="h-4 w-4" />}
-              pressed={kpi === "unpaid"}
-              onClick={() => toggleKpi("unpaid")}
-            />
+            {showPayment ? (
+              <KpiFilterCard
+                title="ยังไม่จ่าย"
+                value={formatCount(kpis.unpaid)}
+                hint={formatBaht(kpis.unpaidAmount, true)}
+                icon={<Wallet className="h-4 w-4" />}
+                pressed={kpi === "unpaid"}
+                onClick={() => toggleKpi("unpaid")}
+              />
+            ) : null}
             <KpiFilterCard
               title="เอกสารครบ"
               value={`${kpis.completePct}%`}
@@ -273,30 +281,33 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
               </p>
               <p className="font-medium">สุทธิ {formatBaht(totals.after, true)}</p>
             </div>
-            {visible.map((row) => (
-              <button
-                key={row.line_key}
-                type="button"
-                onClick={() => setSelected(row)}
-                className="rounded-xl border border-slate-200 bg-white p-3 text-left"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs text-slate-500">
-                      {row.sheet} · {thaiDate(row.bill_date)}
-                    </p>
-                    <p className="truncate font-medium">{row.display_bill_no}</p>
-                    <p className="truncate text-sm text-slate-700">{row.party_name || "—"}</p>
+            {visible.map((row) => {
+              const paid = paymentLabel(row);
+              return (
+                <button
+                  key={row.line_key}
+                  type="button"
+                  onClick={() => setSelected(row)}
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs text-slate-500">
+                        {row.sheet} · {thaiDate(row.bill_date)}
+                      </p>
+                      <p className="truncate font-medium">{row.display_bill_no}</p>
+                      <p className="truncate text-sm text-slate-700">{row.party_name || "—"}</p>
+                    </div>
+                    <p className="shrink-0 text-sm font-medium">{formatBaht(row.after_vat, true)}</p>
                   </div>
-                  <p className="shrink-0 text-sm font-medium">{formatBaht(row.after_vat, true)}</p>
-                </div>
-                <p className="mt-2 text-xs text-slate-600">
-                  {row.paid_status === "paid" ? "จ่ายแล้ว" : "ยังไม่จ่าย"}
-                  {" · "}ใบกำกับ {row.invoice_count}
-                  {" · "}ใบเสร็จ {row.receipt_count}
-                </p>
-              </button>
-            ))}
+                  <p className="mt-2 text-xs text-slate-600">
+                    {paid ? `${paid} · ` : ""}
+                    ใบกำกับ {row.invoice_count}
+                    {" · "}ใบเสร็จ {row.receipt_count}
+                  </p>
+                </button>
+              );
+            })}
           </>
         )}
       </div>
@@ -314,20 +325,20 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
               <th className="px-3 py-2 text-right font-medium">ภาษีมูลค่าเพิ่ม</th>
               <th className="px-3 py-2 text-right font-medium">ยอดสุทธิ</th>
               <th className="px-3 py-2 font-medium">รายการสินค้า</th>
-              <th className="px-3 py-2 font-medium">สถานะ</th>
+              {showPayment ? <th className="px-3 py-2 font-medium">สถานะ</th> : null}
               <th className="px-3 py-2 font-medium">เอกสาร</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={11} className="px-3 py-10 text-center text-slate-500">
+                <td colSpan={showPayment ? 11 : 10} className="px-3 py-10 text-center text-slate-500">
                   <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                 </td>
               </tr>
             ) : visible.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-3 py-10 text-center text-slate-500">
+                <td colSpan={showPayment ? 11 : 10} className="px-3 py-10 text-center text-slate-500">
                   {kpi ? "ไม่มีรายการในกลุ่มนี้" : "ไม่มีรายการในเดือนนี้"}
                 </td>
               </tr>
@@ -353,9 +364,9 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                     {formatBaht(row.after_vat, true)}
                   </td>
                   <td className="max-w-[220px] truncate px-3 py-2">{row.detail}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    {row.paid_status === "paid" ? "จ่ายแล้ว" : "ยังไม่จ่าย"}
-                  </td>
+                  {showPayment ? (
+                    <td className="px-3 py-2 whitespace-nowrap">{paymentLabel(row) ?? "—"}</td>
+                  ) : null}
                   <td className="px-3 py-2 whitespace-nowrap text-slate-600">
                     ใบกำกับ {row.invoice_count} · ใบเสร็จ {row.receipt_count}
                   </td>
@@ -372,7 +383,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                 <td className="px-3 py-2 text-right">{formatBaht(totals.before, true)}</td>
                 <td className="px-3 py-2 text-right">{formatBaht(totals.vat, true)}</td>
                 <td className="px-3 py-2 text-right">{formatBaht(totals.after, true)}</td>
-                <td colSpan={3} />
+                <td colSpan={showPayment ? 3 : 2} />
               </tr>
             </tfoot>
           ) : null}
@@ -387,6 +398,11 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
       />
     </main>
   );
+}
+
+function paymentLabel(row: VatRegisterRow): string | null {
+  if (!vatTracksPayment(row.sheet)) return null;
+  return row.paid_status === "paid" ? "จ่ายแล้ว" : "ยังไม่จ่าย";
 }
 
 function KpiFilterCard({
@@ -694,35 +710,39 @@ function LineDialog({
             ) : null}
 
             <div className="grid gap-3">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className="grid gap-1 text-sm">
-                  <span>สถานะจ่ายเงิน</span>
-                  <Select
-                    value={paidStatus}
-                    onValueChange={(value) => setPaidStatus(value as VatPaidStatus)}
-                    disabled={readOnly || busy || row.paid_from_reminder}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unpaid">ยังไม่จ่าย</SelectItem>
-                      <SelectItem value="paid">จ่ายแล้ว</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </label>
-                <label className="grid gap-1 text-sm">
-                  <span>วันที่จ่าย</span>
-                  <Input
-                    type="date"
-                    value={paidOn}
-                    disabled={readOnly || busy || paidStatus !== "paid"}
-                    onChange={(event) => setPaidOn(event.target.value)}
-                  />
-                </label>
-              </div>
-              {row.paid_from_reminder ? (
-                <p className="text-sm text-slate-600">สถานะจ่ายมาจากใบวางบิลที่จ่ายแล้ว</p>
+              {vatTracksPayment(row.sheet) ? (
+                <>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label className="grid gap-1 text-sm">
+                      <span>สถานะจ่ายเงิน</span>
+                      <Select
+                        value={paidStatus}
+                        onValueChange={(value) => setPaidStatus(value as VatPaidStatus)}
+                        disabled={readOnly || busy || row.paid_from_reminder}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unpaid">ยังไม่จ่าย</SelectItem>
+                          <SelectItem value="paid">จ่ายแล้ว</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                      <span>วันที่จ่าย</span>
+                      <Input
+                        type="date"
+                        value={paidOn}
+                        disabled={readOnly || busy || paidStatus !== "paid"}
+                        onChange={(event) => setPaidOn(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  {row.paid_from_reminder ? (
+                    <p className="text-sm text-slate-600">สถานะจ่ายมาจากใบวางบิลที่จ่ายแล้ว</p>
+                  ) : null}
+                </>
               ) : null}
               <label className="grid gap-1 text-sm">
                 <span>บันทึก</span>

@@ -133,6 +133,21 @@ export function compareSheets(a: string, b: string): number {
   return a.localeCompare(b, "th");
 }
 
+/** Sales credit books, including the branch 3-prefix, plus purchase credit. */
+const CREDIT_PAYMENT_SHEETS = new Set([
+  "TD",
+  "3TD",
+  "TAD",
+  "3TAD",
+  "CNTAD",
+  "3CNTAD",
+  "เครดิต",
+]);
+
+export function vatTracksPayment(sheet: string): boolean {
+  return CREDIT_PAYMENT_SHEETS.has(sheet);
+}
+
 export type VatRegisterKpiKey =
   | "missing_receipt"
   | "missing_invoice"
@@ -154,11 +169,11 @@ export type VatRegisterKpi = {
 
 type VatRegisterKpiRow = Pick<
   VatRegisterRow,
-  "invoice_count" | "receipt_count" | "paid_status" | "after_vat"
+  "sheet" | "invoice_count" | "receipt_count" | "paid_status" | "after_vat"
 >;
 
 export function vatRegisterKpiMatch(
-  row: Pick<VatRegisterRow, "invoice_count" | "receipt_count" | "paid_status">,
+  row: Pick<VatRegisterRow, "sheet" | "invoice_count" | "receipt_count" | "paid_status">,
   key: VatRegisterKpiKey
 ): boolean {
   switch (key) {
@@ -167,7 +182,7 @@ export function vatRegisterKpiMatch(
     case "missing_invoice":
       return row.invoice_count === 0;
     case "unpaid":
-      return row.paid_status !== "paid";
+      return vatTracksPayment(row.sheet) && row.paid_status !== "paid";
     case "complete":
       return row.invoice_count > 0 && row.receipt_count > 0;
   }
