@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { ONLINE_STATEMENT_READ_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import {
+  parseOnlinePayoutListQuery,
+  payoutAtLowerBound,
+  payoutAtUpperBound,
+} from "@/lib/online-statements/list-query";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(req: Request) {
@@ -15,8 +20,8 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const depositId = url.searchParams.get("deposit")?.trim() || "";
-  const platform = url.searchParams.get("platform")?.trim() || "";
-  const status = url.searchParams.get("status")?.trim() || "transferred";
+  const listQuery = parseOnlinePayoutListQuery(url.searchParams);
+  const { platform, status } = listQuery;
 
   const supabase = createAdminClient();
   if (depositId) {
@@ -67,17 +72,25 @@ export async function GET(req: Request) {
     .from("online_payouts")
     .select(
       "payout_key, platform, shop, payout_at, amount, currency, reference, status, source_file, note, order_count, expense_amount, component_net, matched_order_count, built_at"
-    )
-    .order("payout_at", { ascending: false })
-    .limit(500);
+    );
 
   if (platform && platform !== "all") query = query.eq("platform", platform);
   if (status && status !== "all") query = query.eq("status", status);
+  if (listQuery.shop) query = query.eq("shop", listQuery.shop);
+  if (listQuery.from) query = query.gte("payout_at", payoutAtLowerBound(listQuery.from));
+  if (listQuery.to) query = query.lt("payout_at", payoutAtUpperBound(listQuery.to));
 
-  const { data, error } = await query;
+  const { data, error } = await query
+    .order(listQuery.sort, { ascending: listQuery.ascending, nullsFirst: false })
+    .limit(listQuery.limit + 1);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ payouts: data ?? [] });
+  const rows = data ?? [];
+  const truncated = rows.length > listQuery.limit;
+  return NextResponse.json({
+    payouts: truncated ? rows.slice(0, listQuery.limit) : rows,
+    truncated,
+  });
 }

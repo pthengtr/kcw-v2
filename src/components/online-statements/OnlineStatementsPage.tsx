@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 import DialogPrintButton from "@/components/common/DialogPrintButton";
@@ -17,6 +18,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  bangkokCurrentMonthIso,
+  bangkokTodayIso,
+  formatThaiDateRange,
+  monthRange,
+  ytdRangeForYear,
+} from "@/lib/bi/sales-periods";
+import {
+  defaultSortAscending,
+  type OnlinePayoutSort,
+} from "@/lib/online-statements/list-query";
+import { shopsForPlatform } from "@/lib/online-statements/workbook";
 
 type Payout = {
   payout_key: string;
@@ -95,6 +117,16 @@ const PLATFORMS = [
   { id: "tiktok", label: "TikTok" },
 ];
 
+const SORTS: { id: OnlinePayoutSort; label: string; align: "left" | "right" }[] = [
+  { id: "payout_at", label: "วันที่", align: "left" },
+  { id: "platform", label: "แพลตฟอร์ม", align: "left" },
+  { id: "shop", label: "ร้าน", align: "left" },
+  { id: "amount", label: "ยอดเข้าบัญชี", align: "right" },
+  { id: "order_count", label: "ออเดอร์", align: "right" },
+  { id: "expense_amount", label: "ค่าใช้จ่าย", align: "right" },
+  { id: "matched_order_count", label: "TAD", align: "right" },
+];
+
 const money = new Intl.NumberFormat("th-TH", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -124,6 +156,25 @@ function platformLabel(platform: string): string {
   return PLATFORMS.find((item) => item.id === platform)?.label ?? platform;
 }
 
+function previousMonthIso(now = new Date()): string {
+  const [year, month] = bangkokTodayIso(now).split("-").map(Number);
+  if (month === 1) return `${year - 1}-12`;
+  return `${year}-${String(month - 1).padStart(2, "0")}`;
+}
+
+function periodText(from: string, to: string): string {
+  if (from && to) return formatThaiDateRange(from, to);
+  if (from) return `ตั้งแต่ ${formatThaiDateRange(from, from)}`;
+  if (to) return `ถึง ${formatThaiDateRange(to, to)}`;
+  return "รายการล่าสุด";
+}
+
+function sortDirLabel(sort: OnlinePayoutSort, ascending: boolean): string {
+  if (sort === "payout_at") return ascending ? "เก่าไปใหม่" : "ใหม่ไปเก่า";
+  if (sort === "shop" || sort === "platform") return ascending ? "ก-ฮ" : "ฮ-ก";
+  return ascending ? "น้อยไปมาก" : "มากไปน้อย";
+}
+
 function feeText(fees: Fee[] | null): string {
   return (fees ?? [])
     .filter((fee) => num(fee.amount) < 0)
@@ -141,6 +192,12 @@ export default function OnlineStatementsPage({
   const [deposit, setDeposit] = useState<Deposit | null>(null);
   const [platform, setPlatform] = useState("all");
   const [status, setStatus] = useState("transferred");
+  const [shop, setShop] = useState("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [sort, setSort] = useState<OnlinePayoutSort>("payout_at");
+  const [ascending, setAscending] = useState(false);
+  const [truncated, setTruncated] = useState(false);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
@@ -159,7 +216,17 @@ export default function OnlineStatementsPage({
     setLoading(true);
     setError(null);
     const params = new URLSearchParams(
-      depositId ? { deposit: depositId } : { platform, status }
+      depositId
+        ? { deposit: depositId }
+        : {
+            platform,
+            status,
+            shop,
+            from,
+            to,
+            sort,
+            dir: ascending ? "asc" : "desc",
+          }
     );
     const res = await fetch(`/api/online-statements?${params.toString()}`);
     const json = await res.json();
@@ -167,12 +234,14 @@ export default function OnlineStatementsPage({
       setError(json.error ?? "โหลดรายการไม่สำเร็จ");
       setPayouts([]);
       setDeposit(null);
+      setTruncated(false);
     } else {
       setPayouts(json.payouts ?? []);
       setDeposit(json.deposit ?? null);
+      setTruncated(Boolean(json.truncated));
     }
     setLoading(false);
-  }, [platform, status, depositId]);
+  }, [platform, status, shop, from, to, sort, ascending, depositId]);
 
   useEffect(() => {
     void load();
@@ -262,6 +331,63 @@ export default function OnlineStatementsPage({
       return (billsByOrder.get(line.order_id) ?? []).length === 0;
     });
   }, [lines, billsByOrder, onlyUnmatched]);
+
+  const shopOptions = useMemo(() => shopsForPlatform(platform), [platform]);
+  const thisMonth = useMemo(() => monthRange(bangkokCurrentMonthIso()), []);
+  const prevMonth = useMemo(() => monthRange(previousMonthIso()), []);
+  const thisYear = useMemo(
+    () => ytdRangeForYear(Number(bangkokTodayIso().slice(0, 4))),
+    []
+  );
+
+  function applyRange(range: { from: string; to: string } | null) {
+    setFrom(range?.from ?? "");
+    setTo(range?.to ?? "");
+    setSelectedKey(null);
+  }
+
+  function setFromDate(value: string) {
+    if (value && to && value > to) {
+      setFrom(to);
+      setTo(value);
+    } else {
+      setFrom(value);
+    }
+    setSelectedKey(null);
+  }
+
+  function setToDate(value: string) {
+    if (value && from && value < from) {
+      setTo(from);
+      setFrom(value);
+    } else {
+      setTo(value);
+    }
+    setSelectedKey(null);
+  }
+
+  function choosePlatform(next: string) {
+    setPlatform(next);
+    setSelectedKey(null);
+    setShop((current) =>
+      current !== "all" && shopsForPlatform(next).includes(current) ? current : "all"
+    );
+  }
+
+  function chooseSort(column: OnlinePayoutSort) {
+    if (sort === column) {
+      setAscending((current) => !current);
+      return;
+    }
+    setSort(column);
+    setAscending(defaultSortAscending(column));
+  }
+
+  function chooseSortColumn(column: OnlinePayoutSort) {
+    if (sort === column) return;
+    setSort(column);
+    setAscending(defaultSortAscending(column));
+  }
 
   const totals = useMemo(() => {
     return payouts.reduce(
@@ -360,6 +486,7 @@ export default function OnlineStatementsPage({
       ) : null}
 
       {deposit ? null : (
+      <>
       <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {PLATFORMS.map((item) => (
           <Button
@@ -368,10 +495,7 @@ export default function OnlineStatementsPage({
             size="sm"
             className="shrink-0"
             variant={platform === item.id ? "default" : "outline"}
-            onClick={() => {
-              setPlatform(item.id);
-              setSelectedKey(null);
-            }}
+            onClick={() => choosePlatform(item.id)}
           >
             {item.label}
           </Button>
@@ -401,6 +525,112 @@ export default function OnlineStatementsPage({
           ยังไม่โอน
         </Button>
       </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-end">
+        <div className="col-span-2 grid gap-1 sm:w-40">
+          <Label htmlFor="online-shop">ร้าน</Label>
+          <Select
+            value={shopOptions.includes(shop) || shop === "all" ? shop : "all"}
+            onValueChange={(value) => {
+              setShop(value);
+              setSelectedKey(null);
+            }}
+          >
+            <SelectTrigger id="online-shop">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกร้าน</SelectItem>
+              {shopOptions.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-1">
+          <Label htmlFor="online-from">จากวันที่</Label>
+          <Input
+            id="online-from"
+            type="date"
+            value={from}
+            onChange={(event) => setFromDate(event.target.value)}
+          />
+        </div>
+        <div className="grid gap-1">
+          <Label htmlFor="online-to">ถึงวันที่</Label>
+          <Input
+            id="online-to"
+            type="date"
+            value={to}
+            onChange={(event) => setToDate(event.target.value)}
+          />
+        </div>
+        <div className="col-span-2 flex flex-wrap gap-2 sm:pb-0.5">
+          <Button
+            type="button"
+            size="sm"
+            variant={from === thisMonth.from && to === thisMonth.to ? "default" : "outline"}
+            onClick={() => applyRange(thisMonth)}
+          >
+            เดือนนี้
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={from === prevMonth.from && to === prevMonth.to ? "default" : "outline"}
+            onClick={() => applyRange(prevMonth)}
+          >
+            เดือนก่อน
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={from === thisYear.from && to === thisYear.to ? "default" : "outline"}
+            onClick={() => applyRange(thisYear)}
+          >
+            ปีนี้
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={!from && !to ? "default" : "outline"}
+            onClick={() => applyRange(null)}
+          >
+            ทั้งหมด
+          </Button>
+        </div>
+        <div className="col-span-2 grid gap-1 md:hidden">
+          <Label htmlFor="online-sort">เรียงตาม</Label>
+          <div className="flex gap-2">
+            <Select
+              value={sort}
+              onValueChange={(value) => chooseSortColumn(value as OnlinePayoutSort)}
+            >
+              <SelectTrigger id="online-sort" className="flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORTS.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button type="button" variant="outline" onClick={() => setAscending((current) => !current)}>
+              {sortDirLabel(sort, ascending)}
+            </Button>
+          </div>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {shop === "all" ? "ทุกร้าน" : shop} · {periodText(from, to)} ·{" "}
+        {sortDirLabel(sort, ascending)}
+        {loading ? "" : ` · ${payouts.length} รายการ`}
+      </p>
+      </>
       )}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
@@ -410,11 +640,19 @@ export default function OnlineStatementsPage({
         <Summary label="จับคู่ TAD" value={String(totals.matched)} />
       </div>
 
+      {truncated ? (
+        <p className="text-sm text-amber-700">
+          แสดง {payouts.length} รายการแรกตามการเรียงนี้ แคบช่วงวันที่เพื่อดูครบ
+        </p>
+      ) : null}
+
       {loading ? (
         <p className="px-1 py-6 text-sm text-muted-foreground">กำลังโหลด</p>
       ) : payouts.length === 0 ? (
         <p className="px-1 py-6 text-sm text-muted-foreground">
-          ยังไม่มีข้อมูลชุดนี้ กดสั่ง worker จับคู่ใหม่หลังวางไฟล์ statement แล้ว
+          {from || to || shop !== "all"
+            ? "ไม่มีรายการตามร้านหรือช่วงวันที่ที่เลือก"
+            : "ยังไม่มีข้อมูลชุดนี้ กดสั่ง worker จับคู่ใหม่หลังวางไฟล์ statement แล้ว"}
         </p>
       ) : (
         <>
@@ -455,13 +693,16 @@ export default function OnlineStatementsPage({
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left">
                 <tr>
-                  <th className="px-3 py-2 font-medium">วันที่</th>
-                  <th className="px-3 py-2 font-medium">แพลตฟอร์ม</th>
-                  <th className="px-3 py-2 font-medium">ร้าน</th>
-                  <th className="px-3 py-2 text-right font-medium">ยอดเข้าบัญชี</th>
-                  <th className="px-3 py-2 text-right font-medium">ออเดอร์</th>
-                  <th className="px-3 py-2 text-right font-medium">ค่าใช้จ่าย</th>
-                  <th className="px-3 py-2 text-right font-medium">TAD</th>
+                  {SORTS.map((column) => (
+                    <SortHeader
+                      key={column.id}
+                      label={column.label}
+                      align={column.align}
+                      active={sort === column.id}
+                      ascending={ascending}
+                      onClick={() => chooseSort(column.id)}
+                    />
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -642,6 +883,44 @@ export default function OnlineStatementsPage({
         }}
       />
     </div>
+  );
+}
+
+function SortHeader({
+  label,
+  align,
+  active,
+  ascending,
+  onClick,
+}: {
+  label: string;
+  align: "left" | "right";
+  active: boolean;
+  ascending: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <th
+      className={`px-3 py-2 font-medium ${align === "right" ? "text-right" : "text-left"}`}
+      aria-sort={active ? (ascending ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        className={`inline-flex items-center gap-1 hover:text-foreground ${
+          align === "right" ? "flex-row-reverse" : ""
+        } ${active ? "text-foreground" : "text-muted-foreground"}`}
+        onClick={onClick}
+      >
+        {label}
+        {active ? (
+          ascending ? (
+            <ArrowUp className="h-3.5 w-3.5" />
+          ) : (
+            <ArrowDown className="h-3.5 w-3.5" />
+          )
+        ) : null}
+      </button>
+    </th>
   );
 }
 
