@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   const shop = String(form.get("shop") ?? "").trim();
   const file = form.get("file");
   if (!isOnlineStatementFormat(formatRaw)) {
-    return NextResponse.json({ error: "เลือกรูปแบบ Lazada, Shopee, TikTok หรือ Peak" }, { status: 400 });
+    return NextResponse.json({ error: "เลือกรูปแบบ Lazada, Shopee หรือ TikTok" }, { status: 400 });
   }
   if (!isShopForFormat(formatRaw, shop)) {
     return NextResponse.json({ error: "เลือกร้านให้ตรงกับรูปแบบไฟล์" }, { status: 400 });
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     .insert({
       id,
       format: formatRaw,
-      shop: formatRaw === "peak" ? null : shop,
+      shop,
       original_filename: filename,
       storage_path: storagePath,
       status: "pending",

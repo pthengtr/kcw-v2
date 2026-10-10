@@ -62,23 +62,4 @@ describe("online statement workbook format", () => {
     });
     expect(validateOnlineWorkbook(bad, "tiktok").ok).toBe(false);
   });
-
-  it("accepts a Peak order list and rejects one without a platform", () => {
-    const header = ["#", "วันที่คำสั่งซื้อ", "เลขที่คำสั่งซื้อ", "มูลค่าคำสั่งซื้อ", "สถานะ", "วันที่ออกเอกสาร", "เลขที่เอกสาร", "สถานะเอกสาร", "มูลค่าเอกสาร", "", "แพลตฟอร์ม : ", "Shopee"];
-    const good = book({
-      รายการคำสั่งซื้อ: [
-        header,
-        ["1", "01/09/2026", "260901U5BDSGN4", "1236", "สำเร็จ", "01/09/2026", "RT-20260900044", "รับชำระแล้ว", "1236"],
-      ],
-    });
-    expect(validateOnlineWorkbook(good, "peak")).toEqual({ ok: true, rowCount: 1 });
-
-    const bad = book({
-      รายการคำสั่งซื้อ: [
-        ["#", "วันที่คำสั่งซื้อ", "เลขที่คำสั่งซื้อ", "มูลค่า", "สถานะ", "วันที่", "เลขที่เอกสาร"],
-        ["1", "01/09/2026", "260901U5BDSGN4", "1236", "สำเร็จ", "", "RT-1"],
-      ],
-    });
-    expect(validateOnlineWorkbook(bad, "peak").ok).toBe(false);
-  });
 });

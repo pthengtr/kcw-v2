@@ -32,7 +32,6 @@ const FORMAT_LABEL: Record<OnlineStatementFormat, string> = {
   lazada: "Lazada",
   shopee: "Shopee",
   tiktok: "TikTok",
-  peak: "Peak",
 };
 
 type Props = {
@@ -132,23 +131,21 @@ export default function OnlineStatementUploadDialog({ open, onOpenChange, onUplo
               </SelectContent>
             </Select>
           </div>
-          {shops.length > 0 ? (
-            <div className="grid gap-2">
-              <Label htmlFor="online-shop">ร้าน</Label>
-              <Select value={shop} onValueChange={setShop} disabled={uploading}>
-                <SelectTrigger id="online-shop">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {shops.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
+          <div className="grid gap-2">
+            <Label htmlFor="online-shop">ร้าน</Label>
+            <Select value={shop} onValueChange={setShop} disabled={uploading}>
+              <SelectTrigger id="online-shop">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {shops.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="grid gap-2">
             <Label htmlFor="online-file">ไฟล์ Excel</Label>
             <Input

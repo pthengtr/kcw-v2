@@ -64,13 +64,6 @@ type Bill = {
   canceled: boolean;
 };
 
-type Receipt = {
-  order_id: string;
-  receipt_no: string | null;
-  receipt_status: string | null;
-  receipt_amount: number | string | null;
-};
-
 const PLATFORM_LABEL: Record<string, string> = {
   lazada: "Lazada",
   shopee: "Shopee",
@@ -121,7 +114,6 @@ export default function OnlineDepositDialog({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [onlyUnmatched, setOnlyUnmatched] = useState(false);
   const [billTarget, setBillTarget] = useState<SalesBillTarget | null>(null);
@@ -158,7 +150,6 @@ export default function OnlineDepositDialog({
     if (!selectedKey) {
       setLines([]);
       setBills([]);
-      setReceipts([]);
       return;
     }
     let cancelled = false;
@@ -172,7 +163,6 @@ export default function OnlineDepositDialog({
         if (!cancelled) {
           setLines(json.lines ?? []);
           setBills(json.bills ?? []);
-          setReceipts(json.receipts ?? []);
         }
       })
       .catch((err: unknown) => {
@@ -200,11 +190,6 @@ export default function OnlineDepositDialog({
     }
     return map;
   }, [bills]);
-  const receiptsByOrder = useMemo(() => {
-    const map = new Map<string, Receipt>();
-    for (const receipt of receipts) map.set(receipt.order_id, receipt);
-    return map;
-  }, [receipts]);
   const visibleLines = onlyUnmatched
     ? lines.filter((line) => !line.order_id || (billsByOrder.get(line.order_id) ?? []).length === 0)
     : lines;
@@ -303,7 +288,6 @@ export default function OnlineDepositDialog({
                 </li>
                 {visibleLines.map((line) => {
                   const linked = line.order_id ? billsByOrder.get(line.order_id) ?? [] : [];
-                  const receipt = line.order_id ? receiptsByOrder.get(line.order_id) : undefined;
                   const fees = feeText(line.fees);
                   return (
                     <li key={line.line_no} className="rounded-lg border px-3 py-3">
@@ -322,15 +306,6 @@ export default function OnlineDepositDialog({
                         <dd className="text-right tabular-nums">{formatMoney(line.expense_amount)}</dd>
                       </dl>
                       {fees ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{fees}</p> : null}
-                      {receipt ? (
-                        <p className="mt-2 text-sm">
-                          <span className="font-medium">
-                            {receipt.receipt_no
-                              ? `Peak ${receipt.receipt_no}`
-                              : `Peak ${receipt.receipt_status || "ยังไม่สร้างเอกสาร"}`}
-                          </span>
-                        </p>
-                      ) : null}
                       <div className="mt-2 text-sm">
                         {linked.length === 0 ? (
                           <span className="text-amber-700">ยังไม่พบ PO</span>

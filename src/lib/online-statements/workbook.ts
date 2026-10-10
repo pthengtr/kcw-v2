@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 
-export const ONLINE_STATEMENT_FORMATS = ["lazada", "shopee", "tiktok", "peak"] as const;
+export const ONLINE_STATEMENT_FORMATS = ["lazada", "shopee", "tiktok"] as const;
 export type OnlineStatementFormat = (typeof ONLINE_STATEMENT_FORMATS)[number];
 
 export const ONLINE_STATEMENT_SHOPS = {
@@ -25,7 +25,6 @@ export function isOnlineStatementFormat(value: string): value is OnlineStatement
 }
 
 export function shopsForFormat(format: OnlineStatementFormat): readonly string[] {
-  if (format === "peak") return [];
   return ONLINE_STATEMENT_SHOPS[format];
 }
 
@@ -41,7 +40,6 @@ export function shopsForPlatform(platform: string): readonly string[] {
 }
 
 export function isShopForFormat(format: OnlineStatementFormat, shop: string): boolean {
-  if (format === "peak") return shop.trim() === "";
   return (shopsForFormat(format) as readonly string[]).includes(shop);
 }
 
@@ -128,44 +126,6 @@ function validateTiktok(wb: XLSX.WorkBook): { ok: true; rowCount: number } | { o
   return { ok: true, rowCount: orderCount + withdrawalCount };
 }
 
-function validatePeak(wb: XLSX.WorkBook): { ok: true; rowCount: number } | { ok: false; error: string } {
-  const name = wb.SheetNames[0];
-  const sheet = name ? wb.Sheets[name] : undefined;
-  if (!sheet) return { ok: false, error: "ไฟล์ Peak ว่าง" };
-  const rows = XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    defval: null,
-    raw: true,
-    blankrows: false,
-  }) as unknown[][];
-  const headerAt = rows.findIndex((row) => {
-    const cells = row.map(text);
-    return cells.includes("เลขที่คำสั่งซื้อ") && cells.includes("เลขที่เอกสาร");
-  });
-  if (headerAt < 0) {
-    return { ok: false, error: "ไฟล์ Peak ขาดคอลัมน์ เลขที่คำสั่งซื้อ หรือ เลขที่เอกสาร" };
-  }
-  const header = rows[headerAt].map(text);
-  const orderAt = header.indexOf("เลขที่คำสั่งซื้อ");
-  let platform = "";
-  for (const row of rows.slice(0, 40)) {
-    if (text(row[10]).includes("แพลตฟอร์ม")) {
-      platform = text(row[11]).toLowerCase();
-    }
-  }
-  if (!/lazada|shopee|tiktok|tik tok/.test(platform)) {
-    return { ok: false, error: "ไฟล์ Peak ไม่ได้ระบุแพลตฟอร์ม Lazada, Shopee หรือ TikTok" };
-  }
-  const data = rows.slice(headerAt + 1).filter((row) => {
-    const orderId = text(row[orderAt]).replace(/-/g, "");
-    return orderId.length >= 8 && /^[A-Za-z0-9]+$/.test(orderId);
-  });
-  if (data.length === 0) {
-    return { ok: false, error: "ไฟล์ Peak ไม่มีเลขที่คำสั่งซื้อ" };
-  }
-  return { ok: true, rowCount: data.length };
-}
-
 export function validateOnlineWorkbook(
   bytes: Uint8Array | ArrayBuffer,
   format: OnlineStatementFormat
@@ -178,6 +138,5 @@ export function validateOnlineWorkbook(
   }
   if (format === "lazada") return validateLazada(wb);
   if (format === "shopee") return validateShopee(wb);
-  if (format === "tiktok") return validateTiktok(wb);
-  return validatePeak(wb);
+  return validateTiktok(wb);
 }

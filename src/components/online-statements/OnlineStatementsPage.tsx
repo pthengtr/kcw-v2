@@ -83,15 +83,6 @@ type Bill = {
   canceled: boolean;
 };
 
-type Receipt = {
-  order_id: string;
-  receipt_no: string | null;
-  receipt_date: string | null;
-  receipt_status: string | null;
-  receipt_amount: number | string | null;
-  shop_name: string | null;
-};
-
 type Deposit = {
   platform: string;
   shop: string;
@@ -202,7 +193,6 @@ export default function OnlineStatementsPage({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [onlyUnmatched, setOnlyUnmatched] = useState(false);
@@ -251,7 +241,6 @@ export default function OnlineStatementsPage({
     if (!selectedKey) {
       setLines([]);
       setBills([]);
-      setReceipts([]);
       return;
     }
     let cancelled = false;
@@ -265,7 +254,6 @@ export default function OnlineStatementsPage({
         if (!cancelled) {
           setLines(json.lines ?? []);
           setBills(json.bills ?? []);
-          setReceipts(json.receipts ?? []);
         }
       })
       .catch((err: unknown) => {
@@ -301,11 +289,6 @@ export default function OnlineStatementsPage({
   }, [syncing, load]);
 
   const selected = payouts.find((row) => row.payout_key === selectedKey) ?? null;
-  const receiptsByOrder = useMemo(() => {
-    const map = new Map<string, Receipt>();
-    for (const receipt of receipts) map.set(receipt.order_id, receipt);
-    return map;
-  }, [receipts]);
 
   const billsByOrder = useMemo(() => {
     const map = new Map<string, Bill[]>();
@@ -806,7 +789,6 @@ export default function OnlineStatementsPage({
               <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 {visibleLines.map((line) => {
                   const linked = line.order_id ? billsByOrder.get(line.order_id) ?? [] : [];
-                  const receipt = line.order_id ? receiptsByOrder.get(line.order_id) : undefined;
                   const fees = feeText(line.fees);
                   return (
                     <li key={line.line_no} className="rounded-lg border px-3 py-3">
@@ -831,25 +813,6 @@ export default function OnlineStatementsPage({
                       </dl>
                       {fees ? (
                         <p className="mt-2 text-xs leading-5 text-muted-foreground">{fees}</p>
-                      ) : null}
-                      {receipt ? (
-                        <p className="mt-2 text-sm">
-                          <span className="font-medium">
-                            {receipt.receipt_no
-                              ? `Peak ${receipt.receipt_no}`
-                              : `Peak ${receipt.receipt_status || "ยังไม่สร้างเอกสาร"}`}
-                          </span>
-                          {receipt.receipt_no ? (
-                            <span className="text-xs text-muted-foreground">
-                              {receipt.receipt_status ? ` · ${receipt.receipt_status}` : ""}
-                              {receipt.receipt_amount != null
-                                ? ` · ${formatMoney(receipt.receipt_amount)}`
-                                : ""}
-                            </span>
-                          ) : null}
-                        </p>
-                      ) : line.order_id && line.order_id !== "0" ? (
-                        <p className="mt-2 text-xs text-muted-foreground">ไม่มีใน Peak</p>
                       ) : null}
                       <div className="mt-2 text-sm">
                         {linked.length === 0 ? (
