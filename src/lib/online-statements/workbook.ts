@@ -29,6 +29,17 @@ export function shopsForFormat(format: OnlineStatementFormat): readonly string[]
   return ONLINE_STATEMENT_SHOPS[format];
 }
 
+export function shopsForPlatform(platform: string): readonly string[] {
+  if (platform === "lazada" || platform === "shopee" || platform === "tiktok") {
+    return ONLINE_STATEMENT_SHOPS[platform];
+  }
+  return [
+    ...ONLINE_STATEMENT_SHOPS.lazada,
+    ...ONLINE_STATEMENT_SHOPS.shopee,
+    ...ONLINE_STATEMENT_SHOPS.tiktok,
+  ];
+}
+
 export function isShopForFormat(format: OnlineStatementFormat, shop: string): boolean {
   if (format === "peak") return shop.trim() === "";
   return (shopsForFormat(format) as readonly string[]).includes(shop);
