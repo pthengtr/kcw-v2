@@ -301,7 +301,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                         {row.sheet} · {thaiDate(row.bill_date)}
                       </p>
                       <p className="truncate font-medium">{row.display_bill_no}</p>
-                      <p className="truncate text-sm text-slate-700">{row.party_name || "—"}</p>
+                      <PartyLines row={row} />
                     </div>
                     <p className="shrink-0 text-sm font-medium">{formatBaht(row.after_vat, true)}</p>
                   </div>
@@ -356,7 +356,9 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                   <td className="px-3 py-2">{index + 1}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{thaiDate(row.bill_date)}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{row.display_bill_no}</td>
-                  <td className="px-3 py-2">{row.party_name}</td>
+                  <td className="px-3 py-2">
+                    <PartyLines row={row} />
+                  </td>
                   <td className="px-3 py-2 whitespace-nowrap">{row.tax_id}</td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">
                     {formatBaht(row.before_vat, true)}
@@ -401,6 +403,18 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
         onSaved={patchRow}
       />
     </main>
+  );
+}
+
+function PartyLines({ row }: { row: VatRegisterRow }) {
+  const name = row.party_name?.trim() || "";
+  const code = row.side === "purchase" ? row.party_code?.trim() || "" : "";
+  if (!name && !code) return <>—</>;
+  return (
+    <span className="block min-w-0">
+      {name ? <span className="block truncate">{name}</span> : null}
+      {code ? <span className="block font-mono text-xs text-slate-500">{code}</span> : null}
+    </span>
   );
 }
 
@@ -691,7 +705,9 @@ function LineDialog({
               </div>
               <div className="col-span-2">
                 <dt className="text-slate-500">{partyHeading(row.side)}</dt>
-                <dd>{row.party_name || "—"}</dd>
+                <dd>
+                  <PartyLines row={row} />
+                </dd>
               </div>
               {row.remark ? (
                 <div className="col-span-2">

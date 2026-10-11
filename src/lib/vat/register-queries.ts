@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { creditorIdentity } from "@/lib/po/creditor";
+
 import {
   monthEndIso,
   type VatPaidStatus,
@@ -45,7 +47,7 @@ export async function fetchVatRegister(
   if (error) throw error;
   if (!Array.isArray(data)) return [];
 
-  return (data as Record<string, unknown>[]).map((row) => {
+  const rows: VatRegisterRow[] = (data as Record<string, unknown>[]).map((row): VatRegisterRow => {
     const status: VatPaidStatus =
       asString(row.paid_status) === "paid" ? "paid" : "unpaid";
     return {
@@ -60,6 +62,7 @@ export async function fetchVatRegister(
       bill_no: asString(row.bill_no),
       display_bill_no: asString(row.display_bill_no),
       party_name: asNullable(row.party_name),
+      party_code: asNullable(row.party_code),
       tax_id: asNullable(row.tax_id),
       before_vat: asNumber(row.before_vat),
       vat: asNumber(row.vat),
@@ -72,6 +75,89 @@ export async function fetchVatRegister(
       note: asNullable(row.note),
       invoice_count: asNumber(row.invoice_count),
       receipt_count: asNumber(row.receipt_count),
+    };
+  });
+  return attachPurchaseCreditors(supabase, rows, input.monthStart);
+}
+
+function nextMonthStart(monthStart: string): string {
+  const [year, month] = monthStart.slice(0, 7).split("-").map(Number);
+  const next = new Date(Date.UTC(year, month, 1));
+  const y = next.getUTCFullYear();
+  const m = String(next.getUTCMonth() + 1).padStart(2, "0");
+  return `${y}-${m}-01`;
+}
+
+async function attachPurchaseCreditors(
+  supabase: SupabaseClient,
+  rows: VatRegisterRow[],
+  monthStart: string
+): Promise<VatRegisterRow[]> {
+  const wanted = rows.some(
+    (row) => row.side === "purchase" && row.source !== "expense"
+  );
+  if (!wanted) return rows;
+
+  const { data, error } = await supabase
+    .schema("raw_kcw")
+    .from("raw_hq_pimas_purchase_bills")
+    .select("BILLNO, ACCTNO, ACCTNAME")
+    .gte("BILLDATE", monthStart)
+    .lt("BILLDATE", nextMonthStart(monthStart))
+    .limit(5000);
+  if (error || !Array.isArray(data)) return rows;
+
+  const byBill = new Map<string, { code: string | null; name: string | null }>();
+  for (const record of data as Record<string, unknown>[]) {
+    const billNo = asString(record.BILLNO).trim().toUpperCase();
+    if (!billNo) continue;
+    const next = creditorIdentity({
+      code: asNullable(record.ACCTNO),
+      name: asNullable(record.ACCTNAME),
+    });
+    const prev = byBill.get(billNo);
+    if (!prev || (!prev.name && next.name) || (!prev.code && next.code)) {
+      byBill.set(billNo, next);
+    }
+  }
+
+  const missing = [
+    ...new Set(
+      [...byBill.values()]
+        .filter((party) => party.code && !party.name)
+        .map((party) => party.code as string)
+    ),
+  ];
+  if (missing.length > 0) {
+    const masters = await supabase
+      .schema("raw_kcw")
+      .from("raw_hq_apmas_payable")
+      .select("ACCTNO, ACCTNAME")
+      .in("ACCTNO", missing)
+      .limit(missing.length);
+    if (!masters.error && Array.isArray(masters.data)) {
+      const names = new Map<string, string>();
+      for (const record of masters.data as Record<string, unknown>[]) {
+        const code = asNullable(record.ACCTNO);
+        const name = asNullable(record.ACCTNAME);
+        if (code && name && name !== code) names.set(code, name);
+      }
+      for (const [billNo, party] of byBill) {
+        if (party.code && !party.name && names.has(party.code)) {
+          byBill.set(billNo, { code: party.code, name: names.get(party.code) ?? null });
+        }
+      }
+    }
+  }
+
+  return rows.map((row) => {
+    if (row.side !== "purchase" || row.source === "expense") return row;
+    const party = byBill.get(row.bill_no.trim().toUpperCase());
+    if (!party) return row;
+    return {
+      ...row,
+      party_code: party.code ?? row.party_code,
+      party_name: row.party_name || party.name,
     };
   });
 }

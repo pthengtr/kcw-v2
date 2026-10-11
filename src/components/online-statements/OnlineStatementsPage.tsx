@@ -38,6 +38,10 @@ import {
   defaultSortAscending,
   type OnlinePayoutSort,
 } from "@/lib/online-statements/list-query";
+import {
+  describeUploadFailure,
+  uploadStatusLabel,
+} from "@/lib/online-statements/upload-status";
 import { shopsForPlatform } from "@/lib/online-statements/workbook";
 
 type Payout = {
@@ -91,6 +95,17 @@ type Deposit = {
   period_from: string;
   period_to: string;
   payout_count: number;
+};
+
+type Upload = {
+  id: string;
+  format: string;
+  shop: string | null;
+  original_filename: string;
+  status: string;
+  row_count: number | null;
+  error_message: string | null;
+  created_at: string;
 };
 
 type Job = {
@@ -198,6 +213,7 @@ export default function OnlineStatementsPage({
   const [onlyUnmatched, setOnlyUnmatched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [job, setJob] = useState<Job | null>(null);
+  const [uploads, setUploads] = useState<Upload[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [billTarget, setBillTarget] = useState<SalesBillTarget | null>(null);
@@ -233,9 +249,19 @@ export default function OnlineStatementsPage({
     setLoading(false);
   }, [platform, status, shop, from, to, sort, ascending, depositId]);
 
+  const loadUploads = useCallback(async () => {
+    const res = await fetch("/api/online-statements/uploads");
+    const json = await res.json();
+    if (res.ok) setUploads(json.uploads ?? []);
+  }, []);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void loadUploads();
+  }, [loadUploads]);
 
   useEffect(() => {
     if (!selectedKey) {
@@ -282,11 +308,12 @@ export default function OnlineStatementsPage({
       setJob(next);
       if (!next || next.status === "done" || next.status === "failed") {
         setSyncing(false);
+        void loadUploads();
         if (next?.status === "done") void load();
       }
     }, 3000);
     return () => clearInterval(timer);
-  }, [syncing, load]);
+  }, [syncing, load, loadUploads]);
 
   const selected = payouts.find((row) => row.payout_key === selectedKey) ?? null;
 
@@ -439,7 +466,10 @@ export default function OnlineStatementsPage({
         <OnlineStatementUploadDialog
           open={uploadOpen}
           onOpenChange={setUploadOpen}
-          onUploaded={() => setSyncing(true)}
+          onUploaded={() => {
+            setSyncing(true);
+            void loadUploads();
+          }}
         />
       )}
 
@@ -449,6 +479,30 @@ export default function OnlineStatementsPage({
           {job.worker_name ? ` · ${job.worker_name}` : ""}
           {job.error_message ? ` · ${job.error_message}` : ""}
         </p>
+      ) : null}
+      {uploads.some((item) => item.status !== "applied") ? (
+        <div className="rounded-lg border px-3 py-3 text-sm">
+          <p className="font-medium">ไฟล์ที่อัปโหลดแล้วยังไม่ขึ้นในรายงาน</p>
+          <ul className="mt-2 space-y-2">
+            {uploads
+              .filter((item) => item.status !== "applied")
+              .map((item) => {
+                const failure = describeUploadFailure(item.error_message);
+                return (
+                  <li key={item.id}>
+                    <span className="font-medium">
+                      {platformLabel(item.format)} {item.shop}
+                    </span>{" "}
+                    {item.original_filename} · {uploadStatusLabel(item.status)}
+                    {item.row_count != null ? ` · ${item.row_count} แถว` : ""}
+                    {failure ? (
+                      <span className="mt-0.5 block text-red-700">{failure}</span>
+                    ) : null}
+                  </li>
+                );
+              })}
+          </ul>
+        </div>
       ) : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
