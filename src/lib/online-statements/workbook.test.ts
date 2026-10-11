@@ -41,6 +41,24 @@ describe("online statement workbook format", () => {
     expect(validateOnlineWorkbook(bad, "shopee").ok).toBe(false);
   });
 
+  it("accepts a Shopee income report that includes fee columns", () => {
+    const good = book({
+      Income: [
+        ["ชื่อผู้ใช้ (ผู้ขาย)", "จาก", "ถึง"],
+        ["kc.industry", "2026-09-14", "2026-09-25"],
+        [
+          "ลำดับที่",
+          "หมายเลขคำสั่งซื้อ",
+          "สินค้าราคาปกติ",
+          "ค่าคอมมิชชั่น",
+          "จำนวนเงินทั้งหมดที่โอนแล้ว (฿)",
+        ],
+        [1, "260911R83ACM85", 1350, -219, 1131],
+      ],
+    });
+    expect(validateOnlineWorkbook(good, "shopee")).toEqual({ ok: true, rowCount: 1 });
+  });
+
   it("accepts a TikTok order plus withdrawal workbook and rejects one missing the withdrawal sheet", () => {
     const good = book({
       รายละเอียดคำสั่งซื้อ: [

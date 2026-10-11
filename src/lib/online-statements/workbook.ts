@@ -89,12 +89,30 @@ function validateLazada(wb: XLSX.WorkBook): { ok: true; rowCount: number } | { o
 }
 
 function validateShopee(wb: XLSX.WorkBook): { ok: true; rowCount: number } | { ok: false; error: string } {
+  const income = sheetGrid(wb, ["Income"]);
+  const incomeHeaderAt = income.findIndex((row) => {
+    const header = row.map(text);
+    return (
+      header.includes("หมายเลขคำสั่งซื้อ") &&
+      header.some((cell) => cell.startsWith("จำนวนเงินทั้งหมดที่โอนแล้ว"))
+    );
+  });
+  if (incomeHeaderAt >= 0) {
+    const header = income[incomeHeaderAt].map(text);
+    const orderAt = header.indexOf("หมายเลขคำสั่งซื้อ");
+    const data = income.slice(incomeHeaderAt + 1).filter((row) => text(row[orderAt]) !== "");
+    if (data.length === 0) {
+      return { ok: false, error: "ไฟล์ Shopee ไม่มีแถวคำสั่งซื้อ" };
+    }
+    return { ok: true, rowCount: data.length };
+  }
+
   const rows = sheetGrid(wb, ["Transaction Report"]);
   const headerAt = rows.findIndex(
     (row) => text(row[0]) === "วันที่" && text(row[1]) === "ประเภทการทำธุรกรรม"
   );
   if (headerAt < 0) {
-    return { ok: false, error: "ไม่พบหัวตาราง Shopee (วันที่, ประเภทการทำธุรกรรม)" };
+    return { ok: false, error: "ไม่พบหัวตาราง Shopee (รายงานรายรับ หรือ วันที่, ประเภทการทำธุรกรรม)" };
   }
   const data = rows.slice(headerAt + 1).filter((row) => looksLikeDate(row[0]));
   if (data.length === 0) {
