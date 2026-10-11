@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import {
+  onlineStatementNames,
+  onlineStatementStoragePath,
+} from "@/lib/online-statements/storage-key";
+import {
   isOnlineStatementFormat,
   isShopForFormat,
   ONLINE_STATEMENT_MAX_BYTES,
@@ -14,12 +18,11 @@ export const runtime = "nodejs";
 
 const BUCKET = "online-statements";
 
-function safeFilename(name: string): string | null {
-  const base = name.split(/[/\\]/).pop()?.trim() ?? "";
-  if (!base.toLowerCase().endsWith(".xlsx")) return null;
-  const cleaned = base.replace(/[^\w.\-()\u0E00-\u0E7F]+/g, "_").slice(0, 180);
-  if (!cleaned.toLowerCase().endsWith(".xlsx") || cleaned.includes("..")) return null;
-  return cleaned;
+function storageErrorMessage(message: string): string {
+  if (message.startsWith("Invalid key")) {
+    return "ชื่อไฟล์ใช้ตัวอักษรที่ระบบเก็บไฟล์ไม่รองรับ";
+  }
+  return message;
 }
 
 export async function POST(req: Request) {
@@ -41,8 +44,8 @@ export async function POST(req: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "กรุณาเลือกไฟล์ Excel" }, { status: 400 });
   }
-  const filename = safeFilename(file.name);
-  if (!filename) {
+  const names = onlineStatementNames(file.name);
+  if (!names) {
     return NextResponse.json({ error: "รองรับเฉพาะไฟล์ .xlsx" }, { status: 400 });
   }
   if (file.size <= 0 || file.size > ONLINE_STATEMENT_MAX_BYTES) {
@@ -57,13 +60,13 @@ export async function POST(req: Request) {
 
   const supabase = createAdminClient();
   const id = crypto.randomUUID();
-  const storagePath = `${formatRaw}/${id}_${filename}`;
+  const storagePath = onlineStatementStoragePath(formatRaw, id, names.storageName);
   const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, bytes, {
     contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     upsert: false,
   });
   if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+    return NextResponse.json({ error: storageErrorMessage(uploadError.message) }, { status: 500 });
   }
 
   const { error: insertError } = await supabase
@@ -73,7 +76,7 @@ export async function POST(req: Request) {
       id,
       format: formatRaw,
       shop,
-      original_filename: filename,
+      original_filename: names.displayName,
       storage_path: storagePath,
       status: "pending",
       row_count: checked.rowCount,
@@ -97,7 +100,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     id,
-    filename,
+    filename: names.displayName,
     rowCount: checked.rowCount,
     job: job ?? null,
   });
