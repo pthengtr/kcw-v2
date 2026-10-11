@@ -6,8 +6,10 @@ import {
   summarizeVatRegister,
   vatBillDrill,
   vatLineKey,
+  vatDocumentsComplete,
   vatRegisterKpiMatch,
   vatReportingMonth,
+  vatRequiresReceipt,
   vatTracksPayment,
   type VatRegisterKpiKey,
 } from "./register";
@@ -101,6 +103,37 @@ describe("credit payment status", () => {
   });
 });
 
+describe("required documents", () => {
+  it("requires a receipt only for TD sales and credit purchases", () => {
+    expect(vatRequiresReceipt("TD")).toBe(true);
+    expect(vatRequiresReceipt("3TD")).toBe(true);
+    expect(vatRequiresReceipt("เครดิต")).toBe(true);
+    expect(vatRequiresReceipt("TAD")).toBe(false);
+    expect(vatRequiresReceipt("TAR")).toBe(false);
+    expect(vatRequiresReceipt("TR")).toBe(false);
+    expect(vatRequiresReceipt("สด")).toBe(false);
+    expect(vatRequiresReceipt("ค่าใช้จ่าย")).toBe(false);
+  });
+
+  it("treats other books as complete with an invoice alone", () => {
+    expect(
+      vatDocumentsComplete({ sheet: "TAD", invoice_count: 1, receipt_count: 0 })
+    ).toBe(true);
+    expect(
+      vatDocumentsComplete({ sheet: "TD", invoice_count: 1, receipt_count: 0 })
+    ).toBe(false);
+    expect(
+      vatDocumentsComplete({ sheet: "เครดิต", invoice_count: 1, receipt_count: 1 })
+    ).toBe(true);
+    expect(
+      vatRegisterKpiMatch(
+        { sheet: "TAR", invoice_count: 1, receipt_count: 0, paid_status: "paid" },
+        "missing_receipt"
+      )
+    ).toBe(false);
+  });
+});
+
 describe("vat register summary", () => {
   const rows = [
     { sheet: "TD", invoice_count: 1, receipt_count: 1, paid_status: "paid" as const, after_vat: 100 },
@@ -112,21 +145,21 @@ describe("vat register summary", () => {
   it("counts missing documents, unpaid lines, and complete lines", () => {
     expect(summarizeVatRegister(rows)).toEqual({
       total: 4,
-      missingReceipts: 2,
-      missingReceiptAmount: 50,
+      missingReceipts: 1,
+      missingReceiptAmount: 10,
       missingInvoices: 2,
       missingInvoiceAmount: 35,
       unpaid: 2,
       unpaidAmount: 50,
-      complete: 1,
-      completePct: 25,
+      complete: 2,
+      completePct: 50,
     });
   });
 
   it("rounds the complete share to the nearest percent", () => {
     const mostlyComplete = [
       ...Array.from({ length: 6 }, () => rows[0]),
-      rows[1],
+      rows[2],
     ];
     expect(summarizeVatRegister(mostlyComplete).completePct).toBe(86);
   });

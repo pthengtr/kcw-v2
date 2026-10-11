@@ -15,6 +15,7 @@ import {
   vatBillDrill,
   vatRegisterKpiMatch,
   vatReportingMonth,
+  vatRequiresReceipt,
   vatTracksPayment,
   type VatExpenseImage,
   type VatFileKind,
@@ -107,10 +108,12 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
 
   const kpis = useMemo(() => summarizeVatRegister(sheetRows), [sheetRows]);
   const showPayment = sheet === "ALL" || vatTracksPayment(sheet);
+  const showReceipts = sheet === "ALL" || vatRequiresReceipt(sheet);
 
   useEffect(() => {
     if (!showPayment && kpi === "unpaid") setKpi(null);
-  }, [showPayment, kpi]);
+    if (!showReceipts && kpi === "missing_receipt") setKpi(null);
+  }, [showPayment, showReceipts, kpi]);
 
   const visible = useMemo(
     () =>
@@ -158,7 +161,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
         <p className="text-sm text-slate-600">
           {readOnly
             ? "ดูได้อย่างเดียว"
-            : "เล่มเดียวกับรายงาน Excel และแนบสถานะจ่ายเงิน ใบกำกับ และใบเสร็จได้"}
+            : "เล่มเดียวกับรายงาน Excel แนบใบกำกับได้ทุกเล่ม ส่วนขาย TD กับซื้อเครดิตแนบใบเสร็จด้วย"}
         </p>
       </div>
 
@@ -208,15 +211,17 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
         </button>
         {kpiOpen ? (
           <div className="grid gap-3 px-3 pb-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiFilterCard
-              title="ใบเสร็จที่ยังไม่มี"
-              value={formatCount(kpis.missingReceipts)}
-              hint={formatBaht(kpis.missingReceiptAmount, true)}
-              icon={<Receipt className="h-4 w-4" />}
-              pressed={kpi === "missing_receipt"}
-              alert={kpis.missingReceipts > 0}
-              onClick={() => toggleKpi("missing_receipt")}
-            />
+            {showReceipts ? (
+              <KpiFilterCard
+                title="ใบเสร็จที่ยังไม่มี"
+                value={formatCount(kpis.missingReceipts)}
+                hint={formatBaht(kpis.missingReceiptAmount, true)}
+                icon={<Receipt className="h-4 w-4" />}
+                pressed={kpi === "missing_receipt"}
+                alert={kpis.missingReceipts > 0}
+                onClick={() => toggleKpi("missing_receipt")}
+              />
+            ) : null}
             <KpiFilterCard
               title="ใบกำกับที่ยังไม่มี"
               value={formatCount(kpis.missingInvoices)}
@@ -302,8 +307,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                   </div>
                   <p className="mt-2 text-xs text-slate-600">
                     {paid ? `${paid} · ` : ""}
-                    ใบกำกับ {row.invoice_count}
-                    {" · "}ใบเสร็จ {row.receipt_count}
+                    {documentLabel(row)}
                   </p>
                 </button>
               );
@@ -368,7 +372,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                     <td className="px-3 py-2 whitespace-nowrap">{paymentLabel(row) ?? "—"}</td>
                   ) : null}
                   <td className="px-3 py-2 whitespace-nowrap text-slate-600">
-                    ใบกำกับ {row.invoice_count} · ใบเสร็จ {row.receipt_count}
+                    {documentLabel(row)}
                   </td>
                 </tr>
               ))
@@ -403,6 +407,12 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
 function paymentLabel(row: VatRegisterRow): string | null {
   if (!vatTracksPayment(row.sheet)) return null;
   return row.paid_status === "paid" ? "จ่ายแล้ว" : "ยังไม่จ่าย";
+}
+
+function documentLabel(row: VatRegisterRow): string {
+  const invoice = `ใบกำกับ ${row.invoice_count}`;
+  if (!vatRequiresReceipt(row.sheet)) return invoice;
+  return `${invoice} · ใบเสร็จ ${row.receipt_count}`;
 }
 
 function KpiFilterCard({
@@ -768,14 +778,16 @@ function LineDialog({
               onUpload={(file) => void upload("invoice", file)}
               onDelete={(id) => void removeFile(id, "invoice")}
             />
-            <FileGroup
-              title="ใบเสร็จ"
-              files={files.filter((file) => file.kind === "receipt")}
-              readOnly={readOnly}
-              busy={busy}
-              onUpload={(file) => void upload("receipt", file)}
-              onDelete={(id) => void removeFile(id, "receipt")}
-            />
+            {vatRequiresReceipt(row.sheet) ? (
+              <FileGroup
+                title="ใบเสร็จ"
+                files={files.filter((file) => file.kind === "receipt")}
+                readOnly={readOnly}
+                busy={busy}
+                onUpload={(file) => void upload("receipt", file)}
+                onDelete={(id) => void removeFile(id, "receipt")}
+              />
+            ) : null}
 
             {expenseFiles.length > 0 ? (
               <section className="grid gap-2">

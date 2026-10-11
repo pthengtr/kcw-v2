@@ -148,6 +148,23 @@ export function vatTracksPayment(sheet: string): boolean {
   return CREDIT_PAYMENT_SHEETS.has(sheet);
 }
 
+/** Sales TD (including branch 3TD) and purchase credit need both documents. */
+const RECEIPT_REQUIRED_SHEETS = new Set(["TD", "3TD", "เครดิต"]);
+
+export function vatRequiresReceipt(sheet: string): boolean {
+  return RECEIPT_REQUIRED_SHEETS.has(sheet);
+}
+
+export function vatDocumentsComplete(row: {
+  sheet: string;
+  invoice_count: number;
+  receipt_count: number;
+}): boolean {
+  if (row.invoice_count === 0) return false;
+  if (!vatRequiresReceipt(row.sheet)) return true;
+  return row.receipt_count > 0;
+}
+
 export type VatRegisterKpiKey =
   | "missing_receipt"
   | "missing_invoice"
@@ -163,7 +180,7 @@ export type VatRegisterKpi = {
   unpaid: number;
   unpaidAmount: number;
   complete: number;
-  /** Rounded percent of lines that have both an invoice and a receipt. */
+  /** Rounded percent of lines that have the documents that sheet requires. */
   completePct: number;
 };
 
@@ -178,13 +195,13 @@ export function vatRegisterKpiMatch(
 ): boolean {
   switch (key) {
     case "missing_receipt":
-      return row.receipt_count === 0;
+      return vatRequiresReceipt(row.sheet) && row.receipt_count === 0;
     case "missing_invoice":
       return row.invoice_count === 0;
     case "unpaid":
       return vatTracksPayment(row.sheet) && row.paid_status !== "paid";
     case "complete":
-      return row.invoice_count > 0 && row.receipt_count > 0;
+      return vatDocumentsComplete(row);
   }
 }
 
