@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
+import CreditorLabel from "@/components/po/CreditorLabel";
 import PoProductCell from "@/components/po/PoProductCell";
 import PrepareStatusBadge from "@/components/po/PrepareStatusBadge";
 import PoSypDetailDialog from "@/components/po/PoSypDetailDialog";
@@ -427,24 +428,20 @@ export default function PoPendingReceiveTab({
   const lineColumns: Column<PoPendingReceiveRow>[] = useMemo(() => {
     const vendorCol: Column<PoPendingReceiveRow> = {
       key: "vendor",
-      header: "VENDOR",
-      className: "whitespace-nowrap",
-      render: (r) =>
-        r.vendor ? (
-          <button
-            type="button"
-            className="font-mono text-left text-primary underline-offset-2 hover:underline"
-            onClick={(e) => {
-              e.stopPropagation();
-              setAccountRow(r);
-              setAccountOpen(true);
-            }}
-          >
-            {r.vendor}
-          </button>
-        ) : (
-          "—"
-        ),
+      header: "เจ้าหนี้",
+      className: "min-w-[12rem]",
+      render: (r) => (
+        <CreditorLabel
+          code={r.vendor}
+          name={r.acctname}
+          onCodeClick={(e) => {
+            e.stopPropagation();
+            if (!r.vendor) return;
+            setAccountRow(r);
+            setAccountOpen(true);
+          }}
+        />
+      ),
     };
 
     const statusCol: Column<PoPendingReceiveRow> = {
@@ -668,7 +665,9 @@ export default function PoPendingReceiveTab({
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
           {formatPoDate(row.docdate)}
-          {row.vendor ? ` · ${row.vendor}` : ""}
+        </div>
+        <div className="mt-1 text-sm">
+          <CreditorLabel code={row.vendor} name={row.acctname} />
         </div>
         {site === "SYP" ? (
           <div className="mt-2 flex flex-col items-start gap-1">
@@ -910,7 +909,7 @@ export default function PoPendingReceiveTab({
             <div className="space-y-3">
               <div className="space-y-1 text-sm">
                 <div>
-                  ผู้ขาย: {piHeader.acctname ?? "—"} ({piHeader.acctno ?? "—"})
+                  ผู้ขาย: <CreditorLabel code={piHeader.acctno} name={piHeader.acctname} />
                 </div>
                 <div>
                   วันที่: {formatPoDate(piHeader.billdate)} · BILLNO:{" "}

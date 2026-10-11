@@ -12,8 +12,10 @@ import {
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoBranchTabs from "@/components/po/PoBranchTabs";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
+import CreditorLabel from "@/components/po/CreditorLabel";
 import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
 import PoProductCell from "@/components/po/PoProductCell";
+import { purchaseVatNote } from "@/lib/po/creditor";
 import {
   billedLabel,
   formatPoAmount,
@@ -135,24 +137,20 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
       },
       {
         key: "acctno",
-        header: "ACCTNO",
-        className: "whitespace-nowrap",
-        render: (r) =>
-          r.acctno ? (
-            <button
-              type="button"
-              className="font-mono text-left text-primary underline-offset-2 hover:underline"
-              onClick={(e) => {
-                e.stopPropagation();
-                setAccountRow(r);
-                setAccountOpen(true);
-              }}
-            >
-              {r.acctno}
-            </button>
-          ) : (
-            "—"
-          ),
+        header: "เจ้าหนี้",
+        className: "min-w-[12rem]",
+        render: (r) => (
+          <CreditorLabel
+            code={r.acctno}
+            name={r.acctname}
+            onCodeClick={(e) => {
+              e.stopPropagation();
+              if (!r.acctno) return;
+              setAccountRow(r);
+              setAccountOpen(true);
+            }}
+          />
+        ),
       },
       {
         key: "aftertax",
@@ -179,8 +177,8 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <div>
-            <div className="text-xs text-muted-foreground">ACCTNO</div>
-            <div className="text-sm font-mono break-all">{row.acctno || "—"}</div>
+            <div className="text-xs text-muted-foreground">เจ้าหนี้</div>
+            <CreditorLabel code={row.acctno} name={row.acctname} />
           </div>
           <div>
             <div className="text-xs text-muted-foreground">ยอด</div>
@@ -208,7 +206,7 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Input
                 className="w-full sm:max-w-xs"
-                placeholder="ค้นหา DOCNO / ACCTNO"
+                placeholder="ค้นหา DOCNO / รหัสหรือชื่อเจ้าหนี้"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
@@ -251,11 +249,21 @@ export default function PoHqTab({ refreshToken }: { refreshToken: number }) {
                 {selected ? (
                   <div className="space-y-2 text-sm">
                     <div>
-                      ACCTNO: {selected.acctno ?? "—"} · วันที่:{" "}
-                      {formatPoDate(selected.docdate)} · สถานะ:{" "}
-                      {billedLabel(selected.billed)}
+                      เจ้าหนี้: <CreditorLabel code={selected.acctno} name={selected.acctname} />
                     </div>
-                    <div>ยอด: {formatPoAmount(selected.aftertax)}</div>
+                    <div>
+                      วันที่: {formatPoDate(selected.docdate)} · สถานะ:{" "}
+                      {billedLabel(selected.billed)} · ยอด:{" "}
+                      {formatPoAmount(selected.aftertax)}
+                      {selected.tax != null && selected.tax !== ""
+                        ? ` · ภาษีซื้อ: ${formatPoAmount(selected.tax)}`
+                        : ""}
+                    </div>
+                    {purchaseVatNote(selected.acctno, selected.tax) ? (
+                      <div className="text-muted-foreground">
+                        {purchaseVatNote(selected.acctno, selected.tax)}
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
                 <div className="max-h-[50vh] overflow-auto rounded-md border">

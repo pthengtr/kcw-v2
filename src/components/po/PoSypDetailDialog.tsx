@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Printer } from "lucide-react";
 
 import PrepareStatusBadge from "@/components/po/PrepareStatusBadge";
+import CreditorLabel from "@/components/po/CreditorLabel";
 import PoProductCell from "@/components/po/PoProductCell";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import TableLoadingState from "@/components/common/TableLoadingState";
+import { purchaseVatNote } from "@/lib/po/creditor";
 import {
   billedLabel,
   formatPoAmount,
@@ -108,10 +110,21 @@ export default function PoSypDetailDialog({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
                 <div>
+                  เจ้าหนี้: <CreditorLabel code={selected.acctno} name={selected.acctname} />
+                </div>
+                <div>
                   วันที่: {formatPoDate(selected.docdate)} · PARTS9:{" "}
                   {billedLabel(selected.billed)} · ยอด:{" "}
                   {formatPoAmount(selected.aftertax)}
+                  {selected.tax != null && selected.tax !== ""
+                    ? ` · ภาษีซื้อ: ${formatPoAmount(selected.tax)}`
+                    : ""}
                 </div>
+                {purchaseVatNote(selected.acctno, selected.tax) ? (
+                  <div className="text-muted-foreground">
+                    {purchaseVatNote(selected.acctno, selected.tax)}
+                  </div>
+                ) : null}
                 {highlightKey ? (
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-muted-foreground">สถานะ BCODE</span>

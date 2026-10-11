@@ -44,6 +44,7 @@ export type VatRegisterRow = {
   bill_no: string;
   display_bill_no: string;
   party_name: string | null;
+  party_code: string | null;
   tax_id: string | null;
   before_vat: number;
   vat: number;

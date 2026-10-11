@@ -13,6 +13,7 @@ import {
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
 import PoBranchTabs from "@/components/po/PoBranchTabs";
 import PoAccountDialog from "@/components/po/PoAccountDialog";
+import CreditorLabel from "@/components/po/CreditorLabel";
 import { PoDateLookbackControls } from "@/components/po/PoDateLookbackControls";
 import PrepareStatusBadge from "@/components/po/PrepareStatusBadge";
 import PoSypDetailDialog from "@/components/po/PoSypDetailDialog";
@@ -150,24 +151,20 @@ export default function PoSypTab({
       },
       {
         key: "acctno",
-        header: "ACCTNO",
-        className: "whitespace-nowrap",
-        render: (r) =>
-          r.acctno ? (
-            <button
-              type="button"
-              className="font-mono text-left text-primary underline-offset-2 hover:underline"
-              onClick={(e) => {
-                e.stopPropagation();
-                setAccountRow(r);
-                setAccountOpen(true);
-              }}
-            >
-              {r.acctno}
-            </button>
-          ) : (
-            "—"
-          ),
+        header: "เจ้าหนี้",
+        className: "min-w-[12rem]",
+        render: (r) => (
+          <CreditorLabel
+            code={r.acctno}
+            name={r.acctname}
+            onCodeClick={(e) => {
+              e.stopPropagation();
+              if (!r.acctno) return;
+              setAccountRow(r);
+              setAccountOpen(true);
+            }}
+          />
+        ),
       },
       {
         key: "aftertax",
@@ -210,10 +207,8 @@ export default function PoSypTab({
         <div className="mt-3 grid gap-2">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="text-xs text-muted-foreground">ACCTNO</div>
-              <div className="text-sm font-mono break-all">
-                {row.acctno || "—"}
-              </div>
+              <div className="text-xs text-muted-foreground">เจ้าหนี้</div>
+              <CreditorLabel code={row.acctno} name={row.acctname} />
             </div>
             <div>
               <div className="text-xs text-muted-foreground">ยอด</div>
