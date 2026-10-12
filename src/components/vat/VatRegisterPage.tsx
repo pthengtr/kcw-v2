@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { BadgeCheck, ChevronDown, FileText, Loader2, Receipt, Wallet } from "lucide-react";
+import { BadgeCheck, ChevronDown, Columns3, FileText, Loader2, Receipt, Wallet } from "lucide-react";
 
 import { formatBaht, formatCount } from "@/lib/bi/sales-format";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
@@ -25,6 +25,13 @@ import {
   type VatRegisterRow,
   type VatRegisterSide,
 } from "@/lib/vat/register";
+import {
+  isVatRegisterColumnId,
+  visibleVatRegisterColumns,
+  vatRegisterFooterPieces,
+  VAT_REGISTER_COLUMNS,
+  type VatRegisterColumnId,
+} from "@/lib/vat/table-columns";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,6 +39,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -43,8 +59,22 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+const COLUMN_STORAGE_KEY = "kcw-vat-register-columns";
+
 type BranchFilter = "ALL" | "HQ" | "SYP";
 type SideFilter = "ALL" | VatRegisterSide;
+
+function readHiddenColumns(): VatRegisterColumnId[] {
+  try {
+    const raw = window.localStorage.getItem(COLUMN_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isVatRegisterColumnId);
+  } catch {
+    return [];
+  }
+}
 
 function thaiDate(iso: string): string {
   const [year, month, day] = iso.slice(0, 10).split("-");
@@ -54,6 +84,49 @@ function thaiDate(iso: string): string {
 
 function partyHeading(side: VatRegisterSide): string {
   return side === "purchase" ? "ชื่อผู้ขายสินค้า" : "ชื่อผู้ซื้อสินค้า";
+}
+
+function moneyColumn(id: VatRegisterColumnId): boolean {
+  return id === "before" || id === "vat" || id === "after";
+}
+
+function plainNowrap(id: VatRegisterColumnId): boolean {
+  return id === "date" || id === "bill" || id === "taxId" || id === "status";
+}
+
+function vatCell(id: VatRegisterColumnId, row: VatRegisterRow, index: number): ReactNode {
+  switch (id) {
+    case "index":
+      return index + 1;
+    case "date":
+      return thaiDate(row.bill_date);
+    case "bill":
+      return row.display_bill_no;
+    case "party":
+      return (
+        <span className="block max-w-[16rem]">
+          <PartyLines row={row} />
+        </span>
+      );
+    case "taxId":
+      return row.tax_id || "—";
+    case "before":
+      return formatBaht(row.before_vat, true);
+    case "vat":
+      return formatBaht(row.vat, true);
+    case "after":
+      return formatBaht(row.after_vat, true);
+    case "detail":
+      return (
+        <span className="block max-w-[14rem] truncate" title={row.detail ?? undefined}>
+          {row.detail || "—"}
+        </span>
+      );
+    case "status":
+      return paymentLabel(row) ?? "—";
+    case "docs":
+      return documentLabel(row);
+  }
 }
 
 export default function VatRegisterPage({ readOnly = false }: { readOnly?: boolean }) {
@@ -67,6 +140,8 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<VatRegisterRow | null>(null);
+  const [hiddenColumns, setHiddenColumns] = useState<VatRegisterColumnId[]>([]);
+  const [columnsHydrated, setColumnsHydrated] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,6 +166,20 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
     void load();
   }, [load]);
 
+  useEffect(() => {
+    setHiddenColumns(readHiddenColumns());
+    setColumnsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!columnsHydrated) return;
+    try {
+      window.localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(hiddenColumns));
+    } catch {
+      // private mode / disabled storage
+    }
+  }, [columnsHydrated, hiddenColumns]);
+
   const sheets = useMemo(() => {
     const names = Array.from(new Set(rows.map((row) => row.sheet)));
     names.sort(compareSheets);
@@ -109,6 +198,27 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   const kpis = useMemo(() => summarizeVatRegister(sheetRows), [sheetRows]);
   const showPayment = sheet === "ALL" || vatTracksPayment(sheet);
   const showReceipts = sheet === "ALL" || vatRequiresReceipt(sheet);
+  const shownColumns = useMemo(
+    () => visibleVatRegisterColumns(hiddenColumns, showPayment),
+    [hiddenColumns, showPayment]
+  );
+
+  function setColumnVisible(id: VatRegisterColumnId, nextVisible: boolean) {
+    setHiddenColumns((current) => {
+      const availableIds = VAT_REGISTER_COLUMNS.filter(
+        (column) => !("paymentOnly" in column && column.paymentOnly) || showPayment
+      ).map((column) => column.id);
+      let visibleIds = availableIds.filter((columnId) => !current.includes(columnId));
+      if (visibleIds.length === 0) visibleIds = [...availableIds];
+      const nextVisibleIds = nextVisible
+        ? Array.from(new Set([...visibleIds, id]))
+        : visibleIds.filter((columnId) => columnId !== id);
+      if (nextVisibleIds.length === 0) return current;
+      const unavailableHidden = current.filter((columnId) => !availableIds.includes(columnId));
+      const nextHidden = availableIds.filter((columnId) => !nextVisibleIds.includes(columnId));
+      return [...unavailableHidden, ...nextHidden];
+    });
+  }
 
   useEffect(() => {
     if (!showPayment && kpi === "unpaid") setKpi(null);
@@ -155,7 +265,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-4 py-6">
+    <main className="mx-auto flex w-full min-w-0 max-w-[1400px] flex-col gap-4 px-4 py-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">รายงานภาษีขาย / ภาษีซื้อ</h1>
         <p className="text-sm text-slate-600">
@@ -316,84 +426,109 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
         )}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
-        <table className="min-w-[1100px] w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-600">
-            <tr>
-              <th className="px-3 py-2 font-medium">ลำดับ</th>
-              <th className="px-3 py-2 font-medium">วันที่</th>
-              <th className="px-3 py-2 font-medium">เลขที่</th>
-              <th className="px-3 py-2 font-medium">{partyHeading(headingSide)}</th>
-              <th className="px-3 py-2 font-medium">เลขผู้เสียภาษี</th>
-              <th className="px-3 py-2 text-right font-medium">มูลค่าสินค้า</th>
-              <th className="px-3 py-2 text-right font-medium">ภาษีมูลค่าเพิ่ม</th>
-              <th className="px-3 py-2 text-right font-medium">ยอดสุทธิ</th>
-              <th className="px-3 py-2 font-medium">รายการสินค้า</th>
-              {showPayment ? <th className="px-3 py-2 font-medium">สถานะ</th> : null}
-              <th className="px-3 py-2 font-medium">เอกสาร</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+      <div className="hidden min-w-0 max-w-full flex-col gap-2 md:flex">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-slate-600">
+            {loading
+              ? "กำลังโหลด…"
+              : `${visible.length.toLocaleString("th-TH")} รายการ`}
+          </p>
+          <ColumnPicker
+            hidden={hiddenColumns}
+            showPayment={showPayment}
+            headingSide={headingSide}
+            onToggle={setColumnVisible}
+            onReset={() => setHiddenColumns([])}
+          />
+        </div>
+        <div className="min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border border-slate-200 bg-white">
+          <table className="w-max min-w-full text-left text-sm text-slate-900">
+            <thead className="bg-slate-50 text-slate-600">
               <tr>
-                <td colSpan={showPayment ? 11 : 10} className="px-3 py-10 text-center text-slate-500">
-                  <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-                </td>
+                {shownColumns.map((column) => (
+                  <th
+                    key={column.id}
+                    className={cn(
+                      "px-3 py-2 font-medium whitespace-nowrap",
+                      moneyColumn(column.id) && "text-right",
+                      column.id === "index" &&
+                        "sticky left-0 z-10 bg-slate-50 shadow-[1px_0_0_0_#e2e8f0]"
+                    )}
+                  >
+                    {column.id === "party" ? partyHeading(headingSide) : column.label}
+                  </th>
+                ))}
               </tr>
-            ) : visible.length === 0 ? (
-              <tr>
-                <td colSpan={showPayment ? 11 : 10} className="px-3 py-10 text-center text-slate-500">
-                  {kpi ? "ไม่มีรายการในกลุ่มนี้" : "ไม่มีรายการในเดือนนี้"}
-                </td>
-              </tr>
-            ) : (
-              visible.map((row, index) => (
-                <tr
-                  key={row.line_key}
-                  className="cursor-pointer border-t border-slate-100 hover:bg-slate-50"
-                  onClick={() => setSelected(row)}
-                >
-                  <td className="px-3 py-2">{index + 1}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">{thaiDate(row.bill_date)}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">{row.display_bill_no}</td>
-                  <td className="px-3 py-2">
-                    <PartyLines row={row} />
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">{row.tax_id}</td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
-                    {formatBaht(row.before_vat, true)}
-                  </td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
-                    {formatBaht(row.vat, true)}
-                  </td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
-                    {formatBaht(row.after_vat, true)}
-                  </td>
-                  <td className="max-w-[220px] truncate px-3 py-2">{row.detail}</td>
-                  {showPayment ? (
-                    <td className="px-3 py-2 whitespace-nowrap">{paymentLabel(row) ?? "—"}</td>
-                  ) : null}
-                  <td className="px-3 py-2 whitespace-nowrap text-slate-600">
-                    {documentLabel(row)}
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={shownColumns.length} className="px-3 py-10 text-center text-slate-500">
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-          {!loading && visible.length > 0 ? (
-            <tfoot>
-              <tr className="border-t border-slate-200 bg-slate-50 font-medium">
-                <td className="px-3 py-2" colSpan={5}>
-                  รวม {visible.length.toLocaleString("th-TH")} รายการ
-                </td>
-                <td className="px-3 py-2 text-right">{formatBaht(totals.before, true)}</td>
-                <td className="px-3 py-2 text-right">{formatBaht(totals.vat, true)}</td>
-                <td className="px-3 py-2 text-right">{formatBaht(totals.after, true)}</td>
-                <td colSpan={showPayment ? 3 : 2} />
-              </tr>
-            </tfoot>
-          ) : null}
-        </table>
+              ) : visible.length === 0 ? (
+                <tr>
+                  <td colSpan={shownColumns.length} className="px-3 py-10 text-center text-slate-500">
+                    {kpi ? "ไม่มีรายการในกลุ่มนี้" : "ไม่มีรายการในเดือนนี้"}
+                  </td>
+                </tr>
+              ) : (
+                visible.map((row, index) => (
+                  <tr
+                    key={row.line_key}
+                    className="group cursor-pointer border-t border-slate-100 hover:bg-slate-50"
+                    onClick={() => setSelected(row)}
+                  >
+                    {shownColumns.map((column) => (
+                      <td
+                        key={column.id}
+                        className={cn(
+                          "px-3 py-2 align-middle",
+                          moneyColumn(column.id) && "text-right tabular-nums whitespace-nowrap",
+                          plainNowrap(column.id) && "whitespace-nowrap",
+                          column.id === "docs" && "whitespace-nowrap text-slate-600",
+                          column.id === "index" &&
+                            "sticky left-0 z-10 whitespace-nowrap bg-white shadow-[1px_0_0_0_#e2e8f0] group-hover:bg-slate-50"
+                        )}
+                      >
+                        {vatCell(column.id, row, index)}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+            {!loading && visible.length > 0 ? (
+              <tfoot>
+                <tr className="border-t border-slate-200 bg-slate-50 font-medium">
+                  {vatRegisterFooterPieces(shownColumns.map((column) => column.id)).map(
+                    (piece, pieceIndex) => {
+                      if (piece.type === "label") {
+                        return (
+                          <td key="label" className="px-3 py-2" colSpan={piece.span}>
+                            รวม {visible.length.toLocaleString("th-TH")} รายการ
+                          </td>
+                        );
+                      }
+                      if (piece.type === "money") {
+                        return (
+                          <td
+                            key={piece.id}
+                            className="px-3 py-2 text-right tabular-nums whitespace-nowrap"
+                          >
+                            {formatBaht(totals[piece.id], true)}
+                          </td>
+                        );
+                      }
+                      return <td key={`gap-${pieceIndex}`} colSpan={piece.span} />;
+                    }
+                  )}
+                </tr>
+              </tfoot>
+            ) : null}
+          </table>
+        </div>
       </div>
 
       <LineDialog
@@ -502,6 +637,67 @@ function FilterSelect({
         </SelectContent>
       </Select>
     </label>
+  );
+}
+
+function ColumnPicker({
+  hidden,
+  showPayment,
+  headingSide,
+  onToggle,
+  onReset,
+}: {
+  hidden: readonly VatRegisterColumnId[];
+  showPayment: boolean;
+  headingSide: VatRegisterSide;
+  onToggle: (id: VatRegisterColumnId, visible: boolean) => void;
+  onReset: () => void;
+}) {
+  const columns = VAT_REGISTER_COLUMNS.filter(
+    (column) => !("paymentOnly" in column && column.paymentOnly) || showPayment
+  );
+  const shown = new Set(
+    visibleVatRegisterColumns(hidden, showPayment).map((column) => column.id)
+  );
+  const hiddenCount = columns.filter((column) => !shown.has(column.id)).length;
+  const visibleCount = columns.length - hiddenCount;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5">
+          <Columns3 className="h-4 w-4" />
+          คอลัมน์
+          {hiddenCount > 0 ? (
+            <span className="text-xs text-slate-500">
+              {visibleCount}/{columns.length}
+            </span>
+          ) : null}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>เลือกคอลัมน์</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {columns.map((column) => {
+          const checked = shown.has(column.id);
+          return (
+            <DropdownMenuCheckboxItem
+              key={column.id}
+              checked={checked}
+              disabled={checked && visibleCount <= 1}
+              onCheckedChange={(value) => onToggle(column.id, value === true)}
+              onSelect={(event) => event.preventDefault()}
+            >
+              {column.id === "party" ? partyHeading(headingSide) : column.label}
+            </DropdownMenuCheckboxItem>
+          );
+        })}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={hiddenCount === 0} onSelect={onReset}>
+          แสดงทั้งหมด
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
