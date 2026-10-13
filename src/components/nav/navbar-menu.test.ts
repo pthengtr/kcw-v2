@@ -15,14 +15,13 @@ function read(rel: string) {
 }
 
 describe("Navbar menu order and design", () => {
-  it("orders primary links as home → reminder → party → BI with expense after reminder", () => {
+  it("orders primary links as home → party → BI with expense after home", () => {
     expect(primaryNavLinks.map((link) => link.href)).toEqual([
       "/home",
-      "/reminder",
       "/party",
       "/bi",
     ]);
-    expect(EXPENSE_DROPDOWN_AFTER_INDEX).toBe(1);
+    expect(EXPENSE_DROPDOWN_AFTER_INDEX).toBe(0);
   });
 
   it("marks nested BI and expense routes as active", () => {
@@ -31,7 +30,7 @@ describe("Navbar menu order and design", () => {
     expect(isNavActive("/bi/sales", bi!)).toBe(true);
     expect(isNavActive("/party", bi!)).toBe(false);
     expect(isExpenseActive("/expense/general")).toBe(true);
-    expect(isExpenseActive("/reminder")).toBe(false);
+    expect(isExpenseActive("/party")).toBe(false);
   });
 
   it("uses a sticky logo-only navbar and a simple mobile sheet", () => {
@@ -70,7 +69,6 @@ describe("Shared back navigation", () => {
       "src/components/po/PoStatusPage.tsx",
       "src/components/rbac/RbacAdminPage.tsx",
       "src/components/party/PartyScreen.tsx",
-      "src/components/reminder/ReminderTable.tsx",
       "src/components/bi/BiShell.tsx",
       "src/components/product-related/ProductRelatedScreen.tsx",
       "src/app/(root)/kb/_components/kb-admin-screen.tsx",

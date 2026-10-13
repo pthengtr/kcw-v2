@@ -40,7 +40,6 @@ export default async function Home() {
   );
   const adminClient = getAdminClientOrNull() ?? supabase;
   const workspaceTodos = await fetchWorkspaceTodos({
-    userClient: supabase,
     adminClient,
   });
 

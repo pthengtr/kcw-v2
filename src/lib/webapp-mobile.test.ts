@@ -41,10 +41,10 @@ describe("Webapp mobile layout", () => {
 
     const todos = read("src/components/home/WorkspaceTodoSection.tsx");
     expect(todos).toContain("ภาพรวมวันนี้");
-    expect(todos).toContain("md:grid-cols-3");
+    expect(todos).toContain("md:grid-cols-2");
 
     const menu = read("src/lib/home/menu.ts");
-    expect(menu).toContain("งานประจำวัน");
+    expect(menu).not.toContain("/reminder");
     expect(menu).toContain("การเงินและรับชำระ");
     expect(menu).toContain("ข้อมูลและสินค้า");
     expect(menu).toContain("รายงานและความรู้");

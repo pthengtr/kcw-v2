@@ -270,12 +270,9 @@ export function SidebarNav({
           ) : null}
 
           {filteredGroups.map((group) => {
-            const originalIndex = HOME_MENU_GROUPS.findIndex(
-              (candidate) => candidate.title === group.title
-            );
             return (
               <div key={group.title} className="contents">
-                {!searching && originalIndex > 0 ? <MenuDivider /> : null}
+                {!searching ? <MenuDivider /> : null}
                 {group.items.map((item) => (
                   <MenuItemLink
                     key={item.key}
