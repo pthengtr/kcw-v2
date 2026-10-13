@@ -8,14 +8,12 @@ import {
   ImageUp,
   Images,
   Link2,
-  MessageCircleWarning,
   Receipt,
   Wallet,
   Banknote,
 } from "lucide-react";
 
 export type HomeMenuKey =
-  | "reminder"
   | "expense"
   | "stockAudit"
   | "productImageKpi"
@@ -45,15 +43,6 @@ export type HomeMenuGroup = {
 };
 
 export const HOME_MENU_ITEMS = {
-  reminder: {
-    key: "reminder",
-    href: "/reminder",
-    label: "เตือนโอน",
-    description: "ติดตามรายการและกำหนดการโอนเงิน",
-    icon: MessageCircleWarning,
-    iconClassName: "text-amber-600",
-    iconSurfaceClassName: "bg-amber-50 ring-amber-100",
-  },
   expense: {
     key: "expense",
     href: "/expense",
@@ -166,28 +155,20 @@ export const HOME_MENU_ITEMS = {
 
 export const HOME_MENU_KEYS = Object.keys(HOME_MENU_ITEMS) as HomeMenuKey[];
 
-export const DEFAULT_FAVORITE_KEYS: HomeMenuKey[] = [
-  "reminder",
-  "expense",
-  "bi",
-];
+export const DEFAULT_FAVORITE_KEYS: HomeMenuKey[] = ["expense", "bi"];
 
 /**
  * Sidebar / catalog groups. Section titles are kept for catalog identity but
  * the Home sidebar renders groups with dividers only (no visible titles).
  *
  * Order mirrors the Home sidebar:
- * 1. daily ops (reminder) — expense is rendered separately
+ * 1. daily ops (expense) — rendered separately from these groups
  * 2. ops KPI reports (stock check / product images)
  * 3. finance
  * 4. master data / products
  * 5. reports / knowledge
  */
 export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
-  {
-    title: "งานประจำวัน",
-    items: [HOME_MENU_ITEMS.reminder],
-  },
   {
     title: "KPI งาน",
     items: [HOME_MENU_ITEMS.stockAudit, HOME_MENU_ITEMS.productImageKpi],

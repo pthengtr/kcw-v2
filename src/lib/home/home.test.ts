@@ -15,10 +15,7 @@ import {
   HOME_MENU_ITEMS,
   resolveFavoriteItems,
 } from "@/lib/home/menu";
-import {
-  STOCK_AUDIT_DAILY_TARGET,
-  bangkokTodayIsoDate,
-} from "@/lib/home/workspace-todos";
+import { STOCK_AUDIT_DAILY_TARGET } from "@/lib/home/workspace-todos";
 import { STOCK_AUDIT_DAILY_TARGET as sharedTarget } from "@/lib/stock-audit/daily-target";
 
 describe("home favorites", () => {
@@ -27,13 +24,16 @@ describe("home favorites", () => {
     expect(parseFavoriteKeys("")).toEqual(DEFAULT_FAVORITE_KEYS);
     expect(parseFavoriteKeys("[]")).toEqual(DEFAULT_FAVORITE_KEYS);
     expect(FAVORITES_COOKIE_KEY).toBe("home_favorite_menus");
-    expect(DEFAULT_FAVORITE_KEYS).toHaveLength(3);
+    expect(DEFAULT_FAVORITE_KEYS).toHaveLength(2);
   });
 
   it("parses and normalizes favorite keys from JSON or CSV", () => {
-    expect(parseFavoriteKeys(JSON.stringify(["po", "reminder", "po", "nope"]))).toEqual([
-      "reminder",
+    expect(parseFavoriteKeys(JSON.stringify(["po", "expense", "po", "nope"]))).toEqual([
+      "expense",
     ]);
+    expect(parseFavoriteKeys(JSON.stringify(["reminder"]))).toEqual(
+      DEFAULT_FAVORITE_KEYS
+    );
     expect(parseFavoriteKeys("bi,stockAudit,bi")).toEqual(["bi", "stockAudit"]);
     expect(normalizeFavoriteKeys(["faq"])).toEqual(["faq"]);
   });
@@ -41,48 +41,44 @@ describe("home favorites", () => {
   it("allows more than four favorite menus", () => {
     expect(
       normalizeFavoriteKeys([
-        "reminder",
         "expense",
         "bi",
         "bankStatement",
         "party",
+        "faq",
       ])
     ).toEqual([
-      "reminder",
       "expense",
       "bi",
       "bankStatement",
       "party",
+      "faq",
     ]);
   });
 
   it("serializes favorites and refuses emptying via toggle", () => {
-    const serialized = serializeFavoriteKeys(["reminder", "expense"]);
-    expect(JSON.parse(serialized)).toEqual(["reminder", "expense"]);
-    expect(toggleFavoriteKey(["reminder"], "reminder")).toEqual(["reminder"]);
-    expect(toggleFavoriteKey(["reminder"], "bi")).toEqual(["reminder", "bi"]);
+    const serialized = serializeFavoriteKeys(["expense", "bi"]);
+    expect(JSON.parse(serialized)).toEqual(["expense", "bi"]);
+    expect(toggleFavoriteKey(["expense"], "expense")).toEqual(["expense"]);
+    expect(toggleFavoriteKey(["expense"], "bi")).toEqual(["expense", "bi"]);
   });
 
   it("resolves favorite items from the shared menu catalog", () => {
-    const items = resolveFavoriteItems(["reminder", "bi"]);
-    expect(items.map((item) => item.href)).toEqual(["/reminder", "/bi"]);
+    const items = resolveFavoriteItems(["expense", "bi"]);
+    expect(items.map((item) => item.href)).toEqual(["/expense", "/bi"]);
     expect(Object.keys(HOME_MENU_ITEMS).length).toBeGreaterThanOrEqual(11);
-    expect(HOME_MENU_GROUPS).toHaveLength(5);
+    expect(HOME_MENU_GROUPS).toHaveLength(4);
     expect(HOME_MENU_GROUPS.map((group) => group.title)).toEqual([
-      "งานประจำวัน",
       "KPI งาน",
       "การเงินและรับชำระ",
       "ข้อมูลและสินค้า",
       "รายงานและความรู้",
     ]);
     expect(HOME_MENU_GROUPS[0].items.map((item) => item.key)).toEqual([
-      "reminder",
-    ]);
-    expect(HOME_MENU_GROUPS[1].items.map((item) => item.key)).toEqual([
       "stockAudit",
       "productImageKpi",
     ]);
-    expect(HOME_MENU_GROUPS[2].items.map((item) => item.key)).toEqual([
+    expect(HOME_MENU_GROUPS[1].items.map((item) => item.key)).toEqual([
       "bankStatement",
       "onlineStatements",
       "vatRegister",
@@ -96,15 +92,6 @@ describe("home favorites", () => {
 });
 
 describe("home workspace todos helpers", () => {
-  it("formats Bangkok calendar dates as YYYY-MM-DD", () => {
-    expect(bangkokTodayIsoDate(new Date("2026-08-05T02:00:00.000Z"))).toBe(
-      "2026-08-05"
-    );
-    expect(bangkokTodayIsoDate(new Date("2026-08-04T18:00:00.000Z"))).toBe(
-      "2026-08-05"
-    );
-  });
-
   it("keeps the stock-audit daily target aligned with the operator page", () => {
     expect(STOCK_AUDIT_DAILY_TARGET).toBe(30);
     expect(sharedTarget).toBe(STOCK_AUDIT_DAILY_TARGET);
@@ -118,5 +105,7 @@ describe("home workspace todos helpers", () => {
     expect(source).toContain("tiger-pay-hopper");
     expect(source).toContain("/tiger-pay");
     expect(source).toContain("getLatestCashSnapshot");
+    expect(source).not.toContain("payment-reminder");
+    expect(source).not.toContain("/reminder");
   });
 });

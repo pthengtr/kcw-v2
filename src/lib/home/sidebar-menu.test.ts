@@ -11,18 +11,18 @@ describe("sidebar menu helpers", () => {
     const pageKeys = ["po_status", "bi_income"];
     expect(canAccessHomeMenuItem("bi", pageKeys)).toBe(true);
     expect(canAccessHomeMenuItem("tigerPay", pageKeys)).toBe(false);
-    expect(canAccessHomeMenuItem("reminder", pageKeys)).toBe(true);
+    expect(canAccessHomeMenuItem("expense", pageKeys)).toBe(true);
     expect(canAccessHomeMenuItem("productImageKpi", pageKeys)).toBe(true);
   });
 
   it("matches menu search against label and description", () => {
     const item = {
-      label: "เตือนโอน",
-      description: "ติดตามรายการและกำหนดการโอนเงิน",
+      label: "ค่าใช้จ่าย",
+      description: "บันทึกและตรวจสอบค่าใช้จ่าย",
     };
     expect(matchesMenuSearch(item, "")).toBe(true);
-    expect(matchesMenuSearch(item, "โอน")).toBe(true);
-    expect(matchesMenuSearch(item, "ติดตาม")).toBe(true);
+    expect(matchesMenuSearch(item, "ค่าใช้")).toBe(true);
+    expect(matchesMenuSearch(item, "บันทึก")).toBe(true);
     expect(matchesMenuSearch(item, "po")).toBe(false);
   });
 
