@@ -82,6 +82,7 @@ describe("home favorites", () => {
       "bankStatement",
       "onlineStatements",
       "vatRegister",
+      "vatInventory",
       "tigerPay",
     ]);
     expect(HOME_MENU_ITEMS.vatRegister.href).toBe("/vat-register");

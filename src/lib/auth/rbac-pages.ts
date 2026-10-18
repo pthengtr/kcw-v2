@@ -21,6 +21,7 @@ export const BI_PAGE_KEYS = {
 
 /** Line-level VAT book. Kept as the existing grant so current roles still open it. */
 export const VAT_REGISTER_PAGE_KEY: RbacPageKey = "bi_vat_register";
+export const VAT_INVENTORY_PAGE_KEY: RbacPageKey = "bi_vat_inventory";
 
 export const BANK_PAGE_KEYS = {
   tigerPay: "bank_tiger_pay",
@@ -69,6 +70,7 @@ export const RBAC_PROTECTED_PAGE_KEYS: RbacPageKey[] = [
   BI_PAGE_KEYS.cashflow,
   BI_PAGE_KEYS.vat,
   VAT_REGISTER_PAGE_KEY,
+  VAT_INVENTORY_PAGE_KEY,
   BANK_PAGE_KEYS.tigerPay,
   BANK_PAGE_KEYS.statementSync,
   BANK_PAGE_KEYS.statementView,
