@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Receipt, ShieldCheck } from "lucide-react";
+import { Menu, Receipt, ShieldCheck, Boxes } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -28,6 +28,7 @@ import {
   canAccessOnlineStatements,
   canAccessStatementSync,
   canAccessTigerPay,
+  canAccessVatInventory,
   canAccessVatRegister,
 } from "@/lib/auth/client-permissions";
 import {
@@ -140,6 +141,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
   const showStatementSync = pageKeys ? canAccessStatementSync(pageKeys) : false;
   const showOnlineStatements = pageKeys ? canAccessOnlineStatements(pageKeys) : false;
   const showVatRegister = pageKeys ? canAccessVatRegister(pageKeys) : false;
+  const showVatInventory = pageKeys ? canAccessVatInventory(pageKeys) : false;
   const showAdminRbac = pageKeys ? canAccessAdminRbac(pageKeys) : false;
 
   return (
@@ -245,6 +247,15 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     onNavigate={closeSheet}
                   />
                 ) : null}
+                {showVatInventory ? (
+                  <NavLinkButton
+                    href="/vat-inventory"
+                    label="สต็อกภาษี"
+                    icon={Boxes}
+                    active={pathname.startsWith("/vat-inventory")}
+                    onNavigate={closeSheet}
+                  />
+                ) : null}
                 {showAdminRbac ? (
                   <NavLinkButton
                     href="/admin/rbac"
@@ -339,6 +350,17 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                     label="รายงานภาษี"
                     icon={Receipt}
                     active={pathname === "/vat-register"}
+                    className="whitespace-nowrap px-2.5"
+                  />
+                </NavigationMenuItem>
+              ) : null}
+              {showVatInventory ? (
+                <NavigationMenuItem>
+                  <NavLinkButton
+                    href="/vat-inventory"
+                    label="สต็อกภาษี"
+                    icon={Boxes}
+                    active={pathname.startsWith("/vat-inventory")}
                     className="whitespace-nowrap px-2.5"
                   />
                 </NavigationMenuItem>

@@ -4,6 +4,7 @@ import {
   BI_PAGE_KEYS,
   PO_PAGE_KEYS,
   STOCK_AUDIT_PAGE_KEY,
+  VAT_INVENTORY_PAGE_KEY,
   VAT_REGISTER_PAGE_KEY,
 } from "./rbac-pages";
 
@@ -36,6 +37,10 @@ export function canAccessOnlineStatements(pageKeys: string[]): boolean {
 
 export function canAccessVatRegister(pageKeys: string[]): boolean {
   return canAccessPage(pageKeys, VAT_REGISTER_PAGE_KEY);
+}
+
+export function canAccessVatInventory(pageKeys: string[]): boolean {
+  return canAccessPage(pageKeys, VAT_INVENTORY_PAGE_KEY);
 }
 
 export function canAccessPoStatus(pageKeys: string[]): boolean {

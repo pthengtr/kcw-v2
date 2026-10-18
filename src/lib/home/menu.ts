@@ -20,6 +20,7 @@ export type HomeMenuKey =
   | "bankStatement"
   | "onlineStatements"
   | "vatRegister"
+  | "vatInventory"
   | "tigerPay"
   | "party"
   | "relatedProducts"
@@ -96,6 +97,15 @@ export const HOME_MENU_ITEMS = {
     icon: Receipt,
     iconClassName: "text-teal-700",
     iconSurfaceClassName: "bg-teal-50 ring-teal-100",
+  },
+  vatInventory: {
+    key: "vatInventory",
+    href: "/vat-inventory",
+    label: "สต็อกภาษี",
+    description: "คงเหลือเฉพาะรายการภาษี พร้อมทุนและที่มาของบิล",
+    icon: Boxes,
+    iconClassName: "text-emerald-700",
+    iconSurfaceClassName: "bg-emerald-50 ring-emerald-100",
   },
   tigerPay: {
     key: "tigerPay",
@@ -179,6 +189,7 @@ export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
       HOME_MENU_ITEMS.bankStatement,
       HOME_MENU_ITEMS.onlineStatements,
       HOME_MENU_ITEMS.vatRegister,
+      HOME_MENU_ITEMS.vatInventory,
       HOME_MENU_ITEMS.tigerPay,
     ],
   },

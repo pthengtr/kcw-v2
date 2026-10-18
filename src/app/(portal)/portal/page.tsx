@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightLeft, Receipt, Wallet } from "lucide-react";
+import { ArrowRightLeft, Boxes, Receipt, Wallet } from "lucide-react";
 
 const LINKS = [
   {
@@ -19,6 +19,12 @@ const LINKS = [
     label: "รายงานภาษี",
     description: "ดูรายงานภาษีขายและภาษีซื้อ พร้อมสถานะจ่ายและรูปเอกสาร",
     icon: Receipt,
+  },
+  {
+    href: "/portal/vat-inventory",
+    label: "สต็อกภาษี",
+    description: "ดูคงเหลือเฉพาะรายการภาษี และความเคลื่อนไหวของแต่ละรหัส",
+    icon: Boxes,
   },
 ] as const;
 
