@@ -68,6 +68,11 @@ export type VatInventoryExport = {
   movements: VatInventoryExportMovement[];
 };
 
+/** Sales, TAR, and stock adjustments reduce on-hand, so the report shows them negative. */
+export function deductQty(value: number): number {
+  return -value;
+}
+
 export const VAT_MOVEMENT_KIND_LABEL: Record<string, string> = {
   OPEN: "ยกมา",
   PI: "ซื้อ VAT",
