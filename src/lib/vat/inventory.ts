@@ -7,8 +7,15 @@ export type VatInventorySummary = {
   rebuilt_at: string | null;
 };
 
+export type VatSite = "hq" | "syp";
+
+export function vatSite(value: string | undefined): VatSite {
+  return value === "syp" ? "syp" : "hq";
+}
+
 export type VatInventoryRow = {
   bcode: string;
+  site: VatSite;
   descr: string;
   qty: number;
   value: number;
@@ -19,6 +26,7 @@ export type VatInventoryRow = {
   sale_qty: number;
   tar_qty: number;
   sa_qty: number;
+  tf_qty: number;
   actual_qty: number;
 };
 
@@ -67,6 +75,7 @@ export const VAT_MOVEMENT_KIND_LABEL: Record<string, string> = {
   SALE: "ขาย VAT",
   TAR: "TAR",
   SA: "ปรับสต็อก",
+  TF: "โอน",
 };
 
 export type VatInventoryDetail = {
@@ -77,22 +86,24 @@ export type VatInventoryDetail = {
 
 const PAGE_SIZE = 100;
 
-export async function loadVatInventorySummary(): Promise<VatInventorySummary> {
+export async function loadVatInventorySummary(site: VatSite): Promise<VatInventorySummary> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("fn_vat_inventory_summary");
+  const { data, error } = await supabase.rpc("fn_vat_inventory_summary", { p_site: site });
   if (error) throw new Error(error.message);
   return data as VatInventorySummary;
 }
 
 export async function loadVatInventoryProducts(
   search: string,
-  offset: number
+  offset: number,
+  site: VatSite
 ): Promise<VatInventoryList> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("fn_vat_inventory_products", {
     p_search: search,
     p_limit: PAGE_SIZE,
     p_offset: offset,
+    p_site: site,
   });
   if (error) throw new Error(error.message);
   return data as VatInventoryList;
@@ -102,7 +113,8 @@ const EXPORT_PAGE_SIZE = 5000;
 
 export async function loadVatInventoryExport(
   search: string,
-  bcode: string
+  bcode: string,
+  site: VatSite
 ): Promise<VatInventoryExport> {
   const supabase = await createClient();
   const products: VatInventoryExport["products"] = [];
@@ -114,6 +126,7 @@ export async function loadVatInventoryExport(
       p_bcode: bcode,
       p_limit: EXPORT_PAGE_SIZE,
       p_offset: offset,
+      p_site: site,
     });
     if (error) throw new Error(error.message);
     const page = data as VatInventoryExport;
@@ -127,11 +140,13 @@ export async function loadVatInventoryExport(
 }
 
 export async function loadVatInventoryProduct(
-  bcode: string
+  bcode: string,
+  site: VatSite
 ): Promise<VatInventoryDetail> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("fn_vat_inventory_product", {
     p_bcode: bcode,
+    p_site: site,
   });
   if (error) throw new Error(error.message);
   return data as VatInventoryDetail;

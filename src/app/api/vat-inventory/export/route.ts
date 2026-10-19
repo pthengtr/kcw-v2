@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { VAT_INVENTORY_PAGE_KEY } from "@/lib/auth/rbac-pages";
-import { loadVatInventoryExport } from "@/lib/vat/inventory";
+import { loadVatInventoryExport, vatSite } from "@/lib/vat/inventory";
 import { buildVatInventoryWorkbook } from "@/lib/vat/inventory-workbook";
 
 export async function GET(request: Request) {
@@ -14,11 +14,14 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const search = url.searchParams.get("q")?.trim() ?? "";
   const bcode = url.searchParams.get("bcode")?.trim() ?? "";
+  const site = vatSite(url.searchParams.get("site") ?? undefined);
 
   try {
-    const data = await loadVatInventoryExport(search, bcode);
+    const data = await loadVatInventoryExport(search, bcode, site);
     const body = buildVatInventoryWorkbook(data);
-    const filename = bcode ? `inventory-${bcode}.xlsx` : "inventory-report.xlsx";
+    const filename = bcode
+      ? `inventory-${site}-${bcode}.xlsx`
+      : `inventory-${site}.xlsx`;
     return new NextResponse(new Uint8Array(body), {
       headers: {
         "Content-Type":
