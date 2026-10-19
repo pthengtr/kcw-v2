@@ -32,6 +32,7 @@ export default async function PortalVatInventoryPage({
       site={site}
       year={year}
       years={years}
+      showActual={false}
     />
   );
 }
