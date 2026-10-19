@@ -9,6 +9,7 @@ import {
   type VatInventoryDetail,
   type VatInventoryList,
   type VatInventorySummary,
+  type VatSite,
 } from "@/lib/vat/inventory";
 import { cn } from "@/lib/utils";
 
@@ -19,14 +20,15 @@ const KIND_TONE: Record<string, string> = {
   SALE: "bg-rose-50 text-rose-800 ring-rose-100",
   TAR: "bg-amber-50 text-amber-900 ring-amber-100",
   SA: "bg-violet-50 text-violet-800 ring-violet-100",
+  TF: "bg-indigo-50 text-indigo-800 ring-indigo-100",
 };
 
-function exportHref(search: string, bcode?: string): string {
+function exportHref(search: string, site: VatSite, bcode?: string): string {
   const params = new URLSearchParams();
+  params.set("site", site);
   if (bcode) params.set("bcode", bcode);
   else if (search) params.set("q", search);
-  const text = params.toString();
-  return text ? `/api/vat-inventory/export?${text}` : "/api/vat-inventory/export";
+  return `/api/vat-inventory/export?${params.toString()}`;
 }
 
 function qty(value: number | null | undefined): string {
@@ -78,17 +80,20 @@ export function VatInventoryListView({
   list,
   search,
   offset,
+  site,
 }: {
   basePath: string;
   summary: VatInventorySummary;
   list: VatInventoryList;
   search: string;
   offset: number;
+  site: VatSite;
 }) {
   const page = Math.floor(offset / VAT_INVENTORY_PAGE_SIZE) + 1;
   const pages = Math.max(1, Math.ceil(list.total / VAT_INVENTORY_PAGE_SIZE));
   const query = (nextOffset: number) => {
     const params = new URLSearchParams();
+    params.set("site", site);
     if (search) params.set("q", search);
     if (nextOffset > 0) params.set("offset", String(nextOffset));
     const text = params.toString();
@@ -105,7 +110,8 @@ export function VatInventoryListView({
             รายงานสินค้าคงเหลือ
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-500">
-            คงเหลือ = ยกมา VAT + ซื้อ VAT + RV − ขาย TR/TD/TAD − TAR − ปรับสต็อก
+            คงเหลือ = ยกมา + ซื้อ VAT + RV + โอน − ขาย VAT − TAR − ปรับสต็อก.
+            โอนติดลบที่ HQ และบวกที่ SYP ด้วยทุน FIFO เดียวกัน
           </p>
         </div>
         {summary.rebuilt_at ? (
@@ -122,7 +128,12 @@ export function VatInventoryListView({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
+          <SiteLink basePath={basePath} search={search} current={site} value="hq" label="HQ" />
+          <SiteLink basePath={basePath} search={search} current={site} value="syp" label="SYP" />
+        </div>
         <form className="flex flex-1 items-center gap-2" action={basePath}>
+          <input type="hidden" name="site" value={site} />
           <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
             <Input
@@ -135,7 +146,7 @@ export function VatInventoryListView({
           <Button type="submit">ค้นหา</Button>
         </form>
         <Button variant="outline" asChild>
-          <a href={exportHref(search)}>
+          <a href={exportHref(search, site)}>
             <FileSpreadsheet />
             ส่งออก Excel
           </a>
@@ -154,6 +165,7 @@ export function VatInventoryListView({
               <th className={cn(headCell, "text-right")}>ขาย VAT</th>
               <th className={cn(headCell, "text-right")}>TAR</th>
               <th className={cn(headCell, "text-right")}>ปรับสต็อก</th>
+              <th className={cn(headCell, "text-right")}>โอน</th>
               <th className={cn(headCell, "bg-emerald-50 text-right text-emerald-900")}>
                 คงเหลือ
               </th>
@@ -168,7 +180,7 @@ export function VatInventoryListView({
               <tr key={row.bcode} className="group hover:bg-slate-50/80">
                 <td className="sticky left-0 z-10 border-b border-slate-100 bg-white px-3 py-2 font-medium group-hover:bg-slate-50">
                   <Link
-                    href={`${basePath}/${encodeURIComponent(row.bcode)}`}
+                    href={`${basePath}/${encodeURIComponent(row.bcode)}?site=${site}`}
                     className="font-mono text-[13px] text-sky-800 hover:underline"
                   >
                     {row.bcode}
@@ -195,6 +207,9 @@ export function VatInventoryListView({
                 <td className={cn(amountClass(row.sa_qty), "border-b border-slate-100")}>
                   {qty(row.sa_qty)}
                 </td>
+                <td className={cn(amountClass(row.tf_qty, "signed"), "border-b border-slate-100")}>
+                  {qty(row.tf_qty)}
+                </td>
                 <td className={cn(amountClass(row.qty, "emphasis"), "border-b border-emerald-100")}>
                   {qty(row.qty)}
                 </td>
@@ -213,7 +228,7 @@ export function VatInventoryListView({
             ))}
             {list.rows.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-3 py-16 text-center text-sm text-slate-500">
+                <td colSpan={12} className="px-3 py-16 text-center text-sm text-slate-500">
                   ยังไม่มีรายการ
                 </td>
               </tr>
@@ -254,9 +269,11 @@ export function VatInventoryListView({
 export function VatInventoryDrillView({
   basePath,
   detail,
+  site,
 }: {
   basePath: string;
   detail: VatInventoryDetail;
+  site: VatSite;
 }) {
   const product = detail.product;
   if (!product) {
@@ -264,7 +281,7 @@ export function VatInventoryDrillView({
       <main className="mx-auto max-w-3xl px-4 py-8">
         <p className="text-sm text-slate-600">ไม่พบรหัสสินค้านี้ในรายงานสินค้าคงเหลือ</p>
         <Button variant="link" className="mt-2 px-0" asChild>
-          <Link href={basePath}>กลับไปหน้ารายการ</Link>
+          <Link href={`${basePath}?site=${site}`}>กลับไปหน้ารายการ</Link>
         </Button>
       </main>
     );
@@ -274,7 +291,7 @@ export function VatInventoryDrillView({
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6">
       <div>
         <Link
-          href={basePath}
+          href={`${basePath}?site=${site}`}
           className="inline-flex items-center gap-1 text-sm text-sky-800 hover:underline"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -282,13 +299,18 @@ export function VatInventoryDrillView({
         </Link>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
           <div>
-            <div className="font-mono text-sm text-sky-800">{product.bcode}</div>
+            <div className="font-mono text-sm text-sky-800">
+              {product.bcode}
+              <span className="ml-2 text-xs font-medium tracking-wide text-slate-500">
+                {site.toUpperCase()}
+              </span>
+            </div>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
               {product.descr || product.bcode}
             </h1>
           </div>
           <Button variant="outline" asChild>
-            <a href={exportHref("", product.bcode)}>
+            <a href={exportHref("", site, product.bcode)}>
               <FileSpreadsheet />
               ส่งออก Excel
             </a>
@@ -434,6 +456,36 @@ export function VatInventoryDrillView({
         </div>
       </section>
     </main>
+  );
+}
+
+function SiteLink({
+  basePath,
+  search,
+  current,
+  value,
+  label,
+}: {
+  basePath: string;
+  search: string;
+  current: VatSite;
+  value: VatSite;
+  label: string;
+}) {
+  const params = new URLSearchParams();
+  params.set("site", value);
+  if (search) params.set("q", search);
+  const active = current === value;
+  return (
+    <Link
+      href={`${basePath}?${params.toString()}`}
+      className={cn(
+        "rounded-md px-3 py-1.5 font-medium",
+        active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
+      )}
+    >
+      {label}
+    </Link>
   );
 }
 

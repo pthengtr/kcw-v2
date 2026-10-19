@@ -20,7 +20,9 @@ describe("vat inventory workbook", () => {
           sale_qty: 6,
           tar_qty: 0,
           sa_qty: 0,
+          tf_qty: 0,
           actual_qty: 4,
+          site: "hq",
         },
       ],
       movements: [

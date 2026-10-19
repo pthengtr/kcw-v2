@@ -23,9 +23,11 @@ function productRows(rows: VatInventoryRow[]): (string | number)[][] {
       "ขาย VAT",
       "TAR",
       "ปรับสต็อก",
+      "โอน",
       "คงเหลือ",
       "มูลค่า",
       "คงเหลือจริง",
+      "สาขา",
     ],
     ...rows.map((row) => [
       row.bcode,
@@ -36,9 +38,11 @@ function productRows(rows: VatInventoryRow[]): (string | number)[][] {
       row.sale_qty,
       row.tar_qty,
       row.sa_qty,
+      row.tf_qty,
       row.qty,
       row.value,
       row.actual_qty,
+      (row.site || "").toUpperCase(),
     ]),
   ];
 }
