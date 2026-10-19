@@ -44,8 +44,29 @@ export type VatInventoryMovement = {
   site: string;
   qty: number;
   unit_cost: number | null;
+  sale_price: number | null;
+  cost_billno: string | null;
   balance: number;
   supplier: string;
+};
+
+export type VatInventoryExportMovement = VatInventoryMovement & {
+  bcode: string;
+  descr: string;
+};
+
+export type VatInventoryExport = {
+  products: VatInventoryRow[];
+  movements: VatInventoryExportMovement[];
+};
+
+export const VAT_MOVEMENT_KIND_LABEL: Record<string, string> = {
+  OPEN: "ยกมา",
+  PI: "ซื้อ VAT",
+  RV: "RV",
+  SALE: "ขาย VAT",
+  TAR: "TAR",
+  SA: "ปรับสต็อก",
 };
 
 export type VatInventoryDetail = {
@@ -75,6 +96,34 @@ export async function loadVatInventoryProducts(
   });
   if (error) throw new Error(error.message);
   return data as VatInventoryList;
+}
+
+const EXPORT_PAGE_SIZE = 5000;
+
+export async function loadVatInventoryExport(
+  search: string,
+  bcode: string
+): Promise<VatInventoryExport> {
+  const supabase = await createClient();
+  const products: VatInventoryExport["products"] = [];
+  const movements: VatInventoryExport["movements"] = [];
+  let offset = 0;
+  for (;;) {
+    const { data, error } = await supabase.rpc("fn_vat_inventory_export", {
+      p_search: search,
+      p_bcode: bcode,
+      p_limit: EXPORT_PAGE_SIZE,
+      p_offset: offset,
+    });
+    if (error) throw new Error(error.message);
+    const page = data as VatInventoryExport;
+    if (offset === 0) products.push(...(page.products ?? []));
+    const rows = page.movements ?? [];
+    movements.push(...rows);
+    if (rows.length < EXPORT_PAGE_SIZE) break;
+    offset += EXPORT_PAGE_SIZE;
+  }
+  return { products, movements };
 }
 
 export async function loadVatInventoryProduct(

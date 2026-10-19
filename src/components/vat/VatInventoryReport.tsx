@@ -2,19 +2,19 @@ import Link from "next/link";
 
 import {
   VAT_INVENTORY_PAGE_SIZE,
+  VAT_MOVEMENT_KIND_LABEL,
   type VatInventoryDetail,
   type VatInventoryList,
   type VatInventorySummary,
 } from "@/lib/vat/inventory";
 
-const KIND_LABEL: Record<string, string> = {
-  OPEN: "ยกมา",
-  PI: "ซื้อ VAT",
-  RV: "RV",
-  SALE: "ขาย VAT",
-  TAR: "TAR",
-  SA: "ปรับสต็อก",
-};
+function exportHref(search: string, bcode?: string): string {
+  const params = new URLSearchParams();
+  if (bcode) params.set("bcode", bcode);
+  else if (search) params.set("q", search);
+  const text = params.toString();
+  return text ? `/api/vat-inventory/export?${text}` : "/api/vat-inventory/export";
+}
 
 function qty(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return "";
@@ -62,9 +62,9 @@ export function VatInventoryListView({
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">สต็อกภาษี</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">รายงานสินค้าคงเหลือ</h1>
         <p className="text-sm text-slate-600">
-          คงเหลือภาษี = ยกมา VAT + ซื้อ VAT + RV − ขาย TR/TD/TAD − TAR − ปรับสต็อก
+          คงเหลือ = ยกมา VAT + ซื้อ VAT + RV − ขาย TR/TD/TAD − TAR − ปรับสต็อก
           {summary.rebuilt_at
             ? ` · คำนวณเมื่อ ${thaiDate(summary.rebuilt_at)}`
             : ""}
@@ -75,20 +75,28 @@ export function VatInventoryListView({
         <Metric label="จำนวนคงเหลือ" value={qty(summary.qty)} />
         <Metric label="รหัสสินค้า" value={qty(summary.products)} />
       </div>
-      <form className="flex gap-2" action={basePath}>
-        <input
-          name="q"
-          defaultValue={search}
-          placeholder="รหัสหรือชื่อสินค้า"
-          className="w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text-sm"
-        />
-        <button
-          type="submit"
-          className="rounded-md bg-slate-900 px-3 py-2 text-sm text-white"
+      <div className="flex flex-wrap items-center gap-2">
+        <form className="flex gap-2" action={basePath}>
+          <input
+            name="q"
+            defaultValue={search}
+            placeholder="รหัสหรือชื่อสินค้า"
+            className="w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+          <button
+            type="submit"
+            className="rounded-md bg-slate-900 px-3 py-2 text-sm text-white"
+          >
+            ค้นหา
+          </button>
+        </form>
+        <a
+          href={exportHref(search)}
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
         >
-          ค้นหา
-        </button>
-      </form>
+          ส่งออก Excel
+        </a>
+      </div>
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-slate-600">
@@ -101,7 +109,7 @@ export function VatInventoryListView({
               <th className="px-3 py-2 text-right">ขาย VAT</th>
               <th className="px-3 py-2 text-right">TAR</th>
               <th className="px-3 py-2 text-right">ปรับสต็อก</th>
-              <th className="px-3 py-2 text-right">คงเหลือภาษี</th>
+              <th className="px-3 py-2 text-right">คงเหลือ</th>
               <th className="px-3 py-2 text-right">มูลค่า</th>
               <th className="px-3 py-2 text-right">คงเหลือจริง</th>
             </tr>
@@ -171,7 +179,7 @@ export function VatInventoryDrillView({
   if (!product) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-8">
-        <p className="text-sm text-slate-600">ไม่พบรหัสสินค้านี้ในสต็อกภาษี</p>
+        <p className="text-sm text-slate-600">ไม่พบรหัสสินค้านี้ในรายงานสินค้าคงเหลือ</p>
         <Link href={basePath} className="mt-3 inline-block text-sm text-sky-700">
           กลับไปหน้ารายการ
         </Link>
@@ -185,11 +193,19 @@ export function VatInventoryDrillView({
         <Link href={basePath} className="text-sm text-sky-700">
           กลับไปหน้ารายการ
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-900">
-          {product.bcode} {product.descr}
-        </h1>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-semibold text-slate-900">
+            {product.bcode} {product.descr}
+          </h1>
+          <a
+            href={exportHref("", product.bcode)}
+            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+          >
+            ส่งออก Excel
+          </a>
+        </div>
         <p className="text-sm text-slate-600">
-          คงเหลือภาษี {qty(product.qty)} · มูลค่า {baht(product.value)} · คงเหลือจริง{" "}
+          คงเหลือ {qty(product.qty)} · มูลค่า {baht(product.value)} · คงเหลือจริง{" "}
           {qty(product.actual_qty)}
         </p>
       </div>
@@ -238,6 +254,10 @@ export function VatInventoryDrillView({
       </section>
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium text-slate-900">ความเคลื่อนไหวปี 2026</h2>
+        <p className="text-sm text-slate-600">
+          ทุนซื้อของบิลขายไล่ FIFO จากบิลซื้อที่เก่ากว่า หลังกันของใหม่ไว้เป็นสต็อก
+          ราคาเป็นต่อหน่วยเล็กสุด ไม่รวม VAT
+        </p>
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-600">
@@ -247,6 +267,9 @@ export function VatInventoryDrillView({
                 <th className="px-3 py-2">ประเภท</th>
                 <th className="px-3 py-2">สาขา</th>
                 <th className="px-3 py-2 text-right">จำนวน</th>
+                <th className="px-3 py-2 text-right">ทุนซื้อ</th>
+                <th className="px-3 py-2">บิลซื้อ</th>
+                <th className="px-3 py-2 text-right">ราคาขาย</th>
                 <th className="px-3 py-2 text-right">คงเหลือ</th>
               </tr>
             </thead>
@@ -255,9 +278,12 @@ export function VatInventoryDrillView({
                 <tr key={`${row.billdate}-${row.billno}-${index}`} className="border-t border-slate-100">
                   <td className="px-3 py-2">{thaiDate(row.billdate)}</td>
                   <td className="px-3 py-2">{row.billno}</td>
-                  <td className="px-3 py-2">{KIND_LABEL[row.kind] ?? row.kind}</td>
+                  <td className="px-3 py-2">{VAT_MOVEMENT_KIND_LABEL[row.kind] ?? row.kind}</td>
                   <td className="px-3 py-2">{row.site.toUpperCase()}</td>
                   <td className="px-3 py-2 text-right">{qty(row.qty)}</td>
+                  <td className="px-3 py-2 text-right">{baht(row.unit_cost)}</td>
+                  <td className="px-3 py-2">{row.cost_billno}</td>
+                  <td className="px-3 py-2 text-right">{baht(row.sale_price)}</td>
                   <td className="px-3 py-2 text-right">{qty(row.balance)}</td>
                 </tr>
               ))}

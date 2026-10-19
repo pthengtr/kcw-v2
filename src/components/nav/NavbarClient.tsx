@@ -250,7 +250,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                 {showVatInventory ? (
                   <NavLinkButton
                     href="/vat-inventory"
-                    label="สต็อกภาษี"
+                    label="รายงานสินค้าคงเหลือ"
                     icon={Boxes}
                     active={pathname.startsWith("/vat-inventory")}
                     onNavigate={closeSheet}
@@ -358,7 +358,7 @@ export default function NavbarClient({ branches }: NavbarClientProps) {
                 <NavigationMenuItem>
                   <NavLinkButton
                     href="/vat-inventory"
-                    label="สต็อกภาษี"
+                    label="รายงานสินค้าคงเหลือ"
                     icon={Boxes}
                     active={pathname.startsWith("/vat-inventory")}
                     className="whitespace-nowrap px-2.5"
