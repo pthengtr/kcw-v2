@@ -11,6 +11,7 @@ import {
   VAT_INVENTORY_PAGE_SIZE,
   VAT_MOVEMENT_KIND_LABEL,
   deductQty,
+  isCreditNoteBill,
   type VatInventoryDetail,
   type VatInventoryList,
   type VatInventorySummary,
@@ -26,6 +27,7 @@ const KIND_TONE: Record<string, string> = {
   TAR: "bg-amber-50 text-amber-900 ring-amber-100",
   SA: "bg-violet-50 text-violet-800 ring-violet-100",
   TF: "bg-indigo-50 text-indigo-800 ring-indigo-100",
+  CN: "bg-orange-50 text-orange-900 ring-orange-100",
 };
 
 function exportHref(search: string, site: VatSite, year: number, bcode?: string): string {
@@ -440,7 +442,12 @@ export function VatInventoryDrillView({
               </tr>
             </thead>
             <tbody>
-              {detail.movements.map((row, index) => (
+              {detail.movements.map((row, index) => {
+                const creditNotes = detail.movements
+                  .filter((other) => other.ref_billno && other.ref_billno === row.billno)
+                  .map((other) => other.billno);
+                const kind = isCreditNoteBill(row.billno) ? "CN" : row.kind;
+                return (
                 <tr
                   key={`${row.billdate}-${row.billno}-${index}`}
                   className="hover:bg-slate-50/80"
@@ -449,10 +456,18 @@ export function VatInventoryDrillView({
                     {thaiDate(row.billdate)}
                   </td>
                   <td className="whitespace-nowrap border-b border-slate-100 px-3 py-2 font-mono text-[13px]">
-                    {row.billno || "—"}
+                    <div>{row.billno || "—"}</div>
+                    {row.ref_billno ? (
+                      <div className="text-[11px] font-sans text-slate-500">ของ {row.ref_billno}</div>
+                    ) : null}
+                    {creditNotes.length > 0 ? (
+                      <div className="text-[11px] font-sans text-orange-800">
+                        ใบลดหนี้ {creditNotes.join(", ")}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="border-b border-slate-100 px-3 py-2">
-                    <KindPill kind={row.kind} />
+                    <KindPill kind={kind} />
                   </td>
                   <td className="border-b border-slate-100 px-3 py-2 text-xs font-medium tracking-wide text-slate-500">
                     {row.site ? row.site.toUpperCase() : "—"}
@@ -478,7 +493,8 @@ export function VatInventoryDrillView({
                     {qty(row.balance)}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
