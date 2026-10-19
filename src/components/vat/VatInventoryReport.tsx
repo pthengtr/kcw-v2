@@ -443,8 +443,21 @@ export function VatInventoryDrillView({
             </thead>
             <tbody>
               {detail.movements.map((row, index) => {
+                const refs = (row.ref_billno || "")
+                  .split(",")
+                  .map((bill) => bill.trim())
+                  .filter(Boolean);
+                const fromReturns = refs.filter((bill) => isCreditNoteBill(bill));
+                const reversedSale = refs.filter((bill) => !isCreditNoteBill(bill));
                 const creditNotes = detail.movements
-                  .filter((other) => other.ref_billno && other.ref_billno === row.billno)
+                  .filter(
+                    (other) =>
+                      isCreditNoteBill(other.billno) &&
+                      (other.ref_billno || "")
+                        .split(",")
+                        .map((bill) => bill.trim())
+                        .includes(row.billno)
+                  )
                   .map((other) => other.billno);
                 const kind = isCreditNoteBill(row.billno) ? "CN" : row.kind;
                 return (
@@ -457,8 +470,15 @@ export function VatInventoryDrillView({
                   </td>
                   <td className="whitespace-nowrap border-b border-slate-100 px-3 py-2 font-mono text-[13px]">
                     <div>{row.billno || "—"}</div>
-                    {row.ref_billno ? (
-                      <div className="text-[11px] font-sans text-slate-500">ของ {row.ref_billno}</div>
+                    {fromReturns.length > 0 ? (
+                      <div className="text-[11px] font-sans text-orange-800">
+                        จาก {fromReturns.join(", ")}
+                      </div>
+                    ) : null}
+                    {reversedSale.length > 0 ? (
+                      <div className="text-[11px] font-sans text-slate-500">
+                        ของ {reversedSale.join(", ")}
+                      </div>
                     ) : null}
                     {creditNotes.length > 0 ? (
                       <div className="text-[11px] font-sans text-orange-800">
