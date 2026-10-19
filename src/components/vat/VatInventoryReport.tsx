@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { ChevronLeft, FileSpreadsheet, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  PendingLink,
+  VatInventorySearchButton,
   VatInventorySiteSwitch,
   VatInventoryYearSwitch,
 } from "@/components/vat/VatInventorySiteSwitch";
@@ -117,6 +118,7 @@ export function VatInventoryListView({
   };
   const hasPrev = offset > 0;
   const hasNext = offset + VAT_INVENTORY_PAGE_SIZE < list.total;
+  const resetKey = `${site}|${year}|${search}|${offset}`;
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6">
@@ -164,7 +166,7 @@ export function VatInventoryListView({
               className="bg-white pl-8"
             />
           </div>
-          <Button type="submit">ค้นหา</Button>
+          <VatInventorySearchButton resetKey={resetKey} />
         </form>
         <Button variant="outline" asChild>
           <a href={exportHref(search, site, year)}>
@@ -202,12 +204,13 @@ export function VatInventoryListView({
             {list.rows.map((row) => (
               <tr key={row.bcode} className="group hover:bg-slate-50/80">
                 <td className="sticky left-0 z-10 border-b border-slate-100 bg-white px-3 py-2 font-medium group-hover:bg-slate-50">
-                  <Link
+                  <PendingLink
                     href={`${basePath}/${encodeURIComponent(row.bcode)}?site=${site}&year=${year}`}
-                    className="font-mono text-[13px] text-sky-800 hover:underline"
+                    resetKey={resetKey}
+                    className="inline-flex items-center gap-1.5 font-mono text-[13px] text-sky-800 hover:underline"
                   >
                     {row.bcode}
-                  </Link>
+                  </PendingLink>
                 </td>
                 <td className="max-w-xs truncate border-b border-slate-100 px-3 py-2 text-slate-800">
                   {row.descr}
@@ -269,7 +272,9 @@ export function VatInventoryListView({
         <span className="flex gap-2">
           {hasPrev ? (
             <Button variant="outline" size="sm" asChild>
-              <Link href={query(Math.max(0, offset - VAT_INVENTORY_PAGE_SIZE))}>ก่อนหน้า</Link>
+              <PendingLink href={query(Math.max(0, offset - VAT_INVENTORY_PAGE_SIZE))} resetKey={resetKey}>
+                ก่อนหน้า
+              </PendingLink>
             </Button>
           ) : (
             <Button variant="outline" size="sm" disabled>
@@ -278,7 +283,9 @@ export function VatInventoryListView({
           )}
           {hasNext ? (
             <Button variant="outline" size="sm" asChild>
-              <Link href={query(offset + VAT_INVENTORY_PAGE_SIZE)}>ถัดไป</Link>
+              <PendingLink href={query(offset + VAT_INVENTORY_PAGE_SIZE)} resetKey={resetKey}>
+                ถัดไป
+              </PendingLink>
             </Button>
           ) : (
             <Button variant="outline" size="sm" disabled>
@@ -311,7 +318,12 @@ export function VatInventoryDrillView({
       <main className="mx-auto max-w-3xl px-4 py-8">
         <p className="text-sm text-slate-600">ไม่พบรหัสสินค้านี้ในรายงานสินค้าคงเหลือ</p>
         <Button variant="link" className="mt-2 px-0" asChild>
-          <Link href={`${basePath}?site=${site}&year=${year}`}>กลับไปหน้ารายการ</Link>
+          <PendingLink
+            href={`${basePath}?site=${site}&year=${year}`}
+            resetKey={`${site}|${year}|missing`}
+          >
+            กลับไปหน้ารายการ
+          </PendingLink>
         </Button>
       </main>
     );
@@ -320,13 +332,14 @@ export function VatInventoryDrillView({
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6">
       <div>
-        <Link
+        <PendingLink
           href={`${basePath}?site=${site}&year=${year}`}
+          resetKey={`${site}|${year}|${product.bcode}`}
           className="inline-flex items-center gap-1 text-sm text-sky-800 hover:underline"
         >
           <ChevronLeft className="h-4 w-4" />
           กลับไปหน้ารายการ
-        </Link>
+        </PendingLink>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
           <div>
             <div className="font-mono text-sm text-sky-800">
