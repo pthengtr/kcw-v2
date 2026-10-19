@@ -101,8 +101,8 @@ export const HOME_MENU_ITEMS = {
   vatInventory: {
     key: "vatInventory",
     href: "/vat-inventory",
-    label: "สต็อกภาษี",
-    description: "คงเหลือเฉพาะรายการภาษี พร้อมทุนและที่มาของบิล",
+    label: "รายงานสินค้าคงเหลือ",
+    description: "คงเหลือเฉพาะรายการภาษี พร้อมทุนซื้อ ราคาขาย และที่มาของบิล",
     icon: Boxes,
     iconClassName: "text-emerald-700",
     iconSurfaceClassName: "bg-emerald-50 ring-emerald-100",
