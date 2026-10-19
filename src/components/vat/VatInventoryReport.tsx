@@ -89,6 +89,7 @@ export function VatInventoryListView({
   site,
   year,
   years,
+  showActual = true,
 }: {
   basePath: string;
   summary: VatInventorySummary;
@@ -98,6 +99,8 @@ export function VatInventoryListView({
   site: VatSite;
   year: number;
   years: number[];
+  /** PARTS9 on-hand. Internal report only. */
+  showActual?: boolean;
 }) {
   const page = Math.floor(offset / VAT_INVENTORY_PAGE_SIZE) + 1;
   const pages = Math.max(1, Math.ceil(list.total / VAT_INVENTORY_PAGE_SIZE));
@@ -188,7 +191,9 @@ export function VatInventoryListView({
               <th className={cn(headCell, "bg-emerald-50 text-right text-emerald-900")}>
                 มูลค่า
               </th>
-              <th className={cn(headCell, "text-right")}>คงเหลือจริง</th>
+              {showActual ? (
+                <th className={cn(headCell, "text-right")}>คงเหลือจริง</th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -232,19 +237,21 @@ export function VatInventoryListView({
                 <td className={cn(amountClass(row.value, "emphasis"), "border-b border-emerald-100")}>
                   {baht(row.value)}
                 </td>
-                <td
-                  className={cn(
-                    amountClass(row.actual_qty),
-                    "border-b border-slate-100 text-slate-500"
-                  )}
-                >
-                  {qty(row.actual_qty)}
-                </td>
+                {showActual ? (
+                  <td
+                    className={cn(
+                      amountClass(row.actual_qty),
+                      "border-b border-slate-100 text-slate-500"
+                    )}
+                  >
+                    {qty(row.actual_qty)}
+                  </td>
+                ) : null}
               </tr>
             ))}
             {list.rows.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-3 py-16 text-center text-sm text-slate-500">
+                <td colSpan={showActual ? 12 : 11} className="px-3 py-16 text-center text-sm text-slate-500">
                   ยังไม่มีรายการ
                 </td>
               </tr>
@@ -287,11 +294,14 @@ export function VatInventoryDrillView({
   detail,
   site,
   year,
+  showActual = true,
 }: {
   basePath: string;
   detail: VatInventoryDetail;
   site: VatSite;
   year: number;
+  /** PARTS9 on-hand. Internal report only. */
+  showActual?: boolean;
 }) {
   const product = detail.product;
   if (!product) {
@@ -334,10 +344,10 @@ export function VatInventoryDrillView({
             </a>
           </Button>
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className={cn("mt-3 grid gap-3", showActual ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
           <Metric label="คงเหลือ" value={qty(product.qty)} accent />
           <Metric label="มูลค่า" value={baht(product.value)} />
-          <Metric label="คงเหลือจริง" value={qty(product.actual_qty)} />
+          {showActual ? <Metric label="คงเหลือจริง" value={qty(product.actual_qty)} /> : null}
         </div>
       </div>
 

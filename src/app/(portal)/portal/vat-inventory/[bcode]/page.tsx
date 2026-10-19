@@ -19,6 +19,12 @@ export default async function PortalVatInventoryProductPage({
   const year = vatYear(query.year, await loadVatInventoryYears());
   const detail = await loadVatInventoryProduct(decodeURIComponent(bcode), site, year);
   return (
-    <VatInventoryDrillView basePath="/portal/vat-inventory" detail={detail} site={site} year={year} />
+    <VatInventoryDrillView
+      basePath="/portal/vat-inventory"
+      detail={detail}
+      site={site}
+      year={year}
+      showActual={false}
+    />
   );
 }
