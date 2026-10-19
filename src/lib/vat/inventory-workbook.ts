@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import {
   VAT_MOVEMENT_KIND_LABEL,
   deductQty,
+  movementKindLabel,
   type VatInventoryExport,
   type VatInventoryExportMovement,
   type VatInventoryRow,
@@ -63,13 +64,14 @@ function movementRows(rows: VatInventoryExportMovement[]): (string | number)[][]
       "บิลซื้อ",
       "ราคาขาย",
       "ผู้ขาย",
+      "อ้างอิง",
     ],
     ...rows.map((row) => [
       row.bcode,
       row.descr,
       row.billdate?.slice(0, 10) ?? "",
       row.billno,
-      VAT_MOVEMENT_KIND_LABEL[row.kind] ?? row.kind,
+      movementKindLabel(row.kind, row.billno),
       (row.site || "").toUpperCase(),
       row.qty,
       row.balance,
@@ -77,6 +79,7 @@ function movementRows(rows: VatInventoryExportMovement[]): (string | number)[][]
       row.cost_billno ?? "",
       money(row.sale_price),
       row.supplier,
+      row.ref_billno ?? "",
     ]),
   ];
 }

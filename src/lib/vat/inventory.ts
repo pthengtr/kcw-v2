@@ -61,6 +61,7 @@ export type VatInventoryMovement = {
   unit_cost: number | null;
   sale_price: number | null;
   cost_billno: string | null;
+  ref_billno?: string | null;
   balance: number;
   supplier: string;
 };
@@ -89,7 +90,25 @@ export const VAT_MOVEMENT_KIND_LABEL: Record<string, string> = {
   TAR: "TAR",
   SA: "ปรับสต็อก",
   TF: "โอน",
+  CN: "ใบลดหนี้",
 };
+
+export function isCreditNoteBill(billno: string | null | undefined): boolean {
+  const bill = (billno || "").trim().toUpperCase();
+  return (
+    bill.startsWith("3CNTAR") ||
+    bill.startsWith("CNTAR") ||
+    bill.startsWith("3CNTAD") ||
+    bill.startsWith("CNTAD") ||
+    bill.startsWith("3CN") ||
+    bill.startsWith("CN")
+  );
+}
+
+export function movementKindLabel(kind: string, billno: string | null | undefined): string {
+  if (isCreditNoteBill(billno)) return VAT_MOVEMENT_KIND_LABEL.CN;
+  return VAT_MOVEMENT_KIND_LABEL[kind] ?? kind;
+}
 
 export type VatInventoryDetail = {
   product: VatInventoryRow & { rebuilt_at?: string };
