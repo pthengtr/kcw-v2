@@ -7,10 +7,17 @@ export type VatInventorySummary = {
   rebuilt_at: string | null;
 };
 
-export type VatSite = "hq" | "syp";
+export type VatSite = "all" | "hq" | "syp";
 
 export function vatSite(value: string | undefined): VatSite {
-  return value === "syp" ? "syp" : "hq";
+  if (value === "all" || value === "hq" || value === "syp") return value;
+  return "hq";
+}
+
+export function vatYear(value: string | undefined, years: number[]): number {
+  const parsed = Number(value);
+  if (years.includes(parsed)) return parsed;
+  return years.length ? years[years.length - 1] : 2026;
 }
 
 export type VatInventoryRow = {
@@ -65,6 +72,7 @@ export type VatInventoryExportMovement = VatInventoryMovement & {
 
 export type VatInventoryExport = {
   products: VatInventoryRow[];
+  layers: VatInventoryLayer[];
   movements: VatInventoryExportMovement[];
 };
 
@@ -91,9 +99,23 @@ export type VatInventoryDetail = {
 
 const PAGE_SIZE = 100;
 
-export async function loadVatInventorySummary(site: VatSite): Promise<VatInventorySummary> {
+export async function loadVatInventoryYears(): Promise<number[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("fn_vat_inventory_summary", { p_site: site });
+  const { data, error } = await supabase.rpc("fn_vat_inventory_years");
+  if (error) throw new Error(error.message);
+  const years = (data as number[] | null) ?? [];
+  return years.length ? years : [2026];
+}
+
+export async function loadVatInventorySummary(
+  site: VatSite,
+  year: number
+): Promise<VatInventorySummary> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_vat_inventory_summary", {
+    p_site: site,
+    p_year: year,
+  });
   if (error) throw new Error(error.message);
   return data as VatInventorySummary;
 }
@@ -101,7 +123,8 @@ export async function loadVatInventorySummary(site: VatSite): Promise<VatInvento
 export async function loadVatInventoryProducts(
   search: string,
   offset: number,
-  site: VatSite
+  site: VatSite,
+  year: number
 ): Promise<VatInventoryList> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("fn_vat_inventory_products", {
@@ -109,6 +132,7 @@ export async function loadVatInventoryProducts(
     p_limit: PAGE_SIZE,
     p_offset: offset,
     p_site: site,
+    p_year: year,
   });
   if (error) throw new Error(error.message);
   return data as VatInventoryList;
@@ -119,10 +143,12 @@ const EXPORT_PAGE_SIZE = 5000;
 export async function loadVatInventoryExport(
   search: string,
   bcode: string,
-  site: VatSite
+  site: VatSite,
+  year: number
 ): Promise<VatInventoryExport> {
   const supabase = await createClient();
   const products: VatInventoryExport["products"] = [];
+  const layers: VatInventoryExport["layers"] = [];
   const movements: VatInventoryExport["movements"] = [];
   let offset = 0;
   for (;;) {
@@ -132,26 +158,32 @@ export async function loadVatInventoryExport(
       p_limit: EXPORT_PAGE_SIZE,
       p_offset: offset,
       p_site: site,
+      p_year: year,
     });
     if (error) throw new Error(error.message);
     const page = data as VatInventoryExport;
-    if (offset === 0) products.push(...(page.products ?? []));
+    if (offset === 0) {
+      products.push(...(page.products ?? []));
+      layers.push(...(page.layers ?? []));
+    }
     const rows = page.movements ?? [];
     movements.push(...rows);
-    if (rows.length < EXPORT_PAGE_SIZE) break;
+    if (!bcode || rows.length < EXPORT_PAGE_SIZE) break;
     offset += EXPORT_PAGE_SIZE;
   }
-  return { products, movements };
+  return { products, layers, movements };
 }
 
 export async function loadVatInventoryProduct(
   bcode: string,
-  site: VatSite
+  site: VatSite,
+  year: number
 ): Promise<VatInventoryDetail> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("fn_vat_inventory_product", {
     p_bcode: bcode,
     p_site: site,
+    p_year: year,
   });
   if (error) throw new Error(error.message);
   return data as VatInventoryDetail;

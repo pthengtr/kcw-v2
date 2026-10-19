@@ -7,6 +7,7 @@ import type { VatInventoryExport } from "@/lib/vat/inventory";
 describe("vat inventory workbook", () => {
   it("writes remaining stock and the transaction cost and sale price", () => {
     const data: VatInventoryExport = {
+      layers: [],
       products: [
         {
           bcode: "A1",
