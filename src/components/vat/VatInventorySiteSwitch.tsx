@@ -12,26 +12,18 @@ function SitePendingMark() {
   return <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />;
 }
 
-function SiteLink({
-  basePath,
-  search,
-  current,
-  value,
+function QueryLink({
+  href,
+  active,
   label,
 }: {
-  basePath: string;
-  search: string;
-  current: VatSite;
-  value: VatSite;
+  href: string;
+  active: boolean;
   label: string;
 }) {
-  const params = new URLSearchParams();
-  params.set("site", value);
-  if (search) params.set("q", search);
-  const active = current === value;
   return (
     <Link
-      href={`${basePath}?${params.toString()}`}
+      href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium",
@@ -44,19 +36,73 @@ function SiteLink({
   );
 }
 
+function hrefFor(
+  basePath: string,
+  search: string,
+  site: VatSite,
+  year: number,
+  next: { site?: VatSite; year?: number }
+): string {
+  const params = new URLSearchParams();
+  params.set("site", next.site ?? site);
+  params.set("year", String(next.year ?? year));
+  if (search) params.set("q", search);
+  return `${basePath}?${params.toString()}`;
+}
+
 export function VatInventorySiteSwitch({
   basePath,
   search,
   site,
+  year,
 }: {
   basePath: string;
   search: string;
   site: VatSite;
+  year: number;
+}) {
+  const sites: { value: VatSite; label: string }[] = [
+    { value: "all", label: "ทั้งหมด" },
+    { value: "hq", label: "HQ" },
+    { value: "syp", label: "SYP" },
+  ];
+  return (
+    <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
+      {sites.map((item) => (
+        <QueryLink
+          key={item.value}
+          href={hrefFor(basePath, search, site, year, { site: item.value })}
+          active={site === item.value}
+          label={item.label}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function VatInventoryYearSwitch({
+  basePath,
+  search,
+  site,
+  year,
+  years,
+}: {
+  basePath: string;
+  search: string;
+  site: VatSite;
+  year: number;
+  years: number[];
 }) {
   return (
     <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
-      <SiteLink basePath={basePath} search={search} current={site} value="hq" label="HQ" />
-      <SiteLink basePath={basePath} search={search} current={site} value="syp" label="SYP" />
+      {years.map((item) => (
+        <QueryLink
+          key={item}
+          href={hrefFor(basePath, search, site, year, { year: item })}
+          active={year === item}
+          label={String(item + 543)}
+        />
+      ))}
     </div>
   );
 }

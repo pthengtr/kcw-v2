@@ -81,6 +81,21 @@ function movementRows(rows: VatInventoryExportMovement[]): (string | number)[][]
   ];
 }
 
+function layerRows(rows: VatInventoryExport["layers"]): (string | number)[][] {
+  return [
+    ["วันที่", "เอกสาร", "แหล่ง", "สาขา", "ผู้ขาย", "จำนวน", "ทุน/หน่วย"],
+    ...rows.map((row) => [
+      row.billdate?.slice(0, 10) ?? "",
+      row.billno,
+      VAT_MOVEMENT_KIND_LABEL[row.source] ?? row.source,
+      (row.site || "").toUpperCase(),
+      row.supplier,
+      row.qty,
+      row.unit_cost,
+    ]),
+  ];
+}
+
 export function buildVatInventoryWorkbook(data: VatInventoryExport): Buffer {
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(
@@ -88,10 +103,15 @@ export function buildVatInventoryWorkbook(data: VatInventoryExport): Buffer {
     XLSX.utils.aoa_to_sheet(productRows(data.products)),
     "คงเหลือ"
   );
-  XLSX.utils.book_append_sheet(
-    book,
-    XLSX.utils.aoa_to_sheet(movementRows(data.movements)),
-    "ความเคลื่อนไหว"
-  );
+  if (data.layers?.length) {
+    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(layerRows(data.layers)), "ที่มา");
+  }
+  if (data.movements.length) {
+    XLSX.utils.book_append_sheet(
+      book,
+      XLSX.utils.aoa_to_sheet(movementRows(data.movements)),
+      "ความเคลื่อนไหว"
+    );
+  }
   return XLSX.write(book, { type: "buffer", bookType: "xlsx" }) as Buffer;
 }

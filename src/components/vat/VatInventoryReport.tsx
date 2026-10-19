@@ -3,7 +3,10 @@ import { ChevronLeft, FileSpreadsheet, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { VatInventorySiteSwitch } from "@/components/vat/VatInventorySiteSwitch";
+import {
+  VatInventorySiteSwitch,
+  VatInventoryYearSwitch,
+} from "@/components/vat/VatInventorySiteSwitch";
 import {
   VAT_INVENTORY_PAGE_SIZE,
   VAT_MOVEMENT_KIND_LABEL,
@@ -25,9 +28,10 @@ const KIND_TONE: Record<string, string> = {
   TF: "bg-indigo-50 text-indigo-800 ring-indigo-100",
 };
 
-function exportHref(search: string, site: VatSite, bcode?: string): string {
+function exportHref(search: string, site: VatSite, year: number, bcode?: string): string {
   const params = new URLSearchParams();
   params.set("site", site);
+  params.set("year", String(year));
   if (bcode) params.set("bcode", bcode);
   else if (search) params.set("q", search);
   return `/api/vat-inventory/export?${params.toString()}`;
@@ -83,6 +87,8 @@ export function VatInventoryListView({
   search,
   offset,
   site,
+  year,
+  years,
 }: {
   basePath: string;
   summary: VatInventorySummary;
@@ -90,12 +96,15 @@ export function VatInventoryListView({
   search: string;
   offset: number;
   site: VatSite;
+  year: number;
+  years: number[];
 }) {
   const page = Math.floor(offset / VAT_INVENTORY_PAGE_SIZE) + 1;
   const pages = Math.max(1, Math.ceil(list.total / VAT_INVENTORY_PAGE_SIZE));
   const query = (nextOffset: number) => {
     const params = new URLSearchParams();
     params.set("site", site);
+    params.set("year", String(year));
     if (search) params.set("q", search);
     if (nextOffset > 0) params.set("offset", String(nextOffset));
     const text = params.toString();
@@ -130,9 +139,17 @@ export function VatInventoryListView({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <VatInventorySiteSwitch basePath={basePath} search={search} site={site} />
+        <VatInventoryYearSwitch
+          basePath={basePath}
+          search={search}
+          site={site}
+          year={year}
+          years={years}
+        />
+        <VatInventorySiteSwitch basePath={basePath} search={search} site={site} year={year} />
         <form className="flex flex-1 items-center gap-2" action={basePath}>
           <input type="hidden" name="site" value={site} />
+          <input type="hidden" name="year" value={year} />
           <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
             <Input
@@ -145,7 +162,7 @@ export function VatInventoryListView({
           <Button type="submit">ค้นหา</Button>
         </form>
         <Button variant="outline" asChild>
-          <a href={exportHref(search, site)}>
+          <a href={exportHref(search, site, year)}>
             <FileSpreadsheet />
             ส่งออก Excel
           </a>
@@ -179,7 +196,7 @@ export function VatInventoryListView({
               <tr key={row.bcode} className="group hover:bg-slate-50/80">
                 <td className="sticky left-0 z-10 border-b border-slate-100 bg-white px-3 py-2 font-medium group-hover:bg-slate-50">
                   <Link
-                    href={`${basePath}/${encodeURIComponent(row.bcode)}?site=${site}`}
+                    href={`${basePath}/${encodeURIComponent(row.bcode)}?site=${site}&year=${year}`}
                     className="font-mono text-[13px] text-sky-800 hover:underline"
                   >
                     {row.bcode}
@@ -269,10 +286,12 @@ export function VatInventoryDrillView({
   basePath,
   detail,
   site,
+  year,
 }: {
   basePath: string;
   detail: VatInventoryDetail;
   site: VatSite;
+  year: number;
 }) {
   const product = detail.product;
   if (!product) {
@@ -280,7 +299,7 @@ export function VatInventoryDrillView({
       <main className="mx-auto max-w-3xl px-4 py-8">
         <p className="text-sm text-slate-600">ไม่พบรหัสสินค้านี้ในรายงานสินค้าคงเหลือ</p>
         <Button variant="link" className="mt-2 px-0" asChild>
-          <Link href={`${basePath}?site=${site}`}>กลับไปหน้ารายการ</Link>
+          <Link href={`${basePath}?site=${site}&year=${year}`}>กลับไปหน้ารายการ</Link>
         </Button>
       </main>
     );
@@ -290,7 +309,7 @@ export function VatInventoryDrillView({
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6">
       <div>
         <Link
-          href={`${basePath}?site=${site}`}
+          href={`${basePath}?site=${site}&year=${year}`}
           className="inline-flex items-center gap-1 text-sm text-sky-800 hover:underline"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -301,7 +320,7 @@ export function VatInventoryDrillView({
             <div className="font-mono text-sm text-sky-800">
               {product.bcode}
               <span className="ml-2 text-xs font-medium tracking-wide text-slate-500">
-                {site.toUpperCase()}
+                {site === "all" ? "ทั้งหมด" : site.toUpperCase()} · {year + 543}
               </span>
             </div>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
@@ -309,7 +328,7 @@ export function VatInventoryDrillView({
             </h1>
           </div>
           <Button variant="outline" asChild>
-            <a href={exportHref("", site, product.bcode)}>
+            <a href={exportHref("", site, year, product.bcode)}>
               <FileSpreadsheet />
               ส่งออก Excel
             </a>
