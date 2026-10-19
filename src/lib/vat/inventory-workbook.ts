@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 
 import {
   VAT_MOVEMENT_KIND_LABEL,
+  deductQty,
   type VatInventoryExport,
   type VatInventoryExportMovement,
   type VatInventoryRow,
@@ -35,9 +36,9 @@ function productRows(rows: VatInventoryRow[]): (string | number)[][] {
       row.open_qty,
       row.purchase_qty,
       row.rv_qty,
-      row.sale_qty,
-      row.tar_qty,
-      row.sa_qty,
+      deductQty(row.sale_qty),
+      deductQty(row.tar_qty),
+      deductQty(row.sa_qty),
       row.tf_qty,
       row.qty,
       row.value,

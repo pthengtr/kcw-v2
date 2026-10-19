@@ -44,12 +44,16 @@ describe("vat inventory workbook", () => {
     };
 
     const book = XLSX.read(buildVatInventoryWorkbook(data), { type: "buffer" });
+    const products = XLSX.utils.sheet_to_json<(string | number)[]>(book.Sheets["คงเหลือ"], {
+      header: 1,
+    });
     const movements = XLSX.utils.sheet_to_json<(string | number)[]>(
       book.Sheets["ความเคลื่อนไหว"],
       { header: 1 }
     );
 
     expect(book.SheetNames).toEqual(["คงเหลือ", "ความเคลื่อนไหว"]);
+    expect(products[1]?.[5]).toBe(-6);
     expect(movements[0]).toContain("ทุนซื้อ");
     expect(movements[0]).toContain("บิลซื้อ");
     expect(movements[0]).toContain("ราคาขาย");

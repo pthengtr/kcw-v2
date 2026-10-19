@@ -3,9 +3,11 @@ import { ChevronLeft, FileSpreadsheet, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { VatInventorySiteSwitch } from "@/components/vat/VatInventorySiteSwitch";
 import {
   VAT_INVENTORY_PAGE_SIZE,
   VAT_MOVEMENT_KIND_LABEL,
+  deductQty,
   type VatInventoryDetail,
   type VatInventoryList,
   type VatInventorySummary,
@@ -110,8 +112,8 @@ export function VatInventoryListView({
             รายงานสินค้าคงเหลือ
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-500">
-            คงเหลือ = ยกมา + ซื้อ VAT + RV + โอน − ขาย VAT − TAR − ปรับสต็อก.
-            โอนติดลบที่ HQ และบวกที่ SYP ด้วยทุน FIFO เดียวกัน
+            คงเหลือ = ยกมา + ซื้อ VAT + RV + ขาย VAT + TAR + ปรับสต็อก + โอน.
+            ขาย VAT, TAR และการปรับที่หักสต็อกแสดงเป็นจำนวนติดลบ
           </p>
         </div>
         {summary.rebuilt_at ? (
@@ -128,10 +130,7 @@ export function VatInventoryListView({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
-          <SiteLink basePath={basePath} search={search} current={site} value="hq" label="HQ" />
-          <SiteLink basePath={basePath} search={search} current={site} value="syp" label="SYP" />
-        </div>
+        <VatInventorySiteSwitch basePath={basePath} search={search} site={site} />
         <form className="flex flex-1 items-center gap-2" action={basePath}>
           <input type="hidden" name="site" value={site} />
           <div className="relative w-full max-w-sm">
@@ -198,14 +197,14 @@ export function VatInventoryListView({
                 <td className={cn(amountClass(row.rv_qty), "border-b border-slate-100")}>
                   {qty(row.rv_qty)}
                 </td>
-                <td className={cn(amountClass(row.sale_qty), "border-b border-slate-100")}>
-                  {qty(row.sale_qty)}
+                <td className={cn(amountClass(deductQty(row.sale_qty), "signed"), "border-b border-slate-100")}>
+                  {qty(deductQty(row.sale_qty))}
                 </td>
-                <td className={cn(amountClass(row.tar_qty), "border-b border-slate-100")}>
-                  {qty(row.tar_qty)}
+                <td className={cn(amountClass(deductQty(row.tar_qty), "signed"), "border-b border-slate-100")}>
+                  {qty(deductQty(row.tar_qty))}
                 </td>
-                <td className={cn(amountClass(row.sa_qty), "border-b border-slate-100")}>
-                  {qty(row.sa_qty)}
+                <td className={cn(amountClass(deductQty(row.sa_qty), "signed"), "border-b border-slate-100")}>
+                  {qty(deductQty(row.sa_qty))}
                 </td>
                 <td className={cn(amountClass(row.tf_qty, "signed"), "border-b border-slate-100")}>
                   {qty(row.tf_qty)}
@@ -456,36 +455,6 @@ export function VatInventoryDrillView({
         </div>
       </section>
     </main>
-  );
-}
-
-function SiteLink({
-  basePath,
-  search,
-  current,
-  value,
-  label,
-}: {
-  basePath: string;
-  search: string;
-  current: VatSite;
-  value: VatSite;
-  label: string;
-}) {
-  const params = new URLSearchParams();
-  params.set("site", value);
-  if (search) params.set("q", search);
-  const active = current === value;
-  return (
-    <Link
-      href={`${basePath}?${params.toString()}`}
-      className={cn(
-        "rounded-md px-3 py-1.5 font-medium",
-        active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
-      )}
-    >
-      {label}
-    </Link>
   );
 }
 
