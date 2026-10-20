@@ -44,14 +44,14 @@ describe("home favorites", () => {
         "expense",
         "bi",
         "bankStatement",
-        "party",
+        "relatedProducts",
         "faq",
       ])
     ).toEqual([
       "expense",
       "bi",
       "bankStatement",
-      "party",
+      "relatedProducts",
       "faq",
     ]);
   });
