@@ -4,7 +4,6 @@ import {
   BarChart3,
   BookOpen,
   Boxes,
-  Handshake,
   ImageUp,
   Images,
   Link2,
@@ -22,7 +21,6 @@ export type HomeMenuKey =
   | "vatRegister"
   | "vatInventory"
   | "tigerPay"
-  | "party"
   | "relatedProducts"
   | "productImages"
   | "faq"
@@ -116,15 +114,6 @@ export const HOME_MENU_ITEMS = {
     iconClassName: "text-orange-600",
     iconSurfaceClassName: "bg-orange-50 ring-orange-100",
   },
-  party: {
-    key: "party",
-    href: "/party",
-    label: "รายชื่อคู่ค้า",
-    description: "ดูแลข้อมูลลูกค้าและผู้ขาย",
-    icon: Handshake,
-    iconClassName: "text-indigo-600",
-    iconSurfaceClassName: "bg-indigo-50 ring-indigo-100",
-  },
   relatedProducts: {
     key: "relatedProducts",
     href: "/product-related",
@@ -196,7 +185,6 @@ export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
   {
     title: "ข้อมูลและสินค้า",
     items: [
-      HOME_MENU_ITEMS.party,
       HOME_MENU_ITEMS.relatedProducts,
       HOME_MENU_ITEMS.productImages,
     ],

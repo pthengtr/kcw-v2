@@ -103,14 +103,10 @@ describe("Webapp mobile layout", () => {
     expect(search).toContain("sm:flex-row");
   });
 
-  it("stacks party/user panes and fluid shared pickers", () => {
+  it("stacks the user pane and fluid shared pickers", () => {
     const user = read("src/app/(root)/(user)/user/page.tsx");
     expect(user).toContain("grid-cols-1");
     expect(user).toContain("md:grid-cols-2");
-
-    const party = read("src/components/party/PartyFormDialog.tsx");
-    expect(party).toContain("grid-cols-1 gap-3 sm:grid-cols-2");
-    expect(party).toContain("w-[calc(100vw-1.5rem)]");
 
     const sku = read("src/components/common/SKUSelect.tsx");
     expect(sku).toContain("w-[min(560px,calc(100vw-2rem))]");
