@@ -17,6 +17,11 @@ import {
   sha256HexAsync,
   type ParsedLine,
 } from "./parser.ts";
+import {
+  dropStableDuplicates,
+  extractTransactionDetailFromRaw,
+  type TransactionFingerprintInput,
+} from "./fingerprint.ts";
 
 const ALLOWED_EXT = new Set([".xlsx", ".xls", ".xlsm"]);
 const MAX_BYTES = 15 * 1024 * 1024;
@@ -371,6 +376,64 @@ async function setFileStatus(
   if (error) throw error;
 }
 
+function lineIdentity(line: ParsedLine): TransactionFingerprintInput {
+  return {
+    account_no: line.account_no,
+    txn_date: line.txn_date,
+    direction: line.direction,
+    amount: line.amount,
+    balance_after: line.balance_after,
+    bank_reference: line.bank_reference,
+    transaction_detail: extractTransactionDetailFromRaw(line.raw_json),
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+async function loadExistingIdentities(
+  bank: any,
+  lines: ParsedLine[],
+): Promise<TransactionFingerprintInput[]> {
+  const accounts = [...new Set(lines.map((line) => line.account_no))];
+  const dates = lines.map((line) => line.txn_date).sort();
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  const found: TransactionFingerprintInput[] = [];
+
+  for (const account of accounts) {
+    let from = 0;
+    for (;;) {
+      const { data, error } = await bank
+        .from("statement_lines")
+        .select(
+          "account_no,txn_date,amount,direction,balance_after,bank_reference,raw_json",
+        )
+        .eq("account_no", account)
+        .gte("txn_date", start)
+        .lte("txn_date", end)
+        .range(from, from + 999);
+      if (error) throw error;
+      const page = data ?? [];
+      for (const row of page) {
+        found.push({
+          account_no: String(row.account_no ?? ""),
+          txn_date: String(row.txn_date ?? "").slice(0, 10),
+          direction: row.direction === "in" ? "in" : "out",
+          amount: Number(row.amount),
+          balance_after:
+            row.balance_after == null ? null : Number(row.balance_after),
+          bank_reference: row.bank_reference ?? null,
+          transaction_detail: extractTransactionDetailFromRaw(
+            (row.raw_json ?? {}) as Record<string, unknown>,
+          ),
+        });
+      }
+      if (page.length < 1000) break;
+      from += 1000;
+    }
+  }
+  return found;
+}
+
 // deno-lint-ignore no-explicit-any
 async function insertStatementLines(
   bank: any,
@@ -379,7 +442,16 @@ async function insertStatementLines(
 ): Promise<{ inserted_count: number; duplicate_count: number }> {
   if (!lines.length) return { inserted_count: 0, duplicate_count: 0 };
 
-  const rows = lines.map((x) => ({
+  const existing = await loadExistingIdentities(bank, lines);
+  const { fresh, duplicateCount } = dropStableDuplicates(
+    lines.map((line) => ({ ...lineIdentity(line), line })),
+    existing,
+  );
+  if (!fresh.length) {
+    return { inserted_count: 0, duplicate_count: duplicateCount };
+  }
+
+  const rows = fresh.map(({ line: x }) => ({
     account_no: x.account_no,
     bank_name: x.bank_name,
     txn_date: x.txn_date,
@@ -416,6 +488,6 @@ async function insertStatementLines(
 
   return {
     inserted_count: inserted,
-    duplicate_count: rows.length - inserted,
+    duplicate_count: duplicateCount + (rows.length - inserted),
   };
 }
