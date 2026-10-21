@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, Home } from "lucide-react";
+import { BarChart3, Handshake, Home } from "lucide-react";
 import { BranchType } from "@/lib/types/models";
 
 export type NavLink = {
@@ -14,10 +14,11 @@ export type NavLink = {
 /**
  * Primary links shown beside the expense dropdown.
  *
- * Order: home → daily ops → analytics
+ * Order: home → daily ops → master data → analytics
  * 1. หน้าแรก
  * 2. ค่าใช้จ่าย (dropdown — rendered separately)
- * 3. BI
+ * 3. รายชื่อคู่ค้า — expense receipts still pick suppliers from public.party
+ * 4. BI
  */
 export const primaryNavLinks: NavLink[] = [
   {
@@ -25,6 +26,12 @@ export const primaryNavLinks: NavLink[] = [
     label: "หน้าแรก",
     icon: Home,
     matchPrefix: "/home",
+  },
+  {
+    href: "/party",
+    label: "รายชื่อคู่ค้า",
+    icon: Handshake,
+    matchPrefix: "/party",
   },
   {
     href: "/bi",
