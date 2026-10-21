@@ -15,9 +15,10 @@ function read(rel: string) {
 }
 
 describe("Navbar menu order and design", () => {
-  it("orders primary links as home → BI with expense after home", () => {
+  it("orders primary links as home → party → BI with expense after home", () => {
     expect(primaryNavLinks.map((link) => link.href)).toEqual([
       "/home",
+      "/party",
       "/bi",
     ]);
     expect(EXPENSE_DROPDOWN_AFTER_INDEX).toBe(0);
@@ -27,9 +28,9 @@ describe("Navbar menu order and design", () => {
     const bi = primaryNavLinks.find((link) => link.href === "/bi");
     expect(bi).toBeTruthy();
     expect(isNavActive("/bi/sales", bi!)).toBe(true);
-    expect(isNavActive("/home", bi!)).toBe(false);
+    expect(isNavActive("/party", bi!)).toBe(false);
     expect(isExpenseActive("/expense/general")).toBe(true);
-    expect(isExpenseActive("/home")).toBe(false);
+    expect(isExpenseActive("/party")).toBe(false);
   });
 
   it("uses a sticky logo-only navbar and a simple mobile sheet", () => {
@@ -67,6 +68,7 @@ describe("Shared back navigation", () => {
       "src/components/bank/TigerPayPage.tsx",
       "src/components/po/PoStatusPage.tsx",
       "src/components/rbac/RbacAdminPage.tsx",
+      "src/components/party/PartyScreen.tsx",
       "src/components/bi/BiShell.tsx",
       "src/components/product-related/ProductRelatedScreen.tsx",
       "src/app/(root)/kb/_components/kb-admin-screen.tsx",
