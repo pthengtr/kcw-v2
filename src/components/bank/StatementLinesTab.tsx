@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 import { ServerPagedTable, type Column } from "@/components/bank/ServerPagedTable";
+import { StatementSaleFifo } from "@/components/bank/FifoMarginSummary";
 import OnlineDepositDialog from "@/components/online-statements/OnlineDepositDialog";
 import TarDayDialog, { TarDayLink } from "@/components/bank/TarDayDialog";
 import {
@@ -1164,6 +1165,7 @@ export default function StatementLinesTab({
                 onOpenVoucher={setVoucherNo}
                 onOpenExpense={setExpenseReceipts}
               />
+              <StatementSaleFifo row={selected} />
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <div className="text-xs text-muted-foreground">สถานะจับคู่</div>

@@ -2,11 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { FifoBillNote, PayoutFifoSummary } from "@/components/bank/FifoMarginSummary";
 import DialogPrintButton from "@/components/common/DialogPrintButton";
 import SalesBillDetailDialog, {
   SalesBillNoButton,
   type SalesBillTarget,
 } from "@/components/sales/SalesBillDetailDialog";
+import {
+  fifoMarginText,
+  saleBillTakesFifo,
+  type BillFifoCost,
+  type FifoMarginBrief,
+} from "@/lib/bank/fifo-margin";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +36,7 @@ type Payout = {
   matched_order_count: number;
   source_file: string | null;
   note: string | null;
+  fifo?: FifoMarginBrief | null;
 };
 
 type Deposit = {
@@ -109,11 +117,15 @@ export default function OnlineDepositDialog({
 }) {
   const [deposit, setDeposit] = useState<Deposit | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [depositFifo, setDepositFifo] = useState<FifoMarginBrief | null>(null);
+  const [depositFifoError, setDepositFifoError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [fifoCosts, setFifoCosts] = useState<BillFifoCost[]>([]);
+  const [fifoError, setFifoError] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [onlyUnmatched, setOnlyUnmatched] = useState(false);
   const [billTarget, setBillTarget] = useState<SalesBillTarget | null>(null);
@@ -125,6 +137,8 @@ export default function OnlineDepositDialog({
     setError(null);
     setSelectedKey(null);
     setDeposit(null);
+    setDepositFifo(null);
+    setDepositFifoError(null);
     setPayouts([]);
     void fetch(`/api/online-statements?deposit=${encodeURIComponent(lineId)}`)
       .then(async (res) => {
@@ -132,6 +146,8 @@ export default function OnlineDepositDialog({
         if (!res.ok) throw new Error(json.error ?? "โหลดรายการไม่สำเร็จ");
         if (!cancelled) {
           setDeposit(json.deposit ?? null);
+          setDepositFifo(json.deposit_fifo ?? null);
+          setDepositFifoError(json.fifo_error ?? null);
           setPayouts(json.payouts ?? []);
         }
       })
@@ -150,6 +166,8 @@ export default function OnlineDepositDialog({
     if (!selectedKey) {
       setLines([]);
       setBills([]);
+      setFifoCosts([]);
+      setFifoError(null);
       return;
     }
     let cancelled = false;
@@ -163,6 +181,8 @@ export default function OnlineDepositDialog({
         if (!cancelled) {
           setLines(json.lines ?? []);
           setBills(json.bills ?? []);
+          setFifoCosts(json.fifo ?? []);
+          setFifoError(json.fifo_error ?? null);
         }
       })
       .catch((err: unknown) => {
@@ -226,6 +246,15 @@ export default function OnlineDepositDialog({
                 ? `รายการธนาคาร ${formatWhen(deposit.bank_date)} · สเตทเมนต์ ${formatWhen(deposit.period_from)} – ${formatWhen(deposit.period_to)}`
                 : "ยอดที่โอนเข้าบัญชี"}
           </DialogDescription>
+          {!selected && depositFifoError ? (
+            <p className="text-xs text-red-600">{depositFifoError}</p>
+          ) : null}
+          {!selected && depositFifo ? (
+            <p className="text-xs text-muted-foreground">
+              {fifoMarginText(depositFifo)}
+              {depositFifo.pi_bill_count > 0 ? ` · บิล PI ${depositFifo.pi_bill_count} ใบ` : ""}
+            </p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2">
             <DialogPrintButton
               disabled={
@@ -268,6 +297,21 @@ export default function OnlineDepositDialog({
               <p className="py-6 text-sm text-muted-foreground">กำลังโหลดรายละเอียด</p>
             ) : (
               <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {selected ? (
+                  <li>
+                    {fifoError ? (
+                      <p className="text-xs text-red-600">{fifoError}</p>
+                    ) : (
+                      <PayoutFifoSummary
+                        revenue={Number(selected.amount ?? 0)}
+                        billnos={bills
+                          .filter((bill) => !bill.canceled && saleBillTakesFifo(bill.billno))
+                          .map((bill) => bill.billno)}
+                        costs={fifoCosts}
+                      />
+                    )}
+                  </li>
+                ) : null}
                 <li className="flex gap-2 print:hidden">
                   <Button
                     type="button"
@@ -318,6 +362,11 @@ export default function OnlineDepositDialog({
                                 PO {bill.po} · {formatMoney(bill.aftertax)}
                                 {bill.acctname ? ` · ${bill.acctname}` : ""}
                               </div>
+                              {bill.canceled || fifoError || !saleBillTakesFifo(bill.billno) ? null : (
+                                <FifoBillNote
+                                  cost={fifoCosts.find((cost) => cost.billno === bill.billno)}
+                                />
+                              )}
                             </div>
                           ))
                         )}
@@ -341,6 +390,9 @@ export default function OnlineDepositDialog({
                       <div className="mt-1 text-xs text-muted-foreground">
                         ออเดอร์ {row.order_count} · TAD {row.matched_order_count}/{row.order_count}
                       </div>
+                      {row.fifo ? (
+                        <div className="mt-1 text-xs text-muted-foreground">{fifoMarginText(row.fifo)}</div>
+                      ) : null}
                     </div>
                     <div className="shrink-0 text-sm font-semibold tabular-nums">
                       {formatMoney(row.amount)}

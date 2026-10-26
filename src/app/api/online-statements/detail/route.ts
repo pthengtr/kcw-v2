@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { ONLINE_STATEMENT_READ_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { fifoSiteForBillnos, saleBillTakesFifo } from "@/lib/bank/fifo-margin";
+import { loadSaleFifo } from "@/lib/bank/fifo-margin-query";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(req: Request) {
@@ -42,9 +44,23 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const bills = billRes.data ?? [];
+  const saleBillnos = bills
+    .filter((bill) => !bill.canceled && saleBillTakesFifo(String(bill.billno ?? "")))
+    .map((bill) => String(bill.billno ?? ""));
+  let fifo: Awaited<ReturnType<typeof loadSaleFifo>> = [];
+  let fifoError: string | null = null;
+  try {
+    fifo = await loadSaleFifo(saleBillnos, fifoSiteForBillnos(saleBillnos));
+  } catch (err: unknown) {
+    fifoError = err instanceof Error ? err.message : "โหลดต้นทุน FIFO ไม่สำเร็จ";
+  }
+
   return NextResponse.json({
     payout: payoutRes.data,
     lines: lineRes.data ?? [],
-    bills: billRes.data ?? [],
+    bills,
+    fifo,
+    fifo_error: fifoError,
   });
 }

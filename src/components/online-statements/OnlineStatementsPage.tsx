@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
+import { FifoBillNote, PayoutFifoSummary } from "@/components/bank/FifoMarginSummary";
 import DialogPrintButton from "@/components/common/DialogPrintButton";
 import OnlineStatementUploadDialog from "@/components/online-statements/OnlineStatementUploadDialog";
 import SalesBillDetailDialog, {
@@ -27,6 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  fifoMarginText,
+  saleBillTakesFifo,
+  type BillFifoCost,
+  type FifoMarginBrief,
+} from "@/lib/bank/fifo-margin";
 import {
   bangkokCurrentMonthIso,
   bangkokTodayIso,
@@ -59,6 +66,7 @@ type Payout = {
   component_net: number | string;
   matched_order_count: number;
   built_at: string | null;
+  fifo?: FifoMarginBrief | null;
 };
 
 type Fee = { name: string; amount: string };
@@ -196,6 +204,8 @@ export default function OnlineStatementsPage({
   const searchParams = useSearchParams();
   const depositId = searchParams.get("deposit") ?? "";
   const [deposit, setDeposit] = useState<Deposit | null>(null);
+  const [depositFifo, setDepositFifo] = useState<FifoMarginBrief | null>(null);
+  const [depositFifoError, setDepositFifoError] = useState<string | null>(null);
   const [platform, setPlatform] = useState("all");
   const [status, setStatus] = useState("transferred");
   const [shop, setShop] = useState("all");
@@ -208,6 +218,8 @@ export default function OnlineStatementsPage({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [fifoCosts, setFifoCosts] = useState<BillFifoCost[]>([]);
+  const [fifoError, setFifoError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [onlyUnmatched, setOnlyUnmatched] = useState(false);
@@ -240,10 +252,14 @@ export default function OnlineStatementsPage({
       setError(json.error ?? "โหลดรายการไม่สำเร็จ");
       setPayouts([]);
       setDeposit(null);
+      setDepositFifo(null);
+      setDepositFifoError(null);
       setTruncated(false);
     } else {
       setPayouts(json.payouts ?? []);
       setDeposit(json.deposit ?? null);
+      setDepositFifo(json.deposit_fifo ?? null);
+      setDepositFifoError(json.fifo_error ?? null);
       setTruncated(Boolean(json.truncated));
     }
     setLoading(false);
@@ -267,6 +283,8 @@ export default function OnlineStatementsPage({
     if (!selectedKey) {
       setLines([]);
       setBills([]);
+      setFifoCosts([]);
+      setFifoError(null);
       return;
     }
     let cancelled = false;
@@ -280,6 +298,8 @@ export default function OnlineStatementsPage({
         if (!cancelled) {
           setLines(json.lines ?? []);
           setBills(json.bills ?? []);
+          setFifoCosts(json.fifo ?? []);
+          setFifoError(json.fifo_error ?? null);
         }
       })
       .catch((err: unknown) => {
@@ -516,6 +536,14 @@ export default function OnlineStatementsPage({
             รวมสเตทเมนต์ {formatWhen(deposit.period_from)} – {formatWhen(deposit.period_to)} (
             {deposit.payout_count} วัน)
           </p>
+          {depositFifoError ? (
+            <p className="mt-1 text-xs text-red-600">{depositFifoError}</p>
+          ) : depositFifo ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {fifoMarginText(depositFifo)}
+              {depositFifo.pi_bill_count > 0 ? ` · บิล PI ${depositFifo.pi_bill_count} ใบ` : ""}
+            </p>
+          ) : null}
           <a href="/online-statements" className="mt-2 inline-block text-xs underline">
             ดูยอดทั้งหมด
           </a>
@@ -720,6 +748,7 @@ export default function OnlineStatementsPage({
                     <span>
                       TAD {row.matched_order_count}/{row.order_count}
                     </span>
+                    {row.fifo ? <span>{fifoMarginText(row.fifo)}</span> : null}
                   </div>
                 </button>
               </li>
@@ -761,6 +790,11 @@ export default function OnlineStatementsPage({
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
                       {row.matched_order_count}/{row.order_count}
+                      {row.fifo ? (
+                        <div className="text-xs font-normal text-muted-foreground">
+                          {fifoMarginText(row.fifo)}
+                        </div>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -841,6 +875,21 @@ export default function OnlineStatementsPage({
               <p className="py-6 text-sm text-muted-foreground">ไม่มีรายการในมุมนี้</p>
             ) : (
               <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {selected ? (
+                  <li>
+                    {fifoError ? (
+                      <p className="text-xs text-red-600">{fifoError}</p>
+                    ) : (
+                      <PayoutFifoSummary
+                        revenue={Number(selected.amount ?? 0)}
+                        billnos={bills
+                          .filter((bill) => !bill.canceled && saleBillTakesFifo(bill.billno))
+                          .map((bill) => bill.billno)}
+                        costs={fifoCosts}
+                      />
+                    )}
+                  </li>
+                ) : null}
                 {visibleLines.map((line) => {
                   const linked = line.order_id ? billsByOrder.get(line.order_id) ?? [] : [];
                   const fees = feeText(line.fees);
@@ -880,6 +929,11 @@ export default function OnlineStatementsPage({
                                 PO {bill.po} · {bill.match_method} · {formatMoney(bill.aftertax)}
                                 {bill.acctname ? ` · ${bill.acctname}` : ""}
                               </div>
+                              {bill.canceled || fifoError || !saleBillTakesFifo(bill.billno) ? null : (
+                                <FifoBillNote
+                                  cost={fifoCosts.find((cost) => cost.billno === bill.billno)}
+                                />
+                              )}
                             </div>
                           ))
                         )}

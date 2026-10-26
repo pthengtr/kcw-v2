@@ -3,6 +3,14 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { ONLINE_STATEMENT_READ_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import {
+  briefFifoMargin,
+  fifoMargin,
+  fifoSiteForBillnos,
+  saleBillTakesFifo,
+  type FifoMarginBrief,
+} from "@/lib/bank/fifo-margin";
+import { loadSaleFifo } from "@/lib/bank/fifo-margin-query";
+import {
   parseOnlinePayoutListQuery,
   payoutAtLowerBound,
   payoutAtUpperBound,
@@ -61,9 +69,72 @@ export async function GET(req: Request) {
     if (payoutRes.error) {
       return NextResponse.json({ error: payoutRes.error.message }, { status: 500 });
     }
+    const payouts = payoutRes.data ?? [];
+    const billRes = keys.length
+      ? await supabase
+          .schema("curated_kcw")
+          .from("online_order_bills")
+          .select("payout_key, billno, canceled")
+          .in("payout_key", keys)
+      : { data: [], error: null };
+    if (billRes.error) {
+      return NextResponse.json({ error: billRes.error.message }, { status: 500 });
+    }
+    const saleBills = (billRes.data ?? []).filter(
+      (bill) => !bill.canceled && saleBillTakesFifo(String(bill.billno ?? ""))
+    );
+    const saleBillnos = saleBills.map((bill) => String(bill.billno ?? ""));
+    let fifoError: string | null = null;
+    let costs: Awaited<ReturnType<typeof loadSaleFifo>> = [];
+    try {
+      costs = await loadSaleFifo(saleBillnos, fifoSiteForBillnos(saleBillnos));
+    } catch (err: unknown) {
+      fifoError = err instanceof Error ? err.message : "โหลดต้นทุน FIFO ไม่สำเร็จ";
+    }
+    if (fifoError) {
+      return NextResponse.json({
+        deposit: depositRes.data,
+        payouts,
+        deposit_fifo: null,
+        fifo_error: fifoError,
+      });
+    }
+    const billsByPayout = new Map<string, string[]>();
+    for (const bill of saleBills) {
+      const key = String(bill.payout_key ?? "");
+      const list = billsByPayout.get(key) ?? [];
+      list.push(String(bill.billno ?? ""));
+      billsByPayout.set(key, list);
+    }
+    const withFifo = payouts.map((payout) => {
+      const billnos = billsByPayout.get(payout.payout_key) ?? [];
+      const fifo: FifoMarginBrief | null =
+        billnos.length === 0
+          ? null
+          : briefFifoMargin(
+              fifoMargin({
+                revenue: Number(payout.amount ?? 0),
+                billnos,
+                costs,
+              })
+            );
+      return { ...payout, fifo };
+    });
+    const depositFifo =
+      saleBillnos.length === 0
+        ? null
+        : briefFifoMargin(
+            fifoMargin({
+              revenue: Number(depositRes.data.amount ?? 0),
+              billnos: saleBillnos,
+              costs,
+            })
+          );
     return NextResponse.json({
       deposit: depositRes.data,
-      payouts: payoutRes.data ?? [],
+      payouts: withFifo,
+      deposit_fifo: depositFifo,
+      fifo_error: fifoError,
     });
   }
 

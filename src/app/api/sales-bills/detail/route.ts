@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { SALES_BILL_READ_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { fifoMargin, fifoSiteForBillnos, saleBillTakesFifo } from "@/lib/bank/fifo-margin";
+import { loadSaleFifo } from "@/lib/bank/fifo-margin-query";
 import { normalizeSalesBillDocType } from "@/lib/sales/bill-detail";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -73,17 +75,35 @@ export async function GET(req: Request) {
     lines?: BillLine[];
   };
 
+  const billno = String(bill.billno ?? parsed.data.billno.trim());
+  const beforetax = num(bill.beforetax);
+  const aftertax = num(bill.aftertax);
+  let fifo = null;
+  if (saleBillTakesFifo(billno, docType)) {
+    try {
+      const costs = await loadSaleFifo([billno], fifoSiteForBillnos([billno]));
+      fifo = fifoMargin({
+        revenue: beforetax !== 0 ? beforetax : aftertax,
+        billnos: [billno],
+        costs,
+      });
+    } catch {
+      fifo = null;
+    }
+  }
+
   return NextResponse.json({
     doc_type: String(bill.doc_type ?? docType),
-    billno: String(bill.billno ?? parsed.data.billno.trim()),
+    billno,
     bill_date: bill.bill_date ?? null,
     acctname: bill.acctname ?? null,
     po: bill.po ?? null,
-    beforetax: num(bill.beforetax),
+    beforetax,
     tax: num(bill.tax),
-    aftertax: num(bill.aftertax),
+    aftertax,
     discount: num(bill.discount),
     canceled: Boolean(bill.canceled),
+    fifo,
     lines: (bill.lines ?? []).map((line) => ({
       bcode: line.bcode ?? null,
       detail: line.detail ?? null,
