@@ -57,6 +57,8 @@ export type VatRegisterRow = {
   note: string | null;
   invoice_count: number;
   receipt_count: number;
+  /** Accounting left this line out of the book. Totals skip it. */
+  accounting_unused: boolean;
 };
 
 export type VatRegisterFile = {
@@ -204,6 +206,88 @@ export function vatRegisterKpiMatch(
     case "complete":
       return vatDocumentsComplete(row);
   }
+}
+
+/** Bill number, partner, or tax id. A blank query matches every line. */
+export function vatRegisterMatchesQuery(
+  row: Pick<
+    VatRegisterRow,
+    "bill_no" | "display_bill_no" | "party_name" | "party_code" | "tax_id"
+  >,
+  query: string
+): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return [row.display_bill_no, row.bill_no, row.party_name, row.party_code, row.tax_id].some(
+    (value) => value?.toLowerCase().includes(needle)
+  );
+}
+
+export type VatRegisterMoneyTotals = {
+  before: number;
+  vat: number;
+  after: number;
+  /** Lines accounting still uses. */
+  used: number;
+  /** Lines marked accounting-unused. They stay on screen and stay out of the sums. */
+  unused: number;
+};
+
+/** Money totals for the lines accounting uses. Unused lines are counted, not summed. */
+export function summarizeVatRegisterMoney(
+  rows: Pick<VatRegisterRow, "before_vat" | "vat" | "after_vat" | "accounting_unused">[]
+): VatRegisterMoneyTotals {
+  const totals: VatRegisterMoneyTotals = {
+    before: 0,
+    vat: 0,
+    after: 0,
+    used: 0,
+    unused: 0,
+  };
+  for (const row of rows) {
+    if (row.accounting_unused) {
+      totals.unused += 1;
+      continue;
+    }
+    totals.used += 1;
+    totals.before += row.before_vat;
+    totals.vat += row.vat;
+    totals.after += row.after_vat;
+  }
+  return totals;
+}
+
+type VatRegisterListRow = Pick<
+  VatRegisterRow,
+  | "bill_no"
+  | "display_bill_no"
+  | "party_name"
+  | "party_code"
+  | "tax_id"
+  | "accounting_unused"
+  | "sheet"
+  | "invoice_count"
+  | "receipt_count"
+  | "paid_status"
+>;
+
+/**
+ * Search narrows the list. A status chip then keeps in-use lines in that group.
+ * A search still returns unused lines, so a bill can be found and marked again.
+ */
+export function filterVatRegisterRows<T extends VatRegisterListRow>(
+  rows: T[],
+  input: { query: string; kpi: VatRegisterKpiKey | null }
+): T[] {
+  const matched = rows.filter((row) => vatRegisterMatchesQuery(row, input.query));
+  const kpi = input.kpi;
+  if (kpi == null) return matched;
+  const searching = input.query.trim() !== "";
+  return matched.filter(
+    (row) =>
+      (searching && row.accounting_unused) ||
+      (!row.accounting_unused && vatRegisterKpiMatch(row, kpi))
+  );
 }
 
 /** Counts and net amounts for the lines currently in view. */

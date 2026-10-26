@@ -75,6 +75,7 @@ export async function fetchVatRegister(
       note: asNullable(row.note),
       invoice_count: asNumber(row.invoice_count),
       receipt_count: asNumber(row.receipt_count),
+      accounting_unused: row.accounting_unused === true,
     };
   });
   return attachPurchaseCreditors(supabase, rows, input.monthStart);
