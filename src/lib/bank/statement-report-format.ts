@@ -172,7 +172,54 @@ export type EnrichedRow = Record<ReportColumn, string | number | Date | null> & 
   source_row_number: number | null;
   /** Internal — used for warning fill + match_status_counts; not a report column. */
   _match_status: string;
+  /** Seconds since midnight from the bank time column. Not a report column. */
+  _txn_time_seconds: number | null;
 };
+
+export type StatementLineSortable = {
+  id?: string | null;
+  txn_date?: string | null;
+  raw_json?: unknown;
+  source_row_number?: number | null;
+};
+
+/**
+ * Clock time from the bank file (`เวลา/ วันที่มีผล`, `เวลา/วันที่ ทำรายการ`, …).
+ * Excel stores this as `1899-12-30T13:55:00.000Z`; the clock is the face time,
+ * so the hour is read from the text and not shifted into another timezone.
+ */
+export function statementTxnTimeSeconds(rawJson: unknown): number | null {
+  const { timeStr } = extractRawFields(rawJson);
+  if (!timeStr) return null;
+  const iso = /T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(timeStr);
+  const clock = iso ?? /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(timeStr.trim());
+  if (!clock) return null;
+  const hours = Number(clock[1]);
+  const minutes = Number(clock[2]);
+  const seconds = Number(clock[3] ?? "0");
+  if (hours > 23 || minutes > 59 || seconds > 59) return null;
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+/** Latest calendar day, then latest clock time, on top. */
+export function compareStatementLinesLatestFirst(
+  a: StatementLineSortable,
+  b: StatementLineSortable,
+): number {
+  const dateA = String(a.txn_date ?? "");
+  const dateB = String(b.txn_date ?? "");
+  if (dateA !== dateB) return dateB.localeCompare(dateA);
+
+  const timeA = statementTxnTimeSeconds(a.raw_json);
+  const timeB = statementTxnTimeSeconds(b.raw_json);
+  if (timeA != null && timeB != null && timeA !== timeB) return timeB - timeA;
+
+  const rowA = a.source_row_number ?? -1;
+  const rowB = b.source_row_number ?? -1;
+  if (rowA !== rowB) return rowB - rowA;
+
+  return String(b.id ?? "").localeCompare(String(a.id ?? ""));
+}
 
 function parseRawJson(value: unknown): Record<string, unknown> {
   if (value == null) return {};
@@ -816,6 +863,7 @@ export function enrichStatementRows(rows: StatementLineRow[]): EnrichedRow[] {
       bank_name: String(row.bank_name ?? "").trim() || "BANK",
       source_row_number: row.source_row_number,
       _match_status: status,
+      _txn_time_seconds: statementTxnTimeSeconds(row.raw_json),
       "#": 0,
       วันที่: parseDate(row.txn_date),
       "รายการ / ชื่อบริษัท": resolveDescriptionColumn(row),
@@ -853,10 +901,14 @@ export function buildAccountSheets(
     group.sort((a, b) => {
       const da = a.วันที่ instanceof Date ? a.วันที่.getTime() : 0;
       const db = b.วันที่ instanceof Date ? b.วันที่.getTime() : 0;
-      if (da !== db) return da - db;
-      const sa = a.source_row_number ?? 0;
-      const sb = b.source_row_number ?? 0;
-      return sa - sb;
+      if (da !== db) return db - da;
+      const ta = a._txn_time_seconds;
+      const tb = b._txn_time_seconds;
+      if (ta != null && tb != null && ta !== tb) return tb - ta;
+      const sa = a.source_row_number ?? -1;
+      const sb = b.source_row_number ?? -1;
+      if (sa !== sb) return sb - sa;
+      return 0;
     });
     group.forEach((r, i) => {
       r["#"] = i + 1;

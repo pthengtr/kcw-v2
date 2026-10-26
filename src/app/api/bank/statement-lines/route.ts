@@ -8,6 +8,7 @@ import {
   decorateStatementLineLabels,
   type LineForLabel,
 } from "@/lib/bank/statement-line-labels";
+import { compareStatementLinesLatestFirst } from "@/lib/bank/statement-report-format";
 
 const QuerySchema = z.object({
   account_no: z.string().trim().min(1),
@@ -62,65 +63,74 @@ export async function GET(req: Request) {
   }
 
   const supabase = createAdminClient();
+  const selectColumns = [
+    "id",
+    "txn_date",
+    "created_at",
+    "description",
+    "amount",
+    "direction",
+    "balance_after",
+    "bank_reference",
+    "account_no",
+    "bank_name",
+    "match_status",
+    "match_reason",
+    "match_confidence",
+    "matched_ref_type",
+    "matched_ref_id",
+    "match_notes",
+    "report_remark",
+    "matched_at",
+    "matched_by",
+    "source_file_id",
+    "source_row_number",
+    "raw_json",
+    "debit",
+    "credit",
+    "value_date",
+  ].join(",");
 
-  let query = supabase
-    .schema("bank")
-    .from("statement_lines")
-    .select(
-      [
-        "id",
-        "txn_date",
-        "created_at",
-        "description",
-        "amount",
-        "direction",
-        "balance_after",
-        "bank_reference",
-        "account_no",
-        "bank_name",
-        "match_status",
-        "match_reason",
-        "match_confidence",
-        "matched_ref_type",
-        "matched_ref_id",
-        "match_notes",
-        "report_remark",
-        "matched_at",
-        "matched_by",
-        "source_file_id",
-        "raw_json",
-        "debit",
-        "credit",
-        "value_date",
-      ].join(","),
-      { count: "exact" }
-    )
-    .eq("account_no", account_no)
-    .gte("txn_date", from)
-    .lte("txn_date", to)
-    .order("txn_date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+  // Page in SQL, then sort the whole month by date and bank clock time.
+  // created_at is the import timestamp and is identical for a file, so it
+  // cannot order transactions within a day.
+  const pageSize = 1000;
+  const collected: LineForLabel[] = [];
+  let count: number | null = null;
+  for (let start = 0; ; start += pageSize) {
+    let query = supabase
+      .schema("bank")
+      .from("statement_lines")
+      .select(selectColumns, { count: "exact" })
+      .eq("account_no", account_no)
+      .gte("txn_date", from)
+      .lte("txn_date", to)
+      .order("id", { ascending: true })
+      .range(start, start + pageSize - 1);
 
-  if (bank_name) query = query.ilike("bank_name", `%${bank_name}%`);
-  if (direction) query = query.eq("direction", direction);
-  if (match_status) query = query.eq("match_status", match_status);
-  if (typeof amount_min === "number") query = query.gte("amount", amount_min);
-  if (typeof amount_max === "number") query = query.lte("amount", amount_max);
+    if (bank_name) query = query.ilike("bank_name", `%${bank_name}%`);
+    if (direction) query = query.eq("direction", direction);
+    if (match_status) query = query.eq("match_status", match_status);
+    if (typeof amount_min === "number") query = query.gte("amount", amount_min);
+    if (typeof amount_max === "number") query = query.lte("amount", amount_max);
 
-  const { data, error, count } = await query;
-
-  if (error) {
-    return NextResponse.json(
-      { error: "Query failed", details: error.message },
-      { status: 500 }
-    );
+    const { data, error, count: pageCount } = await query;
+    if (error) {
+      return NextResponse.json(
+        { error: "Query failed", details: error.message },
+        { status: 500 }
+      );
+    }
+    if (count == null) count = pageCount ?? null;
+    const chunk = (data ?? []) as LineForLabel[];
+    collected.push(...chunk);
+    if (chunk.length < pageSize) break;
   }
 
-  const labeled = await decorateStatementLineLabels(
-    (data ?? []) as LineForLabel[],
-    supabase,
-  );
+  collected.sort(compareStatementLinesLatestFirst);
+  const page = collected.slice(offset, offset + limit);
+
+  const labeled = await decorateStatementLineLabels(page, supabase);
   const ids = labeled
     .map((row) => String((row as { id?: string }).id ?? ""))
     .filter(Boolean);
@@ -161,6 +171,7 @@ export async function GET(req: Request) {
     delete rest.debit;
     delete rest.credit;
     delete rest.value_date;
+    delete rest.source_row_number;
     const deposit = depositById.get(String(rest.id ?? ""));
     rest.online_platform = deposit?.platform ?? null;
     rest.online_shop = deposit?.shop ?? null;
