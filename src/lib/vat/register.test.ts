@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   compareSheets,
+  filterVatRegisterRows,
   monthEndIso,
   summarizeVatRegister,
+  summarizeVatRegisterMoney,
   vatBillDrill,
   vatLineKey,
   vatDocumentsComplete,
   vatRegisterKpiMatch,
+  vatRegisterMatchesQuery,
   vatReportingMonth,
   vatRequiresReceipt,
   vatTracksPayment,
@@ -213,5 +216,59 @@ describe("vat register summary", () => {
         counts[key]
       );
     }
+  });
+});
+
+describe("vat register search and accounting use", () => {
+  const line = {
+    bill_no: "TD6901001",
+    display_bill_no: "TD6901001",
+    party_name: "บริษัท ทดสอบ",
+    party_code: "C001",
+    tax_id: "0105551234567",
+    accounting_unused: false,
+    sheet: "TD",
+    invoice_count: 1,
+    receipt_count: 1,
+    paid_status: "paid" as const,
+    before_vat: 100,
+    vat: 7,
+    after_vat: 107,
+  };
+  const unused = {
+    ...line,
+    bill_no: "B2607-9",
+    display_bill_no: "B2607-9",
+    party_name: "ร้านไม่ใช้",
+    accounting_unused: true,
+    sheet: "เครดิต",
+    before_vat: 50,
+    vat: 3.5,
+    after_vat: 53.5,
+  };
+
+  it("matches a bill number, partner, or tax id and ignores blank space", () => {
+    expect(vatRegisterMatchesQuery(line, "  td6901001 ")).toBe(true);
+    expect(vatRegisterMatchesQuery(line, "ทดสอบ")).toBe(true);
+    expect(vatRegisterMatchesQuery(line, "010555")).toBe(true);
+    expect(vatRegisterMatchesQuery(line, "ไม่มี")).toBe(false);
+    expect(vatRegisterMatchesQuery(line, "   ")).toBe(true);
+  });
+
+  it("sums only lines accounting still uses", () => {
+    expect(summarizeVatRegisterMoney([line, unused])).toEqual({
+      before: 100,
+      vat: 7,
+      after: 107,
+      used: 1,
+      unused: 1,
+    });
+  });
+
+  it("keeps an unused bill in search results until a status chip is on", () => {
+    const rows = [line, unused];
+    expect(filterVatRegisterRows(rows, { query: "ไม่ใช้", kpi: null })).toEqual([unused]);
+    expect(filterVatRegisterRows(rows, { query: "", kpi: "complete" })).toEqual([line]);
+    expect(filterVatRegisterRows(rows, { query: "B2607", kpi: "unpaid" })).toEqual([unused]);
   });
 });

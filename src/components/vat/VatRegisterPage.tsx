@@ -11,9 +11,10 @@ import SalesBillDetailDialog, {
 import { cn } from "@/lib/utils";
 import {
   compareSheets,
+  filterVatRegisterRows,
   summarizeVatRegister,
+  summarizeVatRegisterMoney,
   vatBillDrill,
-  vatRegisterKpiMatch,
   vatReportingMonth,
   vatRequiresReceipt,
   vatTracksPayment,
@@ -33,6 +34,7 @@ import {
   type VatRegisterColumnId,
 } from "@/lib/vat/table-columns";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -142,6 +144,9 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   const [selected, setSelected] = useState<VatRegisterRow | null>(null);
   const [hiddenColumns, setHiddenColumns] = useState<VatRegisterColumnId[]>([]);
   const [columnsHydrated, setColumnsHydrated] = useState(false);
+  const [query, setQuery] = useState("");
+  const [savingUse, setSavingUse] = useState<ReadonlySet<string>>(new Set());
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -195,7 +200,10 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
     [rows, sheet]
   );
 
-  const kpis = useMemo(() => summarizeVatRegister(sheetRows), [sheetRows]);
+  const kpis = useMemo(
+    () => summarizeVatRegister(sheetRows.filter((row) => !row.accounting_unused)),
+    [sheetRows]
+  );
   const showPayment = sheet === "ALL" || vatTracksPayment(sheet);
   const showReceipts = sheet === "ALL" || vatRequiresReceipt(sheet);
   const shownColumns = useMemo(
@@ -226,25 +234,11 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   }, [showPayment, showReceipts, kpi]);
 
   const visible = useMemo(
-    () =>
-      kpi == null
-        ? sheetRows
-        : sheetRows.filter((row) => vatRegisterKpiMatch(row, kpi)),
-    [sheetRows, kpi]
+    () => filterVatRegisterRows(sheetRows, { query, kpi }),
+    [sheetRows, query, kpi]
   );
 
-  const totals = useMemo(
-    () =>
-      visible.reduce(
-        (sum, row) => ({
-          before: sum.before + row.before_vat,
-          vat: sum.vat + row.vat,
-          after: sum.after + row.after_vat,
-        }),
-        { before: 0, vat: 0, after: 0 }
-      ),
-    [visible]
-  );
+  const totals = useMemo(() => summarizeVatRegisterMoney(visible), [visible]);
 
   const headingSide: VatRegisterSide =
     side === "purchase" || sheetRows.every((row) => row.side === "purchase")
@@ -264,6 +258,40 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
     );
   }
 
+  async function setAccountingUnused(row: VatRegisterRow, unused: boolean) {
+    if (readOnly || unused === row.accounting_unused || savingUse.has(row.line_key)) return;
+    setSaveError(null);
+    setSavingUse((current) => new Set(current).add(row.line_key));
+    patchRow(row.line_key, { accounting_unused: unused });
+    try {
+      const res = await fetch(`/api/vat/register/${row.line_key}/use`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branch: row.branch,
+          side: row.side,
+          sheet: row.sheet,
+          billNo: row.bill_no,
+          billDate: row.bill_date,
+          sourceRef: row.source_ref,
+          reportMonth: row.report_month,
+          accountingUnused: unused,
+        }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error || "บันทึกไม่สำเร็จ");
+    } catch (err) {
+      patchRow(row.line_key, { accounting_unused: !unused });
+      setSaveError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setSavingUse((current) => {
+        const next = new Set(current);
+        next.delete(row.line_key);
+        return next;
+      });
+    }
+  }
+
   return (
     <main className="mx-auto flex w-full min-w-0 max-w-[1400px] flex-col gap-4 px-4 py-6">
       <div>
@@ -271,7 +299,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
         <p className="text-sm text-slate-600">
           {readOnly
             ? "ดูได้อย่างเดียว"
-            : "เล่มเดียวกับรายงาน Excel แนบใบกำกับได้ทุกเล่ม ส่วนขาย TD กับซื้อเครดิตแนบใบเสร็จด้วย"}
+            : "เล่มเดียวกับรายงาน Excel แนบใบกำกับได้ทุกเล่ม ส่วนขาย TD กับซื้อเครดิตแนบใบเสร็จด้วย ติ๊กรายการที่บัญชีไม่ใช้ ยอดรวมจะนับเฉพาะรายการที่ใช้งาน"}
         </p>
       </div>
 
@@ -374,7 +402,17 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
         ))}
       </div>
 
+      <label className="flex max-w-md flex-col gap-1 text-sm">
+        <span className="text-slate-600">ค้นหาบิล</span>
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="เลขที่บิล ชื่อคู่ค้า หรือเลขผู้เสียภาษี"
+        />
+      </label>
+
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {saveError ? <p className="text-sm text-red-600">{saveError}</p> : null}
 
       <div className="flex flex-col gap-2 md:hidden">
         {loading ? (
@@ -382,15 +420,11 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         ) : visible.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-500">
-            {kpi ? "ไม่มีรายการในกลุ่มนี้" : "ไม่มีรายการในเดือนนี้"}
-          </p>
+          <p className="py-10 text-center text-sm text-slate-500">{emptyVatRegisterLabel(query, kpi)}</p>
         ) : (
           <>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-              <p className="font-medium">
-                รวม {visible.length.toLocaleString("th-TH")} รายการ
-              </p>
+              <p className="font-medium">{vatRegisterTotalLabel(totals.used, totals.unused)}</p>
               <p className="mt-1 text-slate-700">
                 มูลค่า {formatBaht(totals.before, true)} · ภาษี {formatBaht(totals.vat, true)}
               </p>
@@ -399,11 +433,21 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
             {visible.map((row) => {
               const paid = paymentLabel(row);
               return (
-                <button
+                <div
                   key={row.line_key}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelected(row)}
-                  className="rounded-xl border border-slate-200 bg-white p-3 text-left"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelected(row);
+                    }
+                  }}
+                  className={cn(
+                    "rounded-xl border border-slate-200 p-3 text-left",
+                    row.accounting_unused ? "bg-amber-50 text-slate-500" : "bg-white"
+                  )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -415,11 +459,18 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                     </div>
                     <p className="shrink-0 text-sm font-medium">{formatBaht(row.after_vat, true)}</p>
                   </div>
-                  <p className="mt-2 text-xs text-slate-600">
-                    {paid ? `${paid} · ` : ""}
-                    {documentLabel(row)}
-                  </p>
-                </button>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <p className="text-xs text-slate-600">
+                      {paid ? `${paid} · ` : ""}
+                      {documentLabel(row)}
+                    </p>
+                    <AccountingUnusedToggle
+                      checked={row.accounting_unused}
+                      disabled={readOnly || savingUse.has(row.line_key)}
+                      onChange={(unused) => void setAccountingUnused(row, unused)}
+                    />
+                  </div>
+                </div>
               );
             })}
           </>
@@ -431,7 +482,9 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
           <p className="text-sm text-slate-600">
             {loading
               ? "กำลังโหลด…"
-              : `${visible.length.toLocaleString("th-TH")} รายการ`}
+              : visible.length === 0
+                ? "0 รายการ"
+                : vatRegisterTotalLabel(totals.used, totals.unused)}
           </p>
           <ColumnPicker
             hidden={hiddenColumns}
@@ -445,6 +498,12 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
           <table className="w-max min-w-full text-left text-sm text-slate-900">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
+                <th
+                  className="sticky left-0 z-20 w-12 bg-slate-50 px-2 py-2 font-medium whitespace-nowrap"
+                  title="ติ๊กเมื่อบัญชีไม่ใช้รายการนี้ ยอดรวมจะไม่นับ"
+                >
+                  ไม่ใช้
+                </th>
                 {shownColumns.map((column) => (
                   <th
                     key={column.id}
@@ -452,7 +511,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                       "px-3 py-2 font-medium whitespace-nowrap",
                       moneyColumn(column.id) && "text-right",
                       column.id === "index" &&
-                        "sticky left-0 z-10 bg-slate-50 shadow-[1px_0_0_0_#e2e8f0]"
+                        "sticky left-12 z-10 bg-slate-50 shadow-[1px_0_0_0_#e2e8f0]"
                     )}
                   >
                     {column.id === "party" ? partyHeading(headingSide) : column.label}
@@ -463,23 +522,43 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={shownColumns.length} className="px-3 py-10 text-center text-slate-500">
+                  <td colSpan={shownColumns.length + 1} className="px-3 py-10 text-center text-slate-500">
                     <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                   </td>
                 </tr>
               ) : visible.length === 0 ? (
                 <tr>
-                  <td colSpan={shownColumns.length} className="px-3 py-10 text-center text-slate-500">
-                    {kpi ? "ไม่มีรายการในกลุ่มนี้" : "ไม่มีรายการในเดือนนี้"}
+                  <td colSpan={shownColumns.length + 1} className="px-3 py-10 text-center text-slate-500">
+                    {emptyVatRegisterLabel(query, kpi)}
                   </td>
                 </tr>
               ) : (
                 visible.map((row, index) => (
                   <tr
                     key={row.line_key}
-                    className="group cursor-pointer border-t border-slate-100 hover:bg-slate-50"
+                    className={cn(
+                      "group cursor-pointer border-t border-slate-100",
+                      row.accounting_unused
+                        ? "bg-amber-50 text-slate-500 hover:bg-amber-100"
+                        : "hover:bg-slate-50"
+                    )}
                     onClick={() => setSelected(row)}
                   >
+                    <td
+                      className={cn(
+                        "sticky left-0 z-20 w-12 px-2 py-2",
+                        row.accounting_unused
+                          ? "bg-amber-50 group-hover:bg-amber-100"
+                          : "bg-white group-hover:bg-slate-50"
+                      )}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <AccountingUnusedToggle
+                        checked={row.accounting_unused}
+                        disabled={readOnly || savingUse.has(row.line_key)}
+                        onChange={(unused) => void setAccountingUnused(row, unused)}
+                      />
+                    </td>
                     {shownColumns.map((column) => (
                       <td
                         key={column.id}
@@ -489,7 +568,11 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                           plainNowrap(column.id) && "whitespace-nowrap",
                           column.id === "docs" && "whitespace-nowrap text-slate-600",
                           column.id === "index" &&
-                            "sticky left-0 z-10 whitespace-nowrap bg-white shadow-[1px_0_0_0_#e2e8f0] group-hover:bg-slate-50"
+                            "sticky left-12 z-10 whitespace-nowrap shadow-[1px_0_0_0_#e2e8f0]",
+                          column.id === "index" &&
+                            (row.accounting_unused
+                              ? "bg-amber-50 group-hover:bg-amber-100"
+                              : "bg-white group-hover:bg-slate-50")
                         )}
                       >
                         {vatCell(column.id, row, index)}
@@ -502,12 +585,12 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
             {!loading && visible.length > 0 ? (
               <tfoot>
                 <tr className="border-t border-slate-200 bg-slate-50 font-medium">
-                  {vatRegisterFooterPieces(shownColumns.map((column) => column.id)).map(
+                  {vatRegisterFooterPieces(["use", ...shownColumns.map((column) => column.id)]).map(
                     (piece, pieceIndex) => {
                       if (piece.type === "label") {
                         return (
                           <td key="label" className="px-3 py-2" colSpan={piece.span}>
-                            รวม {visible.length.toLocaleString("th-TH")} รายการ
+                            {vatRegisterTotalLabel(totals.used, totals.unused)}
                           </td>
                         );
                       }
@@ -534,8 +617,10 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
       <LineDialog
         row={selected}
         readOnly={readOnly}
+        savingUse={selected != null && savingUse.has(selected.line_key)}
         onClose={() => setSelected(null)}
         onSaved={patchRow}
+        onAccountingUnused={(row, unused) => void setAccountingUnused(row, unused)}
       />
     </main>
   );
@@ -550,6 +635,45 @@ function PartyLines({ row }: { row: VatRegisterRow }) {
       {name ? <span className="block truncate">{name}</span> : null}
       {code ? <span className="block font-mono text-xs text-slate-500">{code}</span> : null}
     </span>
+  );
+}
+
+function emptyVatRegisterLabel(query: string, kpi: VatRegisterKpiKey | null): string {
+  if (query.trim() && kpi) return "ไม่พบบิลในกลุ่มนี้";
+  if (query.trim()) return "ไม่พบบิลที่ค้นหา";
+  if (kpi) return "ไม่มีรายการในกลุ่มนี้";
+  return "ไม่มีรายการในเดือนนี้";
+}
+
+function vatRegisterTotalLabel(used: number, unused: number): string {
+  const usedLabel = `รวม ${used.toLocaleString("th-TH")} รายการ`;
+  if (unused === 0) return usedLabel;
+  return `${usedLabel} · ไม่รวม ${unused.toLocaleString("th-TH")} ที่บัญชีไม่ใช้`;
+}
+
+function AccountingUnusedToggle({
+  checked,
+  disabled,
+  onChange,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  onChange: (unused: boolean) => void;
+}) {
+  return (
+    <label
+      className="inline-flex items-center gap-1.5 text-xs text-slate-600"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      <Checkbox
+        checked={checked}
+        disabled={disabled}
+        aria-label="บัญชีไม่ใช้"
+        onCheckedChange={(value) => onChange(value === true)}
+      />
+      <span className="md:sr-only">บัญชีไม่ใช้</span>
+    </label>
   );
 }
 
@@ -728,13 +852,17 @@ function SheetButton({
 function LineDialog({
   row,
   readOnly,
+  savingUse,
   onClose,
   onSaved,
+  onAccountingUnused,
 }: {
   row: VatRegisterRow | null;
   readOnly: boolean;
+  savingUse: boolean;
   onClose: () => void;
   onSaved: (lineKey: string, patch: Partial<VatRegisterRow>) => void;
+  onAccountingUnused: (row: VatRegisterRow, unused: boolean) => void;
 }) {
   const [paidStatus, setPaidStatus] = useState<VatPaidStatus>("unpaid");
   const [paidOn, setPaidOn] = useState("");
@@ -912,6 +1040,16 @@ function LineDialog({
                 </div>
               ) : null}
             </dl>
+
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={row.accounting_unused}
+                disabled={readOnly || savingUse}
+                aria-label="บัญชีไม่ใช้"
+                onCheckedChange={(value) => onAccountingUnused(row, value === true)}
+              />
+              บัญชีไม่ใช้ — ไม่รวมในยอดรวม
+            </label>
 
             {drill ? (
               <button
