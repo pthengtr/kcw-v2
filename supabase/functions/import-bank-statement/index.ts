@@ -97,7 +97,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const form = await req.formData();
+    let form: FormData;
+    try {
+      form = await req.formData();
+    } catch {
+      return jsonResponse(
+        {
+          error:
+            "อ่านไฟล์ที่อัปโหลดไม่สำเร็จ ลองเลือกไฟล์อีกครั้ง หรืออัปโหลดจากคอมพิวเตอร์",
+        },
+        400,
+      );
+    }
     const bankRaw = String(form.get("bank_name") ?? "").trim().toUpperCase();
     if (bankRaw !== "KBANK" && bankRaw !== "KTB") {
       return jsonResponse({ error: "bank_name must be KBANK or KTB" }, 400);
@@ -109,7 +120,8 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Missing file field" }, 400);
     }
 
-    const originalFilename = fileEntry.name || "statement.xlsx";
+    const named = String(form.get("original_filename") ?? "").trim();
+    const originalFilename = named || fileEntry.name || "statement.xlsx";
     const ext = extOf(originalFilename);
     if (!ALLOWED_EXT.has(ext)) {
       return jsonResponse(

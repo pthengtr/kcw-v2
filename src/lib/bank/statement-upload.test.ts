@@ -8,6 +8,7 @@ import {
   formatBankStatementImportMessage,
   invokeBankStatementImport,
   isBankStatementBankName,
+  asciiUploadName,
   validateBankStatementFile,
 } from "@/lib/bank/statement-upload";
 
@@ -83,18 +84,32 @@ describe("Bank statement upload helpers", () => {
     ).toBe("parse error");
   });
 
-  it("invokes the Edge Function with FormData fields", async () => {
-    const invoke = vi.fn().mockResolvedValue({
-      data: {
+  it("keeps an ASCII multipart filename and the real name beside it", () => {
+    expect(asciiUploadName("KBANK W1-8.xlsx")).toBe("KBANK_W1-8.xlsx");
+    expect(asciiUploadName("สเตทเมนต์.xlsx")).toBe("statement.xlsx");
+  });
+
+  it("posts FormData with fetch and does not set Content-Type", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-key");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
         status: "imported",
-        original_filename: "a.xlsx",
+        original_filename: "สเตทเมนต์.xlsx",
         inserted_count: 1,
         row_count: 1,
-      },
-      error: null,
+      }),
     });
-    const supabase = { functions: { invoke } } as never;
-    const file = new File(["x"], "a.xlsx");
+    vi.stubGlobal("fetch", fetchMock);
+    const supabase = {
+      auth: {
+        getSession: async () => ({
+          data: { session: { access_token: "tok" } },
+        }),
+      },
+    } as never;
+    const file = new File(["x"], "สเตทเมนต์.xlsx");
 
     const outcome = await invokeBankStatementImport({
       supabase,
@@ -103,12 +118,19 @@ describe("Bank statement upload helpers", () => {
     });
 
     expect(outcome.ok).toBe(true);
-    expect(invoke).toHaveBeenCalledWith("import-bank-statement", {
-      body: expect.any(FormData),
-    });
-    const form = invoke.mock.calls[0][1].body as FormData;
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      "https://example.supabase.co/functions/v1/import-bank-statement"
+    );
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer tok");
+    expect(headers.apikey).toBe("anon-key");
+    expect(headers["Content-Type"]).toBeUndefined();
+    const form = init.body as FormData;
     expect(form.get("bank_name")).toBe("KBANK");
-    expect(form.get("file")).toBeInstanceOf(File);
+    expect(form.get("original_filename")).toBe("สเตทเมนต์.xlsx");
+    expect(form.get("file")).toBeInstanceOf(Blob);
   });
 });
 
