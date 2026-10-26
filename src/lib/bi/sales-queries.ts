@@ -1,6 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { BiSalesOverview, BiSplitRow, BiTrendRow } from "./sales-types";
+import type {
+  BiOnlineFeeRow,
+  BiOnlineMargin,
+  BiOnlineMarginSummary,
+  BiOnlinePlatformRow,
+  BiOnlineTrendRow,
+  BiSalesOverview,
+  BiSplitRow,
+  BiTrendRow,
+} from "./sales-types";
 
 function asNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -27,6 +36,83 @@ function parseSplitRows(value: unknown): BiSplitRow[] {
       bill_count: asNumber(r.bill_count),
     };
   });
+}
+
+function asOptionalNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function parseOnlineSummary(value: unknown): BiOnlineMarginSummary {
+  const row = (value ?? {}) as Record<string, unknown>;
+  return {
+    revenue_net: asNumber(row.revenue_net),
+    fee_baht: asNumber(row.fee_baht),
+    fifo_ext_cost: asNumber(row.fifo_ext_cost),
+    profit: asNumber(row.profit),
+    margin_pct: asOptionalNumber(row.margin_pct),
+    bill_count: asNumber(row.bill_count),
+    fee_bill_count: asNumber(row.fee_bill_count),
+    fifo_bill_count: asNumber(row.fifo_bill_count),
+    fifo_partial_bill_count: asNumber(row.fifo_partial_bill_count),
+    fifo_missing_bill_count: asNumber(row.fifo_missing_bill_count),
+  };
+}
+
+function parseOnlinePlatformRows(value: unknown): BiOnlinePlatformRow[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    return {
+      platform: asString(r.platform),
+      revenue_net: asNumber(r.revenue_net),
+      fee_baht: asNumber(r.fee_baht),
+      fifo_ext_cost: asNumber(r.fifo_ext_cost),
+      profit: asNumber(r.profit),
+      bill_count: asNumber(r.bill_count),
+    };
+  });
+}
+
+function parseOnlineFeeRows(value: unknown): BiOnlineFeeRow[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    return {
+      fee_name: asString(r.fee_name),
+      fee_baht: asNumber(r.fee_baht),
+    };
+  });
+}
+
+function parseOnlineTrendRows(value: unknown): BiOnlineTrendRow[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    return {
+      period: asString(r.period),
+      revenue_net: asNumber(r.revenue_net),
+      fee_baht: asNumber(r.fee_baht),
+      fifo_ext_cost: asNumber(r.fifo_ext_cost),
+      profit: asNumber(r.profit),
+      bill_count: asNumber(r.bill_count),
+    };
+  });
+}
+
+function parseOnlineMargin(value: unknown): BiOnlineMargin {
+  const row = (value ?? {}) as Record<string, unknown>;
+  return {
+    ...parseOnlineSummary(row),
+    by_platform: parseOnlinePlatformRows(row.by_platform),
+    by_fee: parseOnlineFeeRows(row.by_fee),
+    trend_daily: parseOnlineTrendRows(row.trend_daily),
+    trend_monthly: parseOnlineTrendRows(row.trend_monthly),
+  };
 }
 
 function parseTrendRows(value: unknown): BiTrendRow[] {
@@ -72,6 +158,8 @@ export function normalizeSalesOverview(raw: unknown): BiSalesOverview {
     by_billtype: parseSplitRows(data.by_billtype),
     trend_daily: parseTrendRows(data.trend_daily),
     trend_monthly: parseTrendRows(data.trend_monthly),
+    online_margin: parseOnlineMargin(data.online_margin),
+    previous_online_margin: parseOnlineSummary(data.previous_online_margin),
   };
 }
 

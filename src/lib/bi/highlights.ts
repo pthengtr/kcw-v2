@@ -109,6 +109,15 @@ export function buildSalesHighlights(overview: BiSalesOverview): string[] {
     }
   }
 
+  const online = overview.online_margin;
+  if (online && online.bill_count > 0) {
+    const margin =
+      online.margin_pct == null ? "—" : `${online.margin_pct.toFixed(1)}%`;
+    lines.push(
+      `ออนไลน์หลังค่าธรรมเนียมและ FIFO กำไร ${formatBaht(online.profit)} (${margin}) · ค่าธรรมเนียม ${formatBaht(online.fee_baht)} · ต้นทุน FIFO ${formatBaht(online.fifo_ext_cost)} · ผูกค่าธรรมเนียม ${formatCount(online.fee_bill_count)}/${formatCount(online.bill_count)} บิล`
+    );
+  }
+
   return lines;
 }
 

@@ -19,6 +19,49 @@ export type BiTrendRow = {
   online_revenue_net: number;
 };
 
+export type BiOnlineMarginSummary = {
+  revenue_net: number;
+  fee_baht: number;
+  fifo_ext_cost: number;
+  profit: number;
+  margin_pct: number | null;
+  bill_count: number;
+  fee_bill_count: number;
+  fifo_bill_count: number;
+  fifo_partial_bill_count: number;
+  fifo_missing_bill_count: number;
+};
+
+export type BiOnlinePlatformRow = {
+  platform: string;
+  revenue_net: number;
+  fee_baht: number;
+  fifo_ext_cost: number;
+  profit: number;
+  bill_count: number;
+};
+
+export type BiOnlineFeeRow = {
+  fee_name: string;
+  fee_baht: number;
+};
+
+export type BiOnlineTrendRow = {
+  period: string;
+  revenue_net: number;
+  fee_baht: number;
+  fifo_ext_cost: number;
+  profit: number;
+  bill_count: number;
+};
+
+export type BiOnlineMargin = BiOnlineMarginSummary & {
+  by_platform: BiOnlinePlatformRow[];
+  by_fee: BiOnlineFeeRow[];
+  trend_daily: BiOnlineTrendRow[];
+  trend_monthly: BiOnlineTrendRow[];
+};
+
 export type BiSalesSummary = {
   revenue_net: number;
   vat_baht: number;
@@ -46,6 +89,8 @@ export type BiSalesOverview = {
   by_billtype: BiSplitRow[];
   trend_daily: BiTrendRow[];
   trend_monthly: BiTrendRow[];
+  online_margin: BiOnlineMargin;
+  previous_online_margin: BiOnlineMarginSummary;
 };
 
 export type BiReportId =
