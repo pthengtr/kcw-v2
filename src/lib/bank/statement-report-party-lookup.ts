@@ -12,7 +12,13 @@ import {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-type NameBill = { name: string; bill: string; date: string };
+type NameBill = {
+  name: string;
+  bill: string;
+  date: string;
+  payment?: string;
+  item?: string;
+};
 
 /** Minimal admin client used by report party lookup (Next.js + Edge Function). */
 export type StatementLabelAdmin = {
@@ -125,33 +131,106 @@ async function lookupBillAcctNames(
   return map;
 }
 
+function relatedText(
+  value: { party_name?: string | null; payment_description?: string | null; item_name?: string | null }
+    | Array<{ party_name?: string | null; payment_description?: string | null; item_name?: string | null }>
+    | null
+    | undefined,
+  key: "party_name" | "payment_description" | "item_name",
+): string {
+  const row = Array.isArray(value) ? value[0] : value;
+  return String(row?.[key] ?? "").trim();
+}
+
 async function lookupExpenseReceipts(
   admin: StatementLabelAdmin,
   uuids: string[],
 ): Promise<Map<string, NameBill>> {
   const map = new Map<string, NameBill>();
+  const itemsByReceipt = new Map<string, string[]>();
   for (const batch of chunk(uuids, 200)) {
-    const { data, error } = await admin
-      .from("expense_receipt")
-      .select("receipt_uuid,receipt_number,party:party_uuid(party_name)")
-      .in("receipt_uuid", batch);
+    const [{ data, error }, entries] = await Promise.all([
+      admin
+        .from("expense_receipt")
+        .select(
+          "receipt_uuid,receipt_number,voucher_description,party:party_uuid(party_name),payment_method:payment_uuid(payment_description)",
+        )
+        .in("receipt_uuid", batch),
+      admin
+        .from("expense_entry")
+        .select("receipt_uuid,expense_item(item_name)")
+        .in("receipt_uuid", batch),
+    ]);
     if (error) {
       console.error("expense_receipt lookup failed", error.message);
       continue;
     }
+    if (entries.error) {
+      console.error("expense_entry lookup failed", entries.error.message);
+    } else {
+      for (const entry of entries.data ?? []) {
+        const id = String(entry.receipt_uuid ?? "").trim();
+        const item = relatedText(entry.expense_item, "item_name");
+        if (!id || !item) continue;
+        const list = itemsByReceipt.get(id) ?? [];
+        if (!list.includes(item)) list.push(item);
+        itemsByReceipt.set(id, list);
+      }
+    }
     for (const row of data ?? []) {
       const id = String(row.receipt_uuid ?? "").trim();
       if (!id) continue;
-      const partyRel = row.party;
-      const partyObj = Array.isArray(partyRel) ? partyRel[0] : partyRel;
-      const name = normalizePartyDisplayName(
-        String(partyObj?.party_name ?? "").trim(),
-      );
+      const name = normalizePartyDisplayName(relatedText(row.party, "party_name"));
       const bill = String(row.receipt_number ?? "").trim();
-      map.set(id, { name, bill, date: "" });
+      const items = itemsByReceipt.get(id) ?? [];
+      const voucher = String(row.voucher_description ?? "").trim();
+      map.set(id, {
+        name,
+        bill,
+        date: "",
+        payment: relatedText(row.payment_method, "payment_description"),
+        item: items.join(", ") || voucher,
+      });
     }
   }
   return map;
+}
+
+/** Shop + expense item, only when every receipt is a director reimbursement. */
+function expenseReimbursementLabel(
+  ids: string[],
+  lookup: Map<string, NameBill>,
+): { payment: string; label: string } {
+  const payments: string[] = [];
+  const seenPay = new Set<string>();
+  const byShop = new Map<string, string[]>();
+
+  for (const id of ids) {
+    const hit = lookup.get(id);
+    if (!hit) continue;
+    const payment = (hit.payment ?? "").trim();
+    if (payment && !seenPay.has(payment)) {
+      seenPay.add(payment);
+      payments.push(payment);
+    }
+    const shop = normalizePartyDisplayName(hit.name);
+    if (!shop) continue;
+    const items = byShop.get(shop) ?? [];
+    const item = (hit.item ?? "").trim();
+    if (item && !items.includes(item)) items.push(item);
+    byShop.set(shop, items);
+  }
+
+  const allReimburse =
+    payments.length > 0 && payments.every((payment) => /คืนเงินสำรอง/u.test(payment));
+  if (!allReimburse) {
+    return { payment: payments.join(", "), label: "" };
+  }
+
+  const segments = [...byShop.entries()].map(([shop, items]) =>
+    items.length ? `${shop} ${items.join(", ")}` : shop,
+  );
+  return { payment: payments.join(", "), label: segments.join(", ") };
 }
 
 function collectIdsByType(
@@ -278,6 +357,7 @@ export async function attachMatchedPartyAndBills(
     if (!t || ids.length === 0) return row;
 
     let picked = { name: "", bills: "", date: "" };
+    let expenseExtra = { payment: "", label: "" };
     if (t === "rvmas" || t === "rvi") {
       picked = pickNamesBills(ids, rvmas);
     } else if (t === "pvmas") {
@@ -293,6 +373,7 @@ export async function attachMatchedPartyAndBills(
       picked = pickNamesBills(ids, sales);
     } else if (t === "expense_pv") {
       picked = pickNamesBills(ids, expense);
+      expenseExtra = expenseReimbursementLabel(ids, expense);
     }
 
     return {
@@ -300,6 +381,12 @@ export async function attachMatchedPartyAndBills(
       matched_party_name: picked.name || row.matched_party_name || null,
       matched_bill_nos: picked.bills || row.matched_bill_nos || null,
       matched_bill_date: picked.date || row.matched_bill_date || null,
+      ...(t === "expense_pv"
+        ? {
+            matched_payment_description: expenseExtra.payment || null,
+            matched_expense_label: expenseExtra.label || null,
+          }
+        : {}),
     };
   });
 }
