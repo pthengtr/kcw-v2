@@ -13,6 +13,17 @@ export const BANK_STATEMENT_MAX_BYTES = 15 * 1024 * 1024;
 
 const EXCEL_EXT = /\.(xlsx|xls|xlsm)$/i;
 
+/** Multipart filename Deno can parse. iOS often sends the real name unencoded. */
+export function asciiUploadName(name: string): string {
+  const ext = (name.match(EXCEL_EXT)?.[0] ?? ".xlsx").toLowerCase();
+  const base = name.replace(EXCEL_EXT, "");
+  const ascii = base
+    .replace(/[^\w.\-()]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+  return `${ascii || "statement"}${ext}`;
+}
+
 export type BankStatementImportStatus = "imported" | "skipped" | "failed";
 
 export type BankStatementSheetSummary = {
@@ -113,35 +124,60 @@ export async function invokeBankStatementImport(params: {
     return { ok: false, message: "เลือกธนาคาร KBANK หรือ KTB" };
   }
 
+  // Read the file first. iOS hands back a File that is not fully in the
+  // multipart body until it is copied. Send that copy with fetch, not
+  // supabase.functions.invoke: the SDK wraps headers in a Headers object and
+  // mobile Safari then omits the multipart boundary, so Deno reports
+  // "Unable to parse body as form data".
+  const bytes = await file.arrayBuffer();
+  const blob = new Blob([bytes], {
+    type: file.type || "application/octet-stream",
+  });
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", blob, asciiUploadName(file.name));
   form.append("bank_name", bankName);
+  form.append("original_filename", file.name);
 
-  // Do not set Content-Type manually — the browser/SDK sets the multipart boundary.
-  const { data, error } = await supabase.functions.invoke(
-    BANK_STATEMENT_IMPORT_FN,
-    { body: form }
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) return { ok: false, message: "กรุณาเข้าสู่ระบบใหม่" };
+
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  if (!baseUrl) return { ok: false, message: "ไม่พบที่อยู่เซิร์ฟเวอร์" };
+
+  const res = await fetch(
+    `${baseUrl}/functions/v1/${BANK_STATEMENT_IMPORT_FN}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: anonKey,
+      },
+      body: form,
+    }
   );
 
-  if (error) {
-    let detail = error.message || "เรียก Edge Function ไม่สำเร็จ";
-    try {
-      const ctx = (error as { context?: Response }).context;
-      if (ctx && typeof ctx.json === "function") {
-        const body = (await ctx.json()) as Record<string, unknown>;
-        const msg =
-          (typeof body.error === "string" && body.error) ||
-          (typeof body.message === "string" && body.message) ||
-          null;
-        if (msg) detail = msg;
-      }
-    } catch {
-      // keep detail from error.message
-    }
-    return { ok: false, message: detail };
+  let data: BankStatementImportResult | null = null;
+  try {
+    data = (await res.json()) as BankStatementImportResult;
+  } catch {
+    data = null;
+  }
+  if (!res.ok) {
+    return {
+      ok: false,
+      message:
+        data?.error ||
+        data?.message ||
+        `เรียก Edge Function ไม่สำเร็จ (${res.status})`,
+      result: data ?? undefined,
+    };
   }
 
-  const result = (data ?? {}) as BankStatementImportResult;
+  const result = data ?? ({} as BankStatementImportResult);
   if (!result.status) {
     return { ok: false, message: "ตอบกลับจาก Edge Function ไม่ถูกต้อง" };
   }
