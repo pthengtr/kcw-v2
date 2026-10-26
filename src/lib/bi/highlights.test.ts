@@ -21,6 +21,23 @@ import type { BiProductSalesOverview } from "./product-sales-types";
 import type { BiSalesOverview } from "./sales-types";
 import type { BiVatOverview } from "./vat-types";
 
+const emptyOnlineMargin: BiSalesOverview["online_margin"] = {
+  revenue_net: 0,
+  fee_baht: 0,
+  fifo_ext_cost: 0,
+  profit: 0,
+  margin_pct: null,
+  bill_count: 0,
+  fee_bill_count: 0,
+  fifo_bill_count: 0,
+  fifo_partial_bill_count: 0,
+  fifo_missing_bill_count: 0,
+  by_platform: [],
+  by_fee: [],
+  trend_daily: [],
+  trend_monthly: [],
+};
+
 const salesBase: BiSalesOverview = {
   from: "2026-07-01",
   to: "2026-07-25",
@@ -56,6 +73,8 @@ const salesBase: BiSalesOverview = {
   trend_monthly: [
     { period: "2026-07", revenue_net: 6_560_000, bill_count: 5600, hq_revenue_net: 0, syp_revenue_net: 0, online_revenue_net: 0 },
   ],
+  online_margin: emptyOnlineMargin,
+  previous_online_margin: emptyOnlineMargin,
 };
 
 const productBase: BiProductOverview = {
@@ -147,6 +166,28 @@ describe("BI highlight builders", () => {
     expect(lines.some((l) => l.includes("Non-VAT นำที่"))).toBe(true);
     expect(lines.some((l) => l.includes("บิล/วัน"))).toBe(true);
     expect(lines.some((l) => /18\s*ก\.ค\./.test(l))).toBe(true);
+    expect(lines.some((l) => l.includes("FIFO"))).toBe(false);
+  });
+
+  it("adds online fee and FIFO profit when online bills exist", () => {
+    const lines = buildSalesHighlights({
+      ...salesBase,
+      online_margin: {
+        ...emptyOnlineMargin,
+        revenue_net: 1000,
+        fee_baht: 150,
+        fifo_ext_cost: 400,
+        profit: 450,
+        margin_pct: 45,
+        bill_count: 10,
+        fee_bill_count: 8,
+        fifo_bill_count: 10,
+      },
+    });
+    expect(lines.some((l) => l.includes("ออนไลน์หลังค่าธรรมเนียมและ FIFO"))).toBe(
+      true
+    );
+    expect(lines.some((l) => l.includes("8/10"))).toBe(true);
   });
 
   it("omits bills-per-day for single-day sales ranges", () => {

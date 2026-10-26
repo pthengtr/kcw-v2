@@ -52,6 +52,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import SalesBilltypeTable from "./SalesBilltypeTable";
 import SalesKpiCard from "./SalesKpiCard";
+import SalesOnlineMargin from "./SalesOnlineMargin";
 import SalesPeriodTable from "./SalesPeriodTable";
 import SalesSplitChart from "./SalesSplitChart";
 import SalesTrendChart from "./SalesTrendChart";
@@ -376,6 +377,14 @@ export default function SalesOverviewPage() {
               />
             ) : null}
           </section>
+
+          {branch === "ONLINE" || overview.online_margin.bill_count > 0 ? (
+            <SalesOnlineMargin
+              current={overview.online_margin}
+              previous={overview.previous_online_margin}
+              mode={useDaily ? "daily" : "monthly"}
+            />
+          ) : null}
 
           <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <SalesSplitChart

@@ -21,7 +21,7 @@ Parent index: [docs/README.md](../README.md) · PC workers / sync jobs: [docs/wo
 | [sql/fn_bank_sync_ops.sql](./sql/fn_bank_sync_ops.sql) | Legacy enqueue/poll `bank_statement_import` (HQ-PC); web UI uses Edge Function |
 | [sql/create_raw_hq_brdet_bpdet.sql](./sql/create_raw_hq_brdet_bpdet.sql) | `raw_kcw` BRDET/BPDET cheque+transfer registers (from kcw-analytics) |
 | [sql/fn_bi_sales_revenue_filters.sql](./sql/fn_bi_sales_revenue_filters.sql) | Shared revenue include/exclude helper (`fn_bi_sales_bill_excluded_from_revenue`) |
-| [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales` |
+| [sql/fn_bi_sales_overview.sql](./sql/fn_bi_sales_overview.sql) | RPC used by `/bi/sales`. Online slice adds statement fees linked to each bill and daily FIFO cost. |
 | [sql/fn_bi_product_overview.sql](./sql/fn_bi_product_overview.sql) | RPC used by `/bi/products`. Optional `p_category` (KACC9) and `p_bcodes` (custom SKU set). |
 | [sql/fn_bi_product_search.sql](./sql/fn_bi_product_search.sql) | ICMAS picker RPC used by `/bi/product-sales` |
 | [sql/fn_bi_product_sales.sql](./sql/fn_bi_product_sales.sql) | RPC used by `/bi/product-sales` (plus `fn_bi_product_sales_lines`). UI: pick one SKU for the full report, or several to compare. Unit sale vs LAST_PURCHASE_COST chart + HQ/SYP/online pie when ≥2 branches have sales. |
