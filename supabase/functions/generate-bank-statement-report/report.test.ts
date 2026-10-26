@@ -13,6 +13,7 @@ import {
   splitRefIds,
   formatInternalTransferDescription,
   formatNarumonCashSalesDescription,
+  formatNarumonDirectorReimbursement,
   formatReportRemark,
   formatThaiQrPaymentDescription,
   isDocumentBillToken,
@@ -431,6 +432,82 @@ describe("bank statement report columns", () => {
     expect(enriched["เลขที่บิล"]).toBe("SCT0448/09-69");
   });
 
+  it("labels a 4759 Narumon reimbursement from the shop and expense item", async () => {
+    const receiptId = "3a2d2c59-9eb5-41e8-81c5-8038cb9f41db";
+    const admin = {
+      schema: () => ({
+        from: () => ({
+          select: () => ({
+            in: () => Promise.resolve({ data: [], error: null }),
+          }),
+        }),
+      }),
+      from: (table: string) => ({
+        select: () => ({
+          in: () => {
+            if (table === "expense_receipt") {
+              return Promise.resolve({
+                data: [
+                  {
+                    receipt_uuid: receiptId,
+                    receipt_number: "IV0000090086",
+                    voucher_description: "เติมน้ำมันรถส่งของ ผฉ.1929 ระยอง",
+                    party: {
+                      party_name: "สหกรณ์นิคมชุมเเสงจันทร์ จำกัด (สำนักงานใหญ่)",
+                    },
+                    payment_method: {
+                      payment_description: "คืนเงินสำรองจ่ายกรรมการ",
+                    },
+                  },
+                ],
+                error: null,
+              });
+            }
+            if (table === "expense_entry") {
+              return Promise.resolve({
+                data: [
+                  {
+                    receipt_uuid: receiptId,
+                    expense_item: { item_name: "ค่าน้ำมัน" },
+                  },
+                ],
+                error: null,
+              });
+            }
+            return Promise.resolve({ data: [], error: null });
+          },
+        }),
+      }),
+    };
+
+    const [row] = await attachMatchedPartyAndBills(admin, [
+      baseRow({
+        account_no: "233-1-18475-9",
+        direction: "out",
+        debit: 1000,
+        credit: null,
+        description: "โอนเงิน",
+        match_status: "matched",
+        match_reason: "ใบสำคัญจ่าย PV (วันเดียวกัน)",
+        match_notes: "พบใบสำคัญจ่าย IV0000090086 สุทธิ 1,000.00 บาท",
+        matched_ref_type: "expense_pv",
+        matched_ref_id: receiptId,
+        matched_party_name: null,
+        raw_json: {
+          รายการ: "โอนเงิน",
+          รายละเอียด: "โอนไป KTB X2446 น.ส.นฤมล วิทยผโลท++",
+        },
+      }),
+    ]);
+
+    expect(row.matched_expense_label).toBe(
+      "สหกรณ์นิคมชุมเเสงจันทร์ จำกัด ค่าน้ำมัน",
+    );
+    expect(resolveDescriptionColumn(row)).toBe(
+      "คืนเงินสำรองจ่ายนฤมล / สหกรณ์นิคมชุมเเสงจันทร์ จำกัด ค่าน้ำมัน",
+    );
+  });
+
   it("enriches the example RC6908-003 row into the simplified layout", () => {
     const [enriched] = enrichStatementRows([
       baseRow({
@@ -602,6 +679,75 @@ describe("bank statement report columns", () => {
         }),
       ),
     ).toBe("ขายเงินสด 3TR 26/08/2026");
+
+    expect(
+      formatNarumonDirectorReimbursement(
+        baseRow({
+          account_no: "233-1-18475-9",
+          direction: "out",
+          debit: 1000,
+          credit: null,
+          description: "โอนเงิน",
+          match_reason: "ใบสำคัญจ่าย PV (วันเดียวกัน)",
+          match_notes:
+            "จับคู่กับใบสำคัญจ่าย IV0000090086 (เติมน้ำมันรถส่งของ) จำนวน 1,000.00 บาท ผ่าน คืนเงินสำรองจ่ายกรรมการ",
+          matched_ref_type: "expense_pv",
+          matched_ref_id: "3a2d2c59-9eb5-41e8-81c5-8038cb9f41db",
+          matched_party_name: "สหกรณ์นิคมชุมเเสงจันทร์ จำกัด (สำนักงานใหญ่)",
+          matched_payment_description: "คืนเงินสำรองจ่ายกรรมการ",
+          matched_expense_label: "สหกรณ์นิคมชุมเเสงจันทร์ จำกัด ค่าน้ำมัน",
+          raw_json: {
+            รายการ: "โอนเงิน",
+            รายละเอียด: "โอนไป KTB X2446 น.ส.นฤมล วิทยผโลท++",
+          },
+        }),
+      ),
+    ).toBe("คืนเงินสำรองจ่ายนฤมล / สหกรณ์นิคมชุมเเสงจันทร์ จำกัด ค่าน้ำมัน");
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "233-1-18475-9",
+          direction: "out",
+          debit: 1000,
+          credit: null,
+          description: "โอนเงิน",
+          match_reason: "ใบสำคัญจ่าย PV (วันเดียวกัน)",
+          match_notes:
+            "จับคู่กับใบสำคัญจ่าย IV0000090086 (เติมน้ำมันรถส่งของ) จำนวน 1,000.00 บาท ผ่าน คืนเงินสำรองจ่ายกรรมการ",
+          matched_ref_type: "expense_pv",
+          matched_ref_id: "3a2d2c59-9eb5-41e8-81c5-8038cb9f41db",
+          matched_party_name: "สหกรณ์นิคมชุมเเสงจันทร์ จำกัด (สำนักงานใหญ่)",
+          matched_payment_description: "คืนเงินสำรองจ่ายกรรมการ",
+          matched_expense_label: "สหกรณ์นิคมชุมเเสงจันทร์ จำกัด ค่าน้ำมัน",
+          raw_json: {
+            รายการ: "โอนเงิน",
+            รายละเอียด: "โอนไป KTB X2446 น.ส.นฤมล วิทยผโลท++",
+          },
+        }),
+      ),
+    ).toBe("คืนเงินสำรองจ่ายนฤมล / สหกรณ์นิคมชุมเเสงจันทร์ จำกัด ค่าน้ำมัน");
+
+    expect(
+      resolveDescriptionColumn(
+        baseRow({
+          account_no: "233-1-18475-9",
+          direction: "out",
+          debit: 19000,
+          credit: null,
+          description: "โอนเงิน",
+          match_reason: "ใบสำคัญจ่าย PV (วันเดียวกัน)",
+          match_notes:
+            "จับคู่กับใบสำคัญจ่าย ** (ค่าเช่าสำนักงาน สาขา) ผ่าน กสิกร xxxxxx4759",
+          matched_ref_type: "expense_pv",
+          matched_party_name: "นางสาวนฤมล วิทยผโลทัย",
+          matched_payment_description: "กสิกร xxxxxx4759",
+          raw_json: {
+            รายการ: "โอนเงิน",
+            รายละเอียด: "โอนไป KTB X8822 น.ส.นฤมล วิทยผโลท++",
+          },
+        }),
+      ),
+    ).toBe("นางสาวนฤมล วิทยผโลทัย");
 
     // TAR net from Narumon keeps the daily-net sales label, not ขายเงินสด.
     expect(

@@ -164,6 +164,13 @@ export type StatementLineRow = {
   matched_bill_nos?: string | null;
   /** Optional ISO sales/bill date resolved at report time (TR / 3TR BILLDATE). */
   matched_bill_date?: string | null;
+  /** Payment-method text from matched expense receipts (report time only). */
+  matched_payment_description?: string | null;
+  /**
+   * Shop + expense item for a director reimbursement, e.g.
+   * `สหกรณ์… จำกัด ค่าน้ำมัน`. Report time only.
+   */
+  matched_expense_label?: string | null;
 };
 
 export type EnrichedRow = Record<ReportColumn, string | number | Date | null> & {
@@ -695,6 +702,53 @@ export function formatNarumonCashSalesDescription(
   return `ขายเงินสด ${kind} ${formatDateDdMmYyyy(billDate)}`;
 }
 
+function statementNamesNarumon(row: StatementLineRow): boolean {
+  const hay = statementHaystack(row);
+  if (/นฤมล|วิทยผโลทัย/u.test(hay)) return true;
+  return /narumon|withayapal/i.test(hay);
+}
+
+function isDirectorReimbursementPayment(payment: string): boolean {
+  const parts = payment
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.length > 0 && parts.every((part) => /คืนเงินสำรอง/u.test(part));
+}
+
+/**
+ * Account 4759 transfers to Narumon that settle director cash
+ * (`คืนเงินสำรองจ่ายกรรมการ`).
+ * Example: `คืนเงินสำรองจ่ายนฤมล / สหกรณ์นิคมชุมแสงจันทร์ จำกัด ค่าน้ำมัน`
+ */
+export function formatNarumonDirectorReimbursement(
+  row: StatementLineRow,
+): string | null {
+  if (!accountDigits(row.account_no).endsWith("4759")) return null;
+  const direction = String(row.direction ?? "").trim().toLowerCase();
+  if (direction && direction !== "out") return null;
+  if ((row.matched_ref_type ?? "").trim().toLowerCase() !== "expense_pv") {
+    return null;
+  }
+  if (!statementNamesNarumon(row)) return null;
+
+  const payment = (row.matched_payment_description ?? "").trim();
+  if (payment && !isDirectorReimbursementPayment(payment)) return null;
+
+  const label = (row.matched_expense_label ?? "").trim();
+  const notesHit = /คืนเงินสำรอง/u.test(
+    `${row.match_notes ?? ""}\n${row.match_reason ?? ""}`,
+  );
+  if (!label && !notesHit && !isDirectorReimbursementPayment(payment)) {
+    return null;
+  }
+
+  const body =
+    label || normalizePartyDisplayName((row.matched_party_name ?? "").trim());
+  if (!body) return null;
+  return `คืนเงินสำรองจ่ายนฤมล / ${body}`;
+}
+
 export function findKcwCompanyAccount(
   value: string | null | undefined,
 ): KcwCompanyAccount | null {
@@ -815,6 +869,9 @@ export function resolveDescriptionColumn(row: StatementLineRow): string {
 
   const narumonCash = formatNarumonCashSalesDescription(row);
   if (narumonCash) return narumonCash;
+
+  const narumonReimburse = formatNarumonDirectorReimbursement(row);
+  if (narumonReimburse) return narumonReimburse;
 
   const dailyNet = formatDailyNetSalesDescription(row);
   if (dailyNet) return dailyNet;
