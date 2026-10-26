@@ -15,6 +15,13 @@ import SalesBillDetailDialog, {
   SalesBillNoButton,
   type SalesBillTarget,
 } from "@/components/sales/SalesBillDetailDialog";
+import { FifoBillNote, FifoMarginSummary } from "@/components/bank/FifoMarginSummary";
+import {
+  fifoMargin,
+  indexBillFifo,
+  saleBillTakesFifo,
+  type BillFifoCost,
+} from "@/lib/bank/fifo-margin";
 import {
   summarizeTarDayBills,
   tarDayLookup,
@@ -76,6 +83,8 @@ export default function TarDayDialog({
   const requestKey = open && billDate && series ? `${billDate}|${series}` : "";
   const [loadedKey, setLoadedKey] = useState("");
   const [bills, setBills] = useState<TarDayBill[]>([]);
+  const [fifoCosts, setFifoCosts] = useState<BillFifoCost[]>([]);
+  const [fifoError, setFifoError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [billTarget, setBillTarget] = useState<SalesBillTarget | null>(null);
 
@@ -89,6 +98,8 @@ export default function TarDayDialog({
         if (!res.ok) throw new Error(json.error ?? "โหลดรายการไม่สำเร็จ");
         if (!cancelled) {
           setBills(json.bills ?? []);
+          setFifoCosts(json.fifo ?? []);
+          setFifoError(json.fifo_error ?? null);
           setError(null);
           setLoadedKey(requestKey);
         }
@@ -96,6 +107,8 @@ export default function TarDayDialog({
       .catch((err: unknown) => {
         if (!cancelled) {
           setBills([]);
+          setFifoCosts([]);
+          setFifoError(null);
           setError(err instanceof Error ? err.message : "โหลดรายการไม่สำเร็จ");
           setLoadedKey(requestKey);
         }
@@ -118,6 +131,14 @@ export default function TarDayDialog({
   const creditKind = lookup?.series === "syp" ? "3CNTAR" : "CNTAR";
   const salesBills = bills.filter((bill) => bill.doc_type === salesKind);
   const creditBills = bills.filter((bill) => bill.doc_type === creditKind);
+  const fifoByBill = indexBillFifo(fifoCosts);
+  const saleMargin = fifoMargin({
+    revenue: totals.net,
+    billnos: salesBills
+      .filter((bill) => saleBillTakesFifo(bill.billno, bill.doc_type))
+      .map((bill) => bill.billno),
+    costs: fifoCosts,
+  });
 
   return (
     <>
@@ -169,7 +190,17 @@ export default function TarDayDialog({
                   </>
                 ) : null}
               </dl>
-              <BillList title={salesKind} bills={salesBills} onOpen={setBillTarget} />
+              {fifoError ? (
+                <p className="text-xs text-red-600">{fifoError}</p>
+              ) : (
+                <FifoMarginSummary margin={saleMargin} />
+              )}
+              <BillList
+                title={salesKind}
+                bills={salesBills}
+                fifoByBill={fifoByBill}
+                onOpen={setBillTarget}
+              />
               <BillList title={creditKind} bills={creditBills} onOpen={setBillTarget} />
             </div>
           )}
@@ -190,10 +221,12 @@ export default function TarDayDialog({
 function BillList({
   title,
   bills,
+  fifoByBill,
   onOpen,
 }: {
   title: string;
   bills: TarDayBill[];
+  fifoByBill?: Map<string, BillFifoCost>;
   onOpen: (target: SalesBillTarget) => void;
 }) {
   if (bills.length === 0) return null;
@@ -204,12 +237,19 @@ function BillList({
         {bills.map((bill) => (
           <li
             key={`${bill.doc_type}:${bill.billno}`}
-            className="flex items-start justify-between gap-3 rounded-lg border px-3 py-3"
+            className="rounded-lg border px-3 py-3"
           >
-            <SalesBillNoButton billno={bill.billno} docType={bill.doc_type} onOpen={onOpen} />
-            <div className="shrink-0 text-sm font-semibold tabular-nums">
-              {formatMoney(bill.amount)}
+            <div className="flex items-start justify-between gap-3">
+              <SalesBillNoButton billno={bill.billno} docType={bill.doc_type} onOpen={onOpen} />
+              <div className="shrink-0 text-sm font-semibold tabular-nums">
+                {formatMoney(bill.amount)}
+              </div>
             </div>
+            {fifoByBill && saleBillTakesFifo(bill.billno, bill.doc_type) ? (
+              <div className="mt-1">
+                <FifoBillNote cost={fifoByBill.get(bill.billno)} />
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>

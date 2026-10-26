@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+import { FifoMarginSummary } from "@/components/bank/FifoMarginSummary";
 import DialogPrintButton from "@/components/common/DialogPrintButton";
+import type { FifoMargin } from "@/lib/bank/fifo-margin";
 import { billDiscountToShow } from "@/lib/sales/bill-detail";
 import {
   Dialog,
@@ -38,6 +40,7 @@ type SalesBill = {
   aftertax: number;
   discount: number;
   canceled: boolean;
+  fifo: FifoMargin | null;
   lines: SalesBillLine[];
 };
 
@@ -220,6 +223,7 @@ function BillDetailBody({
         <dt className="font-medium">รวม</dt>
         <dd className="text-right font-medium tabular-nums">{formatMoney(bill.aftertax)}</dd>
       </dl>
+      {source === "sales" && bill.fifo ? <FifoMarginSummary margin={bill.fifo} /> : null}
       <div className="overflow-auto rounded-md border print:overflow-visible print:border-0">
         <table className="w-full min-w-[36rem] border-collapse text-sm print:min-w-0">
           <thead>

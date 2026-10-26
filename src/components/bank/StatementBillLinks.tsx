@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 
 import type { StatementLineRow } from "@/components/bank/types";
+import {
+  FifoBillNote,
+  FifoMarginSummary,
+  useSaleFifo,
+} from "@/components/bank/FifoMarginSummary";
 import DialogPrintButton from "@/components/common/DialogPrintButton";
 import {
   SalesBillNoButton,
@@ -15,6 +20,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  fifoMargin,
+  fifoSiteForBillnos,
+  saleBillTakesFifo,
+} from "@/lib/bank/fifo-margin";
 import {
   statementExpenseReceipts,
   statementPurchaseBills,
@@ -162,6 +172,17 @@ export function StatementBillListDialog({
   onOpenChange: (open: boolean) => void;
   onOpenBill: (target: SalesBillTarget) => void;
 }) {
+  const salesBillnos = bills
+    .filter(
+      (bill) =>
+        bill.source !== "purchase" && saleBillTakesFifo(bill.billno, bill.docType)
+    )
+    .map((bill) => bill.billno);
+  const fifo = useSaleFifo(
+    salesBillnos,
+    fifoSiteForBillnos(salesBillnos),
+    open && salesBillnos.length > 0
+  );
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -181,6 +202,7 @@ export function StatementBillListDialog({
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
           <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {fifo.error ? <li className="text-xs text-red-600">{fifo.error}</li> : null}
             {bills.map((bill) => (
               <li key={`${bill.source ?? "sales"}:${bill.billno}`} className="rounded-lg border px-3 py-3">
                 <SalesBillNoButton
@@ -189,6 +211,15 @@ export function StatementBillListDialog({
                   source={bill.source}
                   onOpen={onOpenBill}
                 />
+                {bill.source !== "purchase" && saleBillTakesFifo(bill.billno, bill.docType) ? (
+                  <div className="mt-1">
+                    {fifo.loading ? (
+                      <span className="text-xs text-muted-foreground">กำลังโหลดต้นทุน FIFO</span>
+                    ) : (
+                      <FifoBillNote cost={fifo.byBill.get(bill.billno)} />
+                    )}
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -244,6 +275,23 @@ export function VoucherBillsDialog({
 
   const loading = requestKey !== "" && loadedKey !== requestKey;
   const summary = voucherListSummary(bills);
+  const salesBillnos = bills
+    .filter(
+      (bill) =>
+        bill.source === "sales" && !bill.canceled && saleBillTakesFifo(bill.billno, bill.doc_type)
+    )
+    .map((bill) => bill.billno);
+  const salesRevenue = bills
+    .filter(
+      (bill) =>
+        bill.source === "sales" && !bill.canceled && saleBillTakesFifo(bill.billno, bill.doc_type)
+    )
+    .reduce((sum, bill) => sum + bill.amount, 0);
+  const fifo = useSaleFifo(
+    salesBillnos,
+    fifoSiteForBillnos(salesBillnos),
+    open && salesBillnos.length > 0
+  );
   const discountText =
     summary.discount < 0
       ? ` · ส่วนลด ${money.format(Math.abs(summary.discount))}`
@@ -284,6 +332,21 @@ export function VoucherBillsDialog({
             <p className="py-6 text-sm text-muted-foreground">ไม่พบบิลในใบสำคัญนี้</p>
           ) : (
             <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              {salesBillnos.length === 0 ? null : fifo.loading ? (
+                <li className="text-xs text-muted-foreground">กำลังโหลดต้นทุน FIFO</li>
+              ) : fifo.error ? (
+                <li className="text-xs text-red-600">{fifo.error}</li>
+              ) : (
+                <li>
+                  <FifoMarginSummary
+                    margin={fifoMargin({
+                      revenue: salesRevenue,
+                      billnos: salesBillnos,
+                      costs: fifo.costs,
+                    })}
+                  />
+                </li>
+              )}
               {bills.map((bill) =>
                 bill.source === "discount" ? (
                   <li
@@ -312,6 +375,14 @@ export function VoucherBillsDialog({
                         {bill.doc_type}
                         {bill.acctname ? ` · ${bill.acctname}` : ""}
                       </div>
+                      {bill.source === "sales" &&
+                      !fifo.loading &&
+                      !fifo.error &&
+                      saleBillTakesFifo(bill.billno, bill.doc_type) ? (
+                        <div className="mt-1">
+                          <FifoBillNote cost={fifo.byBill.get(bill.billno)} />
+                        </div>
+                      ) : null}
                     </div>
                     <div className="shrink-0 text-sm font-semibold tabular-nums">
                       {money.format(bill.amount)}

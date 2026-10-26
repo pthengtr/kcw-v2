@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { BANK_STATEMENT_READ_PAGE_KEYS } from "@/lib/auth/rbac-pages";
+import { saleBillTakesFifo } from "@/lib/bank/fifo-margin";
+import { loadSaleFifo } from "@/lib/bank/fifo-margin-query";
 import { summarizeTarDayBills, type TarDayBill } from "@/lib/bank/tar-day";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -45,11 +47,23 @@ export async function GET(req: Request) {
     amount: Number(row.amount ?? 0),
   }));
   const totals = summarizeTarDayBills(bills);
+  const saleBillnos = bills
+    .filter((bill) => saleBillTakesFifo(bill.billno, bill.doc_type))
+    .map((bill) => bill.billno);
+  let fifo: Awaited<ReturnType<typeof loadSaleFifo>> = [];
+  let fifoError: string | null = null;
+  try {
+    fifo = await loadSaleFifo(saleBillnos, series);
+  } catch (err: unknown) {
+    fifoError = err instanceof Error ? err.message : "โหลดต้นทุน FIFO ไม่สำเร็จ";
+  }
 
   return NextResponse.json({
     date,
     series,
     bills,
+    fifo,
+    fifo_error: fifoError,
     ...totals,
   });
 }
