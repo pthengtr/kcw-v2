@@ -46,7 +46,7 @@ export async function GET(req: Request) {
   }
 
   const supabase = createAdminClient();
-  let query = supabase
+  const query = supabase
     .schema("to_bill")
     .from("invoices")
     .select("invoice_id,tad_billno,docno,status")
