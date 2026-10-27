@@ -91,10 +91,22 @@ export async function GET(req: Request) {
     } catch (err: unknown) {
       fifoError = err instanceof Error ? err.message : "โหลดต้นทุน FIFO ไม่สำเร็จ";
     }
+    const billnosByPayout = new Map<string, string[]>();
+    for (const bill of billRes.data ?? []) {
+      const key = String(bill.payout_key ?? "");
+      const list = billnosByPayout.get(key) ?? [];
+      const billno = String(bill.billno ?? "").trim();
+      if (billno) list.push(billno);
+      billnosByPayout.set(key, list);
+    }
+    const payoutsWithBills = payouts.map((payout) => ({
+      ...payout,
+      billnos: billnosByPayout.get(payout.payout_key) ?? [],
+    }));
     if (fifoError) {
       return NextResponse.json({
         deposit: depositRes.data,
-        payouts,
+        payouts: payoutsWithBills,
         deposit_fifo: null,
         fifo_error: fifoError,
       });
@@ -106,7 +118,7 @@ export async function GET(req: Request) {
       list.push(String(bill.billno ?? ""));
       billsByPayout.set(key, list);
     }
-    const withFifo = payouts.map((payout) => {
+    const withFifo = payoutsWithBills.map((payout) => {
       const billnos = billsByPayout.get(payout.payout_key) ?? [];
       const fifo: FifoMarginBrief | null =
         billnos.length === 0

@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 
 import { FifoMarginSummary } from "@/components/bank/FifoMarginSummary";
 import DialogPrintButton from "@/components/common/DialogPrintButton";
+import ToBillDialog from "@/components/sales/ToBillDialog";
+import { ToBillMark } from "@/components/sales/ToBillMark";
+import { useToBillIndex } from "@/components/sales/useToBillIndex";
 import type { FifoMargin } from "@/lib/bank/fifo-margin";
 import { billDiscountToShow } from "@/lib/sales/bill-detail";
+import { isHqTadBillno, toBillCreateHref } from "@/lib/sales/to-bill";
 import {
   Dialog,
   DialogContent,
@@ -111,6 +115,10 @@ export default function SalesBillDetailDialog({
   const [loadedKey, setLoadedKey] = useState("");
   const [bill, setBill] = useState<SalesBill | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toDoc, setToDoc] = useState<string | null>(null);
+  const tadBillno = open && isHqTadBillno(billno) ? billno : "";
+  const toBills = useToBillIndex(tadBillno ? [tadBillno] : []);
+  const toRow = tadBillno ? toBills.byBill[tadBillno.trim().toUpperCase()] : undefined;
 
   useEffect(() => {
     if (!requestKey || !billno) return;
@@ -142,11 +150,22 @@ export default function SalesBillDetailDialog({
 
   const loading = requestKey !== "" && loadedKey !== requestKey;
 
+  useEffect(() => {
+    if (!open) setToDoc(null);
+  }, [open]);
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         overlayClassName="z-[80]"
         className="left-0 top-0 z-[80] flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(840px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
+        onInteractOutside={(event) => {
+          if (toDoc) event.preventDefault();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (toDoc) event.preventDefault();
+        }}
       >
         <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
           <DialogTitle className="text-base sm:text-lg">
@@ -170,6 +189,25 @@ export default function SalesBillDetailDialog({
               bill ? `${bill.doc_type} ${bill.billno}` : billno || "รายละเอียดบิล"
             }
           />
+          {tadBillno && toBills.ready ? (
+            <div className="print:hidden">
+              <ToBillMark
+                billno={tadBillno}
+                row={toRow}
+                canCreate={toBills.canCreate}
+                createBaseUrl={toBills.createBaseUrl}
+                onOpen={setToDoc}
+              />
+              {!toRow && toBills.canCreate && toBills.createBaseUrl ? (
+                <a
+                  className="text-sm text-sky-800 underline"
+                  href={toBillCreateHref(toBills.createBaseUrl, tadBillno)}
+                >
+                  สร้างใบเต็ม
+                </a>
+              ) : null}
+            </div>
+          ) : null}
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
@@ -185,6 +223,15 @@ export default function SalesBillDetailDialog({
         </div>
       </DialogContent>
     </Dialog>
+    <ToBillDialog
+      docno={toDoc}
+      open={toDoc !== null}
+      onOpenChange={(next) => {
+        if (!next) setToDoc(null);
+      }}
+      onOpenTad={() => setToDoc(null)}
+    />
+    </>
   );
 }
 
