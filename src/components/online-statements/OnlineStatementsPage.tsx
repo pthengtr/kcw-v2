@@ -11,6 +11,10 @@ import SalesBillDetailDialog, {
   SalesBillNoButton,
   type SalesBillTarget,
 } from "@/components/sales/SalesBillDetailDialog";
+import ToBillDialog from "@/components/sales/ToBillDialog";
+import { ToBillMark } from "@/components/sales/ToBillMark";
+import { useToBillIndex } from "@/components/sales/useToBillIndex";
+import { toBillCoverage, toBillCoverageLabel } from "@/lib/sales/to-bill";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -229,6 +233,7 @@ export default function OnlineStatementsPage({
   const [syncing, setSyncing] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [billTarget, setBillTarget] = useState<SalesBillTarget | null>(null);
+  const [toDoc, setToDoc] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -316,8 +321,15 @@ export default function OnlineStatementsPage({
   }, [selectedKey]);
 
   useEffect(() => {
-    if (!selectedKey) setBillTarget(null);
+    if (!selectedKey) {
+      setBillTarget(null);
+      setToDoc(null);
+    }
   }, [selectedKey]);
+
+  const toBillnos = useMemo(() => bills.map((bill) => bill.billno), [bills]);
+  const toBills = useToBillIndex(toBillnos);
+  const coverageLabel = toBillCoverageLabel(toBillCoverage(toBillnos, toBills.byBill));
 
   useEffect(() => {
     if (!syncing) return;
@@ -813,10 +825,10 @@ export default function OnlineStatementsPage({
         <DialogContent
           className="left-0 top-0 flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(960px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
           onInteractOutside={(event) => {
-            if (billTarget) event.preventDefault();
+            if (billTarget || toDoc) event.preventDefault();
           }}
           onEscapeKeyDown={(event) => {
-            if (billTarget) event.preventDefault();
+            if (billTarget || toDoc) event.preventDefault();
           }}
         >
           <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
@@ -833,6 +845,7 @@ export default function OnlineStatementsPage({
               <p className="text-xs text-muted-foreground">
                 ยอดในชุดนี้ {formatMoney(selected.component_net)} บาท
                 {selected.source_file ? ` · ${selected.source_file}` : ""}
+                {coverageLabel ? ` · ${coverageLabel}` : ""}
               </p>
             ) : null}
             <DialogPrintButton
@@ -929,6 +942,13 @@ export default function OnlineStatementsPage({
                                 PO {bill.po} · {bill.match_method} · {formatMoney(bill.aftertax)}
                                 {bill.acctname ? ` · ${bill.acctname}` : ""}
                               </div>
+                              <ToBillMark
+                                billno={bill.billno}
+                                row={toBills.byBill[bill.billno.trim().toUpperCase()]}
+                                canCreate={toBills.canCreate}
+                                createBaseUrl={toBills.createBaseUrl}
+                                onOpen={setToDoc}
+                              />
                               {bill.canceled || fifoError || !saleBillTakesFifo(bill.billno) ? null : (
                                 <FifoBillNote
                                   cost={fifoCosts.find((cost) => cost.billno === bill.billno)}
@@ -951,6 +971,17 @@ export default function OnlineStatementsPage({
         open={billTarget !== null}
         onOpenChange={(next) => {
           if (!next) setBillTarget(null);
+        }}
+      />
+      <ToBillDialog
+        docno={toDoc}
+        open={toDoc !== null}
+        onOpenChange={(next) => {
+          if (!next) setToDoc(null);
+        }}
+        onOpenTad={(billno) => {
+          setToDoc(null);
+          setBillTarget({ billno, docType: "TAD" });
         }}
       />
     </div>

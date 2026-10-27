@@ -8,6 +8,10 @@ import SalesBillDetailDialog, {
   SalesBillNoButton,
   type SalesBillTarget,
 } from "@/components/sales/SalesBillDetailDialog";
+import ToBillDialog from "@/components/sales/ToBillDialog";
+import { ToBillMark } from "@/components/sales/ToBillMark";
+import { useToBillIndex } from "@/components/sales/useToBillIndex";
+import { toBillCoverage, toBillCoverageLabel } from "@/lib/sales/to-bill";
 import {
   fifoMarginText,
   saleBillTakesFifo,
@@ -37,6 +41,7 @@ type Payout = {
   source_file: string | null;
   note: string | null;
   fifo?: FifoMarginBrief | null;
+  billnos?: string[];
 };
 
 type Deposit = {
@@ -129,6 +134,7 @@ export default function OnlineDepositDialog({
   const [detailLoading, setDetailLoading] = useState(false);
   const [onlyUnmatched, setOnlyUnmatched] = useState(false);
   const [billTarget, setBillTarget] = useState<SalesBillTarget | null>(null);
+  const [toDoc, setToDoc] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !lineId) return;
@@ -198,6 +204,7 @@ export default function OnlineDepositDialog({
 
   useEffect(() => {
     if (!open || !selectedKey) setBillTarget(null);
+    if (!open) setToDoc(null);
   }, [open, selectedKey]);
 
   const selected = payouts.find((row) => row.payout_key === selectedKey) ?? null;
@@ -216,6 +223,13 @@ export default function OnlineDepositDialog({
   const unmatchedCount = lines.filter(
     (line) => line.order_id && line.order_id !== "0" && (billsByOrder.get(line.order_id) ?? []).length === 0
   ).length;
+  const depositBillnos = useMemo(
+    () => payouts.flatMap((row) => row.billnos ?? []),
+    [payouts]
+  );
+  const toBillnos = selectedKey ? bills.map((bill) => bill.billno) : depositBillnos;
+  const toBills = useToBillIndex(toBillnos);
+  const coverageLabel = toBillCoverageLabel(toBillCoverage(toBillnos, toBills.byBill));
 
   const title = deposit
     ? `${platformLabel(deposit.platform)} ${deposit.shop} · ${formatMoney(deposit.amount)} บาท`
@@ -227,10 +241,10 @@ export default function OnlineDepositDialog({
       <DialogContent
         className="left-0 top-0 z-[60] flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(960px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
         onInteractOutside={(event) => {
-          if (billTarget) event.preventDefault();
+          if (billTarget || toDoc) event.preventDefault();
         }}
         onEscapeKeyDown={(event) => {
-          if (billTarget) event.preventDefault();
+          if (billTarget || toDoc) event.preventDefault();
         }}
       >
         <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
@@ -248,6 +262,9 @@ export default function OnlineDepositDialog({
           </DialogDescription>
           {!selected && depositFifoError ? (
             <p className="text-xs text-red-600">{depositFifoError}</p>
+          ) : null}
+          {coverageLabel ? (
+            <p className="text-xs text-muted-foreground">{coverageLabel}</p>
           ) : null}
           {!selected && depositFifo ? (
             <p className="text-xs text-muted-foreground">
@@ -362,6 +379,13 @@ export default function OnlineDepositDialog({
                                 PO {bill.po} · {formatMoney(bill.aftertax)}
                                 {bill.acctname ? ` · ${bill.acctname}` : ""}
                               </div>
+                              <ToBillMark
+                                billno={bill.billno}
+                                row={toBills.byBill[bill.billno.trim().toUpperCase()]}
+                                canCreate={toBills.canCreate}
+                                createBaseUrl={toBills.createBaseUrl}
+                                onOpen={setToDoc}
+                              />
                               {bill.canceled || fifoError || !saleBillTakesFifo(bill.billno) ? null : (
                                 <FifoBillNote
                                   cost={fifoCosts.find((cost) => cost.billno === bill.billno)}
@@ -378,7 +402,11 @@ export default function OnlineDepositDialog({
             )
           ) : (
             <ul className="flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              {payouts.map((row) => (
+              {payouts.map((row) => {
+                const fullLabel = toBillCoverageLabel(
+                  toBillCoverage(row.billnos ?? [], toBills.byBill)
+                );
+                return (
                 <li key={row.payout_key}>
                   <button
                     type="button"
@@ -389,6 +417,7 @@ export default function OnlineDepositDialog({
                       <div className="text-sm font-medium">{formatWhen(row.payout_at)}</div>
                       <div className="mt-1 text-xs text-muted-foreground">
                         ออเดอร์ {row.order_count} · TAD {row.matched_order_count}/{row.order_count}
+                        {fullLabel ? ` · ${fullLabel}` : ""}
                       </div>
                       {row.fifo ? (
                         <div className="mt-1 text-xs text-muted-foreground">{fifoMarginText(row.fifo)}</div>
@@ -399,7 +428,8 @@ export default function OnlineDepositDialog({
                     </div>
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </div>
@@ -410,6 +440,17 @@ export default function OnlineDepositDialog({
       open={billTarget !== null}
       onOpenChange={(next) => {
         if (!next) setBillTarget(null);
+      }}
+    />
+    <ToBillDialog
+      docno={toDoc}
+      open={toDoc !== null}
+      onOpenChange={(next) => {
+        if (!next) setToDoc(null);
+      }}
+      onOpenTad={(billno) => {
+        setToDoc(null);
+        setBillTarget({ billno, docType: "TAD" });
       }}
     />
     </>
