@@ -8,6 +8,7 @@ import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
 import SalesBillDetailDialog, {
   type SalesBillTarget,
 } from "@/components/sales/SalesBillDetailDialog";
+import ToBillDialog from "@/components/sales/ToBillDialog";
 import { cn } from "@/lib/utils";
 import {
   compareSheets,
@@ -103,7 +104,7 @@ function vatCell(id: VatRegisterColumnId, row: VatRegisterRow, index: number): R
     case "date":
       return thaiDate(row.bill_date);
     case "bill":
-      return row.display_bill_no;
+      return <BillNumber row={row} />;
     case "party":
       return (
         <span className="block max-w-[16rem]">
@@ -259,7 +260,14 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   }
 
   async function setAccountingUnused(row: VatRegisterRow, unused: boolean) {
-    if (readOnly || unused === row.accounting_unused || savingUse.has(row.line_key)) return;
+    if (
+      readOnly ||
+      row.full_invoice_docno ||
+      unused === row.accounting_unused ||
+      savingUse.has(row.line_key)
+    ) {
+      return;
+    }
     setSaveError(null);
     setSavingUse((current) => new Set(current).add(row.line_key));
     patchRow(row.line_key, { accounting_unused: unused });
@@ -454,7 +462,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                       <p className="text-xs text-slate-500">
                         {row.sheet} · {thaiDate(row.bill_date)}
                       </p>
-                      <p className="truncate font-medium">{row.display_bill_no}</p>
+                      <BillNumber row={row} />
                       <PartyLines row={row} />
                     </div>
                     <p className="shrink-0 text-sm font-medium">{formatBaht(row.after_vat, true)}</p>
@@ -466,6 +474,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                     </p>
                     <AccountingUnusedToggle
                       checked={row.accounting_unused}
+                      locked={Boolean(row.full_invoice_docno)}
                       disabled={readOnly || savingUse.has(row.line_key)}
                       onChange={(unused) => void setAccountingUnused(row, unused)}
                     />
@@ -555,6 +564,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                     >
                       <AccountingUnusedToggle
                         checked={row.accounting_unused}
+                        locked={Boolean(row.full_invoice_docno)}
                         disabled={readOnly || savingUse.has(row.line_key)}
                         onChange={(unused) => void setAccountingUnused(row, unused)}
                       />
@@ -626,6 +636,19 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   );
 }
 
+function BillNumber({ row }: { row: VatRegisterRow }) {
+  return (
+    <span className="block min-w-0">
+      <span className="block">{row.display_bill_no}</span>
+      {row.full_invoice_docno ? (
+        <span className="block text-xs font-normal text-slate-500">
+          ออกใบเต็มแล้ว: {row.full_invoice_docno}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 function PartyLines({ row }: { row: VatRegisterRow }) {
   const name = row.party_name?.trim() || "";
   const code = row.side === "purchase" ? row.party_code?.trim() || "" : "";
@@ -654,21 +677,24 @@ function vatRegisterTotalLabel(used: number, unused: number): string {
 function AccountingUnusedToggle({
   checked,
   disabled,
+  locked = false,
   onChange,
 }: {
   checked: boolean;
   disabled: boolean;
+  locked?: boolean;
   onChange: (unused: boolean) => void;
 }) {
   return (
     <label
       className="inline-flex items-center gap-1.5 text-xs text-slate-600"
+      title={locked ? "ออกใบเต็มแล้ว จึงไม่นับใบย่อ" : "ติ๊กเมื่อบัญชีไม่ใช้รายการนี้ ยอดรวมจะไม่นับ"}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
       <Checkbox
         checked={checked}
-        disabled={disabled}
+        disabled={disabled || locked}
         aria-label="บัญชีไม่ใช้"
         onCheckedChange={(value) => onChange(value === true)}
       />
@@ -873,7 +899,8 @@ function LineDialog({
   const [message, setMessage] = useState<string | null>(null);
   const [billTarget, setBillTarget] = useState<SalesBillTarget | null>(null);
   const [expenseOpen, setExpenseOpen] = useState(false);
-  const detailOpen = billTarget !== null || expenseOpen;
+  const [toDocno, setToDocno] = useState<string | null>(null);
+  const detailOpen = billTarget !== null || expenseOpen || toDocno !== null;
   const drill = row ? vatBillDrill(row) : null;
 
   const loadFiles = useCallback(async (lineKey: string, reportMonth: string) => {
@@ -893,6 +920,7 @@ function LineDialog({
     if (!row) {
       setBillTarget(null);
       setExpenseOpen(false);
+      setToDocno(null);
       return;
     }
     setPaidStatus(row.paid_status);
@@ -903,6 +931,7 @@ function LineDialog({
     setExpenseFiles([]);
     setBillTarget(null);
     setExpenseOpen(false);
+    setToDocno(null);
     void loadFiles(row.line_key, row.report_month).catch((err: unknown) => {
       setMessage(err instanceof Error ? err.message : "โหลดไฟล์ไม่สำเร็จ");
     });
@@ -1017,6 +1046,9 @@ function LineDialog({
               <DialogTitle>
                 {row.sheet} · {row.display_bill_no}
               </DialogTitle>
+              {row.full_invoice_docno ? (
+                <p className="text-sm text-slate-600">ออกใบเต็มแล้ว: {row.full_invoice_docno}</p>
+              ) : null}
             </DialogHeader>
             <dl className="grid grid-cols-2 gap-2 text-sm">
               <div>
@@ -1044,12 +1076,24 @@ function LineDialog({
             <label className="flex items-center gap-2 text-sm">
               <Checkbox
                 checked={row.accounting_unused}
-                disabled={readOnly || savingUse}
+                disabled={readOnly || savingUse || Boolean(row.full_invoice_docno)}
                 aria-label="บัญชีไม่ใช้"
                 onCheckedChange={(value) => onAccountingUnused(row, value === true)}
               />
-              บัญชีไม่ใช้ — ไม่รวมในยอดรวม
+              {row.full_invoice_docno
+                ? "บัญชีไม่ใช้ — ออกใบเต็มแล้ว จึงไม่นับใบย่อ"
+                : "บัญชีไม่ใช้ — ไม่รวมในยอดรวม"}
             </label>
+
+            {row.full_invoice_docno || row.source === "to_bill" ? (
+              <button
+                type="button"
+                className="text-left text-sm font-medium text-sky-800 underline"
+                onClick={() => setToDocno(row.full_invoice_docno || row.bill_no)}
+              >
+                เปิดใบเต็ม {row.full_invoice_docno || row.bill_no}
+              </button>
+            ) : null}
 
             {drill ? (
               <button
@@ -1168,6 +1212,16 @@ function LineDialog({
       onOpenChange={(open) => {
         if (!open) setBillTarget(null);
       }}
+    />
+    <ToBillDialog
+      docno={toDocno}
+      open={toDocno !== null}
+      onOpenChange={(open) => {
+        if (!open) setToDocno(null);
+      }}
+      onOpenTad={(billno) =>
+        setBillTarget({ billno, docType: "TAD", source: "sales" })
+      }
     />
     <ExpenseLinesDialog
       lineKey={row?.line_key ?? ""}
