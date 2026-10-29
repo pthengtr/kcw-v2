@@ -3,7 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { creditorIdentity } from "@/lib/po/creditor";
 
 import {
+  applyIssuedFullInvoices,
+  fullInvoiceLineKey,
   monthEndIso,
+  type IssuedFullInvoice,
   type VatPaidStatus,
   type VatRegisterRow,
   type VatRegisterSide,
@@ -76,9 +79,11 @@ export async function fetchVatRegister(
       invoice_count: asNumber(row.invoice_count),
       receipt_count: asNumber(row.receipt_count),
       accounting_unused: row.accounting_unused === true,
+      full_invoice_docno: null,
     };
   });
-  return attachPurchaseCreditors(supabase, rows, input.monthStart);
+  const withCreditors = await attachPurchaseCreditors(supabase, rows, input.monthStart);
+  return attachFullInvoices(supabase, withCreditors);
 }
 
 function nextMonthStart(monthStart: string): string {
@@ -163,6 +168,84 @@ async function attachPurchaseCreditors(
   });
 }
 
+function chunk<T>(items: T[], size: number): T[][] {
+  const groups: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    groups.push(items.slice(index, index + size));
+  }
+  return groups;
+}
+
+async function attachFullInvoices(
+  supabase: SupabaseClient,
+  rows: VatRegisterRow[]
+): Promise<VatRegisterRow[]> {
+  const tadBills = [
+    ...new Set(
+      rows
+        .filter((row) => row.side === "sales" && row.sheet === "TAD")
+        .map((row) => row.bill_no.trim().toUpperCase())
+        .filter((billno) => billno.startsWith("TAD"))
+    ),
+  ];
+  if (tadBills.length === 0) return rows;
+
+  const invoices: IssuedFullInvoice[] = [];
+  for (const group of chunk(tadBills, 150)) {
+    const { data, error } = await supabase
+      .schema("to_bill")
+      .from("invoices")
+      .select("tad_billno,docno,customer_name,tax_id,beforetax,tax,aftertax")
+      .eq("status", "issued")
+      .in("tad_billno", group);
+    if (error) throw error;
+    for (const record of (data ?? []) as Record<string, unknown>[]) {
+      invoices.push({
+        tad_billno: asString(record.tad_billno),
+        docno: asString(record.docno),
+        customer_name: asString(record.customer_name),
+        tax_id: asString(record.tax_id),
+        before_vat: asNumber(record.beforetax),
+        vat: asNumber(record.tax),
+        after_vat: asNumber(record.aftertax),
+      });
+    }
+  }
+  return applyIssuedFullInvoices(rows, invoices);
+}
+
+async function findIssuedFullInvoiceLine(
+  supabase: SupabaseClient,
+  lineKey: string,
+  monthStart: string
+) {
+  const { data, error } = await supabase
+    .schema("to_bill")
+    .from("invoices")
+    .select("docno,bill_date")
+    .eq("status", "issued")
+    .gte("bill_date", monthStart)
+    .lt("bill_date", nextMonthStart(monthStart));
+  if (error) throw error;
+  for (const record of (data ?? []) as Record<string, unknown>[]) {
+    const docno = asString(record.docno).trim().toUpperCase();
+    const billDate = asString(record.bill_date).slice(0, 10);
+    if (!docno || !billDate) continue;
+    if (fullInvoiceLineKey(docno, billDate) !== lineKey) continue;
+    return {
+      line_key: lineKey,
+      branch: "HQ",
+      side: "sales",
+      sheet: "TO",
+      bill_no: docno,
+      bill_date: billDate,
+      source: "to_bill",
+      source_ref: null,
+    };
+  }
+  return null;
+}
+
 export async function findVatRegisterLine(
   supabase: SupabaseClient,
   lineKey: string,
@@ -184,17 +267,20 @@ export async function findVatRegisterLine(
     p_expense: "created",
   });
   if (error) throw error;
-  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-  const row = data as Record<string, unknown>;
-  if (!asString(row.line_key)) return null;
-  return {
-    line_key: asString(row.line_key),
-    branch: asString(row.branch),
-    side: asString(row.side),
-    sheet: asString(row.sheet),
-    bill_no: asString(row.bill_no),
-    bill_date: asString(row.bill_date).slice(0, 10),
-    source: asString(row.source),
-    source_ref: asNullable(row.source_ref),
-  };
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    const row = data as Record<string, unknown>;
+    if (asString(row.line_key)) {
+      return {
+        line_key: asString(row.line_key),
+        branch: asString(row.branch),
+        side: asString(row.side),
+        sheet: asString(row.sheet),
+        bill_no: asString(row.bill_no),
+        bill_date: asString(row.bill_date).slice(0, 10),
+        source: asString(row.source),
+        source_ref: asNullable(row.source_ref),
+      };
+    }
+  }
+  return findIssuedFullInvoiceLine(supabase, lineKey, monthStart);
 }

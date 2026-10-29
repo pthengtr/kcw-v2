@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyIssuedFullInvoices,
   compareSheets,
   filterVatRegisterRows,
   monthEndIso,
@@ -15,6 +16,7 @@ import {
   vatRequiresReceipt,
   vatTracksPayment,
   type VatRegisterKpiKey,
+  type VatRegisterRow,
 } from "./register";
 
 describe("vat line key", () => {
@@ -75,6 +77,14 @@ describe("bill drill-down", () => {
         bill_no: "B2607-1080",
       })
     ).toEqual({ billno: "B2607-1080", source: "purchase" });
+    expect(
+      vatBillDrill({
+        source: "to_bill",
+        side: "sales",
+        sheet: "TO",
+        bill_no: "TO6910-002",
+      })
+    ).toBeNull();
     expect(
       vatBillDrill({
         source: "expense",
@@ -216,6 +226,80 @@ describe("vat register summary", () => {
         counts[key]
       );
     }
+  });
+});
+
+describe("issued full invoice in the tax book", () => {
+  const tad: VatRegisterRow = {
+    line_key: "tad",
+    report_month: "2026-10-01",
+    branch: "HQ",
+    side: "sales",
+    sheet: "TAD",
+    source: "parts9",
+    source_ref: null,
+    bill_date: "2026-10-02",
+    bill_no: "TAD6910-054",
+    display_bill_no: "TAD6910-054",
+    party_name: "คุณลูกค้าทั่วไป LAZADA (KC INDUSTRY)",
+    party_code: null,
+    tax_id: null,
+    before_vat: 100,
+    vat: 7,
+    after_vat: 107,
+    detail: "แหวน",
+    remark: null,
+    paid_status: "unpaid",
+    paid_on: null,
+    paid_from_reminder: false,
+    note: null,
+    invoice_count: 0,
+    receipt_count: 0,
+    accounting_unused: false,
+    full_invoice_docno: null,
+  };
+
+  it("marks the abbreviated bill unused and counts the full invoice", () => {
+    const [kept, full] = applyIssuedFullInvoices(
+      [tad],
+      [
+        {
+          tad_billno: "tad6910-054",
+          docno: "to6910-002",
+          customer_name: "บริษัท อินเตอร์เนชั่นแนล ฟรอนเทียร์ ยูนิเทรด จำกัด",
+          tax_id: "0105556003920",
+          before_vat: 584.11,
+          vat: 40.89,
+          after_vat: 625,
+        },
+      ]
+    );
+    expect(kept.accounting_unused).toBe(true);
+    expect(kept.full_invoice_docno).toBe("TO6910-002");
+    expect(kept.bill_no).toBe("TAD6910-054");
+    expect(full).toMatchObject({
+      sheet: "TO",
+      source: "to_bill",
+      bill_no: "TO6910-002",
+      display_bill_no: "TO6910-002",
+      party_name: "บริษัท อินเตอร์เนชั่นแนล ฟรอนเทียร์ ยูนิเทรด จำกัด",
+      tax_id: "0105556003920",
+      before_vat: 584.11,
+      vat: 40.89,
+      after_vat: 625,
+      remark: "อ้างอิง TAD6910-054",
+      accounting_unused: false,
+      detail: "แหวน",
+    });
+    expect(summarizeVatRegisterMoney([kept, full])).toEqual({
+      before: 584.11,
+      vat: 40.89,
+      after: 625,
+      used: 1,
+      unused: 1,
+    });
+    expect(vatRegisterMatchesQuery(kept, "TO6910-002")).toBe(true);
+    expect(compareSheets("TAD", "TO")).toBeLessThan(0);
   });
 });
 

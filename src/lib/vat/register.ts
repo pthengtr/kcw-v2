@@ -8,6 +8,7 @@ export const VAT_SHEET_ORDER = [
   "TD",
   "TR",
   "TAD",
+  "TO",
   "CN",
   "CNTAD",
   "3TAR",
@@ -59,6 +60,8 @@ export type VatRegisterRow = {
   receipt_count: number;
   /** Accounting left this line out of the book. Totals skip it. */
   accounting_unused: boolean;
+  /** Issued full invoice that replaces this abbreviated TAD. Totals skip the TAD. */
+  full_invoice_docno: string | null;
 };
 
 export type VatRegisterFile = {
@@ -122,7 +125,9 @@ export function vatBillDrill(row: {
   sheet: string;
   bill_no: string;
 }): { billno: string; docType?: string; source: "sales" | "purchase" } | null {
-  if (row.source === "expense" || row.bill_no.trim() === "") return null;
+  if (row.source === "expense" || row.source === "to_bill" || row.bill_no.trim() === "") {
+    return null;
+  }
   if (row.side === "purchase") return { billno: row.bill_no, source: "purchase" };
   return { billno: row.bill_no, docType: row.sheet, source: "sales" };
 }
@@ -213,14 +218,100 @@ export function vatRegisterMatchesQuery(
   row: Pick<
     VatRegisterRow,
     "bill_no" | "display_bill_no" | "party_name" | "party_code" | "tax_id"
-  >,
+  > & { full_invoice_docno?: string | null },
   query: string
 ): boolean {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
-  return [row.display_bill_no, row.bill_no, row.party_name, row.party_code, row.tax_id].some(
-    (value) => value?.toLowerCase().includes(needle)
-  );
+  return [
+    row.display_bill_no,
+    row.bill_no,
+    row.party_name,
+    row.party_code,
+    row.tax_id,
+    row.full_invoice_docno,
+  ].some((value) => value?.toLowerCase().includes(needle));
+}
+
+export type IssuedFullInvoice = {
+  tad_billno: string;
+  docno: string;
+  customer_name: string;
+  tax_id: string;
+  before_vat: number;
+  vat: number;
+  after_vat: number;
+};
+
+export function fullInvoiceLineKey(docno: string, billDate: string, branch = "HQ"): string {
+  return vatLineKey({
+    branch,
+    side: "sales",
+    sheet: "TO",
+    billNo: docno.trim().toUpperCase(),
+    billDate: billDate.slice(0, 10),
+    sourceRef: null,
+  });
+}
+
+/** Abbreviated TAD stays on screen, marked unused, and the issued TO is the line that counts. */
+export function applyIssuedFullInvoices(
+  rows: VatRegisterRow[],
+  invoices: IssuedFullInvoice[]
+): VatRegisterRow[] {
+  const byTad = new Map<string, IssuedFullInvoice>();
+  for (const invoice of invoices) {
+    const tad = invoice.tad_billno.trim().toUpperCase();
+    const docno = invoice.docno.trim().toUpperCase();
+    if (!tad.startsWith("TAD") || !/^TO\d{4}-\d{3,}$/.test(docno)) continue;
+    byTad.set(tad, { ...invoice, tad_billno: tad, docno });
+  }
+  const out: VatRegisterRow[] = [];
+  for (const row of rows) {
+    const invoice =
+      row.side === "sales" && row.sheet === "TAD"
+        ? byTad.get(row.bill_no.trim().toUpperCase())
+        : undefined;
+    if (!invoice) {
+      out.push({ ...row, full_invoice_docno: row.full_invoice_docno ?? null });
+      continue;
+    }
+    const tadNo = row.bill_no.trim().toUpperCase();
+    out.push({
+      ...row,
+      accounting_unused: true,
+      full_invoice_docno: invoice.docno,
+    });
+    out.push({
+      line_key: fullInvoiceLineKey(invoice.docno, row.bill_date, row.branch),
+      report_month: row.report_month,
+      branch: row.branch,
+      side: "sales",
+      sheet: "TO",
+      source: "to_bill",
+      source_ref: null,
+      bill_date: row.bill_date,
+      bill_no: invoice.docno,
+      display_bill_no: invoice.docno,
+      party_name: invoice.customer_name.trim() || null,
+      party_code: null,
+      tax_id: invoice.tax_id.trim() || null,
+      before_vat: invoice.before_vat,
+      vat: invoice.vat,
+      after_vat: invoice.after_vat,
+      detail: row.detail,
+      remark: `อ้างอิง ${tadNo}`,
+      paid_status: "unpaid",
+      paid_on: null,
+      paid_from_reminder: false,
+      note: null,
+      invoice_count: 0,
+      receipt_count: 0,
+      accounting_unused: false,
+      full_invoice_docno: null,
+    });
+  }
+  return out;
 }
 
 export type VatRegisterMoneyTotals = {
