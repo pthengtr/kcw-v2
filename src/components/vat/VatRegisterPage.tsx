@@ -1,7 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { BadgeCheck, ChevronDown, Columns3, FileText, Loader2, Receipt, Wallet } from "lucide-react";
+import {
+  BadgeCheck,
+  ChevronDown,
+  Columns3,
+  FileSpreadsheet,
+  Files,
+  FileText,
+  Loader2,
+  Receipt,
+  Wallet,
+} from "lucide-react";
 
 import { formatBaht, formatCount } from "@/lib/bi/sales-format";
 import SalesKpiCard from "@/components/bi/sales/SalesKpiCard";
@@ -148,6 +158,8 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   const [query, setQuery] = useState("");
   const [savingUse, setSavingUse] = useState<ReadonlySet<string>>(new Set());
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -201,10 +213,12 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
     [rows, sheet]
   );
 
-  const kpis = useMemo(
-    () => summarizeVatRegister(sheetRows.filter((row) => !row.accounting_unused)),
+  const inUseRows = useMemo(
+    () => sheetRows.filter((row) => !row.accounting_unused),
     [sheetRows]
   );
+  const kpis = useMemo(() => summarizeVatRegister(inUseRows), [inUseRows]);
+  const bookTotals = useMemo(() => summarizeVatRegisterMoney(inUseRows), [inUseRows]);
   const showPayment = sheet === "ALL" || vatTracksPayment(sheet);
   const showReceipts = sheet === "ALL" || vatRequiresReceipt(sheet);
   const shownColumns = useMemo(
@@ -245,6 +259,34 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
     side === "purchase" || sheetRows.every((row) => row.side === "purchase")
       ? "purchase"
       : "sales";
+
+  async function downloadExcel() {
+    setDownloading(true);
+    setDownloadError(null);
+    try {
+      const params = new URLSearchParams({ month });
+      if (branch !== "ALL") params.set("branch", branch);
+      if (side !== "ALL") params.set("side", side);
+      const res = await fetch(`/api/vat/register/export?${params.toString()}`);
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(json?.error || "ดาวน์โหลดไม่สำเร็จ");
+      }
+      const blob = await res.blob();
+      const match = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "");
+      const filename = match?.[1] ?? `vat_reports_${month}.xlsx`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : "ดาวน์โหลดไม่สำเร็จ");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   function toggleKpi(key: VatRegisterKpiKey) {
     setKpi((current) => (current === key ? null : key));
@@ -302,13 +344,25 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
 
   return (
     <main className="mx-auto flex w-full min-w-0 max-w-[1400px] flex-col gap-4 px-4 py-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">รายงานภาษีขาย / ภาษีซื้อ</h1>
-        <p className="text-sm text-slate-600">
-          {readOnly
-            ? "ดูได้อย่างเดียว"
-            : "เล่มเดียวกับรายงาน Excel แนบใบกำกับได้ทุกเล่ม ส่วนขาย TD กับซื้อเครดิตแนบใบเสร็จด้วย ติ๊กรายการที่บัญชีไม่ใช้ ยอดรวมจะนับเฉพาะรายการที่ใช้งาน"}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">รายงานภาษีขาย / ภาษีซื้อ</h1>
+          <p className="text-sm text-slate-600">
+            {readOnly
+              ? "ดูได้อย่างเดียว"
+              : "เล่มเดียวกับรายงาน Excel แนบใบกำกับได้ทุกเล่ม ส่วนขาย TD กับซื้อเครดิตแนบใบเสร็จด้วย ติ๊กรายการที่บัญชีไม่ใช้ ยอดรวมจะนับเฉพาะรายการที่ใช้งาน"}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={downloading}
+          title="ไฟล์เดียวกับรายงานที่ส่งขึ้น Google Drive ตามเดือน สาขา และประเภทที่เลือก"
+          onClick={() => void downloadExcel()}
+        >
+          {downloading ? <Loader2 className="animate-spin" /> : <FileSpreadsheet />}
+          ดาวน์โหลด Excel
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -356,7 +410,14 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
           />
         </button>
         {kpiOpen ? (
-          <div className="grid gap-3 px-3 pb-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 px-3 pb-3 sm:grid-cols-2 xl:grid-cols-5">
+            <SalesKpiCard
+              title="จำนวนบิล"
+              value={formatCount(bookTotals.used)}
+              hint={`สุทธิ ${formatBaht(bookTotals.after, true)}`}
+              icon={<Files className="h-4 w-4" />}
+              className="h-full"
+            />
             {showReceipts ? (
               <KpiFilterCard
                 title="ใบเสร็จที่ยังไม่มี"
@@ -421,6 +482,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {saveError ? <p className="text-sm text-red-600">{saveError}</p> : null}
+      {downloadError ? <p className="text-sm text-red-600">{downloadError}</p> : null}
 
       <div className="flex flex-col gap-2 md:hidden">
         {loading ? (
