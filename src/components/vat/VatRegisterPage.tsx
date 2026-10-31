@@ -20,6 +20,8 @@ import SalesBillDetailDialog, {
 } from "@/components/sales/SalesBillDetailDialog";
 import ToBillDialog from "@/components/sales/ToBillDialog";
 import { cn } from "@/lib/utils";
+import VatReceiptSheet from "@/components/vat/VatReceiptSheet";
+import { isGeneratedVatBill } from "@/lib/vat/generated-bill";
 import {
   compareSheets,
   filterVatRegisterRows,
@@ -1094,7 +1096,11 @@ function LineDialog({
     <>
     <Dialog open={row != null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-h-[90vh] w-[calc(100vw-1.5rem)] overflow-y-auto p-4 sm:max-w-xl sm:p-6"
+        className={
+          row && isGeneratedVatBill(row.sheet)
+            ? "max-h-[90vh] w-[calc(100vw-1.5rem)] overflow-y-auto p-4 sm:max-w-4xl sm:p-6"
+            : "max-h-[90vh] w-[calc(100vw-1.5rem)] overflow-y-auto p-4 sm:max-w-xl sm:p-6"
+        }
         onInteractOutside={(event) => {
           if (detailOpen) event.preventDefault();
         }}
@@ -1104,6 +1110,7 @@ function LineDialog({
       >
         {row ? (
           <>
+            <div className={isGeneratedVatBill(row.sheet) ? "print:hidden" : undefined}>
             <DialogHeader className="text-left">
               <DialogTitle>
                 {row.sheet} · {row.display_bill_no}
@@ -1157,7 +1164,7 @@ function LineDialog({
               </button>
             ) : null}
 
-            {drill ? (
+            {drill && !isGeneratedVatBill(row.sheet) ? (
               <button
                 type="button"
                 className="text-left text-sm font-medium text-sky-800 underline"
@@ -1225,15 +1232,35 @@ function LineDialog({
                 </Button>
               )}
             </div>
+            </div>
 
-            <FileGroup
-              title="ใบกำกับ"
-              files={files.filter((file) => file.kind === "invoice")}
-              readOnly={readOnly}
-              busy={busy}
-              onUpload={(file) => void upload("invoice", file)}
-              onDelete={(id) => void removeFile(id, "invoice")}
-            />
+            {isGeneratedVatBill(row.sheet) ? (
+              <>
+                <VatReceiptSheet row={row} />
+                {files.some((file) => file.kind === "invoice") ? (
+                  <div className="print:hidden">
+                    <FileGroup
+                      title="ไฟล์ที่อัปโหลดเพิ่ม"
+                      files={files.filter((file) => file.kind === "invoice")}
+                      readOnly={readOnly}
+                      allowUpload={false}
+                      busy={busy}
+                      onUpload={() => undefined}
+                      onDelete={(id) => void removeFile(id, "invoice")}
+                    />
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <FileGroup
+                title="ใบกำกับ"
+                files={files.filter((file) => file.kind === "invoice")}
+                readOnly={readOnly}
+                busy={busy}
+                onUpload={(file) => void upload("invoice", file)}
+                onDelete={(id) => void removeFile(id, "invoice")}
+              />
+            )}
             {vatRequiresReceipt(row.sheet) ? (
               <FileGroup
                 title="ใบเสร็จ"
@@ -1246,7 +1273,11 @@ function LineDialog({
             ) : null}
 
             {expenseFiles.length > 0 ? (
-              <section className="grid gap-2">
+              <section
+                className={
+                  isGeneratedVatBill(row.sheet) ? "grid gap-2 print:hidden" : "grid gap-2"
+                }
+              >
                 <h3 className="text-sm font-medium">รูปค่าใช้จ่ายเดิม</h3>
                 <div className="flex flex-wrap gap-2">
                   {expenseFiles.map((file) => (
@@ -1263,7 +1294,17 @@ function LineDialog({
               </section>
             ) : null}
 
-            {message ? <p className="text-sm text-slate-600">{message}</p> : null}
+            {message ? (
+              <p
+                className={
+                  isGeneratedVatBill(row.sheet)
+                    ? "text-sm text-slate-600 print:hidden"
+                    : "text-sm text-slate-600"
+                }
+              >
+                {message}
+              </p>
+            ) : null}
           </>
         ) : null}
       </DialogContent>
@@ -1402,6 +1443,7 @@ function FileGroup({
   title,
   files,
   readOnly,
+  allowUpload = true,
   busy,
   onUpload,
   onDelete,
@@ -1409,6 +1451,7 @@ function FileGroup({
   title: string;
   files: VatRegisterFile[];
   readOnly: boolean;
+  allowUpload?: boolean;
   busy: boolean;
   onUpload: (file: File | undefined) => void;
   onDelete: (id: string) => void;
@@ -1417,7 +1460,7 @@ function FileGroup({
     <section className="grid gap-2">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-medium">{title}</h3>
-        {readOnly ? null : (
+        {readOnly || !allowUpload ? null : (
           <Label className="cursor-pointer text-sm text-slate-700 underline">
             เพิ่มไฟล์
             <input

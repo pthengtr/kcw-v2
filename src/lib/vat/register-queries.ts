@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { creditorIdentity } from "@/lib/po/creditor";
 
+import { displayInvoiceCount } from "./generated-bill";
 import {
   applyIssuedFullInvoices,
   fullInvoiceLineKey,
@@ -76,7 +77,7 @@ export async function fetchVatRegister(
       paid_on: row.paid_on ? asString(row.paid_on).slice(0, 10) : null,
       paid_from_reminder: row.paid_from_reminder === true,
       note: asNullable(row.note),
-      invoice_count: asNumber(row.invoice_count),
+      invoice_count: displayInvoiceCount(asString(row.sheet), asNumber(row.invoice_count)),
       receipt_count: asNumber(row.receipt_count),
       accounting_unused: row.accounting_unused === true,
       full_invoice_docno: null,
