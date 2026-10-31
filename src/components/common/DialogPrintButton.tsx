@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 const PRINT_ATTR = "data-dialog-print";
 const STYLE_ID = "dialog-print-style";
 
-const PRINT_CSS = `
+function printCss(pageMargin: string) {
+  return `
 @media print {
-  @page { margin: 12mm; size: auto; }
+  @page { margin: ${pageMargin}; size: auto; }
   html, body {
     height: auto !important;
     overflow: visible !important;
@@ -75,21 +76,27 @@ const PRINT_CSS = `
   }
 }
 `;
+}
 
-function ensurePrintStyle() {
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = PRINT_CSS;
-  document.head.appendChild(style);
+function ensurePrintStyle(pageMargin: string) {
+  let style = document.getElementById(STYLE_ID);
+  if (!style) {
+    style = document.createElement("style");
+    style.id = STYLE_ID;
+    document.head.appendChild(style);
+  }
+  style.textContent = printCss(pageMargin);
 }
 
 export default function DialogPrintButton({
   disabled = false,
   documentTitle,
+  pageMargin = "12mm",
 }: {
   disabled?: boolean;
   documentTitle?: string;
+  /** Zero leaves no room for the browser date, title, URL, and page number. */
+  pageMargin?: string;
 }) {
   const [busy, setBusy] = useState(false);
 
@@ -98,7 +105,7 @@ export default function DialogPrintButton({
     const root = event.currentTarget.closest("[role='dialog']");
     if (!(root instanceof HTMLElement)) return;
 
-    ensurePrintStyle();
+    ensurePrintStyle(pageMargin);
     const previousTitle = document.title;
     root.setAttribute(PRINT_ATTR, "");
     if (documentTitle?.trim()) document.title = documentTitle.trim();
