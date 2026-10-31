@@ -7,10 +7,7 @@ import {
   formatReceiptMoney,
   formatReceiptQty,
   printedBillNo,
-  receiptCompany,
   receiptTitle,
-  receiptTotals,
-  thaiReceiptDate,
 } from "@/lib/vat/generated-bill";
 import type { VatRegisterRow } from "@/lib/vat/register";
 
@@ -38,8 +35,6 @@ export default function VatReceiptSheet({ row }: { row: VatRegisterRow }) {
   const [bill, setBill] = useState<ReceiptBill | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const credit = row.sheet === "CNTAR" || row.sheet === "3CNTAR";
-  const company = receiptCompany(row.sheet);
   const title = receiptTitle(row.sheet);
   const billNo = printedBillNo(row.sheet, bill?.billno || row.bill_no);
 
@@ -87,37 +82,12 @@ export default function VatReceiptSheet({ row }: { row: VatRegisterRow }) {
     };
   }, [row.bill_date, row.bill_no, row.sheet]);
 
-  const totals = receiptTotals((bill?.lines ?? []).map((line) => line.amount));
-
   return (
-    <section className="grid gap-3 rounded border border-slate-300 bg-white p-4 text-sm text-slate-900 print:border-0 print:p-0">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-base font-semibold">{company.name}</p>
-          <p>{company.address}</p>
-          <p>{company.phone}</p>
-          <p className="mt-1">{company.tax}</p>
-        </div>
-        <div className="shrink-0 text-right">
-          <p className="text-lg font-semibold">{title}</p>
-          <p>
-            <span className="font-semibold">เลขที่:</span> {billNo}
-          </p>
-          <p>
-            <span className="font-semibold">วันที่:</span>{" "}
-            {thaiReceiptDate(bill?.bill_date || row.bill_date)}
-          </p>
-          {credit ? (
-            <p>
-              <span className="font-semibold">อ้างอิง:</span> {row.remark ?? ""}
-            </p>
-          ) : null}
-        </div>
-      </div>
-
+    <section className="grid gap-3 rounded border border-slate-300 bg-white p-4 text-sm text-slate-900 print:border-0 print:p-[8mm]">
       <DialogPrintButton
         disabled={loading || Boolean(error)}
         documentTitle={`${title} ${billNo}`}
+        pageMargin="0"
       />
 
       {loading ? (
@@ -125,7 +95,6 @@ export default function VatReceiptSheet({ row }: { row: VatRegisterRow }) {
       ) : error ? (
         <p className="text-red-600">{error}</p>
       ) : (
-        <>
           <div className="overflow-auto print:overflow-visible">
             <table className="w-full min-w-[36rem] border-collapse text-sm print:min-w-0">
               <thead>
@@ -172,15 +141,6 @@ export default function VatReceiptSheet({ row }: { row: VatRegisterRow }) {
               </tbody>
             </table>
           </div>
-          <dl className="ml-auto grid w-full max-w-xs grid-cols-[1fr_auto] gap-x-4 text-right">
-            <dt className="font-semibold">ยอดก่อน VAT:</dt>
-            <dd className="tabular-nums">{formatReceiptMoney(totals.base)}</dd>
-            <dt className="font-semibold">VAT 7%:</dt>
-            <dd className="tabular-nums">{formatReceiptMoney(totals.vat)}</dd>
-            <dt className="font-semibold">รวมทั้งสิ้น (รวม VAT):</dt>
-            <dd className="tabular-nums">{formatReceiptMoney(totals.total)}</dd>
-          </dl>
-        </>
       )}
     </section>
   );
