@@ -1,5 +1,18 @@
 -- Month-bounded VAT book lines. Date filters sit on the source tables so a
 -- page does not scan every bill and every line.
+-- tax_id is curated_kcw.fn_vat_tax_id: the 13 digits after the last #.
+
+CREATE OR REPLACE FUNCTION curated_kcw.fn_vat_tax_id(p_text text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+AS $$
+  SELECT substring(
+    regexp_replace(split_part(coalesce(p_text, ''), '#', -1), '[^0-9]', '', 'g')
+    from '^[0-9]{13}$'
+  );
+$$;
 
 CREATE OR REPLACE FUNCTION public.fn_vat_register(
   p_from date,
@@ -56,7 +69,7 @@ WITH sales_headers AS (
       ELSE NULL
     END AS sheet,
     nullif(btrim(b."ACCTNAME"), '') AS party_name,
-    nullif(regexp_replace(coalesce(b."REMARKS", ''), '^##', ''), '') AS tax_id,
+    curated_kcw.fn_vat_tax_id(b."REMARKS") AS tax_id,
     curated_kcw.fn_vat_num(b."BEFORETAX") AS before_vat,
     curated_kcw.fn_vat_num(b."TAX") AS vat,
     curated_kcw.fn_vat_num(b."AFTERTAX") AS after_vat,
@@ -125,7 +138,7 @@ purchase_bills AS (
       ELSE NULL
     END AS sheet,
     nullif(btrim(p."ACCTNAME"), '') AS party_name,
-    nullif(right(coalesce(p."REMARKS", ''), 13), '') AS tax_id,
+    curated_kcw.fn_vat_tax_id(p."REMARKS") AS tax_id,
     curated_kcw.fn_vat_num(p."BEFORETAX") AS before_vat,
     curated_kcw.fn_vat_num(p."TAX") AS vat,
     curated_kcw.fn_vat_num(p."AFTERTAX") AS after_vat,

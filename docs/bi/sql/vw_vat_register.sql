@@ -3,6 +3,18 @@
 -- Expense report_month follows the notebook window: created_at from the 10th
 -- of the month through the 10th of the next month, on the stored timestamp.
 
+CREATE OR REPLACE FUNCTION curated_kcw.fn_vat_tax_id(p_text text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+AS $$
+  SELECT substring(
+    regexp_replace(split_part(coalesce(p_text, ''), '#', -1), '[^0-9]', '', 'g')
+    from '^[0-9]{13}$'
+  );
+$$;
+
 CREATE OR REPLACE FUNCTION curated_kcw.fn_vat_num(p_text text)
 RETURNS numeric
 LANGUAGE sql
@@ -43,7 +55,7 @@ WITH sales_headers AS (
       ELSE NULL
     END AS sheet,
     nullif(btrim(b."ACCTNAME"), '') AS party_name,
-    nullif(regexp_replace(coalesce(b."REMARKS", ''), '^##', ''), '') AS tax_id,
+    curated_kcw.fn_vat_tax_id(b."REMARKS") AS tax_id,
     curated_kcw.fn_vat_num(b."BEFORETAX") AS before_vat,
     curated_kcw.fn_vat_num(b."TAX") AS vat,
     curated_kcw.fn_vat_num(b."AFTERTAX") AS after_vat,
@@ -104,7 +116,7 @@ purchase_bills AS (
       ELSE NULL
     END AS sheet,
     nullif(btrim(p."ACCTNAME"), '') AS party_name,
-    nullif(right(coalesce(p."REMARKS", ''), 13), '') AS tax_id,
+    curated_kcw.fn_vat_tax_id(p."REMARKS") AS tax_id,
     curated_kcw.fn_vat_num(p."BEFORETAX") AS before_vat,
     curated_kcw.fn_vat_num(p."TAX") AS vat,
     curated_kcw.fn_vat_num(p."AFTERTAX") AS after_vat,
@@ -431,6 +443,9 @@ COMMENT ON VIEW curated_kcw.vw_vat_register IS
 
 REVOKE ALL ON FUNCTION curated_kcw.fn_vat_num(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION curated_kcw.fn_vat_num(text) TO service_role;
+
+REVOKE ALL ON FUNCTION curated_kcw.fn_vat_tax_id(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION curated_kcw.fn_vat_tax_id(text) TO service_role;
 
 REVOKE ALL ON curated_kcw.vw_vat_register FROM PUBLIC;
 GRANT SELECT ON curated_kcw.vw_vat_register TO service_role;
