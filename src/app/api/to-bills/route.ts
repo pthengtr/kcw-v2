@@ -49,7 +49,7 @@ export async function GET(req: Request) {
   const query = supabase
     .schema("to_bill")
     .from("invoices")
-    .select("invoice_id,tad_billno,docno,status")
+    .select("invoice_id,tad_billno,docno,status,doc_kind")
     .in("tad_billno", billnos)
     .in("status", allowCreate ? ["draft", "issued"] : ["issued"]);
   const { data, error } = await query;
@@ -63,6 +63,7 @@ export async function GET(req: Request) {
       tad_billno: row.tad_billno,
       docno: row.docno,
       status: row.status,
+      doc_kind: row.doc_kind,
     })),
     can_create: allowCreate,
     create_base_url: base,

@@ -301,6 +301,26 @@ describe("issued full invoice in the tax book", () => {
     expect(vatRegisterMatchesQuery(kept, "TO6910-002")).toBe(true);
     expect(compareSheets("TAD", "TO")).toBeLessThan(0);
   });
+
+  it("keeps the abbreviated bill when the issued document is a receipt", () => {
+    const [kept] = applyIssuedFullInvoices(
+      [tad],
+      [
+        {
+          tad_billno: "TAD6910-054",
+          docno: "RVO6910-001",
+          customer_name: "บริษัท ทดสอบ จำกัด",
+          tax_id: "1234567890123",
+          before_vat: 100,
+          vat: 7,
+          after_vat: 107,
+        },
+      ]
+    );
+    expect(kept.accounting_unused).toBe(false);
+    expect(kept.full_invoice_docno).toBeNull();
+    expect(kept.bill_no).toBe("TAD6910-054");
+  });
 });
 
 describe("vat register search and accounting use", () => {

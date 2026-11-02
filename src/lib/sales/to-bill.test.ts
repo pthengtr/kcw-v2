@@ -24,5 +24,8 @@ describe("to bill coverage", () => {
     expect(toBillCreateHref("http://192.168.1.21:8794/", "TAD6910-014")).toBe(
       "http://192.168.1.21:8794/to-bill/?tad=TAD6910-014"
     );
+    expect(toBillCreateHref("http://192.168.1.21:8794/", "TAD6910-014", "rvo")).toBe(
+      "http://192.168.1.21:8794/to-bill/?tad=TAD6910-014&kind=rvo"
+    );
   });
 });

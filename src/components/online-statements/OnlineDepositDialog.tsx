@@ -381,7 +381,7 @@ export default function OnlineDepositDialog({
                               </div>
                               <ToBillMark
                                 billno={bill.billno}
-                                row={toBills.byBill[bill.billno.trim().toUpperCase()]}
+                                rows={toBills.rowsByBill[bill.billno.trim().toUpperCase()]}
                                 canCreate={toBills.canCreate}
                                 createBaseUrl={toBills.createBaseUrl}
                                 onOpen={setToDoc}

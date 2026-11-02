@@ -6,7 +6,7 @@ import { SALES_BILL_READ_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-const DOCNO = /^TO\d{4}-\d{3,}$/;
+const DOCNO = /^(?:TO|RVO)\d{4}-\d{3,}$/;
 
 function num(value: number | string | null | undefined): number {
   const parsed = Number(value ?? 0);
@@ -42,7 +42,7 @@ export async function GET(
     .schema("to_bill")
     .from("invoices")
     .select(
-      "invoice_id,docno,status,tad_billno,bill_date,customer_name,address,phone,tax_id,branch_label,email,beforetax,tax,aftertax,discount,online_po,void_reason"
+      "invoice_id,docno,status,tad_billno,bill_date,customer_name,address,phone,tax_id,branch_label,email,beforetax,tax,aftertax,discount,online_po,void_reason,pay_via,source_docno"
     )
     .eq("docno", key)
     .maybeSingle();
@@ -80,6 +80,8 @@ export async function GET(
     aftertax: num(data.aftertax),
     discount: num(data.discount),
     void_reason: data.void_reason,
+    pay_via: data.pay_via,
+    source_docno: data.source_docno,
     lines: (linesRes.data ?? []).map((line) => ({
       bcode: line.bcode,
       detail: line.detail,

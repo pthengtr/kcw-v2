@@ -9,7 +9,7 @@ import { ToBillMark } from "@/components/sales/ToBillMark";
 import { useToBillIndex } from "@/components/sales/useToBillIndex";
 import type { FifoMargin } from "@/lib/bank/fifo-margin";
 import { billDiscountToShow } from "@/lib/sales/bill-detail";
-import { isHqTadBillno, toBillCreateHref } from "@/lib/sales/to-bill";
+import { isHqTadBillno, isReceiptToBill, toBillCreateHref } from "@/lib/sales/to-bill";
 import {
   Dialog,
   DialogContent,
@@ -118,7 +118,10 @@ export default function SalesBillDetailDialog({
   const [toDoc, setToDoc] = useState<string | null>(null);
   const tadBillno = open && isHqTadBillno(billno) ? billno : "";
   const toBills = useToBillIndex(tadBillno ? [tadBillno] : []);
-  const toRow = tadBillno ? toBills.byBill[tadBillno.trim().toUpperCase()] : undefined;
+  const docRows = tadBillno ? (toBills.rowsByBill[tadBillno.trim().toUpperCase()] ?? []) : [];
+  const hasReceipt = docRows.some((row) => isReceiptToBill(row));
+  const hasTaxInvoice = docRows.some((row) => !isReceiptToBill(row));
+  const issuedTax = docRows.some((row) => !isReceiptToBill(row) && row.status === "issued");
 
   useEffect(() => {
     if (!requestKey || !billno) return;
@@ -193,17 +196,25 @@ export default function SalesBillDetailDialog({
             <div className="print:hidden">
               <ToBillMark
                 billno={tadBillno}
-                row={toRow}
+                rows={docRows}
                 canCreate={toBills.canCreate}
                 createBaseUrl={toBills.createBaseUrl}
                 onOpen={setToDoc}
               />
-              {!toRow && toBills.canCreate && toBills.createBaseUrl ? (
+              {!hasTaxInvoice && toBills.canCreate && toBills.createBaseUrl ? (
                 <a
                   className="text-sm text-sky-800 underline"
                   href={toBillCreateHref(toBills.createBaseUrl, tadBillno)}
                 >
-                  สร้างใบเต็ม
+                  {docRows.length ? "สร้างใบกำกับภาษี" : "สร้างใบเต็ม"}
+                </a>
+              ) : null}
+              {issuedTax && !hasReceipt && toBills.canCreate && toBills.createBaseUrl ? (
+                <a
+                  className="mt-1 block text-sm text-sky-800 underline"
+                  href={toBillCreateHref(toBills.createBaseUrl, tadBillno, "rvo")}
+                >
+                  สร้างใบเสร็จรับเงิน
                 </a>
               ) : null}
             </div>

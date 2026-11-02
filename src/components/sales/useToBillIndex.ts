@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { ToBillRef } from "@/lib/sales/to-bill";
-import { isHqTadBillno } from "@/lib/sales/to-bill";
+import { isHqTadBillno, isReceiptToBill } from "@/lib/sales/to-bill";
 
 type IndexState = {
   rows: ToBillRef[];
@@ -75,13 +75,28 @@ export function useToBillIndex(billnos: string[]) {
     };
   }, [key]);
 
-  const byBill = useMemo(() => {
-    const map: Record<string, ToBillRef> = {};
+  const rowsByBill = useMemo(() => {
+    const map: Record<string, ToBillRef[]> = {};
     for (const row of state.rows) {
-      map[row.tad_billno.trim().toUpperCase()] = row;
+      const key = row.tad_billno.trim().toUpperCase();
+      (map[key] ??= []).push(row);
     }
     return map;
   }, [state.rows]);
 
-  return { ...state, byBill };
+  const byBill = useMemo(() => {
+    const map: Record<string, ToBillRef> = {};
+    for (const [key, rows] of Object.entries(rowsByBill)) {
+      const preferred = [...rows].sort((a, b) => docRank(a) - docRank(b))[0];
+      if (preferred) map[key] = preferred;
+    }
+    return map;
+  }, [rowsByBill]);
+
+  return { ...state, byBill, rowsByBill };
+}
+
+function docRank(row: ToBillRef): number {
+  const issued = row.status === "issued" ? 0 : row.status === "draft" ? 1 : 2;
+  return issued * 2 + (isReceiptToBill(row) ? 1 : 0);
 }
