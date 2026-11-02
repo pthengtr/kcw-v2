@@ -6,6 +6,7 @@ import {
   statementPurchaseBills,
   statementSalesBills,
   statementVoucherNo,
+  statementVoucherNos,
   voucherListSummary,
 } from "./statement-doc-links";
 
@@ -55,6 +56,13 @@ describe("statement document links", () => {
     expect(
       statementVoucherNo({ ...matched, matched_ref_type: "pvmas", matched_ref_id: "P6903-002" })
     ).toBe("P6903-002");
+    expect(
+      statementVoucherNos({
+        ...matched,
+        matched_ref_type: "rvmas",
+        matched_ref_id: "3RV6907-001,3RV6907-002",
+      })
+    ).toEqual(["3RV6907-001", "3RV6907-002"]);
     expect(
       statementPurchaseBills({
         ...matched,

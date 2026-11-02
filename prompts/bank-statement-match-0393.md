@@ -221,7 +221,7 @@ Notes from May/June probe:
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
 | Internal sweep out | `internal_transfer` | `matched` | **Always classify** large transfers to X6184 / X4759 / X7236 / other KCW accounts when counterpart is clear from `raw_json` or same-day sister-account inflow — do not leave `pending`/`unmatched`. Report label: `โอนไป KTB 2486006184` / `โอนไป KBANK …` from `matched_ref_id` | `โอนภายใน` |
-| Director parts reimbursement | `expense_pv` or best available | `matched` / `review` | Transfers to Narumon X2446 that settle branch parts paid via `3RV…` (not always a same-day `%0393%` PV) — populate refs when unique; else `review` with Thai note | `คืนเงินอะไหล่สาขา (กรรมการ)` |
+| Director parts reimbursement | `expense_pv` or best available | `matched` / `review` | Narumon / X2446 cash paid back from an `expense_receipt`. Do **not** auto-match a generated `billgen.fin_3rv_lines` month total here. Those receipts are paid from **141-1-72355-7**. A 0393 transfer for that amount is an operator mistake: leave it `unmatched` unless the row is already `manual` | `คืนเงินอะไหล่สาขา (กรรมการ)` |
 | 3CTAR / sales adjustment refund | — | `review` | Small transfer to X2446 that exactly equals a same-day 3TAR shortfall / 3CTAR adjustment — explain both legs in `match_notes` | `โอนคืนปรับปรุงยอดขาย` |
 | No unique expense | — | `unmatched` / `review` | Do not invent blind subset-sums across many receipts | `ยังไม่พบใบสำคัญจ่าย` |
 

@@ -29,7 +29,7 @@ import {
   statementExpenseReceipts,
   statementPurchaseBills,
   statementSalesBills,
-  statementVoucherNo,
+  statementVoucherNos,
   voucherListSummary,
 } from "@/lib/bank/statement-doc-links";
 
@@ -67,9 +67,14 @@ export function StatementBillLinks({
   onOpenExpense: (receiptIds: string[]) => void;
 }) {
   const sales = statementSalesBills(row);
-  const voucherNo = statementVoucherNo(row);
+  const vouchers = statementVoucherNos(row);
   const purchase = statementPurchaseBills(row);
   const expense = statementExpenseReceipts(row);
+  const [voucherList, setVoucherList] = useState<string[] | null>(null);
+  const voucherNoun =
+    (row.matched_ref_type ?? "").trim().toLowerCase() === "pvmas"
+      ? "ใบสำคัญจ่าย"
+      : "ใบสำคัญรับเงิน";
 
   return (
     <>
@@ -100,16 +105,28 @@ export function StatementBillLinks({
           ดูบิล TR {sales.length} ใบ
         </button>
       ) : null}
-      {voucherNo ? (
+      {vouchers?.length === 1 ? (
         <button
           type="button"
           className={linkClassName}
           onClick={(event) => {
             event.stopPropagation();
-            onOpenVoucher(voucherNo);
+            onOpenVoucher(vouchers[0]);
           }}
         >
-          ดูบิลในใบสำคัญ {voucherNo}
+          ดูบิลในใบสำคัญ {vouchers[0]}
+        </button>
+      ) : null}
+      {vouchers && vouchers.length > 1 ? (
+        <button
+          type="button"
+          className={linkClassName}
+          onClick={(event) => {
+            event.stopPropagation();
+            setVoucherList(vouchers);
+          }}
+        >
+          ดู{voucherNoun} {vouchers.length} ใบ
         </button>
       ) : null}
       {purchase?.length === 1 ? (
@@ -139,6 +156,36 @@ export function StatementBillLinks({
           ดูบิลซื้อ {purchase.length} ใบ
         </button>
       ) : null}
+      <Dialog open={voucherList !== null} onOpenChange={(next) => { if (!next) setVoucherList(null); }}>
+        <DialogContent
+          overlayClassName="z-[70]"
+          className="z-[70] sm:max-w-md"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {voucherNoun} {voucherList?.length ?? 0} ใบ
+            </DialogTitle>
+            <DialogDescription>กดเลขที่ใบสำคัญเพื่อดูบิลที่อยู่ในใบนั้น</DialogDescription>
+          </DialogHeader>
+          <ul className="flex max-h-[60vh] flex-col gap-2 overflow-y-auto">
+            {(voucherList ?? []).map((voucherNo) => (
+              <li key={voucherNo}>
+                <button
+                  type="button"
+                  className="text-left text-sm font-medium text-sky-800 underline"
+                  onClick={() => {
+                    setVoucherList(null);
+                    onOpenVoucher(voucherNo);
+                  }}
+                >
+                  {voucherNo}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
       {expense?.length ? (
         <button
           type="button"
