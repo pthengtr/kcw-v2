@@ -122,36 +122,26 @@ Confidence: strong same-day unique / COD bundle ≈ **0.85–0.95**; near-window
 
 Large transfers with **no** exact PVMAS `PAYAMT` and no unique PIMAS hit (often 50k–400k+) should be set to `unmatched` or `review` with a Thai note — do **not** invent blind subset-sums across many vouchers/bills.
 
-### 3b) Parts reimbursement — ใบสำคัญรับเงิน RV / 3RV (ซื้อไม่ VAT ขาย VAT)
+### 3b) HQ parts reimbursement — ใบสำคัญรับเงิน RV (ซื้อไม่ VAT ขาย VAT)
 
-Only after PVMAS and PIMAS miss. These receipts are paid from **this account**, to Narumon (`X2446` / `นฤมล`). A payment of the same amount from **064-8-92039-3** is an operator mistake. Do not write a 0393 rule for it. Rows already marked `manual` for that mistake stay as one-off operator matches.
+Headquarters receipts are paid from **this account**. Branch `3RV…` receipts are paid from **064-8-92039-3**. Only after PVMAS and PIMAS miss.
 
-Sources:
-
-- HQ: `billgen.fin_rv_lines`, bill numbers `RV69MM-NNN`, month key `left(new_billno, 6)`
-- Branch: `billgen.fin_3rv_lines`, bill numbers `3RV69MM-NNN`, month key `left(new_billno, 7)`
+Source: `billgen.fin_rv_lines`, bill numbers `RV69MM-NNN`, month key `left(new_billno, 6)`.
 
 ```sql
-select 'HQ' as site, left(new_billno, 6) as ym,
+select left(new_billno, 6) as ym,
        array_to_string(array_agg(distinct new_billno order by new_billno), ',') as refs,
        round(sum(amount), 2) as amt
 from billgen.fin_rv_lines
 where new_billno like 'RV%'
-group by 2
-union all
-select 'SYP', left(new_billno, 7),
-       array_to_string(array_agg(distinct new_billno order by new_billno), ','),
-       round(sum(amount), 2)
-from billgen.fin_3rv_lines
-where new_billno like '3RV%'
-group by 2
+group by 1
 ```
 
-Match only when `direction = 'out'`, the payee is Narumon, and `amount` equals **exactly one** month total from either source. Set `matched_ref_type = rvmas`, `matched_ref_id` to every `new_billno` in that month, `match_reason = คืนเงินอะไหล่ (ใบสำคัญรับเงิน)`, confidence **0.98**. The bank date may be months after the receipt month. That lag is normal. Do not add `⚠️ วันที่ไม่ตรงช่วงปกติ:`.
+Match only when `direction = 'out'`, the payee is Narumon (`X2446` / `นฤมล`), and `amount` equals **exactly one** month total. Set `matched_ref_type = rvmas`, `matched_ref_id` to every `new_billno` that month, `match_reason = คืนเงินอะไหล่ (ใบสำคัญรับเงิน)`, confidence **0.98**. The bank date may be months later. That lag is normal. Do not add `⚠️ วันที่ไม่ตรงช่วงปกติ:`.
 
-Do not match a near amount, a subset of bills, or two months added together. Use `rvmas`, not `expense_pv`, so the statement screen opens the receipt vouchers.
+Do not match a near amount, a subset of bills, or two months added together. Use `rvmas`, not `expense_pv`.
 
-October 2026 transfers of 333,884.52 and 337,352.61 are **not** HQ July (329,447.73) or August (333,422.61). Leave those `unmatched`.
+October 2026 transfers of 333,884.52 and 337,352.61 are **not** July (329,447.73) or August (333,422.61). Leave those `unmatched`.
 
 ## INBOUND — internal funding only
 
@@ -183,6 +173,7 @@ Unclear inflows with no KCW counterpart → `review` with a Thai note (still nev
 - Matching PVMAS/PIMAS onto `direction = 'in'`
 - Leaving clear inbound funding from X7236 as `pending` / `unmatched`
 - Canceled vouchers/bills
+- Branch `billgen.fin_3rv_lines` / `3RV…` (ค่าอะไหล่สาขา — those belong on **064-8-92039-3**)
 - Changing money fields or source descriptions
 ## Possible duplicate statement rows (operator `ignored`)
 
