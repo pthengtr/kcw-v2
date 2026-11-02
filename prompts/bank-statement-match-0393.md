@@ -33,7 +33,7 @@ Scope rules:
 4. Touch both directions while `match_status` in (`pending`, `unmatched`):
    - `direction = 'in'` → sales sources first, then non-sales inflows
    - `direction = 'out'` → expense PV sources, then non-expense outflows
-5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. 3TR / 3TAR / expense_receipt often land after the bank feed; when a unique candidate now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
+5. **Re-match `unmatched` every run** — a prior `unmatched` is not final. 3TR / 3TAR / expense_receipt / a `fin_3rv_lines` month total often land after the bank feed; when a unique candidate now exists, overwrite the old unmatched decision. Never skip `unmatched` rows.
 6. **Never write `match_status = ignored`** — operator-only (exclude from monthly Excel). Interest / WHT → `matched` with the proper `matched_ref_type`. Possible duplicate rows → `review` (`possible_duplicate`); ask the operator to set `ignored` manually if confirmed.
 7. Never change amount / description / source_* / any money fields
 8. Write only `match_*` and `matched_*` fields
@@ -55,8 +55,9 @@ Default relaxed windows for this account:
 | 3TR bills | same day; T+1 .. T+3 | up to T+5 |
 | 3TAR net | T+1 .. T+4 | up to T+7 |
 | Expense PV | same day; ±3d | ±7d |
+| Branch 3RV month | exact unique month total, paid any later date | amount close but not exact → leave `unmatched` |
 
-Never auto-`matched` outside the strict auto-tier. Wider hits are always `review` with the warning prefix.
+Never auto-`matched` outside the strict auto-tier. Wider hits are always `review` with the warning prefix. The branch 3RV row is its own auto tier: an exact unique month total on any later bank date is `matched`, with no date warning.
 
 ## Match sources — INBOUND (priority order)
 
@@ -216,12 +217,54 @@ Notes from May/June probe:
 - Some `receipt_number` values already look like `PV69…` / `3PV69…` (rent etc.) — still match via `expense_receipt`, not PARTS9 PVMAS
 - `expense_general` with `%0393%` payment was **not** observed in May/June — do not invent general-row matches unless a unique hit appears
 
+### 1c) Branch parts reimbursement — ใบสำคัญรับเงิน 3RV (ซื้อไม่ VAT ขาย VAT)
+
+Branch receipts are paid from **this account**. Headquarters `RV…` receipts are paid from **141-1-72355-7**. Run this on outbound rows still `pending` / `unmatched` after expense PV. These are not `expense_receipt` rows.
+
+Source: `billgen.fin_3rv_lines`  
+The printed bill number is `new_billno` (`3RV69MM-NNN`). Sum `amount`. Do not add VAT.
+
+```sql
+select left(new_billno, 7) as ym,
+       array_to_string(array_agg(distinct new_billno order by new_billno), ',') as refs,
+       count(distinct new_billno) as bills,
+       round(sum(amount), 2) as amt
+from billgen.fin_3rv_lines
+where new_billno like '3RV%'
+group by 1
+```
+
+Match a bank row only when all of these are true:
+
+1. `direction = 'out'`
+2. Payee is Narumon: `raw_json->>'รายละเอียด'` contains `X2446` or `นฤมล`
+3. `amount` equals **exactly one** month total
+4. That month is not already stored on another statement row
+
+The bank date is often one to three months after the receipt month. That lag is normal. Auto-`matched` on an exact unique month total. Do not add `⚠️ วันที่ไม่ตรงช่วงปกติ:`.
+
+Do not match a near amount, a subset of bills, or two months added together.
+
+| Kind | `match_status` | `match_reason` (Thai) |
+|---|---|---|
+| One month total, unique | `matched` | `คืนเงินอะไหล่สาขา (กรรมการ)` |
+| Two months share the same total | `review` | `คืนเงินอะไหล่สาขา (กำกวม)` |
+
+`matched_ref_type = rvmas`  
+`matched_ref_id` = every `new_billno` that month, comma-separated, in order. Do **not** use `expense_pv`. Confidence **0.98**.
+
+Thai note:
+
+- `โอนไป KTB X2446 น.ส.นฤมล วิทยผโลท จำนวน 1,734.57 บาท วันที่ 28/10/2026 ยอดรวมใบสำคัญรับเงินสาขา 3RV6908-001 ถึง 3RV6908-007 เดือน 08/69 (ซื้อไม่ VAT ขาย VAT)`
+
+Do not retouch rows already `matched` / `manual` / `review`. July `3RV6907` (2,292.16 on 29/10/2026) and August `3RV6908` (1,734.57 on 28/10/2026) are already `manual`.
+
 ### 2) Large / residual outflows
 
 | Category | `matched_ref_type` | `match_status` | Notes | `match_reason` (Thai) |
 |---|---|---|---|---|
 | Internal sweep out | `internal_transfer` | `matched` | **Always classify** large transfers to X6184 / X4759 / X7236 / other KCW accounts when counterpart is clear from `raw_json` or same-day sister-account inflow — do not leave `pending`/`unmatched`. Report label: `โอนไป KTB 2486006184` / `โอนไป KBANK …` from `matched_ref_id` | `โอนภายใน` |
-| Director parts reimbursement | `expense_pv` or best available | `matched` / `review` | Narumon / X2446 cash paid back from an `expense_receipt`. Do **not** auto-match a generated `billgen.fin_3rv_lines` month total here. Those receipts are paid from **141-1-72355-7**. A 0393 transfer for that amount is an operator mistake: leave it `unmatched` unless the row is already `manual` | `คืนเงินอะไหล่สาขา (กรรมการ)` |
+| Director parts reimbursement | `rvmas` | `matched` / `review` | Use §1c for an exact `fin_3rv_lines` month total paid to Narumon. Other Narumon cash repayments stay `expense_pv` | `คืนเงินอะไหล่สาขา (กรรมการ)` |
 | 3CTAR / sales adjustment refund | — | `review` | Small transfer to X2446 that exactly equals a same-day 3TAR shortfall / 3CTAR adjustment — explain both legs in `match_notes` | `โอนคืนปรับปรุงยอดขาย` |
 | No unique expense | — | `unmatched` / `review` | Do not invent blind subset-sums across many receipts | `ยังไม่พบใบสำคัญจ่าย` |
 
@@ -229,6 +272,7 @@ July 2026: six outs to X6184 / X4759 were operator-marked `โอนภายใ
 ## Exclusions (do not use)
 
 - HQ `TR%` / `billgen.fin_tar_lines` / `fin_cntar_lines` (those belong to **064-8-91723-6**)
+- HQ `billgen.fin_rv_lines` / `RV…` (ค่าอะไหล่สำนักงานใหญ่ — those belong to **141-1-72355-7**)
 - `raw_kcw.raw_hq_pvmas_notes_vouchers` / `raw_hq_pimas_purchase_bills` (those belong to **141-1-72355-7**)
 - Online fee receipts with `voucher_type = skip` / `หักจากรายได้` — not banked on `064-8-92039-3`
 - Blind unconstrained subset-sum without a payment-method or same-day 3TR constraint
@@ -260,7 +304,7 @@ Always set:
 
 Confidence guide:
 
-- Clear 1:1 3TR / 3TAR T+1 / expense PV same-day ≥ **0.95**
+- Clear 1:1 3TR / 3TAR T+1 / expense PV same-day / exact 3RV month ≥ **0.95**
 - 3TR bundle / QR remainder / 3TAR T+2–T+3 / expense near-day ≈ **0.85–0.90**
 - Expense multi-receipt bundle ≈ **0.80–0.90** (use `review` if unsure)
 - Ambiguous → `review` and confidence ≤ **0.55**
@@ -276,6 +320,7 @@ Examples:
 - `ยอดขายสุทธิรายวัน (3TAR หัก 3CNTAR) ของวันที่ 01/05/2026 จำนวน 53,630.80 บาท เข้าบัญชีวันถัดไป (02/05/2026)`
 - `จับคู่กับใบสำคัญจ่าย PV จาก expense_receipt IV69050238 (CLEAR OPP TAPE) สุทธิ 13,057.00 บาท วันที่ 06/05/2026 ชำระผ่าน กสิกร xxxxxx0393`
 - `จับคู่กับใบสำคัญจ่ายคืนเงินสำรอง 452203 (ค่าขนส่ง PMPL) สุทธิ 25,131.15 บาท โอนเข้า X2446 วันที่ 04/05/2026`
+- `โอนไป KTB X2446 น.ส.นฤมล วิทยผโลท จำนวน 2,292.16 บาท วันที่ 29/10/2026 ยอดรวมใบสำคัญรับเงินสาขา 3RV6907-001 ถึง 3RV6907-010 เดือน 07/69 (ซื้อไม่ VAT ขาย VAT)`
 - `โอนภายในไปบัญชี X6184 จำนวน 200,000.00 บาท — ไม่ใช่ค่าใช้จ่าย`
 
 Do not use cryptic codes like `3tr_remainder:` or `T+1 net=` as the main `match_notes` text.
@@ -297,6 +342,6 @@ Report briefly in English:
 - Counts of `matched` / `review` / `unmatched` (split by `in` / `out` if useful)
 - Confirm zero remaining `pending` or `unmatched` in scope (or list any still open and why)
 - `possible_duplicate` reviews for the operator to set `ignored`
-- Breakdown by source: 3TR / 3TAR / expense_pv / internal_transfer / interest+WHT `matched` / other
+- Breakdown by source: 3TR / 3TAR / expense_pv / **3RV month (`rvmas`)** / internal_transfer / interest+WHT `matched` / other
 - Any 3TAR shortfall catch-up pairs or missing settlement days
 - Rows that need human review
