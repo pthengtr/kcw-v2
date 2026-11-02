@@ -37,8 +37,16 @@ type ToBill = {
   aftertax: number;
   discount: number;
   void_reason: string | null;
+  pay_via?: string | null;
+  source_docno?: string | null;
   lines: ToBillLine[];
 };
+
+function payViaLabel(value: string | null | undefined): string | null {
+  if (value === "platform") return "ชำระผ่านแพลตฟอร์ม";
+  if (value === "cod") return "เก็บเงินปลายทาง (COD)";
+  return null;
+}
 
 const money = new Intl.NumberFormat("th-TH", {
   minimumFractionDigits: 2,
@@ -49,6 +57,13 @@ const qtyFormat = new Intl.NumberFormat("th-TH", { maximumFractionDigits: 4 });
 
 function formatMoney(value: number): string {
   return money.format(Number.isFinite(value) ? value : 0);
+}
+
+function documentName(docno: string | null | undefined): string {
+  const no = (docno || "").trim().toUpperCase();
+  if (no.startsWith("RVO")) return "ใบเสร็จรับเงิน";
+  if (no.startsWith("TO")) return "ใบกำกับภาษี";
+  return "ใบเต็ม";
 }
 
 function formatWhen(iso: string | null): string {
@@ -116,13 +131,14 @@ export default function ToBillDialog({
           <DialogDescription className="text-left">
             {bill
               ? [
+                  documentName(bill.docno),
                   bill.customer_name,
                   bill.tax_id,
                   formatWhen(bill.bill_date),
                 ]
                   .filter(Boolean)
                   .join(" · ")
-              : "ใบกำกับภาษีเต็มรูป"}
+              : documentName(docno)}
           </DialogDescription>
           {bill ? (
             <button
@@ -165,6 +181,18 @@ export default function ToBillDialog({
                   <>
                     <dt className="text-muted-foreground">อีเมล</dt>
                     <dd>{bill.email}</dd>
+                  </>
+                ) : null}
+                {bill.source_docno ? (
+                  <>
+                    <dt className="text-muted-foreground">อ้างอิงใบกำกับ</dt>
+                    <dd>{bill.source_docno}</dd>
+                  </>
+                ) : null}
+                {payViaLabel(bill.pay_via) ? (
+                  <>
+                    <dt className="text-muted-foreground">การชำระเงิน</dt>
+                    <dd>{payViaLabel(bill.pay_via)}</dd>
                   </>
                 ) : null}
                 {bill.online_po ? (
