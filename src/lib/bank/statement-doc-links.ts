@@ -43,12 +43,18 @@ export function statementSalesBills(row: StatementDocRow): LinkedSalesBill[] | n
   return bills.length > 0 ? bills : null;
 }
 
-/** Receipt or payment voucher number. `rvi` rows have no number, so they stay closed. */
-export function statementVoucherNo(row: StatementDocRow): string | null {
+/** Receipt or payment voucher numbers. `rvi` rows have no number, so they stay closed. */
+export function statementVoucherNos(row: StatementDocRow): string[] | null {
   if (!linkable(row)) return null;
   const type = refType(row);
   if (type !== "rvmas" && type !== "pvmas") return null;
-  return documentIds(row)[0] ?? null;
+  const ids = documentIds(row);
+  return ids.length > 0 ? ids : null;
+}
+
+/** First receipt or payment voucher number. */
+export function statementVoucherNo(row: StatementDocRow): string | null {
+  return statementVoucherNos(row)?.[0] ?? null;
 }
 
 /** Purchase bill numbers matched directly, not through a voucher. */
