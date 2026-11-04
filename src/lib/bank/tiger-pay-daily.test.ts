@@ -557,6 +557,7 @@ describe("Tiger Pay snapshot mapping", () => {
     });
     expect(snapshot?.change_level).toBe("orange");
     expect(hopperItemCounts(snapshot?.items)["20"]).toBe(5);
+    expect(snapshot?.items.find((item) => item.value === 20)?.enabled).toBeUndefined();
     expect(hopperItemCounts(snapshot?.items)["10"]).toBe(12);
     expect(snapshot?.cash_box_total_baht).toBe(228000);
     expect(hopperItemCounts(snapshot?.cash_box_items)["1000"]).toBe(228);
@@ -575,6 +576,21 @@ describe("Tiger Pay snapshot mapping", () => {
       total_baht: 0,
       shop_code: "1",
     });
+    const disabled = mapCashSnapshot({
+      id: "snap-disabled",
+      captured_at: "2026-11-04T10:00:00+07:00",
+      biz_day: "2026-11-04",
+      trigger: "manual",
+      change_ready: true,
+      change_level: "orange",
+      change_reasons: ["ธนบัตร 100 ถูกปิด เหลือ 95 ใบ"],
+      items: [{ type: "Banknote", value: 100, amount: 95, enabled: false }],
+      total_baht: 9500,
+      shop_code: "1",
+    });
+    expect(disabled?.items).toEqual([
+      { type: "Banknote", value: 100, amount: 95, enabled: false },
+    ]);
     expect(snapshot?.cash_box_items).toEqual([]);
     expect(snapshot?.cash_box_total_baht).toBe(0);
   });

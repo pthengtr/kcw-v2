@@ -28,6 +28,10 @@ function itemKindLabel(item: { type?: string; value: number }): string {
     : "ธนบัตร";
 }
 
+function denomDisabled(reason: string): boolean {
+  return reason.includes("ถูกปิด");
+}
+
 function sortByValueDesc(
   items: TigerPayCashSnapshot["items"]
 ): TigerPayCashSnapshot["items"] {
@@ -66,7 +70,12 @@ function HopperItemsTable({
             <tr key={`${item.value}-${index}`} className="border-t">
               <td className="py-1">{itemKindLabel(item)}</td>
               <td className="py-1">{item.value}</td>
-              <td className="py-1 text-right">{item.amount}</td>
+              <td className="py-1 text-right">
+                {item.amount}
+                {item.enabled === false ? (
+                  <span className="ml-2 text-xs font-medium text-amber-800">ปิด</span>
+                ) : null}
+              </td>
               {showLineTotal ? (
                 <td className="py-1 text-right tabular-nums">
                   {formatBaht(item.value * item.amount)}
@@ -91,16 +100,20 @@ export default function TigerPayHopperButton({
 }) {
   const [open, setOpen] = useState(false);
   const level = hopper?.change_level ?? "";
+  const reasons = hopper?.change_reasons ?? [];
+  const hasDisabledDenom = reasons.some(denomDisabled);
   const label =
     hopper?.change_ready === false
       ? "ทอนไม่ได้"
       : level === "red"
         ? "เงินทอนใกล้หมด"
-        : level === "orange"
-          ? "เงินทอนเริ่มน้อย"
-          : hopper
-            ? "เงินทอนพร้อม"
-            : "สถานะเงินทอน";
+        : hasDisabledDenom
+          ? "เงินทอนถูกปิด"
+          : level === "orange"
+            ? "เงินทอนเริ่มน้อย"
+            : hopper
+              ? "เงินทอนพร้อม"
+              : "สถานะเงินทอน";
 
   const changeItems = useMemo(
     () => sortByValueDesc(hopper?.items ?? []),
@@ -110,8 +123,6 @@ export default function TigerPayHopperButton({
     () => sortByValueDesc(hopper?.cash_box_items ?? []),
     [hopper?.cash_box_items]
   );
-  const reasons = hopper?.change_reasons ?? [];
-
   return (
     <>
       <Button
