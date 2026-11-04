@@ -1201,69 +1201,69 @@ export default function StatementLinesTab({
                         disabled={savingMatch}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">
-                          ประเภทการจับคู่
-                        </div>
-                        <Select
-                          value={editRefType || REF_TYPE_NONE}
-                          onValueChange={(v) =>
-                            setEditRefType(v === REF_TYPE_NONE ? "" : v)
-                          }
-                          disabled={savingMatch}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="เลือกประเภท" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={REF_TYPE_NONE}>
-                              — ไม่ระบุ —
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">
+                        ประเภทการจับคู่
+                      </div>
+                      <Select
+                        value={editRefType || REF_TYPE_NONE}
+                        onValueChange={(v) =>
+                          setEditRefType(v === REF_TYPE_NONE ? "" : v)
+                        }
+                        disabled={savingMatch}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="เลือกประเภท" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={REF_TYPE_NONE}>
+                            — ไม่ระบุ —
+                          </SelectItem>
+                          {editRefType &&
+                          !BANK_MATCHED_REF_TYPE_OPTIONS.some(
+                            (o) => o.value === editRefType
+                          ) ? (
+                            <SelectItem value={editRefType}>
+                              {matchedRefTypeLabelTh(editRefType)} (เดิม)
                             </SelectItem>
-                            {editRefType &&
-                            !BANK_MATCHED_REF_TYPE_OPTIONS.some(
-                              (o) => o.value === editRefType
-                            ) ? (
-                              <SelectItem value={editRefType}>
-                                {matchedRefTypeLabelTh(editRefType)} (เดิม)
-                              </SelectItem>
-                            ) : null}
-                            {BANK_MATCHED_REF_TYPE_OPTIONS.filter(
-                              (o) => o.group === "in"
-                            ).map((o) => (
-                              <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                            {BANK_MATCHED_REF_TYPE_OPTIONS.filter(
-                              (o) => o.group === "out"
-                            ).map((o) => (
-                              <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                            {BANK_MATCHED_REF_TYPE_OPTIONS.filter(
-                              (o) => o.group === "other"
-                            ).map((o) => (
-                              <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">
-                          รหัสอ้างอิง
-                        </div>
-                        <Input
-                          value={editRefId}
-                          onChange={(e) => setEditRefId(e.target.value)}
-                          placeholder="VOUCNO / BILLNO"
-                          disabled={savingMatch}
-                        />
-                      </div>
+                          ) : null}
+                          {BANK_MATCHED_REF_TYPE_OPTIONS.filter(
+                            (o) => o.group === "in"
+                          ).map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                          {BANK_MATCHED_REF_TYPE_OPTIONS.filter(
+                            (o) => o.group === "out"
+                          ).map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                          {BANK_MATCHED_REF_TYPE_OPTIONS.filter(
+                            (o) => o.group === "other"
+                          ).map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">
+                      รหัสอ้างอิง
+                    </div>
+                    <Textarea
+                      value={editRefId}
+                      onChange={(e) => setEditRefId(e.target.value)}
+                      placeholder="เลขใบ คั่นด้วยจุลภาค เช่น RV6905-001,RV6905-002"
+                      rows={3}
+                      disabled={savingMatch}
+                      className="font-mono text-xs"
+                    />
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">
