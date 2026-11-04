@@ -58,12 +58,17 @@ function hopperTodo(snapshot: TigerPayCashSnapshot | null): WorkspaceTodoItem {
         ? "attention"
         : "ok";
 
+  const disabled = snapshot.change_reasons.some((reason) =>
+    reason.includes("ถูกปิด")
+  );
   const primaryValue =
     status === "urgent"
       ? "ต้องเติมด่วน"
-      : status === "attention"
-        ? "เริ่มน้อย"
-        : "พร้อมทอน";
+      : disabled
+        ? "มีชนิดที่ถูกปิด"
+        : status === "attention"
+          ? "เริ่มน้อย"
+          : "พร้อมทอน";
 
   return {
     id: "tiger-pay-hopper",

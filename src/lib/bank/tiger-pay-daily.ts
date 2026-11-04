@@ -124,8 +124,8 @@ export type TigerPayCashSnapshot = {
   change_ready: boolean | null;
   change_level: TigerPayChangeLevel;
   change_reasons: string[];
-  /** Open API recycler / change inventory (api/open/v2/payment/cash). */
-  items: Array<{ type?: string; value: number; amount: number }>;
+  /** Recycler / change inventory. Disabled cassettes are included from api/dispenser. */
+  items: Array<{ type?: string; value: number; amount: number; enabled?: boolean }>;
   total_baht: number;
   /** Device drop-box inventory (api/cash_box via admin JWT). */
   cash_box_items: Array<{ type?: string; value: number; amount: number }>;
@@ -628,6 +628,7 @@ export function mapCashSnapshot(row: unknown): TigerPayCashSnapshot | null {
             type: asString(item.type) ?? undefined,
             value,
             amount,
+            ...(item.enabled === false ? { enabled: false as const } : {}),
           },
         ];
       })

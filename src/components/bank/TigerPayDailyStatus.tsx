@@ -182,6 +182,13 @@ export default function TigerPayDailyStatus({
 
   const today = data?.today;
   const hopperCounts = hopperItemCounts(data?.hopper?.items);
+  const disabledDenoms = useMemo(() => {
+    const values = new Set<number>();
+    for (const item of data?.hopper?.items ?? []) {
+      if (item.enabled === false) values.add(item.value);
+    }
+    return values;
+  }, [data?.hopper?.items]);
   const denomRows = useMemo(() => {
     if (!today) return [];
     return TIGER_PAY_DENOMS.map((denom) => {
@@ -321,6 +328,9 @@ export default function TigerPayDailyStatus({
                       )}
                     >
                       {row.hopper}
+                      {disabledDenoms.has(row.denom) ? (
+                        <span className="ml-2 text-xs font-medium text-amber-800">ปิด</span>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
