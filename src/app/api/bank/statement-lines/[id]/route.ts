@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/auth/requirePermission";
@@ -9,13 +8,14 @@ import {
 } from "@/lib/auth/rbac-pages";
 import { decorateStatementLineLabels, type LineForLabel } from "@/lib/bank/statement-line-labels";
 import {
-  BANK_MATCH_STATUSES,
   canOperatorEditMatchFields,
   canOperatorTransitionMatchStatus,
-  isBankMatchedRefType,
-  normalizeBankMatchedRefType,
   operatorMatchBy,
 } from "@/lib/bank/match-status";
+import {
+  statementLinePatchError,
+  statementLinePatchSchema,
+} from "@/lib/bank/statement-line-patch";
 
 export async function GET(
   _req: Request,
@@ -58,39 +58,6 @@ export async function GET(
   return NextResponse.json({ row: labeled });
 }
 
-const PatchBodySchema = z
-  .object({
-    match_status: z.enum(BANK_MATCH_STATUSES).optional(),
-    match_reason: z.string().trim().max(500).nullable().optional(),
-    match_notes: z.string().trim().max(4000).nullable().optional(),
-    report_remark: z.string().trim().max(1000).nullable().optional(),
-    matched_ref_type: z
-      .string()
-      .trim()
-      .max(100)
-      .nullable()
-      .optional()
-      .transform((v) => {
-        if (v == null || v === "") return v;
-        return normalizeBankMatchedRefType(v) ?? v.toLowerCase();
-      })
-      .refine(
-        (v) => v == null || v === "" || isBankMatchedRefType(v),
-        { message: "Unknown matched_ref_type" }
-      ),
-    matched_ref_id: z.string().trim().max(200).nullable().optional(),
-  })
-  .refine(
-    (body) =>
-      body.match_status !== undefined ||
-      body.match_reason !== undefined ||
-      body.match_notes !== undefined ||
-      body.report_remark !== undefined ||
-      body.matched_ref_type !== undefined ||
-      body.matched_ref_id !== undefined,
-    { message: "No match fields to update" }
-  );
-
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -106,10 +73,15 @@ export async function PATCH(
   const { id } = await params;
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const parsed = PatchBodySchema.safeParse(await req.json().catch(() => ({})));
+  const parsed = statementLinePatchSchema.safeParse(
+    await req.json().catch(() => ({}))
+  );
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid body", details: parsed.error.flatten() },
+      {
+        error: statementLinePatchError(parsed.error),
+        details: parsed.error.flatten(),
+      },
       { status: 400 }
     );
   }
