@@ -10,6 +10,7 @@ const QuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/),
   branch: z.enum(["HQ", "SYP"]).optional(),
   side: z.enum(["sales", "purchase"]).optional(),
+  view: z.enum(["book", "doc"]).optional(),
 });
 
 export async function GET(req: Request) {
@@ -26,6 +27,7 @@ export async function GET(req: Request) {
     month: url.searchParams.get("month") ?? undefined,
     branch: url.searchParams.get("branch") || undefined,
     side: url.searchParams.get("side") || undefined,
+    view: url.searchParams.get("view") || undefined,
   });
 
   if (!parsed.success) {
@@ -34,10 +36,12 @@ export async function GET(req: Request) {
 
   try {
     const supabase = createAdminClient();
+    const basis = parsed.data.view === "doc" ? "accounting" : "bill";
     const rows = await fetchVatRegister(supabase, {
       monthStart: monthStartIso(parsed.data.month),
       branch: parsed.data.branch ?? null,
       side: parsed.data.side ?? null,
+      basis,
     });
     return NextResponse.json({ rows });
   } catch (error) {

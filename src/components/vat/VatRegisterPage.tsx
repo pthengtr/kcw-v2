@@ -78,6 +78,7 @@ const COLUMN_STORAGE_KEY = "kcw-vat-register-columns";
 
 type BranchFilter = "ALL" | "HQ" | "SYP";
 type SideFilter = "ALL" | VatRegisterSide;
+type ViewFilter = "BOOK" | "DOC";
 
 function readHiddenColumns(): VatRegisterColumnId[] {
   try {
@@ -148,6 +149,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   const [month, setMonth] = useState(vatReportingMonth);
   const [branch, setBranch] = useState<BranchFilter>("ALL");
   const [side, setSide] = useState<SideFilter>("ALL");
+  const [view, setView] = useState<ViewFilter>("BOOK");
   const [sheet, setSheet] = useState<string>("ALL");
   const [kpiOpen, setKpiOpen] = useState(true);
   const [kpi, setKpi] = useState<VatRegisterKpiKey | null>(null);
@@ -170,6 +172,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
       const params = new URLSearchParams({ month });
       if (branch !== "ALL") params.set("branch", branch);
       if (side !== "ALL") params.set("side", side);
+      if (view === "DOC") params.set("view", "doc");
       const res = await fetch(`/api/vat/register?${params.toString()}`);
       const json = (await res.json()) as { rows?: VatRegisterRow[]; error?: string };
       if (!res.ok) throw new Error(json.error || "โหลดรายงานไม่สำเร็จ");
@@ -180,7 +183,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
     } finally {
       setLoading(false);
     }
-  }, [month, branch, side]);
+  }, [month, branch, side, view]);
 
   useEffect(() => {
     void load();
@@ -369,7 +372,9 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-600">เดือน</span>
+          <span className="text-slate-600">
+            {view === "DOC" ? "เดือนเอกสารบัญชี" : "เดือนเล่มภาษี"}
+          </span>
           <Input
             type="month"
             value={month}
@@ -395,6 +400,15 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
             ["ALL", "ทั้งหมด"],
             ["sales", "ภาษีขาย"],
             ["purchase", "ภาษีซื้อ"],
+          ]}
+        />
+        <FilterSelect
+          label="มุมมอง"
+          value={view}
+          onChange={(value) => setView(value as ViewFilter)}
+          options={[
+            ["BOOK", "ตามเล่มภาษี"],
+            ["DOC", "ตามเดือนเอกสารบัญชี"],
           ]}
         />
       </div>
