@@ -141,7 +141,12 @@ Match only when `direction = 'out'`, the payee is Narumon (`X2446` / `นฤม�
 
 Do not match a near amount, a subset of bills, or two months added together. Use `rvmas`, not `expense_pv`.
 
-October 2026 transfers of 333,884.52 and 337,352.61 are **not** July (329,447.73) or August (333,422.61). Leave those `unmatched`.
+Operator confirmed the October 2026 transfers to Narumon are these months even though the bank paid more than the voucher total. They are already `manual`. Do not rematch them.
+
+| Bank date | Bank amount | Vouchers | Voucher total | Bank above vouchers |
+|---|---:|---|---:|---:|
+| 2026-10-30 | 333,884.52 | RV6907-001..043 (July) | 329,447.73 | 4,436.79 |
+| 2026-10-31 | 337,352.61 | RV6908-001..039 (August) | 333,422.61 | 3,930.00 |
 
 ## INBOUND — internal funding only
 
