@@ -79,6 +79,7 @@ const COLUMN_STORAGE_KEY = "kcw-vat-register-columns";
 type BranchFilter = "ALL" | "HQ" | "SYP";
 type SideFilter = "ALL" | VatRegisterSide;
 type ViewFilter = "BOOK" | "DOC";
+const PAGE_SIZE = 200;
 
 function readHiddenColumns(): VatRegisterColumnId[] {
   try {
@@ -202,6 +203,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   const [saveError, setSaveError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -215,6 +217,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
       const json = (await res.json()) as { rows?: VatRegisterRow[]; error?: string };
       if (!res.ok) throw new Error(json.error || "โหลดรายงานไม่สำเร็จ");
       setRows(json.rows ?? []);
+      setPage(1);
     } catch (err) {
       setRows([]);
       setError(err instanceof Error ? err.message : "โหลดรายงานไม่สำเร็จ");
@@ -297,6 +300,20 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   );
 
   const totals = useMemo(() => summarizeVatRegisterMoney(visible), [visible]);
+  const pageCount = useMemo(
+    () => Math.max(1, Math.ceil(visible.length / PAGE_SIZE)),
+    [visible]
+  );
+  const pagedVisible = useMemo(
+    () => visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [visible, page]
+  );
+
+  useEffect(() => {
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
+  }, [page, pageCount]);
 
   const headingSide: VatRegisterSide =
     side === "purchase" || sheetRows.every((row) => row.side === "purchase")
@@ -555,7 +572,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
               </p>
               <p className="font-medium">สุทธิ {formatBaht(totals.after, true)}</p>
             </div>
-            {visible.map((row) => {
+            {pagedVisible.map((row) => {
               const paid = paymentLabel(row);
               return (
                 <div
@@ -599,6 +616,31 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                 </div>
               );
             })}
+            <div className="flex items-center justify-between py-2 text-xs text-slate-600">
+              <span>
+                หน้า {page} / {pageCount} • ทั้งหมด {visible.length.toLocaleString("th-TH")} รายการ
+              </span>
+              <div className="space-x-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={page <= 1}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                >
+                  ก่อนหน้า
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={page >= pageCount}
+                  onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+                >
+                  ถัดไป
+                </Button>
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -612,13 +654,40 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                 ? "0 รายการ"
                 : vatRegisterTotalLabel(totals.used, totals.unused)}
           </p>
-          <ColumnPicker
-            hidden={hiddenColumns}
-            showPayment={showPayment}
-            headingSide={headingSide}
-            onToggle={setColumnVisible}
-            onReset={() => setHiddenColumns([])}
-          />
+          <div className="flex items-center gap-2">
+            {visible.length > 0 ? (
+              <div className="flex items-center gap-2 text-xs text-slate-600">
+                <span>
+                  หน้า {page} / {pageCount}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={page <= 1}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                >
+                  ก่อนหน้า
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={page >= pageCount}
+                  onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+                >
+                  ถัดไป
+                </Button>
+              </div>
+            ) : null}
+            <ColumnPicker
+              hidden={hiddenColumns}
+              showPayment={showPayment}
+              headingSide={headingSide}
+              onToggle={setColumnVisible}
+              onReset={() => setHiddenColumns([])}
+            />
+          </div>
         </div>
         <div className="min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border border-slate-200 bg-white">
           <table className="w-max min-w-full text-left text-sm text-slate-900">
@@ -659,7 +728,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                   </td>
                 </tr>
               ) : (
-                visible.map((row, index) => (
+                pagedVisible.map((row, index) => (
                   <tr
                     key={row.line_key}
                     className={cn(
@@ -702,7 +771,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
                               : "bg-white group-hover:bg-slate-50")
                         )}
                       >
-                        {vatCell(column.id, row, index)}
+                        {vatCell(column.id, row, (page - 1) * PAGE_SIZE + index)}
                       </td>
                     ))}
                   </tr>
