@@ -291,4 +291,3 @@ GRANT EXECUTE ON FUNCTION public.fn_vat_register_accounting_json(date, text, tex
 
 COMMENT ON FUNCTION public.fn_vat_register_accounting_json(date, text, text) IS
   'VAT book lines for accounting by document month (ops.vw_vat_register_accounting, filtered on accounting_month).';
-
