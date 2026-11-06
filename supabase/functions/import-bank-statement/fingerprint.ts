@@ -50,7 +50,22 @@ export function normalizeStableTransactionDetail(
   s = s.replace(/Future Amount:\s*([\d.]+)\s*T\b/gi, "Future Amount: $1");
   s = s.replace(/Future Amount:\s*([\d.]+)\s*$/gi, "Future Amount: $1");
   s = s.replace(/\s+/g, " ").trim();
+  s = stripKbankTruncatedTail(s);
   return s || null;
+}
+
+/**
+ * KBANK Excel cuts รายละเอียด with a trailing "++". Weekly files use different
+ * column widths, so the same transfer is cut on a different character
+ * ("ก.แ++" vs "ก.++") and would otherwise hash as two transactions.
+ * Drop the marker and the incomplete last token. Running balance still
+ * separates two real payments.
+ */
+function stripKbankTruncatedTail(detail: string): string {
+  if (!/\+\+\s*$/.test(detail)) return detail;
+  const withoutMarker = detail.replace(/\s*\+\+\s*$/g, "").trim();
+  const withoutTail = withoutMarker.replace(/\s+\S+\s*$/u, "").trim();
+  return withoutTail || withoutMarker;
 }
 
 export function normMoney(x: unknown): string {
@@ -114,11 +129,10 @@ const RAW_DETAIL_KEY_PATTERNS = [
  * `balance_after` disambiguates legitimate same-day same-amount sequences.
  * `transaction_detail` and `bank_reference` add stability when present.
  */
-export async function buildTransactionFingerprint(
-  input: TransactionFingerprintInput,
-): Promise<string> {
+/** Pipe-separated identity hashed into transaction_fingerprint. */
+export function movementKey(input: TransactionFingerprintInput): string {
   const stableDetail = normalizeStableTransactionDetail(input.transaction_detail);
-  const fpInput = [
+  return [
     normText(input.account_no),
     input.txn_date,
     normMoney(input.amount),
@@ -129,7 +143,36 @@ export async function buildTransactionFingerprint(
       ? ""
       : normMoney(input.balance_after),
   ].join("|");
-  return sha256HexAsync(fpInput);
+}
+
+export async function buildTransactionFingerprint(
+  input: TransactionFingerprintInput,
+): Promise<string> {
+  return sha256HexAsync(movementKey(input));
+}
+
+/**
+ * Drop incoming lines that are the same movement as a line already stored,
+ * or repeated inside this file. Compares normalized detail, so an older row
+ * whose stored fingerprint was hashed before KBANK "++" folding still counts.
+ */
+export function dropStableDuplicates<T extends TransactionFingerprintInput>(
+  incoming: T[],
+  existing: TransactionFingerprintInput[],
+): { fresh: T[]; duplicateCount: number } {
+  const seen = new Set(existing.map((row) => movementKey(row)));
+  const fresh: T[] = [];
+  let duplicateCount = 0;
+  for (const row of incoming) {
+    const key = movementKey(row);
+    if (seen.has(key)) {
+      duplicateCount += 1;
+      continue;
+    }
+    seen.add(key);
+    fresh.push(row);
+  }
+  return { fresh, duplicateCount };
 }
 
 export function extractTransactionDetailFromRaw(
