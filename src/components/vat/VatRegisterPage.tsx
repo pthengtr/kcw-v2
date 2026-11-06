@@ -310,6 +310,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
       const params = new URLSearchParams({ month });
       if (branch !== "ALL") params.set("branch", branch);
       if (side !== "ALL") params.set("side", side);
+      if (view === "DOC") params.set("view", "doc");
       const res = await fetch(`/api/vat/register/export?${params.toString()}`);
       if (!res.ok) {
         const json = (await res.json().catch(() => null)) as { error?: string } | null;
