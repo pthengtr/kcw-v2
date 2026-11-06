@@ -79,7 +79,7 @@ const COLUMN_STORAGE_KEY = "kcw-vat-register-columns";
 type BranchFilter = "ALL" | "HQ" | "SYP";
 type SideFilter = "ALL" | VatRegisterSide;
 type ViewFilter = "BOOK" | "DOC";
-const PAGE_SIZE = 200;
+const PAGE_SIZE = 100;
 
 function readHiddenColumns(): VatRegisterColumnId[] {
   try {
