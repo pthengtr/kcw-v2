@@ -39,15 +39,24 @@ export async function fetchVatRegister(
     monthStart: string;
     branch: string | null;
     side: VatRegisterSide | null;
+    basis?: "bill" | "accounting";
   }
 ): Promise<VatRegisterRow[]> {
-  const { data, error } = await supabase.rpc("fn_vat_register_json", {
-    p_from: input.monthStart,
-    p_to: monthEndIso(input.monthStart),
-    p_branch: input.branch,
-    p_side: input.side,
-    p_expense: "created",
-  });
+  const basis = input.basis ?? "bill";
+  const { data, error } =
+    basis === "accounting"
+      ? await supabase.rpc("fn_vat_register_accounting_json", {
+          p_month: input.monthStart,
+          p_branch: input.branch,
+          p_side: input.side,
+        })
+      : await supabase.rpc("fn_vat_register_json", {
+          p_from: input.monthStart,
+          p_to: monthEndIso(input.monthStart),
+          p_branch: input.branch,
+          p_side: input.side,
+          p_expense: "created",
+        });
   if (error) throw error;
   if (!Array.isArray(data)) return [];
 

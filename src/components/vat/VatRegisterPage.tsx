@@ -78,6 +78,7 @@ const COLUMN_STORAGE_KEY = "kcw-vat-register-columns";
 
 type BranchFilter = "ALL" | "HQ" | "SYP";
 type SideFilter = "ALL" | VatRegisterSide;
+type ViewFilter = "BOOK" | "DOC";
 
 function readHiddenColumns(): VatRegisterColumnId[] {
   try {
@@ -97,6 +98,12 @@ function thaiDate(iso: string): string {
   return `${day}/${month}/${Number(year) + 543}`;
 }
 
+function thaiMonthYear(isoMonth: string): string {
+  const [year, month] = isoMonth.slice(0, 7).split("-");
+  if (!year || !month) return isoMonth;
+  return `${month}/${Number(year) + 543}`;
+}
+
 function partyHeading(side: VatRegisterSide): string {
   return side === "purchase" ? "ชื่อผู้ขายสินค้า" : "ชื่อผู้ซื้อสินค้า";
 }
@@ -114,7 +121,22 @@ function vatCell(id: VatRegisterColumnId, row: VatRegisterRow, index: number): R
     case "index":
       return index + 1;
     case "date":
-      return thaiDate(row.bill_date);
+      {
+        const bill = thaiDate(row.bill_date);
+        const billMonth = row.bill_date.slice(0, 7);
+        const acctMonth =
+          row.accounting_month?.slice(0, 7) ?? row.doc_month?.slice(0, 7) ?? null;
+        const showDocMonth = acctMonth && acctMonth !== billMonth;
+        if (!showDocMonth) return bill;
+        return (
+          <span className="inline-flex flex-col leading-tight">
+            <span>{bill}</span>
+            <span className="text-[11px] text-amber-700">
+              เอกสารบัญชี: {thaiMonthYear(acctMonth)}
+            </span>
+          </span>
+        );
+      }
     case "bill":
       return <BillNumber row={row} />;
     case "party":
@@ -140,7 +162,24 @@ function vatCell(id: VatRegisterColumnId, row: VatRegisterRow, index: number): R
     case "status":
       return paymentLabel(row) ?? "—";
     case "docs":
-      return documentLabel(row);
+      {
+        const label = documentLabel(row);
+        const uploaded =
+          row.first_uploaded_at && row.last_uploaded_at
+            ? row.first_uploaded_at.slice(0, 10) === row.last_uploaded_at.slice(0, 10)
+              ? `อัปโหลด: ${thaiDate(row.first_uploaded_at)}`
+              : `อัปโหลด: ${thaiDate(row.first_uploaded_at)} – ${thaiDate(row.last_uploaded_at)}`
+            : row.first_uploaded_at
+              ? `อัปโหลด: ${thaiDate(row.first_uploaded_at)}`
+              : null;
+        if (!uploaded) return label;
+        return (
+          <span className="inline-flex flex-col leading-tight">
+            <span>{label}</span>
+            <span className="text-[11px] text-slate-500">{uploaded}</span>
+          </span>
+        );
+      }
   }
 }
 
@@ -148,6 +187,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   const [month, setMonth] = useState(vatReportingMonth);
   const [branch, setBranch] = useState<BranchFilter>("ALL");
   const [side, setSide] = useState<SideFilter>("ALL");
+  const [view, setView] = useState<ViewFilter>("BOOK");
   const [sheet, setSheet] = useState<string>("ALL");
   const [kpiOpen, setKpiOpen] = useState(true);
   const [kpi, setKpi] = useState<VatRegisterKpiKey | null>(null);
@@ -170,6 +210,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
       const params = new URLSearchParams({ month });
       if (branch !== "ALL") params.set("branch", branch);
       if (side !== "ALL") params.set("side", side);
+      if (view === "DOC") params.set("view", "doc");
       const res = await fetch(`/api/vat/register?${params.toString()}`);
       const json = (await res.json()) as { rows?: VatRegisterRow[]; error?: string };
       if (!res.ok) throw new Error(json.error || "โหลดรายงานไม่สำเร็จ");
@@ -180,7 +221,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
     } finally {
       setLoading(false);
     }
-  }, [month, branch, side]);
+  }, [month, branch, side, view]);
 
   useEffect(() => {
     void load();
@@ -369,7 +410,9 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-600">เดือน</span>
+          <span className="text-slate-600">
+            {view === "DOC" ? "เดือนเอกสารบัญชี" : "เดือนเล่มภาษี"}
+          </span>
           <Input
             type="month"
             value={month}
@@ -395,6 +438,15 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
             ["ALL", "ทั้งหมด"],
             ["sales", "ภาษีขาย"],
             ["purchase", "ภาษีซื้อ"],
+          ]}
+        />
+        <FilterSelect
+          label="มุมมอง"
+          value={view}
+          onChange={(value) => setView(value as ViewFilter)}
+          options={[
+            ["BOOK", "ตามเล่มภาษี"],
+            ["DOC", "ตามเดือนเอกสารบัญชี"],
           ]}
         />
       </div>

@@ -259,3 +259,35 @@ LEFT JOIN files f ON f.line_key = b.line_key;
 REVOKE ALL ON ops.vw_vat_register_accounting FROM PUBLIC;
 GRANT SELECT ON ops.vw_vat_register_accounting TO service_role;
 
+-- 4) JSON RPC for accounting/doc-month view
+
+CREATE OR REPLACE FUNCTION public.fn_vat_register_accounting_json(
+  p_month date,
+  p_branch text DEFAULT NULL,
+  p_side text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, curated_kcw, raw_kcw, billgen, ops
+AS $$
+  SELECT coalesce(
+    jsonb_agg(
+      to_jsonb(r)
+      ORDER BY r.bill_date, r.bill_no
+    ),
+    '[]'::jsonb
+  )
+  FROM ops.vw_vat_register_accounting r
+  WHERE (p_month IS NULL OR r.accounting_month = p_month)
+    AND (p_branch IS NULL OR r.branch = p_branch)
+    AND (p_side IS NULL OR r.side = p_side);
+$$;
+
+REVOKE ALL ON FUNCTION public.fn_vat_register_accounting_json(date, text, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.fn_vat_register_accounting_json(date, text, text) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_vat_register_accounting_json(date, text, text) TO service_role;
+
+COMMENT ON FUNCTION public.fn_vat_register_accounting_json(date, text, text) IS
+  'VAT book lines for accounting by document month (ops.vw_vat_register_accounting, filtered on accounting_month).';
