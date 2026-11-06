@@ -57,6 +57,7 @@ export async function fetchVatRegister(
     return {
       line_key: asString(row.line_key),
       report_month: asString(row.report_month).slice(0, 10),
+      bill_month: row.bill_month ? asString(row.bill_month).slice(0, 10) : null,
       branch: asString(row.branch),
       side: asString(row.side) === "purchase" ? "purchase" : "sales",
       sheet: asString(row.sheet),
@@ -77,6 +78,14 @@ export async function fetchVatRegister(
       paid_on: row.paid_on ? asString(row.paid_on).slice(0, 10) : null,
       paid_from_reminder: row.paid_from_reminder === true,
       note: asNullable(row.note),
+      doc_month: row.doc_month ? asString(row.doc_month).slice(0, 10) : null,
+      accounting_month: row.accounting_month
+        ? asString(row.accounting_month).slice(0, 10)
+        : null,
+      first_uploaded_at: row.first_uploaded_at
+        ? asString(row.first_uploaded_at)
+        : null,
+      last_uploaded_at: row.last_uploaded_at ? asString(row.last_uploaded_at) : null,
       invoice_count: displayInvoiceCount(asString(row.sheet), asNumber(row.invoice_count)),
       receipt_count: asNumber(row.receipt_count),
       accounting_unused: row.accounting_unused === true,

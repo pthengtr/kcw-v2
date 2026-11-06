@@ -42,6 +42,8 @@ export type VatRegisterRow = {
   source: string;
   source_ref: string | null;
   bill_date: string;
+  /** Calendar month of the tax book (derived from bill_date). */
+  bill_month?: string | null;
   bill_no: string;
   display_bill_no: string;
   party_name: string | null;
@@ -56,6 +58,13 @@ export type VatRegisterRow = {
   paid_on: string | null;
   paid_from_reminder: boolean;
   note: string | null;
+  /** Explicit document month for accounting (YYYY-MM-01), set by accounting. */
+  doc_month?: string | null;
+  /** Month that accounting uses for this line. doc_month overrides upload month. */
+  accounting_month?: string | null;
+  /** First and last evidence upload, when present. */
+  first_uploaded_at?: string | null;
+  last_uploaded_at?: string | null;
   invoice_count: number;
   receipt_count: number;
   /** Accounting left this line out of the book. Totals skip it. */

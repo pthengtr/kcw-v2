@@ -957,6 +957,7 @@ function LineDialog({
   const [paidStatus, setPaidStatus] = useState<VatPaidStatus>("unpaid");
   const [paidOn, setPaidOn] = useState("");
   const [note, setNote] = useState("");
+  const [docMonth, setDocMonth] = useState("");
   const [files, setFiles] = useState<VatRegisterFile[]>([]);
   const [expenseFiles, setExpenseFiles] = useState<VatExpenseImage[]>([]);
   const [busy, setBusy] = useState(false);
@@ -990,6 +991,7 @@ function LineDialog({
     setPaidStatus(row.paid_status);
     setPaidOn(row.paid_on ?? "");
     setNote(row.note ?? "");
+    setDocMonth(row.doc_month ? row.doc_month.slice(0, 7) : "");
     setMessage(null);
     setFiles([]);
     setExpenseFiles([]);
@@ -1028,6 +1030,41 @@ function LineDialog({
         paid_status: paidStatus,
         paid_on: paidStatus === "paid" && paidOn ? paidOn : null,
         note: note.trim() || null,
+      });
+      setMessage("บันทึกแล้ว");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveDocMonth() {
+    if (!row) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/vat/register/${row.line_key}/doc-month`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branch: row.branch,
+          side: row.side,
+          sheet: row.sheet,
+          billNo: row.bill_no,
+          billDate: row.bill_date,
+          sourceRef: row.source_ref,
+          reportMonth: row.report_month,
+          docMonth: docMonth || null,
+        }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error || "บันทึกไม่สำเร็จ");
+      const stored =
+        docMonth && /^\d{4}-\d{2}$/.test(docMonth) ? `${docMonth}-01` : docMonth;
+      onSaved(row.line_key, {
+        doc_month: stored || null,
+        accounting_month: stored || row.accounting_month || null,
       });
       setMessage("บันทึกแล้ว");
     } catch (err) {
@@ -1226,10 +1263,29 @@ function LineDialog({
                   rows={2}
                 />
               </label>
+              <label className="grid gap-1 text-sm">
+                <span>เดือนเอกสารบัญชี</span>
+                <Input
+                  type="month"
+                  value={docMonth}
+                  disabled={readOnly || busy}
+                  onChange={(event) => setDocMonth(event.target.value)}
+                />
+              </label>
               {readOnly ? null : (
-                <Button type="button" onClick={() => void savePaid()} disabled={busy}>
-                  บันทึกสถานะ
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" onClick={() => void savePaid()} disabled={busy}>
+                    บันทึกสถานะ
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void saveDocMonth()}
+                    disabled={busy}
+                  >
+                    บันทึกเดือนเอกสาร
+                  </Button>
+                </div>
               )}
             </div>
             </div>
