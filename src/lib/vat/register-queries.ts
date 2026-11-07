@@ -214,7 +214,7 @@ async function attachFullInvoices(
     const { data, error } = await supabase
       .schema("to_bill")
       .from("invoices")
-      .select("tad_billno,docno,customer_name,tax_id,beforetax,tax,aftertax")
+      .select("tad_billno,docno,customer_name,tax_id,beforetax,tax,aftertax,bill_date")
       .eq("status", "issued")
       .in("tad_billno", group);
     // Don't blank the whole VAT register if full-invoice enrichment fails
@@ -232,6 +232,7 @@ async function attachFullInvoices(
         before_vat: asNumber(record.beforetax),
         vat: asNumber(record.tax),
         after_vat: asNumber(record.aftertax),
+        bill_date: asNullable(record.bill_date)?.slice(0, 10) ?? null,
       });
     }
   }

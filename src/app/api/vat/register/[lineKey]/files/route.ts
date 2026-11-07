@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireVatRegisterRead, requireVatRegisterWrite } from "@/lib/vat/access";
-import { monthStartIso } from "@/lib/vat/register";
+import { isIssuedToBill, monthStartIso } from "@/lib/vat/register";
 import { findVatRegisterLine } from "@/lib/vat/register-queries";
 import type { VatExpenseImage, VatFileKind, VatRegisterFile } from "@/lib/vat/register";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -185,6 +185,12 @@ export async function POST(
     );
     if (!line) {
       return NextResponse.json({ error: "Line not found" }, { status: 404 });
+    }
+    if (isIssuedToBill(line)) {
+      return NextResponse.json(
+        { error: "บิล TO ใช้ใบเต็มจากระบบ ไม่ต้องอัปโหลด" },
+        { status: 400 }
+      );
     }
 
     await ensureEvidence(supabase, line, permCheck.userId);

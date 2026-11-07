@@ -25,6 +25,7 @@ import { isGeneratedVatBill } from "@/lib/vat/generated-bill";
 import {
   compareSheets,
   filterVatRegisterRows,
+  isIssuedToBill,
   summarizeVatRegister,
   summarizeVatRegisterMoney,
   vatBillDrill,
@@ -411,7 +412,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
           <p className="text-sm text-slate-600">
             {readOnly
               ? "ดูได้อย่างเดียว"
-              : "เล่มเดียวกับรายงาน Excel แนบใบกำกับได้ทุกเล่ม ส่วนขาย TD กับซื้อเครดิตแนบใบเสร็จด้วย ติ๊กรายการที่บัญชีไม่ใช้ ยอดรวมจะนับเฉพาะรายการที่ใช้งาน"}
+              : "เล่มเดียวกับรายงาน Excel แนบใบกำกับได้ ส่วน TO ใช้ใบเต็มจากระบบ ไม่ต้องอัปโหลด ขาย TD กับซื้อเครดิตแนบใบเสร็จด้วย ติ๊กรายการที่บัญชีไม่ใช้ ยอดรวมจะนับเฉพาะรายการที่ใช้งาน"}
           </p>
         </div>
         <Button
@@ -1120,6 +1121,7 @@ function LineDialog({
     setBillTarget(null);
     setExpenseOpen(false);
     setToDocno(null);
+    if (isIssuedToBill(row)) return;
     void loadFiles(row.line_key, row.report_month).catch((err: unknown) => {
       setMessage(err instanceof Error ? err.message : "โหลดไฟล์ไม่สำเร็จ");
     });
@@ -1412,7 +1414,11 @@ function LineDialog({
             </div>
             </div>
 
-            {isGeneratedVatBill(row.sheet) ? (
+            {isIssuedToBill(row) ? (
+              <p className="text-sm text-slate-600">
+                ใบกำกับมาจากใบเต็มในระบบ — ไม่ต้องอัปโหลด
+              </p>
+            ) : isGeneratedVatBill(row.sheet) ? (
               <>
                 <VatReceiptSheet row={row} />
                 {files.some((file) => file.kind === "invoice") ? (

@@ -4,6 +4,8 @@ import {
   applyIssuedFullInvoices,
   compareSheets,
   filterVatRegisterRows,
+  fullInvoiceLineKey,
+  isIssuedToBill,
   monthEndIso,
   summarizeVatRegister,
   summarizeVatRegisterMoney,
@@ -320,6 +322,46 @@ describe("issued full invoice in the tax book", () => {
     expect(kept.accounting_unused).toBe(false);
     expect(kept.full_invoice_docno).toBeNull();
     expect(kept.bill_no).toBe("TAD6910-054");
+  });
+
+  it("uses the TO issue date for the synthetic line key", () => {
+    const [, full] = applyIssuedFullInvoices(
+      [tad],
+      [
+        {
+          tad_billno: "TAD6910-054",
+          docno: "TO6910-002",
+          customer_name: "บริษัท ทดสอบ จำกัด",
+          tax_id: "1234567890123",
+          before_vat: 100,
+          vat: 7,
+          after_vat: 107,
+          bill_date: "2026-10-15",
+        },
+      ]
+    );
+    expect(full.bill_date).toBe("2026-10-15");
+    expect(full.line_key).toBe(fullInvoiceLineKey("TO6910-002", "2026-10-15"));
+  });
+
+  it("counts the issued TO record as the tax invoice without uploads", () => {
+    const [, full] = applyIssuedFullInvoices(
+      [tad],
+      [
+        {
+          tad_billno: "TAD6910-054",
+          docno: "TO6910-002",
+          customer_name: "บริษัท ทดสอบ จำกัด",
+          tax_id: "1234567890123",
+          before_vat: 100,
+          vat: 7,
+          after_vat: 107,
+        },
+      ]
+    );
+    expect(full.invoice_count).toBe(1);
+    expect(isIssuedToBill(full)).toBe(true);
+    expect(vatDocumentsComplete(full)).toBe(true);
   });
 });
 
