@@ -250,6 +250,8 @@ export type IssuedFullInvoice = {
   before_vat: number;
   vat: number;
   after_vat: number;
+  /** Issue date on the TO; falls back to the TAD bill date when absent. */
+  bill_date?: string | null;
 };
 
 export function fullInvoiceLineKey(docno: string, billDate: string, branch = "HQ"): string {
@@ -261,6 +263,13 @@ export function fullInvoiceLineKey(docno: string, billDate: string, branch = "HQ
     billDate: billDate.slice(0, 10),
     sourceRef: null,
   });
+}
+
+/** Issued TO lines already have the tax invoice in to_bill — no file upload. */
+export function isIssuedToBill(
+  row: Pick<VatRegisterRow, "source" | "sheet"> | { source: string; sheet: string }
+): boolean {
+  return row.source === "to_bill" || row.sheet === "TO";
 }
 
 /** Abbreviated TAD stays on screen, marked unused, and the issued TO is the line that counts. */
@@ -286,20 +295,23 @@ export function applyIssuedFullInvoices(
       continue;
     }
     const tadNo = row.bill_no.trim().toUpperCase();
+    const billDate =
+      (invoice.bill_date && invoice.bill_date.slice(0, 10)) || row.bill_date;
     out.push({
       ...row,
       accounting_unused: true,
       full_invoice_docno: invoice.docno,
     });
     out.push({
-      line_key: fullInvoiceLineKey(invoice.docno, row.bill_date, row.branch),
+      line_key: fullInvoiceLineKey(invoice.docno, billDate, row.branch),
       report_month: row.report_month,
+      bill_month: row.bill_month ?? null,
       branch: row.branch,
       side: "sales",
       sheet: "TO",
       source: "to_bill",
       source_ref: null,
-      bill_date: row.bill_date,
+      bill_date: billDate,
       bill_no: invoice.docno,
       display_bill_no: invoice.docno,
       party_name: invoice.customer_name.trim() || null,
@@ -314,7 +326,8 @@ export function applyIssuedFullInvoices(
       paid_on: null,
       paid_from_reminder: false,
       note: null,
-      invoice_count: 0,
+      // The issued to_bill.invoices row is the tax invoice; no upload needed.
+      invoice_count: 1,
       receipt_count: 0,
       accounting_unused: false,
       full_invoice_docno: null,
