@@ -217,7 +217,12 @@ async function attachFullInvoices(
       .select("tad_billno,docno,customer_name,tax_id,beforetax,tax,aftertax")
       .eq("status", "issued")
       .in("tad_billno", group);
-    if (error) throw error;
+    // Don't blank the whole VAT register if full-invoice enrichment fails
+    // (e.g. PostgREST schema exposure drift). Book lines still load.
+    if (error) {
+      console.error("vat register attachFullInvoices", error);
+      return rows;
+    }
     for (const record of (data ?? []) as Record<string, unknown>[]) {
       invoices.push({
         tad_billno: asString(record.tad_billno),

@@ -46,8 +46,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ rows });
   } catch (error) {
     console.error("vat register", error);
+    const detail =
+      error && typeof error === "object" && "message" in error
+        ? String((error as { message: unknown }).message)
+        : error instanceof Error
+          ? error.message
+          : null;
     return NextResponse.json(
-      { error: "Unable to load VAT register" },
+      {
+        error: "Unable to load VAT register",
+        ...(detail ? { detail } : {}),
+      },
       { status: 500 }
     );
   }
