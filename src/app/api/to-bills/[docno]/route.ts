@@ -42,7 +42,7 @@ export async function GET(
     .schema("to_bill")
     .from("invoices")
     .select(
-      "invoice_id,docno,status,tad_billno,bill_date,customer_name,address,phone,tax_id,branch_label,email,beforetax,tax,aftertax,discount,online_po,void_reason,pay_via,source_docno"
+      "invoice_id,docno,status,tad_billno,bill_date,issued_at,issued_by,customer_name,address,phone,tax_id,branch_label,email,beforetax,tax,aftertax,discount,online_po,void_reason,pay_via,source_docno,acctno,acctname_kss"
     )
     .eq("docno", key)
     .maybeSingle();
@@ -68,6 +68,8 @@ export async function GET(
     status: data.status,
     tad_billno: data.tad_billno,
     bill_date: data.bill_date,
+    issued_at: data.issued_at,
+    issued_by: data.issued_by,
     customer_name: data.customer_name,
     address: data.address,
     phone: data.phone,
@@ -82,6 +84,8 @@ export async function GET(
     void_reason: data.void_reason,
     pay_via: data.pay_via,
     source_docno: data.source_docno,
+    acctno: data.acctno,
+    acctname_kss: data.acctname_kss,
     lines: (linesRes.data ?? []).map((line) => ({
       bcode: line.bcode,
       detail: line.detail,
