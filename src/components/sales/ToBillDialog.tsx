@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import DialogPrintButton from "@/components/common/DialogPrintButton";
+import ToBillSheet from "@/components/sales/ToBillSheet";
 import {
   Dialog,
   DialogContent,
@@ -10,67 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-type ToBillLine = {
-  bcode: string | null;
-  detail: string | null;
-  qty: number;
-  ui: string | null;
-  price: number;
-  amount: number;
-};
-
-type ToBill = {
-  docno: string;
-  status: string;
-  tad_billno: string;
-  bill_date: string | null;
-  customer_name: string | null;
-  address: string | null;
-  phone: string | null;
-  tax_id: string | null;
-  branch_label: string | null;
-  email: string | null;
-  online_po: string | null;
-  beforetax: number;
-  tax: number;
-  aftertax: number;
-  discount: number;
-  void_reason: string | null;
-  pay_via?: string | null;
-  source_docno?: string | null;
-  lines: ToBillLine[];
-};
-
-function payViaLabel(value: string | null | undefined): string | null {
-  if (value === "platform") return "ชำระผ่านแพลตฟอร์ม";
-  if (value === "cod") return "เก็บเงินปลายทาง (COD)";
-  return null;
-}
-
-const money = new Intl.NumberFormat("th-TH", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const qtyFormat = new Intl.NumberFormat("th-TH", { maximumFractionDigits: 4 });
-
-function formatMoney(value: number): string {
-  return money.format(Number.isFinite(value) ? value : 0);
-}
+import {
+  isReceiptDoc,
+  thaiLongDate,
+  type ToBillSheetData,
+} from "@/lib/sales/to-bill-sheet";
 
 function documentName(docno: string | null | undefined): string {
-  const no = (docno || "").trim().toUpperCase();
-  if (no.startsWith("RVO")) return "ใบเสร็จรับเงิน";
-  if (no.startsWith("TO")) return "ใบกำกับภาษี";
+  if (isReceiptDoc(docno)) return "ใบเสร็จรับเงิน";
+  if ((docno || "").trim().toUpperCase().startsWith("TO")) return "ใบกำกับภาษี";
   return "ใบเต็ม";
-}
-
-function formatWhen(iso: string | null): string {
-  if (!iso) return "—";
-  const date = new Date(`${iso.slice(0, 10)}T00:00:00+07:00`);
-  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
-  return new Intl.DateTimeFormat("th-TH", { dateStyle: "medium" }).format(date);
 }
 
 export default function ToBillDialog({
@@ -86,7 +36,7 @@ export default function ToBillDialog({
 }) {
   const key = open && docno ? docno : "";
   const [loadedKey, setLoadedKey] = useState("");
-  const [bill, setBill] = useState<ToBill | null>(null);
+  const [bill, setBill] = useState<ToBillSheetData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -97,7 +47,7 @@ export default function ToBillDialog({
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "โหลดใบเต็มไม่สำเร็จ");
         if (!cancelled) {
-          setBill(json as ToBill);
+          setBill(json as ToBillSheetData);
           setError(null);
           setLoadedKey(key);
         }
@@ -121,9 +71,9 @@ export default function ToBillDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         overlayClassName="z-[90]"
-        className="left-0 top-0 z-[90] flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:w-[min(840px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
+        className="left-0 top-0 z-[90] flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[min(92dvh,980px)] sm:w-[min(920px,calc(100vw-2rem))] sm:max-w-none sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
       >
-        <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left">
+        <DialogHeader className="shrink-0 space-y-2 border-b px-4 py-4 pr-12 text-left print:hidden">
           <DialogTitle className="text-base sm:text-lg">
             {bill?.docno || docno || "ใบเต็ม"}
             {voided ? " (ยกเลิก)" : ""}
@@ -134,7 +84,7 @@ export default function ToBillDialog({
                   documentName(bill.docno),
                   bill.customer_name,
                   bill.tax_id,
-                  formatWhen(bill.bill_date),
+                  thaiLongDate(bill.bill_date),
                 ]
                   .filter(Boolean)
                   .join(" · ")
@@ -152,103 +102,19 @@ export default function ToBillDialog({
           <DialogPrintButton
             disabled={loading || Boolean(error) || !bill}
             documentTitle={bill ? bill.docno : docno || "ใบเต็ม"}
+            pageMargin="12mm"
           />
         </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4 print:overflow-visible print:p-0">
           {loading ? (
-            <p className="py-6 text-sm text-muted-foreground">กำลังโหลด</p>
+            <p className="py-6 text-sm text-muted-foreground print:hidden">กำลังโหลด</p>
           ) : error ? (
-            <p className="py-6 text-sm text-red-600">{error}</p>
+            <p className="py-6 text-sm text-red-600 print:hidden">{error}</p>
           ) : !bill ? (
-            <p className="py-6 text-sm text-muted-foreground">ไม่พบใบเต็ม</p>
+            <p className="py-6 text-sm text-muted-foreground print:hidden">ไม่พบใบเต็ม</p>
           ) : (
-            <div className="flex flex-col gap-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              {voided ? (
-                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  ยกเลิกแล้ว{bill.void_reason ? ` · ${bill.void_reason}` : ""}
-                </p>
-              ) : null}
-              <dl className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-1 rounded-lg border px-3 py-3 text-sm">
-                <dt className="text-muted-foreground">ผู้ซื้อ</dt>
-                <dd>{bill.customer_name || "—"}</dd>
-                <dt className="text-muted-foreground">ที่อยู่</dt>
-                <dd className="whitespace-pre-wrap">{bill.address || "—"}</dd>
-                <dt className="text-muted-foreground">สาขา</dt>
-                <dd>{bill.branch_label || "—"}</dd>
-                <dt className="text-muted-foreground">โทร</dt>
-                <dd>{bill.phone || "—"}</dd>
-                {bill.email ? (
-                  <>
-                    <dt className="text-muted-foreground">อีเมล</dt>
-                    <dd>{bill.email}</dd>
-                  </>
-                ) : null}
-                {bill.source_docno ? (
-                  <>
-                    <dt className="text-muted-foreground">อ้างอิงใบกำกับ</dt>
-                    <dd>{bill.source_docno}</dd>
-                  </>
-                ) : null}
-                {payViaLabel(bill.pay_via) ? (
-                  <>
-                    <dt className="text-muted-foreground">การชำระเงิน</dt>
-                    <dd>{payViaLabel(bill.pay_via)}</dd>
-                  </>
-                ) : null}
-                {bill.online_po ? (
-                  <>
-                    <dt className="text-muted-foreground">ออเดอร์</dt>
-                    <dd>{bill.online_po}</dd>
-                  </>
-                ) : null}
-                <dt className="text-muted-foreground">ก่อนภาษี</dt>
-                <dd className="text-right tabular-nums">{formatMoney(bill.beforetax)}</dd>
-                {bill.discount ? (
-                  <>
-                    <dt className="text-muted-foreground">ส่วนลด</dt>
-                    <dd className="text-right tabular-nums">{formatMoney(bill.discount)}</dd>
-                  </>
-                ) : null}
-                <dt className="text-muted-foreground">ภาษี</dt>
-                <dd className="text-right tabular-nums">{formatMoney(bill.tax)}</dd>
-                <dt className="font-medium">รวม</dt>
-                <dd className="text-right font-medium tabular-nums">{formatMoney(bill.aftertax)}</dd>
-              </dl>
-              <div className="overflow-auto rounded-md border print:overflow-visible print:border-0">
-                <table className="w-full min-w-[36rem] border-collapse text-sm print:min-w-0">
-                  <thead>
-                    <tr className="text-left">
-                      <th className="sticky top-0 z-10 border-b bg-muted p-2">BCODE</th>
-                      <th className="sticky top-0 z-10 border-b bg-muted p-2">รายละเอียด</th>
-                      <th className="sticky top-0 z-10 border-b bg-muted p-2">จำนวน</th>
-                      <th className="sticky top-0 z-10 border-b bg-muted p-2">ราคา</th>
-                      <th className="sticky top-0 z-10 border-b bg-muted p-2">จำนวนเงิน</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bill.lines.length === 0 ? (
-                      <tr>
-                        <td className="p-2 text-muted-foreground" colSpan={5}>
-                          ไม่มีรายการ
-                        </td>
-                      </tr>
-                    ) : (
-                      bill.lines.map((line, index) => (
-                        <tr key={`${line.bcode ?? "line"}-${index}`} className="border-b">
-                          <td className="p-2 font-mono">{line.bcode ?? "—"}</td>
-                          <td className="p-2">{line.detail ?? "—"}</td>
-                          <td className="whitespace-nowrap p-2 tabular-nums">
-                            {qtyFormat.format(line.qty)}
-                            {line.ui ? ` ${line.ui}` : ""}
-                          </td>
-                          <td className="p-2 tabular-nums">{formatMoney(line.price)}</td>
-                          <td className="p-2 tabular-nums">{formatMoney(line.amount)}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+            <div className="pb-[max(0.75rem,env(safe-area-inset-bottom))] print:pb-0">
+              <ToBillSheet bill={bill} />
             </div>
           )}
         </div>
