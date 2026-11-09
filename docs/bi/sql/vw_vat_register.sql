@@ -68,12 +68,16 @@ sales_detail AS (
   SELECT DISTINCT ON (upper(btrim(s."BILLNO")))
     upper(btrim(s."BILLNO")) AS bill_no,
     nullif(btrim(s."DETAIL"), '') AS detail
-  FROM raw_kcw.raw_hq_sidet_sales_lines s
+  -- HQ + SYP lines (raw_hq_sidet alone misses 3TR / other SYP prefixes).
+  FROM curated_kcw.fact_sales_all s
   WHERE nullif(btrim(s."BILLNO"), '') IS NOT NULL
   ORDER BY
     upper(btrim(s."BILLNO")),
-    abs(curated_kcw.fn_vat_num(s."AMOUNT")) DESC,
-    s."LINE"
+    abs(curated_kcw.fn_vat_num(coalesce(nullif(btrim(s."AMOUNT_NUM"), ''), s."AMOUNT"))) DESC,
+    CASE
+      WHEN btrim(coalesce(s."ROW_ID", '')) ~ '^[0-9]+$' THEN btrim(s."ROW_ID")::bigint
+      ELSE 0
+    END
 ),
 purchase_detail AS (
   SELECT DISTINCT ON (upper(btrim(d."BILLNO")))
