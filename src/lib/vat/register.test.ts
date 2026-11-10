@@ -18,6 +18,8 @@ import {
   vatReportingMonth,
   vatRequiresReceipt,
   vatTracksPayment,
+  vatUploadDocMonth,
+  splitInclusiveVat,
   type VatRegisterKpiKey,
   type VatRegisterRow,
 } from "./register";
@@ -44,6 +46,21 @@ describe("vat reporting month", () => {
     expect(vatReportingMonth(new Date("2026-10-20T04:00:00.000Z"))).toBe(
       "2026-10"
     );
+  });
+});
+
+describe("vat upload doc month", () => {
+  it("assigns uploads on the 1st–10th to the prior month", () => {
+    // 8 Nov 2026 12:00 Bangkok = 05:00 UTC
+    expect(vatUploadDocMonth("2026-11-08T05:00:00.000Z")).toBe("2026-10");
+    expect(vatUploadDocMonth("2026-11-10T05:00:00.000Z")).toBe("2026-10");
+    expect(vatUploadDocMonth("2026-11-11T05:00:00.000Z")).toBe("2026-11");
+  });
+});
+
+describe("split inclusive vat", () => {
+  it("splits a 7% inclusive total into before and vat", () => {
+    expect(splitInclusiveVat(107)).toEqual({ before: 100, vat: 7, after: 107 });
   });
 });
 
