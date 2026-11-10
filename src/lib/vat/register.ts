@@ -150,6 +150,20 @@ export function compareSheets(a: string, b: string): number {
   return a.localeCompare(b, "th");
 }
 
+/** Book line order: bill date, then bill number (numeric-aware). */
+export function compareVatRegisterRows(
+  a: Pick<VatRegisterRow, "bill_date" | "bill_no">,
+  b: Pick<VatRegisterRow, "bill_date" | "bill_no">
+): number {
+  const dateA = a.bill_date.slice(0, 10);
+  const dateB = b.bill_date.slice(0, 10);
+  if (dateA !== dateB) return dateA < dateB ? -1 : 1;
+  return a.bill_no.localeCompare(b.bill_no, "th", {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
 /** Sales credit books, including the branch 3-prefix, plus purchase credit. */
 const CREDIT_PAYMENT_SHEETS = new Set([
   "TD",

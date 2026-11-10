@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyIssuedFullInvoices,
   compareSheets,
+  compareVatRegisterRows,
   filterVatRegisterRows,
   fullInvoiceLineKey,
   isIssuedToBill,
@@ -102,6 +103,26 @@ describe("sheet order", () => {
   it("puts TAR before TD and credit purchases before cash", () => {
     expect(compareSheets("TD", "TAR")).toBeGreaterThan(0);
     expect(compareSheets("เครดิต", "สด")).toBeLessThan(0);
+  });
+});
+
+describe("register row order", () => {
+  it("sorts by bill date then bill number", () => {
+    const rows = [
+      { bill_date: "2026-10-03", bill_no: "B-2" },
+      { bill_date: "2026-10-02", bill_no: "B-10" },
+      { bill_date: "2026-10-02", bill_no: "B-2" },
+    ];
+    expect([...rows].sort(compareVatRegisterRows).map((row) => row.bill_no)).toEqual([
+      "B-2",
+      "B-10",
+      "B-2",
+    ]);
+    expect([...rows].sort(compareVatRegisterRows).map((row) => row.bill_date)).toEqual([
+      "2026-10-02",
+      "2026-10-02",
+      "2026-10-03",
+    ]);
   });
 });
 
