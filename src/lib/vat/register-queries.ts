@@ -81,6 +81,12 @@ export async function fetchVatRegister(
       before_vat: asNumber(row.before_vat),
       vat: asNumber(row.vat),
       after_vat: asNumber(row.after_vat),
+      book_before_vat:
+        row.book_before_vat == null ? asNumber(row.before_vat) : asNumber(row.book_before_vat),
+      book_vat: row.book_vat == null ? asNumber(row.vat) : asNumber(row.book_vat),
+      book_after_vat:
+        row.book_after_vat == null ? asNumber(row.after_vat) : asNumber(row.book_after_vat),
+      amount_overridden: row.amount_overridden === true,
       detail: asNullable(row.detail),
       remark: asNullable(row.remark),
       paid_status: status,

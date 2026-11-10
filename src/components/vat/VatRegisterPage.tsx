@@ -29,10 +29,13 @@ import {
   isIssuedToBill,
   summarizeVatRegister,
   summarizeVatRegisterMoney,
+  monthStartIso,
+  splitInclusiveVat,
   vatBillDrill,
   vatReportingMonth,
   vatRequiresReceipt,
   vatTracksPayment,
+  vatUploadDocMonth,
   type VatExpenseImage,
   type VatFileKind,
   type VatPaidStatus,
@@ -151,11 +154,18 @@ function vatCell(id: VatRegisterColumnId, row: VatRegisterRow, index: number): R
     case "taxId":
       return row.tax_id || "—";
     case "before":
-      return formatBaht(row.before_vat, true);
     case "vat":
-      return formatBaht(row.vat, true);
-    case "after":
-      return formatBaht(row.after_vat, true);
+    case "after": {
+      const value =
+        id === "before" ? row.before_vat : id === "vat" ? row.vat : row.after_vat;
+      if (!row.amount_overridden) return formatBaht(value, true);
+      return (
+        <span className="inline-flex flex-col items-end leading-tight">
+          <span>{formatBaht(value, true)}</span>
+          <span className="text-[11px] text-amber-700">แก้ตามเอกสาร</span>
+        </span>
+      );
+    }
     case "detail":
       return (
         <span className="block max-w-[14rem] truncate" title={row.detail ?? undefined}>
@@ -1082,6 +1092,9 @@ function LineDialog({
   const [paidOn, setPaidOn] = useState("");
   const [note, setNote] = useState("");
   const [docMonth, setDocMonth] = useState("");
+  const [beforeVat, setBeforeVat] = useState("");
+  const [vatAmount, setVatAmount] = useState("");
+  const [afterVat, setAfterVat] = useState("");
   const [files, setFiles] = useState<VatRegisterFile[]>([]);
   const [expenseFiles, setExpenseFiles] = useState<VatExpenseImage[]>([]);
   const [busy, setBusy] = useState(false);
@@ -1091,6 +1104,7 @@ function LineDialog({
   const [toDocno, setToDocno] = useState<string | null>(null);
   const detailOpen = billTarget !== null || expenseOpen || toDocno !== null;
   const drill = row ? vatBillDrill(row) : null;
+  const canEditPurchaseAmount = Boolean(row && row.side === "purchase" && !readOnly);
 
   const loadFiles = useCallback(async (lineKey: string, reportMonth: string) => {
     const params = new URLSearchParams({ month: reportMonth });
@@ -1116,6 +1130,9 @@ function LineDialog({
     setPaidOn(row.paid_on ?? "");
     setNote(row.note ?? "");
     setDocMonth(row.doc_month ? row.doc_month.slice(0, 7) : "");
+    setBeforeVat(String(row.before_vat));
+    setVatAmount(String(row.vat));
+    setAfterVat(String(row.after_vat));
     setMessage(null);
     setFiles([]);
     setExpenseFiles([]);
@@ -1199,6 +1216,84 @@ function LineDialog({
     }
   }
 
+  async function savePurchaseAmounts(clear = false) {
+    if (!row || row.side !== "purchase") return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      let payload: {
+        beforeVat: number | null;
+        vat: number | null;
+        afterVat: number | null;
+      };
+      if (clear) {
+        payload = { beforeVat: null, vat: null, afterVat: null };
+      } else {
+        const before = Number(beforeVat);
+        const vat = Number(vatAmount);
+        const after = Number(afterVat);
+        if (![before, vat, after].every((n) => Number.isFinite(n) && n >= 0)) {
+          throw new Error("ยอดต้องเป็นตัวเลข");
+        }
+        payload = { beforeVat: before, vat, afterVat: after };
+      }
+      const res = await fetch(`/api/vat/register/${row.line_key}/amounts`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branch: row.branch,
+          side: "purchase",
+          sheet: row.sheet,
+          billNo: row.bill_no,
+          billDate: row.bill_date,
+          sourceRef: row.source_ref,
+          reportMonth: row.report_month,
+          ...payload,
+        }),
+      });
+      const json = (await res.json()) as {
+        error?: string;
+        beforeVat?: number | null;
+        vat?: number | null;
+        afterVat?: number | null;
+        amountOverridden?: boolean;
+      };
+      if (!res.ok) throw new Error(json.error || "บันทึกยอดไม่สำเร็จ");
+      const bookBefore = row.book_before_vat ?? row.before_vat;
+      const bookVat = row.book_vat ?? row.vat;
+      const bookAfter = row.book_after_vat ?? row.after_vat;
+      const nextBefore = clear ? bookBefore : Number(payload.beforeVat);
+      const nextVat = clear ? bookVat : Number(payload.vat);
+      const nextAfter = clear ? bookAfter : Number(payload.afterVat);
+      setBeforeVat(String(nextBefore));
+      setVatAmount(String(nextVat));
+      setAfterVat(String(nextAfter));
+      onSaved(row.line_key, {
+        before_vat: nextBefore,
+        vat: nextVat,
+        after_vat: nextAfter,
+        book_before_vat: bookBefore,
+        book_vat: bookVat,
+        book_after_vat: bookAfter,
+        amount_overridden: !clear,
+      });
+      setMessage(clear ? "คืนยอดระบบแล้ว" : "บันทึกยอดแล้ว");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "บันทึกยอดไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function applyInclusiveTotal(raw: string) {
+    setAfterVat(raw);
+    const after = Number(raw);
+    if (!Number.isFinite(after) || after < 0) return;
+    const split = splitInclusiveVat(after);
+    setBeforeVat(String(split.before));
+    setVatAmount(String(split.vat));
+  }
+
   async function upload(kind: VatFileKind, file: File | undefined) {
     if (!row || !file) return;
     setBusy(true);
@@ -1219,9 +1314,14 @@ function LineDialog({
         kind === "invoice" ? row.invoice_count + 1 : row.invoice_count;
       const receiptCount =
         kind === "receipt" ? row.receipt_count + 1 : row.receipt_count;
+      const uploadedAt = new Date().toISOString();
+      const uploadMonth = monthStartIso(vatUploadDocMonth(uploadedAt));
       onSaved(row.line_key, {
         invoice_count: invoiceCount,
         receipt_count: receiptCount,
+        first_uploaded_at: row.first_uploaded_at ?? uploadedAt,
+        last_uploaded_at: uploadedAt,
+        accounting_month: row.doc_month || row.accounting_month || uploadMonth,
       });
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
@@ -1397,6 +1497,87 @@ function LineDialog({
                   onChange={(event) => setDocMonth(event.target.value)}
                 />
               </label>
+              {row.side === "purchase" ? (
+                <div className="grid gap-2 rounded-md border border-slate-200 p-3">
+                  <p className="text-sm font-medium text-slate-800">
+                    ยอดตามเอกสาร
+                    {row.amount_overridden ? (
+                      <span className="ml-2 text-xs font-normal text-amber-700">
+                        แก้จากยอดระบบแล้ว
+                      </span>
+                    ) : null}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <label className="grid gap-1 text-sm">
+                      <span>มูลค่า</span>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0"
+                        value={beforeVat}
+                        disabled={!canEditPurchaseAmount || busy}
+                        onChange={(event) => setBeforeVat(event.target.value)}
+                      />
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                      <span>ภาษี</span>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0"
+                        value={vatAmount}
+                        disabled={!canEditPurchaseAmount || busy}
+                        onChange={(event) => setVatAmount(event.target.value)}
+                      />
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                      <span>สุทธิ</span>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0"
+                        value={afterVat}
+                        disabled={!canEditPurchaseAmount || busy}
+                        onChange={(event) => applyInclusiveTotal(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  {row.book_after_vat != null && row.amount_overridden ? (
+                    <p className="text-xs text-slate-500">
+                      ยอดระบบ {formatBaht(row.book_after_vat, true)}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500">
+                      แก้สุทธิแล้วระบบจะแยกมูลค่า/ภาษี 7% ให้ หรือแก้ทีละช่องได้
+                    </p>
+                  )}
+                  {canEditPurchaseAmount ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void savePurchaseAmounts(false)}
+                        disabled={busy}
+                      >
+                        บันทึกยอดตามเอกสาร
+                      </Button>
+                      {row.amount_overridden ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => void savePurchaseAmounts(true)}
+                          disabled={busy}
+                        >
+                          คืนยอดระบบ
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               {readOnly ? null : (
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" onClick={() => void savePaid()} disabled={busy}>

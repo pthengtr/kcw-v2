@@ -52,6 +52,12 @@ export type VatRegisterRow = {
   before_vat: number;
   vat: number;
   after_vat: number;
+  /** Book amounts before any accounting override. */
+  book_before_vat?: number | null;
+  book_vat?: number | null;
+  book_after_vat?: number | null;
+  /** True when accounting overrode the book total to match the document. */
+  amount_overridden?: boolean;
   detail: string | null;
   remark: string | null;
   paid_status: VatPaidStatus;
@@ -114,6 +120,28 @@ export function vatReportingMonth(now = new Date()): string {
   const y = date.getUTCFullYear();
   const m = String(date.getUTCMonth() + 1).padStart(2, "0");
   return `${y}-${m}`;
+}
+
+/**
+ * Doc-month view assignment from an evidence upload timestamp.
+ * Same rule as vatReportingMonth: upload on 1–10 of a month belongs to the prior month.
+ */
+export function vatUploadDocMonth(uploadedAt: Date | string): string {
+  return vatReportingMonth(
+    typeof uploadedAt === "string" ? new Date(uploadedAt) : uploadedAt
+  );
+}
+
+/** Split an inclusive (after-VAT) total the same way as a printed 7% tax bill. */
+export function splitInclusiveVat(afterVat: number): {
+  before: number;
+  vat: number;
+  after: number;
+} {
+  const after = Math.round((Number.isFinite(afterVat) ? afterVat : 0) * 100) / 100;
+  const vat = Math.round(after * (7 / 107) * 100) / 100;
+  const before = Math.round((after - vat) * 100) / 100;
+  return { before, vat, after };
 }
 
 export function monthStartIso(month: string): string {
