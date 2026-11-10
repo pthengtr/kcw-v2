@@ -24,6 +24,7 @@ import VatReceiptSheet from "@/components/vat/VatReceiptSheet";
 import { isGeneratedVatBill } from "@/lib/vat/generated-bill";
 import {
   compareSheets,
+  compareVatRegisterRows,
   filterVatRegisterRows,
   isIssuedToBill,
   summarizeVatRegister,
@@ -255,10 +256,10 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
     if (sheet !== "ALL" && !sheets.includes(sheet)) setSheet("ALL");
   }, [sheet, sheets]);
 
-  const sheetRows = useMemo(
-    () => (sheet === "ALL" ? rows : rows.filter((row) => row.sheet === sheet)),
-    [rows, sheet]
-  );
+  const sheetRows = useMemo(() => {
+    const filtered = sheet === "ALL" ? rows : rows.filter((row) => row.sheet === sheet);
+    return [...filtered].sort(compareVatRegisterRows);
+  }, [rows, sheet]);
 
   const inUseRows = useMemo(
     () => sheetRows.filter((row) => !row.accounting_unused),
