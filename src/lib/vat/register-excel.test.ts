@@ -96,12 +96,38 @@ describe("vat workbook files", () => {
       bill_date: "2026-10-03",
     }),
     line({
+      sheet: "TAD",
+      side: "sales",
+      bill_no: "TAD6910-570",
+      party_name: "บริษัท ลูกค้า",
+      tax_id: "0105551234567",
+      bill_date: "2026-10-04",
+      before_vat: 500,
+      vat: 35,
+      after_vat: 535,
+      detail: "อะไหล่เดิม",
+      accounting_unused: true,
+      full_invoice_docno: "TO6910-088",
+    }),
+    line({
       sheet: "TO",
       side: "sales",
       bill_no: "TO6910-002",
       party_name: "บริษัท ทดสอบ",
       tax_id: "0105555555555",
       bill_date: "2026-10-03",
+    }),
+    line({
+      sheet: "TO",
+      side: "sales",
+      bill_no: "TO6910-088",
+      party_name: "บริษัท ลูกค้า",
+      tax_id: "0105551234567",
+      bill_date: "2026-10-04",
+      before_vat: 500,
+      vat: 35,
+      after_vat: 535,
+      remark: "อ้างอิง TAD6910-570",
     }),
     line({
       sheet: "เครดิต",
@@ -149,12 +175,27 @@ describe("vat workbook files", () => {
 
     const tad = file.sheets.find((sheet) => sheet.name === "TAD");
     expect(tad?.rows[0][3]).toBe("คุณลูกค้าทั่วไป Lazada");
+    // TAD replaced by TO stays on the sheet: ยกเลิก, amounts 0, TO ref.
+    expect(tad?.rows.map((row) => row[2])).toEqual([
+      "TAD6910-054",
+      "TAD6910-570",
+      "รวม",
+    ]);
+    expect(tad?.rows[1][5]).toBe(0);
+    expect(tad?.rows[1][6]).toBe(0);
+    expect(tad?.rows[1][7]).toBe(0);
+    expect(tad?.rows[1][8]).toBe("ยกเลิก");
+    expect(tad?.rows[1][9]).toBe("อ้างอิง TO6910-088");
+    expect(tad?.rows[2][5]).toBe(100);
+    expect(tad?.rows[2][7]).toBe(107);
 
     const combined = file.sheets.find((sheet) => sheet.name === "รวม");
     expect(combined?.rows.map((row) => row[2])).toEqual([
       "R6910-001-002",
       "TAD6910-054",
       "TO6910-002",
+      "TAD6910-570",
+      "TO6910-088",
       "รวม",
     ]);
 
