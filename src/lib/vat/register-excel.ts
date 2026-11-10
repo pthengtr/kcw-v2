@@ -217,20 +217,34 @@ function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+/**
+ * Manual "บัญชีไม่ใช้" stays out of Excel. A TAD replaced by an issued TO still
+ * appears on the TAD sheet with zero amounts, status ยกเลิก, and the TO reference —
+ * same sequence-preserving idea as canceled SIMAS bills in notebook 32.
+ */
+function includeInExcelBook(row: VatRegisterRow): boolean {
+  if (!row.accounting_unused) return true;
+  return Boolean(row.full_invoice_docno?.trim());
+}
+
 function bookLines(rows: VatRegisterRow[], branch: string, sheet: string): BookLine[] {
   return rows
-    .filter((row) => row.branch === branch && row.sheet === sheet && !row.accounting_unused)
-    .map((row) => ({
-      dateIso: row.bill_date.slice(0, 10),
-      rawBill: row.bill_no,
-      party: vatBuyerName(sheet, row.party_name),
-      taxId: (row.tax_id ?? "").trim(),
-      before: row.before_vat,
-      vat: row.vat,
-      after: row.after_vat,
-      detail: (row.detail ?? "").trim(),
-      remark: (row.remark ?? "").trim(),
-    }))
+    .filter((row) => row.branch === branch && row.sheet === sheet && includeInExcelBook(row))
+    .map((row) => {
+      const toRef = row.full_invoice_docno?.trim() ?? "";
+      const replacedByTo = row.accounting_unused && toRef !== "";
+      return {
+        dateIso: row.bill_date.slice(0, 10),
+        rawBill: row.bill_no,
+        party: vatBuyerName(sheet, row.party_name),
+        taxId: (row.tax_id ?? "").trim(),
+        before: replacedByTo ? 0 : row.before_vat,
+        vat: replacedByTo ? 0 : row.vat,
+        after: replacedByTo ? 0 : row.after_vat,
+        detail: replacedByTo ? "ยกเลิก" : (row.detail ?? "").trim(),
+        remark: replacedByTo ? `อ้างอิง ${toRef}` : (row.remark ?? "").trim(),
+      };
+    })
     .sort((a, b) => cmp(a.dateIso, b.dateIso) || cmp(a.rawBill, b.rawBill));
 }
 
