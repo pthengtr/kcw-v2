@@ -1,15 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useDropzone } from "react-dropzone";
 import {
   BadgeCheck,
+  Camera,
   ChevronDown,
   Columns3,
   FileSpreadsheet,
   Files,
   FileText,
+  ImagePlus,
   Loader2,
   Receipt,
+  Upload,
   Wallet,
 } from "lucide-react";
 
@@ -69,7 +80,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -1294,26 +1304,33 @@ function LineDialog({
     setVatAmount(String(split.vat));
   }
 
-  async function upload(kind: VatFileKind, file: File | undefined) {
-    if (!row || !file) return;
+  async function upload(kind: VatFileKind, incoming: File | File[] | undefined) {
+    const list = !incoming
+      ? []
+      : Array.isArray(incoming)
+        ? incoming
+        : [incoming];
+    if (!row || list.length === 0) return;
     setBusy(true);
     setMessage(null);
     try {
-      const body = new FormData();
-      body.set("kind", kind);
-      body.set("file", file);
-      body.set("reportMonth", row.report_month);
-      const res = await fetch(`/api/vat/register/${row.line_key}/files`, {
-        method: "POST",
-        body,
-      });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(json.error || "อัปโหลดไม่สำเร็จ");
+      for (const file of list) {
+        const body = new FormData();
+        body.set("kind", kind);
+        body.set("file", file);
+        body.set("reportMonth", row.report_month);
+        const res = await fetch(`/api/vat/register/${row.line_key}/files`, {
+          method: "POST",
+          body,
+        });
+        const json = (await res.json()) as { error?: string };
+        if (!res.ok) throw new Error(json.error || "อัปโหลดไม่สำเร็จ");
+      }
       await loadFiles(row.line_key, row.report_month);
       const invoiceCount =
-        kind === "invoice" ? row.invoice_count + 1 : row.invoice_count;
+        kind === "invoice" ? row.invoice_count + list.length : row.invoice_count;
       const receiptCount =
-        kind === "receipt" ? row.receipt_count + 1 : row.receipt_count;
+        kind === "receipt" ? row.receipt_count + list.length : row.receipt_count;
       const uploadedAt = new Date().toISOString();
       const uploadMonth = monthStartIso(vatUploadDocMonth(uploadedAt));
       onSaved(row.line_key, {
@@ -1805,6 +1822,13 @@ function ExpenseLinesDialog({
   );
 }
 
+const VAT_FILE_ACCEPT = {
+  "image/jpeg": [".jpg", ".jpeg"],
+  "image/png": [".png"],
+  "image/webp": [".webp"],
+  "application/pdf": [".pdf"],
+} as const;
+
 function FileGroup({
   title,
   files,
@@ -1819,52 +1843,172 @@ function FileGroup({
   readOnly: boolean;
   allowUpload?: boolean;
   busy: boolean;
-  onUpload: (file: File | undefined) => void;
+  onUpload: (files: File | File[] | undefined) => void;
   onDelete: (id: string) => void;
 }) {
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const canUpload = !readOnly && allowUpload;
+
+  const onDrop = useCallback(
+    (accepted: File[]) => {
+      if (!canUpload || busy || accepted.length === 0) return;
+      onUpload(accepted);
+    },
+    [busy, canUpload, onUpload],
+  );
+
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    onDrop,
+    accept: VAT_FILE_ACCEPT,
+    multiple: true,
+    disabled: !canUpload || busy,
+    noClick: true,
+    noKeyboard: true,
+  });
+
   return (
-    <section className="grid gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">{title}</h3>
-        {readOnly || !allowUpload ? null : (
-          <Label className="cursor-pointer text-sm text-slate-700 underline">
-            เพิ่มไฟล์
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              className="hidden"
-              disabled={busy}
-              onChange={(event) => {
-                onUpload(event.target.files?.[0]);
-                event.target.value = "";
-              }}
-            />
-          </Label>
-        )}
-      </div>
+    <section className="grid gap-3">
+      <h3 className="text-sm font-medium">{title}</h3>
+
+      {canUpload ? (
+        <div
+          {...getRootProps({
+            className: cn(
+              "rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors touch-manipulation",
+              isDragActive
+                ? "border-slate-900 bg-slate-50"
+                : "border-slate-300 bg-slate-50/60",
+              busy ? "pointer-events-none opacity-60" : "cursor-pointer",
+            ),
+            onClick: (event) => {
+              if (busy) return;
+              const target = event.target as HTMLElement | null;
+              if (target?.closest("button")) return;
+              open();
+            },
+          })}
+        >
+          <input {...getInputProps()} />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            disabled={busy}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onUpload(file);
+              event.target.value = "";
+            }}
+          />
+          <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200">
+              {busy ? (
+                <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
+              ) : (
+                <Upload className="h-5 w-5 text-slate-600" />
+              )}
+            </div>
+            <div className="grid gap-1">
+              <p className="text-sm font-medium text-slate-800">
+                {isDragActive
+                  ? "วางไฟล์ที่นี่"
+                  : busy
+                    ? "กำลังอัปโหลด…"
+                    : "ลากวางไฟล์ หรือเลือกจากเครื่อง"}
+              </p>
+              <p className="text-xs text-slate-500">
+                รองรับ JPG, PNG, WEBP, PDF — เลือกได้หลายไฟล์
+              </p>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full touch-manipulation sm:w-auto"
+                disabled={busy}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  open();
+                }}
+              >
+                <ImagePlus className="mr-2 h-4 w-4" />
+                เลือกไฟล์
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full touch-manipulation sm:hidden"
+                disabled={busy}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  cameraInputRef.current?.click();
+                }}
+              >
+                <Camera className="mr-2 h-4 w-4" />
+                ถ่ายรูป
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {files.length === 0 ? (
         <p className="text-sm text-slate-500">ยังไม่มี{title}</p>
       ) : (
         <ul className="grid gap-2">
-          {files.map((file) => (
-            <li key={file.id} className="flex items-center justify-between gap-2 text-sm">
-              <a href={file.url} target="_blank" rel="noreferrer" className="truncate underline">
-                {file.content_type === "application/pdf" ? `${title} PDF` : title}
-              </a>
-              {readOnly ? null : (
-                <button
-                  type="button"
-                  className="text-red-600"
-                  disabled={busy}
-                  onClick={() => onDelete(file.id)}
+          {files.map((file) => {
+            const isPdf = file.content_type === "application/pdf";
+            const isImage = Boolean(
+              file.content_type?.startsWith("image/") ||
+                (!file.content_type && !isPdf),
+            );
+            return (
+              <li
+                key={file.id}
+                className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2"
+              >
+                <a
+                  href={file.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex min-w-0 flex-1 items-center gap-3"
                 >
-                  ลบ
-                </button>
-              )}
-            </li>
-          ))}
+                  {isImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={file.url}
+                      alt={title}
+                      className="h-14 w-14 shrink-0 rounded-md border object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border bg-slate-50">
+                      <FileText className="h-5 w-5 text-slate-500" />
+                    </div>
+                  )}
+                  <span className="truncate text-sm underline">
+                    {isPdf ? `${title} PDF` : title}
+                  </span>
+                </a>
+                {readOnly ? null : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-11 shrink-0 touch-manipulation px-3 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    disabled={busy}
+                    onClick={() => onDelete(file.id)}
+                  >
+                    ลบ
+                  </Button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
+
     </section>
   );
 }
