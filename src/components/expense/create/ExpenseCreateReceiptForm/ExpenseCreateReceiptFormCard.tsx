@@ -26,6 +26,9 @@ export default function ExpenseCreateReceiptFormCard({
         payment_uuid: selectedReceipt.payment_uuid,
         receipt_number: selectedReceipt.receipt_number,
         receipt_date: new Date(selectedReceipt.receipt_date),
+        payment_date: selectedReceipt.payment_date
+          ? new Date(selectedReceipt.payment_date)
+          : undefined,
         vat: selectedReceipt.vat.toString(),
         withholding: selectedReceipt.vat.toString(),
         discount: selectedReceipt.vat.toString(),

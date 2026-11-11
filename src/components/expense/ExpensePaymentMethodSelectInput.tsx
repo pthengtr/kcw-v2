@@ -15,6 +15,7 @@ export default function ExpensePaymentMethodSelectInput() {
     selectedPaymentMethod,
     setSelectedPaymentMethod,
     paymentMethodFormError,
+    formExpenseReceipt,
   } = useContext(ExpenseContext) as ExpenseContextType;
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodType[]>([]);
@@ -54,9 +55,13 @@ export default function ExpensePaymentMethodSelectInput() {
   );
 
   function handleValueChanage(payment_uuid: string) {
-    setSelectedPaymentMethod(
-      paymentMethods.find((method) => method.payment_uuid === payment_uuid)
+    const method = paymentMethods.find(
+      (item) => item.payment_uuid === payment_uuid
     );
+    setSelectedPaymentMethod(method);
+    if (method?.voucher_type === "skip") {
+      formExpenseReceipt.setValue("payment_date", undefined);
+    }
   }
 
   return (

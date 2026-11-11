@@ -7,6 +7,8 @@ export type ExpenseReceiptType = {
   user_id: string;
   receipt_number: string;
   receipt_date: string;
+  /** Optional PV date; null/undefined → voucher uses receipt_date (bill date). */
+  payment_date?: string | null;
   vat: number;
   withholding: number;
   discount: number;

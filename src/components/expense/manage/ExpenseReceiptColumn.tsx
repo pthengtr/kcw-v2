@@ -35,7 +35,7 @@ export const expenseReceiptFieldLabel = {
   receipt_uuid: "รายการเลขที่",
   "party.party_name": "บริษัท",
   receipt_number: "เลขที่เอกสาร",
-  receipt_date: "วันที่",
+  receipt_date: "วันที่บิล",
   created_at: "วันที่สร้าง",
   total_amount: "ก่อนภาษี",
   "payment_method.payment_description": "ชำระโดย",

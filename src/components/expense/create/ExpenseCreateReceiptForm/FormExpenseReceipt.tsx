@@ -37,9 +37,16 @@ export default function FormExpenseReceipt<T extends FieldValues>({
   getFormInput,
   className = "",
 }: FormProps<T>) {
-  const { formExpenseReceipt: form } = useContext(
+  const { formExpenseReceipt: form, selectedPaymentMethod } = useContext(
     ExpenseContext
   ) as ExpenseContextType;
+
+  const needsVoucher =
+    !!selectedPaymentMethod && selectedPaymentMethod.voucher_type !== "skip";
+
+  const fieldNames = Object.keys(defaultValues).filter(
+    (name) => name !== "payment_date" || needsVoucher
+  );
 
   return (
     <_Form {...form}>
@@ -48,11 +55,11 @@ export default function FormExpenseReceipt<T extends FieldValues>({
         onSubmit={form.handleSubmit(onSubmit)}
         className={`mx-auto ${className}`}
       >
-        {Object.keys(defaultValues).map((field) => (
+        {fieldNames.map((name) => (
           <FormField
-            key={field}
+            key={name}
             control={form.control}
-            name={field as Path<ExpenseCreateReceiptFormDefaultType>}
+            name={name as Path<ExpenseCreateReceiptFormDefaultType>}
             render={({ field }) => (
               <FormItem className="w-full">
                 <FormLabel>{getFieldLabel(field as FieldValues)}</FormLabel>
