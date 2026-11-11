@@ -151,9 +151,10 @@ export default function ExpenseVoucherTable({
     const totalNet =
       obj.total_amount - obj.discount + taxOnly - withholdingOnly;
 
-    // decide voucher_date
-    const voucher_date =
-      obj.payment_uuid === "e98a3376-9b5d-40f1-89be-298d5b99fcef"
+    // decide voucher_date: explicit payment_date, else special method, else bill date
+    const voucher_date = obj.payment_date
+      ? new Date(obj.payment_date)
+      : obj.payment_uuid === "e98a3376-9b5d-40f1-89be-298d5b99fcef"
         ? new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0) // last day of month
         : new Date(obj.receipt_date);
 

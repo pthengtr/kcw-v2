@@ -23,12 +23,20 @@ import ExpenseTaxExemptInput from "./ExpenseTaxExemptInput";
 import RefReceiptByNumber from "./RefReceiptByNumber";
 import { uploadReceiptFiles } from "@/lib/utils";
 
+function dateToIsoDay(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export type ExpenseCreateReceiptFormDefaultType = {
   payment_uuid: string;
   remark: string;
   party_uuid?: string;
   receipt_number: string;
   receipt_date: Date;
+  payment_date?: Date | undefined;
   vat: string;
   withholding: string;
   discount: string;
@@ -41,6 +49,7 @@ export type ExpenseCreateCreditNoteFormDefaultType = {
   ref_number?: string;
   receipt_number: string;
   receipt_date: Date;
+  payment_date?: Date | undefined;
   vat: string;
   withholding: string;
   discount: string;
@@ -53,6 +62,7 @@ export const expenseCreateReceiptFormDefaultValues: ExpenseCreateReceiptFormDefa
     payment_uuid: "",
     receipt_number: "",
     receipt_date: new Date(),
+    payment_date: undefined,
     vat: "7",
     withholding: "0",
     discount: "0",
@@ -66,6 +76,7 @@ export const expenseCreateCreditNoteFormDefaultValues: ExpenseCreateCreditNoteFo
     payment_uuid: "",
     receipt_number: "",
     receipt_date: new Date(),
+    payment_date: undefined,
     vat: "7",
     withholding: "0",
     discount: "0",
@@ -76,7 +87,8 @@ export const expenseCreateCreditNoteFormDefaultValues: ExpenseCreateCreditNoteFo
 const expenseCretaeReceiptFormFieldLabel = {
   party_uuid: "ชื่อบริษัท",
   receipt_number: "เลขที่เอกสาร",
-  receipt_date: "วันที่",
+  receipt_date: "วันที่บิล",
+  payment_date: "วันที่ใบสำคัญ",
   payment_uuid: "ชำระโดย",
   remark: "หมายเหตุ",
   vat: "ภาษี",
@@ -128,6 +140,10 @@ function getFormInput(
       return <DatePickerInput field={field} />;
       break;
 
+    case "payment_date":
+      return <DatePickerInput field={field} optional />;
+      break;
+
     case "party_uuid":
       return <ExpenseSelectSupplierInput />;
 
@@ -153,9 +169,18 @@ export const formSchema = z.object({
   withholding: z.string(),
   discount: z.string(),
   receipt_date: z.coerce.date({
-    required_error: "กรุณาระบุวันที่",
-    invalid_type_error: "วันที่ไม่ถูกต้อง",
+    required_error: "กรุณาระบุวันที่บิล",
+    invalid_type_error: "วันที่บิลไม่ถูกต้อง",
   }),
+  payment_date: z.preprocess(
+    (value) =>
+      value === "" || value === null || value === undefined ? undefined : value,
+    z.coerce
+      .date({
+        invalid_type_error: "วันที่ใบสำคัญไม่ถูกต้อง",
+      })
+      .optional()
+  ),
   // tax_exempt: z.string(),
   remark: z.string(),
 });
@@ -260,7 +285,10 @@ export default function ExpenseCreateReceiptForm({
     if (!selectedSupplier || !selectedSupplier || !selectedPaymentMethod)
       return;
 
-    const createReceiptFormData: Omit<ExpenseReceiptType, "doc_type"> = {
+    const createReceiptFormData: Omit<
+      ExpenseReceiptType,
+      "doc_type" | "payment_date"
+    > = {
       receipt_number: receiptNumber,
       receipt_date: formData.get("receipt_date") as string,
       remark: formData.get("remark") as string,
@@ -292,11 +320,6 @@ export default function ExpenseCreateReceiptForm({
         : {}),
     };
 
-    // console.log(selectedReceipt?.receipt_uuid);
-    // console.log(JSON.stringify(createReceiptFormData));
-    // console.log(JSON.stringify(createEntries));
-    // console.log(JSON.stringify(deleteEntries));
-
     const rpcFunction = update
       ? "fn_update_expense_receipt"
       : "fn_create_new_expense_receipt";
@@ -324,10 +347,28 @@ export default function ExpenseCreateReceiptForm({
     }
     console.log(dataRpc);
     if (dataRpc) {
-      uploadReceiptFiles(
-        update ? selectedReceipt?.receipt_uuid : dataRpc,
-        pendingFiles
-      );
+      const receiptUuid = update ? selectedReceipt?.receipt_uuid : dataRpc;
+      const paymentDateRaw = formData.get("payment_date");
+      const paymentDate =
+        selectedPaymentMethod.voucher_type === "skip"
+          ? null
+          : typeof paymentDateRaw === "string" && paymentDateRaw
+            ? paymentDateRaw
+            : null;
+
+      if (receiptUuid) {
+        const { error: paymentDateError } = await supabase
+          .from("expense_receipt")
+          .update({ payment_date: paymentDate })
+          .eq("receipt_uuid", receiptUuid);
+
+        if (paymentDateError) {
+          toast.error(paymentDateError.message);
+          return;
+        }
+      }
+
+      uploadReceiptFiles(receiptUuid, pendingFiles);
 
       toast.success(
         `${update ? "แก้ไข" : "สร้าง"}${
@@ -341,7 +382,7 @@ export default function ExpenseCreateReceiptForm({
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const { receipt_date, remark } = values;
+    const { receipt_date, remark, payment_date } = values;
 
     const formData = new FormData();
 
@@ -349,6 +390,10 @@ export default function ExpenseCreateReceiptForm({
 
     if (receipt_date) {
       formData.append("receipt_date", receipt_date.toLocaleString("en-US"));
+    }
+
+    if (payment_date instanceof Date && !Number.isNaN(payment_date.getTime())) {
+      formData.append("payment_date", dateToIsoDay(payment_date));
     }
 
     await createReceipt(formData);
