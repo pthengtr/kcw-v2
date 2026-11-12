@@ -6,9 +6,9 @@ import {
   useMemo,
   useRef,
   useState,
+  type DragEvent,
   type ReactNode,
 } from "react";
-import { useDropzone } from "react-dropzone";
 import {
   BadgeCheck,
   Camera,
@@ -1383,6 +1383,10 @@ function LineDialog({
         onInteractOutside={(event) => {
           if (detailOpen) event.preventDefault();
         }}
+        onFocusOutside={(event) => {
+          // Native file/camera pickers steal focus; don't dismiss the line dialog.
+          event.preventDefault();
+        }}
         onEscapeKeyDown={(event) => {
           if (detailOpen) event.preventDefault();
         }}
@@ -1822,12 +1826,28 @@ function ExpenseLinesDialog({
   );
 }
 
-const VAT_FILE_ACCEPT = {
-  "image/jpeg": [".jpg", ".jpeg"],
-  "image/png": [".png"],
-  "image/webp": [".webp"],
-  "application/pdf": [".pdf"],
-} as const;
+const VAT_FILE_ACCEPT_ATTR =
+  "image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf";
+
+function isVatUploadFile(file: File): boolean {
+  const type = (file.type || "").toLowerCase();
+  if (
+    type === "image/jpeg" ||
+    type === "image/png" ||
+    type === "image/webp" ||
+    type === "application/pdf"
+  ) {
+    return true;
+  }
+  const name = file.name.toLowerCase();
+  return (
+    name.endsWith(".jpg") ||
+    name.endsWith(".jpeg") ||
+    name.endsWith(".png") ||
+    name.endsWith(".webp") ||
+    name.endsWith(".pdf")
+  );
+}
 
 function FileGroup({
   title,
@@ -1846,25 +1866,45 @@ function FileGroup({
   onUpload: (files: File | File[] | undefined) => void;
   onDelete: (id: string) => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const [dragging, setDragging] = useState(false);
   const canUpload = !readOnly && allowUpload;
 
-  const onDrop = useCallback(
-    (accepted: File[]) => {
-      if (!canUpload || busy || accepted.length === 0) return;
-      onUpload(accepted);
+  const takeFiles = useCallback(
+    (list: FileList | File[] | null | undefined) => {
+      if (!canUpload || busy || !list) return;
+      const accepted = Array.from(list).filter(isVatUploadFile);
+      if (accepted.length === 0) return;
+      onUpload(accepted.length === 1 ? accepted[0] : accepted);
     },
     [busy, canUpload, onUpload],
   );
 
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    onDrop,
-    accept: VAT_FILE_ACCEPT,
-    multiple: true,
-    disabled: !canUpload || busy,
-    noClick: true,
-    noKeyboard: true,
-  });
+  const openPicker = useCallback(() => {
+    if (busy || !canUpload) return;
+    fileInputRef.current?.click();
+  }, [busy, canUpload]);
+
+  function onDragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!canUpload || busy) return;
+    setDragging(true);
+  }
+
+  function onDragLeave(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragging(false);
+  }
+
+  function onDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragging(false);
+    takeFiles(event.dataTransfer.files);
+  }
 
   return (
     <section className="grid gap-3">
@@ -1872,23 +1912,46 @@ function FileGroup({
 
       {canUpload ? (
         <div
-          {...getRootProps({
-            className: cn(
-              "rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors touch-manipulation",
-              isDragActive
-                ? "border-slate-900 bg-slate-50"
-                : "border-slate-300 bg-slate-50/60",
-              busy ? "pointer-events-none opacity-60" : "cursor-pointer",
-            ),
-            onClick: (event) => {
-              if (busy) return;
-              const target = event.target as HTMLElement | null;
-              if (target?.closest("button")) return;
-              open();
-            },
-          })}
+          role="button"
+          tabIndex={0}
+          aria-label={`อัปโหลด${title}`}
+          className={cn(
+            "rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors touch-manipulation",
+            dragging
+              ? "border-slate-900 bg-slate-50"
+              : "border-slate-300 bg-slate-50/60",
+            busy ? "pointer-events-none opacity-60" : "cursor-pointer",
+          )}
+          onClick={(event) => {
+            if (busy) return;
+            const target = event.target as HTMLElement | null;
+            if (target?.closest("button")) return;
+            openPicker();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              openPicker();
+            }
+          }}
+          onDragEnter={onDragOver}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
         >
-          <input {...getInputProps()} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={VAT_FILE_ACCEPT_ATTR}
+            multiple
+            className="hidden"
+            disabled={busy}
+            onClick={(event) => event.stopPropagation()}
+            onChange={(event) => {
+              takeFiles(event.target.files);
+              event.target.value = "";
+            }}
+          />
           <input
             ref={cameraInputRef}
             type="file"
@@ -1896,6 +1959,7 @@ function FileGroup({
             capture="environment"
             className="hidden"
             disabled={busy}
+            onClick={(event) => event.stopPropagation()}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) onUpload(file);
@@ -1912,7 +1976,7 @@ function FileGroup({
             </div>
             <div className="grid gap-1">
               <p className="text-sm font-medium text-slate-800">
-                {isDragActive
+                {dragging
                   ? "วางไฟล์ที่นี่"
                   : busy
                     ? "กำลังอัปโหลด…"
@@ -1930,7 +1994,7 @@ function FileGroup({
                 disabled={busy}
                 onClick={(event) => {
                   event.stopPropagation();
-                  open();
+                  openPicker();
                 }}
               >
                 <ImagePlus className="mr-2 h-4 w-4" />
