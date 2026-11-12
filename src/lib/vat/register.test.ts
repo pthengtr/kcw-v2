@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyIssuedFullInvoices,
+  tadRefFromToRemark,
+  vatAccountingMonth,
   compareSheets,
   compareVatRegisterRows,
   filterVatRegisterRows,
@@ -55,6 +57,55 @@ describe("vat upload doc month", () => {
     expect(vatUploadDocMonth("2026-11-08T05:00:00.000Z")).toBe("2026-10");
     expect(vatUploadDocMonth("2026-11-10T05:00:00.000Z")).toBe("2026-10");
     expect(vatUploadDocMonth("2026-11-11T05:00:00.000Z")).toBe("2026-11");
+  });
+});
+
+describe("vat accounting month", () => {
+  it("uses bill month for generated sheets and issued-TO TAD", () => {
+    expect(
+      vatAccountingMonth({
+        billDate: "2026-11-05",
+        sheet: "TAR",
+        uploadedAt: "2026-11-08T05:00:00.000Z",
+      })
+    ).toBe("2026-11");
+    expect(
+      vatAccountingMonth({
+        billDate: "2026-11-05",
+        sheet: "TO",
+        uploadedAt: "2026-11-08T05:00:00.000Z",
+      })
+    ).toBe("2026-11");
+    expect(
+      vatAccountingMonth({
+        billDate: "2026-11-05",
+        sheet: "TAD",
+        uploadedAt: "2026-11-08T05:00:00.000Z",
+        issuedFullInvoice: true,
+      })
+    ).toBe("2026-11");
+  });
+
+  it("uses the upload −10 day rule for purchase uploads", () => {
+    expect(
+      vatAccountingMonth({
+        billDate: "2026-11-05",
+        sheet: "เครดิต",
+        uploadedAt: "2026-11-08T05:00:00.000Z",
+      })
+    ).toBe("2026-10");
+  });
+
+  it("prefers an explicit doc month", () => {
+    expect(
+      vatAccountingMonth({
+        docMonth: "2026-09-01",
+        billDate: "2026-11-05",
+        sheet: "TAD",
+        issuedFullInvoice: true,
+        uploadedAt: "2026-11-08T05:00:00.000Z",
+      })
+    ).toBe("2026-09");
   });
 });
 
@@ -362,8 +413,8 @@ describe("issued full invoice in the tax book", () => {
     expect(kept.bill_no).toBe("TAD6910-054");
   });
 
-  it("uses the TO issue date for the synthetic line key", () => {
-    const [, full] = applyIssuedFullInvoices(
+  it("uses the TAD bill date for the synthetic TO (TO follows TAD)", () => {
+    const [kept, full] = applyIssuedFullInvoices(
       [tad],
       [
         {
@@ -378,8 +429,40 @@ describe("issued full invoice in the tax book", () => {
         },
       ]
     );
-    expect(full.bill_date).toBe("2026-10-15");
-    expect(full.line_key).toBe(fullInvoiceLineKey("TO6910-002", "2026-10-15"));
+    expect(full.bill_date).toBe("2026-10-02");
+    expect(full.line_key).toBe(fullInvoiceLineKey("TO6910-002", "2026-10-02"));
+    expect(full.accounting_month).toBe("2026-10-01");
+    expect(kept.accounting_month).toBe("2026-10-01");
+    expect(kept.full_invoice_docno).toBe("TO6910-002");
+    expect(tadRefFromToRemark(full.remark)).toBe("TAD6910-054");
+  });
+
+  it("ignores TAD upload month once a TO is issued", () => {
+    const uploaded: VatRegisterRow = {
+      ...tad,
+      first_uploaded_at: "2026-11-08T05:00:00.000Z",
+      accounting_month: "2026-10-01",
+      bill_date: "2026-11-05",
+      report_month: "2026-11-01",
+    };
+    const [kept, full] = applyIssuedFullInvoices(
+      [uploaded],
+      [
+        {
+          tad_billno: "TAD6910-054",
+          docno: "TO6911-001",
+          customer_name: "บริษัท ทดสอบ จำกัด",
+          tax_id: "1234567890123",
+          before_vat: 100,
+          vat: 7,
+          after_vat: 107,
+          bill_date: "2026-11-20",
+        },
+      ]
+    );
+    expect(kept.accounting_month).toBe("2026-11-01");
+    expect(full.accounting_month).toBe("2026-11-01");
+    expect(full.bill_date).toBe("2026-11-05");
   });
 
   it("counts the issued TO record as the tax invoice without uploads", () => {

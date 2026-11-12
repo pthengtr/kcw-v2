@@ -7,6 +7,8 @@ import {
   applyIssuedFullInvoices,
   fullInvoiceLineKey,
   monthEndIso,
+  monthStartIso,
+  vatLineKey,
   type IssuedFullInvoice,
   type VatPaidStatus,
   type VatRegisterRow,
@@ -108,7 +110,15 @@ export async function fetchVatRegister(
     };
   });
   const withCreditors = await attachPurchaseCreditors(supabase, rows, input.monthStart);
-  return attachFullInvoices(supabase, withCreditors);
+  const enriched = await attachFullInvoices(supabase, withCreditors);
+  if (basis !== "accounting") return enriched;
+  // After TAD↔TO enrich, accounting_month may move to the TAD bill month.
+  const want = input.monthStart.slice(0, 7);
+  return enriched.filter((row) => {
+    const acct = row.accounting_month?.slice(0, 7) ?? row.doc_month?.slice(0, 7);
+    if (!acct) return true;
+    return acct === want;
+  });
 }
 
 function nextMonthStart(monthStart: string): string {
@@ -250,22 +260,60 @@ async function findIssuedFullInvoiceLine(
   lineKey: string,
   monthStart: string
 ) {
-  const { data, error } = await supabase
-    .schema("to_bill")
-    .from("invoices")
-    .select("docno,bill_date")
-    .eq("status", "issued")
-    .gte("bill_date", monthStart)
-    .lt("bill_date", nextMonthStart(monthStart));
-  if (error) throw error;
-  for (const record of (data ?? []) as Record<string, unknown>[]) {
-    const docno = asString(record.docno).trim().toUpperCase();
-    const billDate = asString(record.bill_date).slice(0, 10);
-    if (!docno || !billDate) continue;
-    if (fullInvoiceLineKey(docno, billDate) !== lineKey) continue;
+  // TO line_key uses the parent TAD bill_date (TO follows TAD), so resolve via
+  // TAD book lines in the report month rather than the TO issue date.
+  const { data: bookJson, error: bookError } = await supabase.rpc(
+    "fn_vat_register_json",
+    {
+      p_from: monthStart,
+      p_to: monthEndIso(monthStart),
+      p_branch: null,
+      p_side: "sales",
+      p_expense: "created",
+    }
+  );
+  if (bookError) throw bookError;
+  if (!Array.isArray(bookJson)) return null;
+
+  const tadRows = (bookJson as Record<string, unknown>[]).filter(
+    (row) =>
+      asString(row.sheet) === "TAD" &&
+      asString(row.bill_no).trim().toUpperCase().startsWith("TAD")
+  );
+  if (tadRows.length === 0) return null;
+
+  const tadNos = [
+    ...new Set(
+      tadRows.map((row) => asString(row.bill_no).trim().toUpperCase())
+    ),
+  ];
+  const invoices = new Map<string, string>();
+  for (const group of chunk(tadNos, 150)) {
+    const { data, error } = await supabase
+      .schema("to_bill")
+      .from("invoices")
+      .select("tad_billno,docno")
+      .eq("status", "issued")
+      .in("tad_billno", group);
+    if (error) throw error;
+    for (const record of (data ?? []) as Record<string, unknown>[]) {
+      const tad = asString(record.tad_billno).trim().toUpperCase();
+      const docno = asString(record.docno).trim().toUpperCase();
+      if (!tad || !/^TO\d{4}-\d{3,}$/.test(docno)) continue;
+      invoices.set(tad, docno);
+    }
+  }
+
+  for (const row of tadRows) {
+    const tadNo = asString(row.bill_no).trim().toUpperCase();
+    const docno = invoices.get(tadNo);
+    if (!docno) continue;
+    const billDate = asString(row.bill_date).slice(0, 10);
+    const branch = asString(row.branch) || "HQ";
+    if (fullInvoiceLineKey(docno, billDate, branch) !== lineKey) continue;
     return {
       line_key: lineKey,
-      branch: "HQ",
+      branch,
       side: "sales",
       sheet: "TO",
       bill_no: docno,
@@ -275,6 +323,107 @@ async function findIssuedFullInvoiceLine(
     };
   }
   return null;
+}
+
+export type VatEvidenceLine = {
+  line_key: string;
+  branch: string;
+  side: string;
+  sheet: string;
+  bill_no: string;
+  bill_date: string;
+  source: string;
+  source_ref: string | null;
+};
+
+/** TAD ↔ TO partners that share a doc_month override (DOC follows TAD). */
+export async function findVatDocMonthSyncTargets(
+  supabase: SupabaseClient,
+  line: VatEvidenceLine,
+  monthStart: string
+): Promise<VatEvidenceLine[]> {
+  const targets: VatEvidenceLine[] = [line];
+
+  if (line.sheet === "TAD" && line.side === "sales") {
+    const { data, error } = await supabase
+      .schema("to_bill")
+      .from("invoices")
+      .select("docno")
+      .eq("status", "issued")
+      .eq("tad_billno", line.bill_no)
+      .limit(1);
+    if (error) throw error;
+    const docno = asString(
+      (data as Record<string, unknown>[] | null)?.[0]?.docno
+    )
+      .trim()
+      .toUpperCase();
+    if (/^TO\d{4}-\d{3,}$/.test(docno)) {
+      targets.push({
+        line_key: fullInvoiceLineKey(docno, line.bill_date, line.branch),
+        branch: line.branch,
+        side: "sales",
+        sheet: "TO",
+        bill_no: docno,
+        bill_date: line.bill_date,
+        source: "to_bill",
+        source_ref: null,
+      });
+    }
+    return targets;
+  }
+
+  if (line.sheet === "TO" && line.side === "sales") {
+    const { data, error } = await supabase
+      .schema("to_bill")
+      .from("invoices")
+      .select("tad_billno")
+      .eq("status", "issued")
+      .eq("docno", line.bill_no)
+      .limit(1);
+    if (error) throw error;
+    const tadNo = asString(
+      (data as Record<string, unknown>[] | null)?.[0]?.tad_billno
+    )
+      .trim()
+      .toUpperCase();
+    if (!tadNo.startsWith("TAD")) return targets;
+
+    const tadKey = vatLineKey({
+      branch: line.branch,
+      side: "sales",
+      sheet: "TAD",
+      billNo: tadNo,
+      billDate: line.bill_date,
+      sourceRef: null,
+    });
+    const tad =
+      (await findVatRegisterLine(supabase, tadKey, monthStart)) ??
+      ({
+        line_key: tadKey,
+        branch: line.branch,
+        side: "sales",
+        sheet: "TAD",
+        bill_no: tadNo,
+        bill_date: line.bill_date,
+        source: "parts9",
+        source_ref: null,
+      } satisfies VatEvidenceLine);
+    // Prefer writing TAD first so DOC membership follows TAD.
+    return [tad, line];
+  }
+
+  return targets;
+}
+
+/** YYYY-MM or YYYY-MM-01 → YYYY-MM-01; empty → null. */
+export function normalizeVatDocMonth(
+  value: string | null | undefined
+): string | null {
+  if (!value) return null;
+  const text = value.trim().slice(0, 7);
+  if (!/^\d{4}-\d{2}$/.test(text)) return null;
+  return monthStartIso(text);
 }
 
 export async function findVatRegisterLine(
