@@ -485,8 +485,8 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
           value={view}
           onChange={(value) => setView(value as ViewFilter)}
           options={[
-            ["BOOK", "ตามเล่มภาษี"],
-            ["DOC", "ตามเดือนเอกสารบัญชี"],
+            ["BOOK", "ตามเดือนเอกสาร"],
+            ["DOC", "ตามเดือนที่ส่งบัญชี"],
           ]}
         />
       </div>
