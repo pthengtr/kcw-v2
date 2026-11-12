@@ -40,13 +40,16 @@ import {
   isIssuedToBill,
   summarizeVatRegister,
   summarizeVatRegisterMoney,
+  fullInvoiceLineKey,
   monthStartIso,
   splitInclusiveVat,
+  tadRefFromToRemark,
+  vatAccountingMonth,
   vatBillDrill,
+  vatLineKey,
   vatReportingMonth,
   vatRequiresReceipt,
   vatTracksPayment,
-  vatUploadDocMonth,
   type VatExpenseImage,
   type VatFileKind,
   type VatPaidStatus,
@@ -1210,14 +1213,42 @@ function LineDialog({
           docMonth: docMonth || null,
         }),
       });
-      const json = (await res.json()) as { error?: string };
+      const json = (await res.json()) as {
+        error?: string;
+        docMonth?: string | null;
+        lineKeys?: string[];
+      };
       if (!res.ok) throw new Error(json.error || "บันทึกไม่สำเร็จ");
-      const stored =
-        docMonth && /^\d{4}-\d{2}$/.test(docMonth) ? `${docMonth}-01` : docMonth;
-      onSaved(row.line_key, {
-        doc_month: stored || null,
-        accounting_month: stored || row.accounting_month || null,
-      });
+      const stored = json.docMonth ?? null;
+      const acct =
+        stored ||
+        (row.full_invoice_docno || isIssuedToBill(row)
+          ? monthStartIso(row.bill_date.slice(0, 7))
+          : row.accounting_month) ||
+        null;
+      const patch = {
+        doc_month: stored,
+        accounting_month: acct,
+      };
+      const keys = new Set(json.lineKeys?.length ? json.lineKeys : [row.line_key]);
+      // Also patch the on-screen pair when API did not echo keys (older server).
+      if (row.full_invoice_docno) {
+        keys.add(fullInvoiceLineKey(row.full_invoice_docno, row.bill_date, row.branch));
+      }
+      const tadRef = tadRefFromToRemark(row.remark);
+      if (tadRef) {
+        keys.add(
+          vatLineKey({
+            branch: row.branch,
+            side: "sales",
+            sheet: "TAD",
+            billNo: tadRef,
+            billDate: row.bill_date,
+            sourceRef: null,
+          })
+        );
+      }
+      for (const key of keys) onSaved(key, patch);
       setMessage("บันทึกแล้ว");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
@@ -1332,13 +1363,19 @@ function LineDialog({
       const receiptCount =
         kind === "receipt" ? row.receipt_count + list.length : row.receipt_count;
       const uploadedAt = new Date().toISOString();
-      const uploadMonth = monthStartIso(vatUploadDocMonth(uploadedAt));
+      const acctYm = vatAccountingMonth({
+        docMonth: row.doc_month,
+        uploadedAt: row.first_uploaded_at ?? uploadedAt,
+        billDate: row.bill_date,
+        sheet: row.sheet,
+        issuedFullInvoice: Boolean(row.full_invoice_docno),
+      });
       onSaved(row.line_key, {
         invoice_count: invoiceCount,
         receipt_count: receiptCount,
         first_uploaded_at: row.first_uploaded_at ?? uploadedAt,
         last_uploaded_at: uploadedAt,
-        accounting_month: row.doc_month || row.accounting_month || uploadMonth,
+        accounting_month: acctYm ? monthStartIso(acctYm) : row.accounting_month,
       });
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");

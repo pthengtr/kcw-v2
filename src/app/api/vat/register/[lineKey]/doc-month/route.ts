@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireVatRegisterWrite } from "@/lib/vat/access";
-import { findVatRegisterLine } from "@/lib/vat/register-queries";
+import {
+  findVatDocMonthSyncTargets,
+  findVatRegisterLine,
+  normalizeVatDocMonth,
+} from "@/lib/vat/register-queries";
 import { vatLineKey } from "@/lib/vat/register";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -54,12 +58,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Line key mismatch" }, { status: 400 });
   }
 
-  // Normalize month string to YYYY-MM-01 for storage.
-  let docMonth: string | null = null;
-  if (parsed.data.docMonth) {
-    const text = parsed.data.docMonth.slice(0, 7); // YYYY-MM
-    docMonth = `${text}-01`;
-  }
+  const docMonth = normalizeVatDocMonth(parsed.data.docMonth ?? null);
 
   try {
     const supabase = createAdminClient();
@@ -72,23 +71,35 @@ export async function PATCH(
       return NextResponse.json({ error: "Line not found" }, { status: 404 });
     }
 
-    const { error } = await supabase.schema("ops").from("vat_line_evidence").upsert(
-      {
-        line_key: lineKey,
-        branch: line.branch,
-        side: line.side,
-        doc_type: line.sheet,
-        bill_no: line.bill_no,
-        bill_date: line.bill_date,
-        doc_month: docMonth,
-        updated_by: permCheck.userId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "line_key" }
+    const targets = await findVatDocMonthSyncTargets(
+      supabase,
+      line,
+      parsed.data.reportMonth
     );
-    if (error) throw error;
+    const now = new Date().toISOString();
+    for (const target of targets) {
+      const { error } = await supabase.schema("ops").from("vat_line_evidence").upsert(
+        {
+          line_key: target.line_key,
+          branch: target.branch,
+          side: target.side,
+          doc_type: target.sheet,
+          bill_no: target.bill_no,
+          bill_date: target.bill_date,
+          doc_month: docMonth,
+          updated_by: permCheck.userId,
+          updated_at: now,
+        },
+        { onConflict: "line_key" }
+      );
+      if (error) throw error;
+    }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      docMonth,
+      lineKeys: targets.map((target) => target.line_key),
+    });
   } catch (error) {
     console.error("vat register doc-month", error);
     return NextResponse.json(
@@ -97,4 +108,3 @@ export async function PATCH(
     );
   }
 }
-

@@ -132,6 +132,40 @@ export function vatUploadDocMonth(uploadedAt: Date | string): string {
   );
 }
 
+/** Sheets printed/generated in-system: accounting month is the bill month, not upload −10 days. */
+export const VAT_GENERATED_ACCT_SHEETS = new Set([
+  "TAR",
+  "CNTAR",
+  "3TAR",
+  "3CNTAR",
+  "TO",
+]);
+
+/**
+ * Month used in the “ตามเดือนที่ส่งบัญชี” view (YYYY-MM).
+ * Priority: explicit doc_month → generated / issued-TO TAD bill month → upload −10 days.
+ */
+export function vatAccountingMonth(input: {
+  docMonth?: string | null;
+  uploadedAt?: string | Date | null;
+  billDate: string;
+  sheet: string;
+  /** TAD replaced by an issued TO — ignore upload month; follow TAD bill date. */
+  issuedFullInvoice?: boolean;
+}): string | null {
+  const doc = input.docMonth?.trim();
+  if (doc) return doc.slice(0, 7);
+  if (
+    VAT_GENERATED_ACCT_SHEETS.has(input.sheet) ||
+    input.issuedFullInvoice === true
+  ) {
+    const bill = input.billDate.trim();
+    return bill.length >= 7 ? bill.slice(0, 7) : null;
+  }
+  if (input.uploadedAt) return vatUploadDocMonth(input.uploadedAt);
+  return null;
+}
+
 /** Split an inclusive (after-VAT) total the same way as a printed 7% tax bill. */
 export function splitInclusiveVat(afterVat: number): {
   before: number;
@@ -292,7 +326,10 @@ export type IssuedFullInvoice = {
   before_vat: number;
   vat: number;
   after_vat: number;
-  /** Issue date on the TO; falls back to the TAD bill date when absent. */
+  /**
+   * Issue date on the TO (informational). Synthetic TO rows always use the
+   * parent TAD bill_date for line_key / DOC month — TO follows TAD.
+   */
   bill_date?: string | null;
 };
 
@@ -314,7 +351,17 @@ export function isIssuedToBill(
   return row.source === "to_bill" || row.sheet === "TO";
 }
 
-/** Abbreviated TAD stays on screen, marked unused, and the issued TO is the line that counts. */
+/** TAD remark / TO remark helpers for pairing. */
+export function tadRefFromToRemark(remark: string | null | undefined): string | null {
+  const match = /^อ้างอิง\s+(TAD\S+)/i.exec((remark ?? "").trim());
+  return match ? match[1].toUpperCase() : null;
+}
+
+/**
+ * Abbreviated TAD stays on screen, marked unused, and the issued TO is the line
+ * that counts. TO always inherits the TAD bill_date and accounting month (DOC
+ * view follows TAD).
+ */
 export function applyIssuedFullInvoices(
   rows: VatRegisterRow[],
   invoices: IssuedFullInvoice[]
@@ -337,17 +384,27 @@ export function applyIssuedFullInvoices(
       continue;
     }
     const tadNo = row.bill_no.trim().toUpperCase();
-    const billDate =
-      (invoice.bill_date && invoice.bill_date.slice(0, 10)) || row.bill_date;
+    // DOC / line identity follow the TAD date, not the TO issue date.
+    const billDate = row.bill_date.slice(0, 10);
+    const billMonth = row.bill_month ?? monthStartIso(billDate.slice(0, 7));
+    const acctYm = vatAccountingMonth({
+      docMonth: row.doc_month,
+      billDate,
+      sheet: "TAD",
+      issuedFullInvoice: true,
+    });
+    const accountingMonth = acctYm ? monthStartIso(acctYm) : billMonth;
     out.push({
       ...row,
+      bill_month: billMonth,
+      accounting_month: accountingMonth,
       accounting_unused: true,
       full_invoice_docno: invoice.docno,
     });
     out.push({
       line_key: fullInvoiceLineKey(invoice.docno, billDate, row.branch),
       report_month: row.report_month,
-      bill_month: row.bill_month ?? null,
+      bill_month: billMonth,
       branch: row.branch,
       side: "sales",
       sheet: "TO",
@@ -368,6 +425,10 @@ export function applyIssuedFullInvoices(
       paid_on: null,
       paid_from_reminder: false,
       note: null,
+      doc_month: row.doc_month ?? null,
+      accounting_month: accountingMonth,
+      first_uploaded_at: null,
+      last_uploaded_at: null,
       // The issued to_bill.invoices row is the tax invoice; no upload needed.
       invoice_count: 1,
       receipt_count: 0,
