@@ -8,7 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const LINE_KEY = /^[a-f0-9]{32}$/;
 
-const AmountSchema = z.number().finite().min(0).max(1_000_000_000);
+/** Purchase books include credit notes (ลดหนี้ซื้อ) with negative amounts. */
+const AmountSchema = z.number().finite().min(-1_000_000_000).max(1_000_000_000);
 
 const BodySchema = z.object({
   branch: z.enum(["HQ", "SYP"]),

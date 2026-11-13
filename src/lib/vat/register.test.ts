@@ -61,7 +61,7 @@ describe("vat upload doc month", () => {
 });
 
 describe("vat accounting month", () => {
-  it("uses bill month for generated sheets and issued-TO TAD", () => {
+  it("uses bill month for TAR/TO and TAD (ignores upload −10 days)", () => {
     expect(
       vatAccountingMonth({
         billDate: "2026-11-05",
@@ -81,7 +81,13 @@ describe("vat accounting month", () => {
         billDate: "2026-11-05",
         sheet: "TAD",
         uploadedAt: "2026-11-08T05:00:00.000Z",
-        issuedFullInvoice: true,
+      })
+    ).toBe("2026-11");
+    expect(
+      vatAccountingMonth({
+        billDate: "2026-11-05",
+        sheet: "3TAD",
+        uploadedAt: "2026-11-08T05:00:00.000Z",
       })
     ).toBe("2026-11");
   });
@@ -102,7 +108,6 @@ describe("vat accounting month", () => {
         docMonth: "2026-09-01",
         billDate: "2026-11-05",
         sheet: "TAD",
-        issuedFullInvoice: true,
         uploadedAt: "2026-11-08T05:00:00.000Z",
       })
     ).toBe("2026-09");
@@ -112,6 +117,10 @@ describe("vat accounting month", () => {
 describe("split inclusive vat", () => {
   it("splits a 7% inclusive total into before and vat", () => {
     expect(splitInclusiveVat(107)).toEqual({ before: 100, vat: 7, after: 107 });
+  });
+
+  it("keeps the sign for purchase credit-note totals", () => {
+    expect(splitInclusiveVat(-107)).toEqual({ before: -100, vat: -7, after: -107 });
   });
 });
 

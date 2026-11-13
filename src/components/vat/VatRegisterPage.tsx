@@ -1273,7 +1273,8 @@ function LineDialog({
         const before = Number(beforeVat);
         const vat = Number(vatAmount);
         const after = Number(afterVat);
-        if (![before, vat, after].every((n) => Number.isFinite(n) && n >= 0)) {
+        // Credit notes (ลดหนี้ซื้อ) store negative amounts in the tax book.
+        if (![before, vat, after].every((n) => Number.isFinite(n))) {
           throw new Error("ยอดต้องเป็นตัวเลข");
         }
         payload = { beforeVat: before, vat, afterVat: after };
@@ -1329,7 +1330,7 @@ function LineDialog({
   function applyInclusiveTotal(raw: string) {
     setAfterVat(raw);
     const after = Number(raw);
-    if (!Number.isFinite(after) || after < 0) return;
+    if (!Number.isFinite(after)) return;
     const split = splitInclusiveVat(after);
     setBeforeVat(String(split.before));
     setVatAmount(String(split.vat));
@@ -1572,7 +1573,6 @@ function LineDialog({
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        min="0"
                         value={beforeVat}
                         disabled={!canEditPurchaseAmount || busy}
                         onChange={(event) => setBeforeVat(event.target.value)}
@@ -1584,7 +1584,6 @@ function LineDialog({
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        min="0"
                         value={vatAmount}
                         disabled={!canEditPurchaseAmount || busy}
                         onChange={(event) => setVatAmount(event.target.value)}
@@ -1596,7 +1595,6 @@ function LineDialog({
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        min="0"
                         value={afterVat}
                         disabled={!canEditPurchaseAmount || busy}
                         onChange={(event) => applyInclusiveTotal(event.target.value)}
