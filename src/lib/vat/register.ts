@@ -132,25 +132,32 @@ export function vatUploadDocMonth(uploadedAt: Date | string): string {
   );
 }
 
-/** Sheets printed/generated in-system: accounting month is the bill month, not upload −10 days. */
+/**
+ * Sheets whose DOC-view month follows bill_date (not upload −10 days).
+ * Includes generated TAR/CNTAR/TO and abbreviated TAD family tax invoices.
+ */
 export const VAT_GENERATED_ACCT_SHEETS = new Set([
   "TAR",
   "CNTAR",
   "3TAR",
   "3CNTAR",
   "TO",
+  "TAD",
+  "3TAD",
+  "CNTAD",
+  "3CNTAD",
 ]);
 
 /**
  * Month used in the “ตามเดือนที่ส่งบัญชี” view (YYYY-MM).
- * Priority: explicit doc_month → generated / issued-TO TAD bill month → upload −10 days.
+ * Priority: explicit doc_month → bill month for TAR/TO/TAD family → upload −10 days.
  */
 export function vatAccountingMonth(input: {
   docMonth?: string | null;
   uploadedAt?: string | Date | null;
   billDate: string;
   sheet: string;
-  /** TAD replaced by an issued TO — ignore upload month; follow TAD bill date. */
+  /** Kept for callers; TAD* already uses bill month regardless of issued TO. */
   issuedFullInvoice?: boolean;
 }): string | null {
   const doc = input.docMonth?.trim();
