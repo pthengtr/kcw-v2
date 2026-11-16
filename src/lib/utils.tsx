@@ -325,6 +325,7 @@ export async function uploadReceiptFiles(
 
     const { data, error } = await storage.from(bucket).upload(path, f, {
       upsert,
+      contentType: f.type || undefined,
     });
     if (error) throw error;
     results.push({

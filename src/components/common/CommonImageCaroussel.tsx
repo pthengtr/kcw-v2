@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FileText,
   Printer,
   RefreshCw,
   Trash2,
@@ -55,7 +56,19 @@ type ObjItem = {
   url: string; // public or signed url for display
   path: string; // bucket path for deletion
   name: string; // file name for UI
+  kind: "image" | "pdf";
 };
+
+function fileKind(name: string, mimetype?: string): "image" | "pdf" | null {
+  if (mimetype === "application/pdf" || /\.pdf$/i.test(name)) return "pdf";
+  if (
+    mimetype?.startsWith("image/") ||
+    /\.(png|jpe?g|webp|gif|bmp|tiff?|heic|heif)$/i.test(name)
+  ) {
+    return "image";
+  }
+  return null;
+}
 
 export default function CommonImagesCarousel({
   folder,
@@ -110,10 +123,8 @@ export default function CommonImagesCarousel({
       const items: ObjItem[] = [];
       for (const f of data ?? []) {
         const mm = f?.metadata?.mimetype as string | undefined;
-        const isImg =
-          mm?.startsWith?.("image/") ||
-          /\.(png|jpe?g|webp|gif|bmp|tiff?|heic|heif)$/i.test(f.name);
-        if (!isImg) continue;
+        const kind = fileKind(f.name, mm);
+        if (!kind) continue;
 
         const path = `${prefix}/${f.name}`;
         if (preferSignedUrls) {
@@ -121,11 +132,11 @@ export default function CommonImagesCarousel({
             .from(bucket)
             .createSignedUrl(path, signedUrlTTL);
           if (s?.signedUrl)
-            items.push({ url: s.signedUrl, path, name: f.name });
+            items.push({ url: s.signedUrl, path, name: f.name, kind });
         } else {
           const { data: p } = storage.from(bucket).getPublicUrl(path);
           if (p?.publicUrl)
-            items.push({ url: p.publicUrl, path, name: f.name });
+            items.push({ url: p.publicUrl, path, name: f.name, kind });
         }
       }
       setImages(items);
@@ -162,7 +173,12 @@ export default function CommonImagesCarousel({
   const hasImages = images.length > 0;
   const current = hasImages ? images[index] : undefined;
 
-  function handlePrint(src: string) {
+  function handlePrint(item: ObjItem) {
+    if (item.kind === "pdf") {
+      const win = window.open(item.url, "_blank");
+      win?.focus();
+      return;
+    }
     const win = window.open("", "_blank");
     if (!win) return;
     win.document.write(`
@@ -175,7 +191,7 @@ export default function CommonImagesCarousel({
         </style>
       </head>
       <body>
-        <img src="${src}" />
+        <img src="${item.url}" />
         <script>window.onload = () => window.print();</script>
       </body>
     </html>`);
@@ -228,7 +244,7 @@ export default function CommonImagesCarousel({
   return (
     <div className={className}>
       <div className="flex items-center justify-between mb-2">
-        <div className="text-sm font-medium">รูปที่ลิงก์กับรายการนี้</div>
+        <div className="text-sm font-medium">ไฟล์ที่ลิงก์กับรายการนี้</div>
         <div className="flex items-center gap-2">
           {showRefresh && (
             <Button
@@ -247,7 +263,7 @@ export default function CommonImagesCarousel({
       {loading ? (
         <div className="text-sm text-muted-foreground">กำลังโหลด…</div>
       ) : !hasImages ? (
-        <div className="text-sm text-muted-foreground">ไม่พบรูปภาพ...</div>
+        <div className="text-sm text-muted-foreground">ไม่พบไฟล์...</div>
       ) : (
         <Carousel className="w-full max-w-xl mx-auto px-0">
           <CarouselContent>
@@ -260,12 +276,22 @@ export default function CommonImagesCarousel({
                       className="w-full group relative"
                       onClick={() => openAt(idx)}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={item.url}
-                        alt={item.name}
-                        className="h-48 sm:h-64 w-full object-contain"
-                      />
+                      {item.kind === "pdf" ? (
+                        <div className="h-48 sm:h-64 w-full flex flex-col items-center justify-center gap-2 bg-muted/50 px-4">
+                          <FileText className="h-12 w-12 text-muted-foreground" />
+                          <span className="text-sm font-medium">PDF</span>
+                          <span className="text-xs text-muted-foreground truncate max-w-full">
+                            {item.name}
+                          </span>
+                        </div>
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.url}
+                          alt={item.name}
+                          className="h-48 sm:h-64 w-full object-contain"
+                        />
+                      )}
                     </button>
                   </CardContent>
                 </Card>
@@ -298,12 +324,20 @@ export default function CommonImagesCarousel({
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={current.url}
-                  alt={current.name}
-                  className="max-h-[55dvh] sm:max-h-[80vh] max-w-full w-auto object-contain"
-                />
+                {current.kind === "pdf" ? (
+                  <iframe
+                    src={current.url}
+                    title={current.name}
+                    className="h-[55dvh] sm:h-[70vh] w-full rounded-md border bg-muted/30"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={current.url}
+                    alt={current.name}
+                    className="max-h-[55dvh] sm:max-h-[80vh] max-w-full w-auto object-contain"
+                  />
+                )}
                 <Button
                   type="button"
                   onClick={next}
@@ -329,7 +363,7 @@ export default function CommonImagesCarousel({
 
                 <button
                   type="button"
-                  onClick={() => handlePrint(current.url)}
+                  onClick={() => handlePrint(current)}
                   className="inline-flex items-center gap-2 text-sm underline"
                   title="Print"
                 >
@@ -351,7 +385,7 @@ export default function CommonImagesCarousel({
                     </AlertDialogTrigger>
                     <AlertDialogContent className="w-[calc(100vw-1.5rem)] max-w-lg">
                       <AlertDialogHeader>
-                        <AlertDialogTitle>ลบรูปภาพนี้?</AlertDialogTitle>
+                        <AlertDialogTitle>ลบไฟล์นี้?</AlertDialogTitle>
                         <AlertDialogDescription>
                           การกระทำนี้จะลบ{" "}
                           <span className="font-medium break-all">
