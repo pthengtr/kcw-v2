@@ -9,10 +9,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-import { ImagePlus, Upload, X, Images, RotateCcw } from "lucide-react";
+import { FileText, ImagePlus, Upload, X, Images, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 // ---------- Utilities ----------
+
+const RECEIPT_FILE_ACCEPT_ATTR =
+  "image/jpeg,image/png,image/webp,image/gif,application/pdf,.jpg,.jpeg,.png,.webp,.gif,.pdf";
 
 function extOf(file: File) {
   const n = file.name.split(".");
@@ -24,6 +27,26 @@ function bytes(n: number) {
   if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
   if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
   return `${(n / 1024 ** 3).toFixed(1)} GB`;
+}
+
+function isReceiptUploadFile(file: File) {
+  const type = (file.type || "").toLowerCase();
+  if (type.startsWith("image/") || type === "application/pdf") return true;
+  const name = file.name.toLowerCase();
+  return (
+    name.endsWith(".jpg") ||
+    name.endsWith(".jpeg") ||
+    name.endsWith(".png") ||
+    name.endsWith(".webp") ||
+    name.endsWith(".gif") ||
+    name.endsWith(".pdf")
+  );
+}
+
+function isPdfFile(file: File) {
+  return (
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+  );
 }
 
 // ---------- Types ----------
@@ -78,7 +101,7 @@ export default function CommonImageDropzone({
     (files: FileList | File[]) => {
       const list: File[] = Array.from(files);
       const accepted = list
-        .filter((f) => f.type.startsWith("image/"))
+        .filter(isReceiptUploadFile)
         .slice(0, Math.max(0, maxFiles - items.length));
 
       const tooBig: string[] = [];
@@ -231,7 +254,7 @@ export default function CommonImageDropzone({
         onDrop={onDrop}
         onClick={openPicker}
         role="button"
-        aria-label="Upload images"
+        aria-label="Upload receipt files"
         className={
           "relative w-full border-dashed cursor-pointer transition select-none " +
           (isDragging ? "ring-2 ring-offset-2 ring-primary" : "hover:shadow-sm")
@@ -244,12 +267,13 @@ export default function CommonImageDropzone({
             หรือ คลิกเพื่อเลือกไฟล์
           </div>
           <div className="text-xs text-muted-foreground">
-            จำนวนไฟล์สูงสุด {maxFiles} ไฟล์ · {bytes(maxSize)} ต่อไฟล์
+            รองรับ JPG, PNG, WEBP, PDF · สูงสุด {maxFiles} ไฟล์ ·{" "}
+            {bytes(maxSize)} ต่อไฟล์
           </div>
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept={RECEIPT_FILE_ACCEPT_ATTR}
             multiple
             className="hidden"
             onChange={onInputChange}
@@ -257,7 +281,7 @@ export default function CommonImageDropzone({
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-2 pb-6 px-4">
           <Button size="sm" variant="secondary" type="button">
-            <ImagePlus className="mr-2 h-4 w-4" /> เลือกไฟล์รูปภาพ
+            <ImagePlus className="mr-2 h-4 w-4" /> เลือกไฟล์
           </Button>
           <Separator
             orientation="vertical"
@@ -280,12 +304,21 @@ export default function CommonImageDropzone({
             {items.map((it) => (
               <Card key={it.id} className="overflow-hidden relative">
                 <CardContent className="p-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={it.preview}
-                    alt={it.file.name}
-                    className="h-36 w-full object-cover"
-                  />
+                  {isPdfFile(it.file) ? (
+                    <div className="h-36 w-full flex flex-col items-center justify-center gap-2 bg-muted/60">
+                      <FileText className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">
+                        PDF
+                      </span>
+                    </div>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={it.preview}
+                      alt={it.file.name}
+                      className="h-36 w-full object-cover"
+                    />
+                  )}
                 </CardContent>
                 <CardFooter className="flex-col items-stretch gap-2">
                   <div className="flex items-center justify-between gap-2 w-full text-xs">

@@ -3,9 +3,20 @@
 import * as React from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
-import { X, Upload } from "lucide-react";
+import { FileText, X, Upload } from "lucide-react";
 import clsx from "clsx";
 import { normalizeFileName, renameFileKeepingContent } from "@/lib/utils";
+
+export const RECEIPT_FILE_ACCEPT: Record<string, string[]> = {
+  "image/*": [],
+  "application/pdf": [".pdf"],
+};
+
+function isPdfFile(file: File) {
+  return (
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+  );
+}
 
 export type LocalImageDropzoneProps = {
   value?: File[];
@@ -30,12 +41,13 @@ type Preview = {
   objectUrl: string;
   id: string;
   displayName: string; // normalized or original
+  isPdf: boolean;
 };
 
 export function LocalImageDropzone({
   value,
   onChange,
-  accept = { "image/*": [] },
+  accept = RECEIPT_FILE_ACCEPT,
   maxSize,
   multiple = true,
   className,
@@ -66,6 +78,7 @@ export function LocalImageDropzone({
       objectUrl: URL.createObjectURL(f),
       id: `${f.name}-${f.size}-${i}`,
       displayName: f.name,
+      isPdf: isPdfFile(f),
     }));
     setPreviews(next);
     return () => next.forEach((p) => URL.revokeObjectURL(p.objectUrl));
@@ -156,9 +169,8 @@ export function LocalImageDropzone({
             </p>
           )}
           <p className="text-xs text-muted-foreground">
-            {multiple
-              ? "สามารถเลือกได้มากกว่าหนึ่งไฟล์"
-              : "เลือกได้ไฟล์เดียวเท่านั้น"}
+            รองรับ JPG, PNG, WEBP, PDF
+            {multiple ? " — เลือกได้หลายไฟล์" : " — เลือกได้ไฟล์เดียว"}
           </p>
         </div>
       </div>
@@ -185,12 +197,21 @@ export function LocalImageDropzone({
                 key={p.id}
                 className="relative border rounded-lg overflow-hidden bg-muted/40"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={p.objectUrl}
-                  alt={p.displayName}
-                  className="aspect-square w-full object-cover"
-                />
+                {p.isPdf ? (
+                  <div className="aspect-square w-full flex flex-col items-center justify-center gap-2 bg-muted/60 p-3">
+                    <FileText className="h-10 w-10 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">
+                      PDF
+                    </span>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.objectUrl}
+                    alt={p.displayName}
+                    className="aspect-square w-full object-cover"
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => removeAt(idx)}
