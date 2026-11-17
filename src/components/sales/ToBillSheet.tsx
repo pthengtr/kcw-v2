@@ -40,12 +40,16 @@ function Field({
 function SignatureBlock({
   title,
   signer,
+  name,
   signedOn,
 }: {
   title: string;
   signer?: ToBillSigner | null;
+  name?: string;
   signedOn?: string;
 }) {
+  const printed =
+    (name || "").trim() || (signer ? signerDisplayName(signer) : "");
   return (
     <section>
       <h3>{title}</h3>
@@ -59,9 +63,9 @@ function SignatureBlock({
         <span>ลายมือชื่อ</span>
         <span className="line" />
         <span>ชื่อ</span>
-        <span className="line">{signer ? signerDisplayName(signer) : ""}</span>
+        <span className="line">{printed}</span>
         <span>วันที่</span>
-        <span className="line">{signer ? signedOn || "" : ""}</span>
+        <span className="line">{signer || printed ? signedOn || "" : ""}</span>
       </div>
     </section>
   );
@@ -81,6 +85,9 @@ function Article({
   const paid = payViaLabel(bill.pay_via);
   const signedOn = thaiLongDate(bill.issued_at || bill.bill_date);
   const [issuer, approver] = sheetSigners(bill.issued_by || "");
+  const issuerName = (bill.issuer_label || "").trim() || signerDisplayName(issuer);
+  const approverName =
+    (bill.approver_label || "").trim() || signerDisplayName(approver);
   const note = receipt ? (
     <>
       <span className="keep">
@@ -216,11 +223,13 @@ function Article({
         <SignatureBlock
           title={`${ROLE_ISSUER} (ผู้ขาย)`}
           signer={issuer}
+          name={issuerName}
           signedOn={signedOn}
         />
         <SignatureBlock
           title={`${ROLE_APPROVER} (ผู้ขาย)`}
           signer={approver}
+          name={approverName}
           signedOn={signedOn}
         />
         <SignatureBlock title="ผู้รับเอกสาร (ลูกค้า)" />

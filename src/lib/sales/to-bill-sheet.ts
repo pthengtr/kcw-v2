@@ -80,6 +80,8 @@ export type ToBillSheetData = {
   bill_date: string | null;
   issued_at?: string | null;
   issued_by?: string | null;
+  issuer_label?: string | null;
+  approver_label?: string | null;
   customer_name: string | null;
   address: string | null;
   phone: string | null;
@@ -132,7 +134,10 @@ export function sheetSigners(issuedBy = ""): [ToBillSigner, ToBillSigner] {
 }
 
 export function signerDisplayName(signer: ToBillSigner): string {
-  return signer.fullName;
+  const full = (signer.fullName || "").trim();
+  const nick = (signer.nick || "").trim();
+  if (full && nick) return `${full} (${nick})`;
+  return full || nick;
 }
 
 export function isReceiptDoc(docno: string | null | undefined, docKind?: string | null): boolean {
