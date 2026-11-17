@@ -47,13 +47,13 @@ describe("to bill sheet signers", () => {
     expect(sheetSigners("")).toEqual([AON, MAY]);
     expect(sheetSigners("อ้อน")).toEqual([AON, MAY]);
     expect(matchSigner("May")).toBe(MAY);
-    expect(signerDisplayName(AON)).toBe("มัญชุนันท์ คำลา");
+    expect(signerDisplayName(AON)).toBe("มัญชุนันท์ คำลา (อ้อน)");
   });
 
   it("lets Cartoon sign both roles", () => {
     expect(matchSigner("การ์ตูน")).toBe(CARTOON);
     expect(sheetSigners("จิดาภา กระจาย")).toEqual([CARTOON, CARTOON]);
-    expect(signerDisplayName(CARTOON)).toBe("จิดาภา กระจาย");
+    expect(signerDisplayName(CARTOON)).toBe("จิดาภา กระจาย (การ์ตูน)");
   });
 
   it("formats marketplace shop and Thai dates like kcw-api", () => {
