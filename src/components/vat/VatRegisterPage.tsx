@@ -41,12 +41,14 @@ import {
   summarizeVatRegister,
   summarizeVatRegisterMoney,
   fullInvoiceLineKey,
+  monthEndIso,
   monthStartIso,
   splitInclusiveVat,
   tadRefFromToRemark,
   vatAccountingMonth,
   vatBillDrill,
   vatLineKey,
+  vatRegisterInDateRange,
   vatReportingMonth,
   vatRequiresReceipt,
   vatTracksPayment,
@@ -209,8 +211,17 @@ function vatCell(id: VatRegisterColumnId, row: VatRegisterRow, index: number): R
   }
 }
 
+function monthDateBounds(monthValue: string): { from: string; to: string } {
+  const start = monthStartIso(monthValue);
+  return { from: start, to: monthEndIso(start) };
+}
+
 export default function VatRegisterPage({ readOnly = false }: { readOnly?: boolean }) {
-  const [month, setMonth] = useState(vatReportingMonth);
+  const initialMonth = vatReportingMonth();
+  const initialBounds = monthDateBounds(initialMonth);
+  const [month, setMonth] = useState(initialMonth);
+  const [dateFrom, setDateFrom] = useState(initialBounds.from);
+  const [dateTo, setDateTo] = useState(initialBounds.to);
   const [branch, setBranch] = useState<BranchFilter>("ALL");
   const [side, setSide] = useState<SideFilter>("ALL");
   const [view, setView] = useState<ViewFilter>("BOOK");
@@ -229,6 +240,13 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+
+  function changeMonth(next: string) {
+    setMonth(next);
+    const bounds = monthDateBounds(next);
+    setDateFrom(bounds.from);
+    setDateTo(bounds.to);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -284,9 +302,15 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
     return [...filtered].sort(compareVatRegisterRows);
   }, [rows, sheet]);
 
+  const datedRows = useMemo(
+    () =>
+      sheetRows.filter((row) => vatRegisterInDateRange(row, dateFrom, dateTo)),
+    [sheetRows, dateFrom, dateTo]
+  );
+
   const inUseRows = useMemo(
-    () => sheetRows.filter((row) => !row.accounting_unused),
-    [sheetRows]
+    () => datedRows.filter((row) => !row.accounting_unused),
+    [datedRows]
   );
   const kpis = useMemo(() => summarizeVatRegister(inUseRows), [inUseRows]);
   const bookTotals = useMemo(() => summarizeVatRegisterMoney(inUseRows), [inUseRows]);
@@ -320,9 +344,13 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   }, [showPayment, showReceipts, kpi]);
 
   const visible = useMemo(
-    () => filterVatRegisterRows(sheetRows, { query, kpi }),
-    [sheetRows, query, kpi]
+    () => filterVatRegisterRows(datedRows, { query, kpi }),
+    [datedRows, query, kpi]
   );
+
+  useEffect(() => {
+    setPage(1);
+  }, [dateFrom, dateTo, sheet, query, kpi]);
 
   const totals = useMemo(() => summarizeVatRegisterMoney(visible), [visible]);
   const pageCount = useMemo(
@@ -353,6 +381,8 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
       if (branch !== "ALL") params.set("branch", branch);
       if (side !== "ALL") params.set("side", side);
       if (view === "DOC") params.set("view", "doc");
+      if (dateFrom) params.set("from", dateFrom);
+      if (dateTo) params.set("to", dateTo);
       const res = await fetch(`/api/vat/register/export?${params.toString()}`);
       if (!res.ok) {
         const json = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -451,7 +481,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-600">
             {view === "DOC" ? "เดือนเอกสารบัญชี" : "เดือนเล่มภาษี"}
@@ -459,7 +489,27 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
           <Input
             type="month"
             value={month}
-            onChange={(event) => setMonth(event.target.value)}
+            onChange={(event) => changeMonth(event.target.value)}
+            className="w-full"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-slate-600">จากวันที่</span>
+          <Input
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(event) => setDateFrom(event.target.value)}
+            className="w-full"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-slate-600">ถึงวันที่</span>
+          <Input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(event) => setDateTo(event.target.value)}
             className="w-full"
           />
         </label>

@@ -494,15 +494,39 @@ type VatRegisterListRow = Pick<
   | "paid_status"
 >;
 
+/** Inclusive bill_date window. Empty from/to means unbounded on that side. */
+export function vatRegisterInDateRange(
+  row: Pick<VatRegisterRow, "bill_date">,
+  dateFrom?: string | null,
+  dateTo?: string | null
+): boolean {
+  const day = (row.bill_date ?? "").slice(0, 10);
+  if (!day) return !dateFrom && !dateTo;
+  const from = dateFrom?.slice(0, 10) ?? "";
+  const to = dateTo?.slice(0, 10) ?? "";
+  if (from && day < from) return false;
+  if (to && day > to) return false;
+  return true;
+}
+
 /**
  * Search narrows the list. A status chip then keeps in-use lines in that group.
  * A search still returns unused lines, so a bill can be found and marked again.
  */
 export function filterVatRegisterRows<T extends VatRegisterListRow>(
   rows: T[],
-  input: { query: string; kpi: VatRegisterKpiKey | null }
+  input: {
+    query: string;
+    kpi: VatRegisterKpiKey | null;
+    dateFrom?: string | null;
+    dateTo?: string | null;
+  }
 ): T[] {
-  const matched = rows.filter((row) => vatRegisterMatchesQuery(row, input.query));
+  const matched = rows.filter(
+    (row) =>
+      vatRegisterInDateRange(row, input.dateFrom, input.dateTo) &&
+      vatRegisterMatchesQuery(row, input.query)
+  );
   const kpi = input.kpi;
   if (kpi == null) return matched;
   const searching = input.query.trim() !== "";
