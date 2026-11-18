@@ -31,8 +31,10 @@ import SalesBillDetailDialog, {
 } from "@/components/sales/SalesBillDetailDialog";
 import ToBillDialog from "@/components/sales/ToBillDialog";
 import { cn } from "@/lib/utils";
+import VatOnlineBillSheet from "@/components/vat/VatOnlineBillSheet";
 import VatReceiptSheet from "@/components/vat/VatReceiptSheet";
 import { isGeneratedVatBill } from "@/lib/vat/generated-bill";
+import { isOnlineTaxVatBill } from "@/lib/vat/online-bill";
 import {
   compareSheets,
   compareVatRegisterRows,
@@ -1710,6 +1712,9 @@ function LineDialog({
               <p className="text-sm text-slate-600">
                 ใบกำกับมาจากใบเต็มในระบบ — ไม่ต้องอัปโหลด
               </p>
+            ) : isOnlineTaxVatBill(row.sheet) &&
+              isGeneratedVatBill(row.sheet, row.bill_date) ? (
+              <VatOnlineBillSheet row={row} />
             ) : isGeneratedVatBill(row.sheet, row.bill_date) ? (
               <>
                 <VatReceiptSheet row={row} />

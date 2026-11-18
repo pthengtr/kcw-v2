@@ -11,6 +11,7 @@ import {
   receiptTotals,
   thaiReceiptDate,
 } from "./generated-bill";
+import { isOnlineTaxVatBill, onlineSalePrintKind } from "./online-bill";
 
 describe("printed VAT bills", () => {
   it("covers the four abbreviated bill sheets", () => {
@@ -26,6 +27,10 @@ describe("printed VAT bills", () => {
     expect(isGeneratedVatBill("CNTAD", "2026-11-18")).toBe(true);
     expect(displayInvoiceCount("TAD", 0, "2026-11-01")).toBe(1);
     expect(displayInvoiceCount("TAD", 0, "2026-10-31")).toBe(0);
+    expect(isOnlineTaxVatBill("TAD")).toBe(true);
+    expect(isOnlineTaxVatBill("TAR")).toBe(false);
+    expect(onlineSalePrintKind("TAD", "TAD6911-001")).toBe("tad");
+    expect(onlineSalePrintKind("CNTAD", "CNTAD6911-012")).toBe("cntad");
   });
 
   it("counts the on-screen bill as the invoice", () => {
