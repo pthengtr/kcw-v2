@@ -13,8 +13,8 @@ export const TIGER_PAY_DENOMS = [1000, 500, 100, 50, 20, 10, 5, 2, 1] as const;
 export type TigerPayChangeLevel = "green" | "orange" | "red";
 
 export type TigerPayDailyBill = {
-  tigerPaymentId: number;
-  paymentNo: string;
+  tigerPaymentId: number | null;
+  paymentNo: string | null;
   paymentType: string;
   status: string;
   amount: number;
@@ -361,12 +361,26 @@ export function emptyDenomMap(): Record<string, number> {
   return Object.fromEntries(TIGER_PAY_DENOMS.map((d) => [String(d), 0]));
 }
 
+export type TigerPayCloudQrRow = {
+  id: string | null;
+  pos_bill_number: string | null;
+  amount: number | string | null;
+  paid_amount: number | string | null;
+  status: string | null;
+  ref1: string | null;
+  ref2: string | null;
+  submitted_by_name: string | null;
+  created_at: string | null;
+  paid_at: string | null;
+};
+
 export function rollupTigerPayDay(input: {
   date: string;
   shopCode: string;
   transactions: TigerPayTransaction[];
   attempts?: DailyAttempt[];
   vouchers?: DailyVoucher[];
+  cloudQrRows?: TigerPayCloudQrRow[];
 }): TigerPayDailyRollup {
   const rows = input.transactions.filter((row) => {
     if (input.shopCode && row.shop_code && row.shop_code !== input.shopCode) {
@@ -511,6 +525,44 @@ export function rollupTigerPayDay(input: {
       posBillNumber: attempt?.pos_bill_number ?? null,
       submittedByName: attempt?.submitted_by_name ?? null,
       at: row.tiger_created_at || row.last_received_at,
+    });
+  }
+
+  for (const cloud of input.cloudQrRows ?? []) {
+    if ((cloud.status ?? "").trim() !== "C") continue;
+    const at = cloud.paid_at || cloud.created_at;
+    if (bizDayOf({ tiger_created_at: at ?? null }) !== input.date) continue;
+    const paid = money(cloud.paid_amount ?? cloud.amount);
+    const billedAmount = money(cloud.amount);
+    successCount += 1;
+    qrSuccessCount += 1;
+    qrPromptpayIn += paid;
+    billed += billedAmount;
+    posBilled += billedAmount;
+    const mix = methodMap.get("cloud_qr") ?? { count: 0, baht: 0 };
+    mix.count += 1;
+    mix.baht += billedAmount;
+    methodMap.set("cloud_qr", mix);
+    if (at) {
+      const hour = Number(bangkokHourFmt.format(new Date(at)));
+      if (Number.isFinite(hour) && hourly[hour]) {
+        hourly[hour].billed += billedAmount;
+        hourly[hour].count += 1;
+      }
+    }
+    bills.push({
+      tigerPaymentId: null,
+      paymentNo: cloud.ref1 ?? cloud.id,
+      paymentType: "cloud_qr",
+      status: "success",
+      amount: billedAmount,
+      posAmount: billedAmount,
+      cashFloorRemainder: 0,
+      totalPay: paid,
+      changeAmount: 0,
+      posBillNumber: cloud.pos_bill_number ?? null,
+      submittedByName: cloud.submitted_by_name ?? null,
+      at,
     });
   }
 
