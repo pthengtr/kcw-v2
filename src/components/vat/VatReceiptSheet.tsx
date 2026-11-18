@@ -38,7 +38,11 @@ export default function VatReceiptSheet({ row }: { row: VatRegisterRow }) {
   const [bill, setBill] = useState<ReceiptBill | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const credit = row.sheet === "CNTAR" || row.sheet === "3CNTAR";
+  const credit =
+    row.sheet === "CNTAR" ||
+    row.sheet === "3CNTAR" ||
+    row.sheet === "CNTAD" ||
+    row.sheet === "3CNTAD";
   const company = receiptCompany(row.sheet);
   const title = receiptTitle(row.sheet);
   const billNo = printedBillNo(row.sheet, bill?.billno || row.bill_no);

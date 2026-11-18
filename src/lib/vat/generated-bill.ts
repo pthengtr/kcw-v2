@@ -1,6 +1,13 @@
 /** TAR / CNTAR / 3TAR / 3CNTAR are printed from the lines already stored in billgen. */
-
 const GENERATED_SHEETS = new Set(["TAR", "CNTAR", "3TAR", "3CNTAR"]);
+
+/**
+ * Online abbreviated tax invoices (TAD/CNTAD) attach automatically from this
+ * bill date onward (1 พ.ย. 2569) — no staff upload.
+ */
+export const ONLINE_TAX_AUTO_ATTACH_FROM = "2026-11-01";
+
+const ONLINE_TAX_SHEETS = new Set(["TAD", "CNTAD", "3TAD", "3CNTAD"]);
 
 const TH_MONTHS = [
   "ม.ค.",
@@ -38,13 +45,24 @@ const SYP_RECEIPT: ReceiptCompany = {
   tax: "เลขประจำตัวผู้เสียภาษี 0215560000262 (สาขาที่ 00003)",
 };
 
-export function isGeneratedVatBill(sheet: string): boolean {
-  return GENERATED_SHEETS.has(sheet);
+/** TAR family always; TAD/CNTAD from ONLINE_TAX_AUTO_ATTACH_FROM when billDate is set. */
+export function isGeneratedVatBill(
+  sheet: string,
+  billDate?: string | null
+): boolean {
+  if (GENERATED_SHEETS.has(sheet)) return true;
+  if (!ONLINE_TAX_SHEETS.has(sheet)) return false;
+  const day = (billDate ?? "").trim().slice(0, 10);
+  return day !== "" && day >= ONLINE_TAX_AUTO_ATTACH_FROM;
 }
 
 /** The on-screen bill counts as the invoice, so these rows are not missing a document. */
-export function displayInvoiceCount(sheet: string, uploaded: number): number {
-  return uploaded + (isGeneratedVatBill(sheet) ? 1 : 0);
+export function displayInvoiceCount(
+  sheet: string,
+  uploaded: number,
+  billDate?: string | null
+): number {
+  return uploaded + (isGeneratedVatBill(sheet, billDate) ? 1 : 0);
 }
 
 export function receiptCompany(sheet: string): ReceiptCompany {
@@ -52,9 +70,10 @@ export function receiptCompany(sheet: string): ReceiptCompany {
 }
 
 export function receiptTitle(sheet: string): string {
-  return sheet === "CNTAR" || sheet === "3CNTAR"
-    ? "ใบลดหนี้"
-    : "ใบเสร็จรับเงิน/ใบกำกับภาษีอย่างย่อ";
+  if (sheet === "CNTAD" || sheet === "3CNTAD") return "ใบลดหนี้/ใบกำกับภาษี";
+  if (sheet === "CNTAR" || sheet === "3CNTAR") return "ใบลดหนี้";
+  if (sheet === "TAD" || sheet === "3TAD") return "ใบกำกับภาษีอย่างย่อ/ใบส่งสินค้า";
+  return "ใบเสร็จรับเงิน/ใบกำกับภาษีอย่างย่อ";
 }
 
 /** 3CNTAR bills are printed as 3CTAR, matching the numbered series. */

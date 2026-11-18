@@ -19,6 +19,15 @@ describe("printed VAT bills", () => {
     expect(isGeneratedVatBill("TD")).toBe(false);
   });
 
+  it("auto-attaches TAD/CNTAD from 1 พ.ย. 2569", () => {
+    expect(isGeneratedVatBill("TAD")).toBe(false);
+    expect(isGeneratedVatBill("TAD", "2026-10-31")).toBe(false);
+    expect(isGeneratedVatBill("TAD", "2026-11-01")).toBe(true);
+    expect(isGeneratedVatBill("CNTAD", "2026-11-18")).toBe(true);
+    expect(displayInvoiceCount("TAD", 0, "2026-11-01")).toBe(1);
+    expect(displayInvoiceCount("TAD", 0, "2026-10-31")).toBe(0);
+  });
+
   it("counts the on-screen bill as the invoice", () => {
     expect(displayInvoiceCount("TAR", 0)).toBe(1);
     expect(displayInvoiceCount("CNTAR", 2)).toBe(3);
@@ -30,6 +39,8 @@ describe("printed VAT bills", () => {
     expect(receiptCompany("3TAR").tax).toContain("00003");
     expect(receiptTitle("TAR")).toBe("ใบเสร็จรับเงิน/ใบกำกับภาษีอย่างย่อ");
     expect(receiptTitle("3CNTAR")).toBe("ใบลดหนี้");
+    expect(receiptTitle("TAD")).toBe("ใบกำกับภาษีอย่างย่อ/ใบส่งสินค้า");
+    expect(receiptTitle("CNTAD")).toBe("ใบลดหนี้/ใบกำกับภาษี");
   });
 
   it("prints a 3CNTAR number as 3CTAR", () => {
