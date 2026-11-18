@@ -482,6 +482,7 @@ export function summarizeVatRegisterMoney(
 
 type VatRegisterListRow = Pick<
   VatRegisterRow,
+  | "bill_date"
   | "bill_no"
   | "display_bill_no"
   | "party_name"
