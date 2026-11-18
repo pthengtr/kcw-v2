@@ -214,6 +214,64 @@ describe("Tiger Pay daily rollup", () => {
     ]);
   });
 
+  it("merges successful cloud QR into qrPromptpayIn and settledNet", () => {
+    const rollup = rollupTigerPayDay({
+      date: "2026-09-20",
+      shopCode: "1",
+      transactions: [
+        txn({
+          tiger_payment_id: 50,
+          payment_no: "PA50",
+          payment_type: "qr",
+          amount: 100,
+          total_pay: 100,
+          payload: { payment: { cashList: [] } },
+        }),
+      ],
+      cloudQrRows: [
+        {
+          id: "cloud1",
+          pos_bill_number: "8K69-0001",
+          amount: 250,
+          paid_amount: 250,
+          status: "C",
+          ref1: "QRTS1",
+          ref2: "QRTS1",
+          submitted_by_name: "Aon",
+          created_at: "2026-09-20T11:00:00+07:00",
+          paid_at: "2026-09-20T11:05:00+07:00",
+        },
+        {
+          id: "cloud-open",
+          pos_bill_number: "8K69-0002",
+          amount: 99,
+          paid_amount: null,
+          status: "I",
+          ref1: "QRTS2",
+          ref2: "QRTS2",
+          submitted_by_name: null,
+          created_at: "2026-09-20T12:00:00+07:00",
+          paid_at: null,
+        },
+      ],
+    });
+
+    expect(rollup.qrPromptpayIn).toBe(350);
+    expect(rollup.qrSuccessCount).toBe(2);
+    expect(rollup.successCount).toBe(2);
+    expect(rollup.settledNet).toBe(350);
+    expect(rollup.bills.find((b) => b.paymentType === "cloud_qr")).toMatchObject({
+      paymentNo: "QRTS1",
+      totalPay: 250,
+      posBillNumber: "8K69-0001",
+      status: "success",
+    });
+    expect(rollup.methodMix.find((m) => m.key === "cloud_qr")).toMatchObject({
+      count: 1,
+      baht: 250,
+    });
+  });
+
   it("does not net +cancel then −redeem on the same CN", () => {
     const rollup = rollupTigerPayDay({
       date: "2026-09-20",

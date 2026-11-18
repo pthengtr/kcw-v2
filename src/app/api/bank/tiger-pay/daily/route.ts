@@ -12,6 +12,7 @@ import {
   getDailyClose,
   getLatestCashSnapshot,
   getTigerPayAttemptsForWindow,
+  getTigerPayCloudQrForWindow,
   getTigerPayTransactionsForWindow,
   getTigerPayVouchersForWindow,
 } from "@/lib/bank/tiger-pay-queries";
@@ -51,7 +52,7 @@ export async function GET(req: Request) {
 
   try {
     const supabase = createAdminClient();
-    const [transactions, attempts, vouchers, hopper, dailyClose] =
+    const [transactions, attempts, vouchers, cloudQrRows, hopper, dailyClose] =
       await Promise.all([
         getTigerPayTransactionsForWindow(supabase, {
           fromIso: from,
@@ -67,6 +68,12 @@ export async function GET(req: Request) {
         getTigerPayVouchersForWindow(supabase, { fromIso: from, toIso: to }).catch(
           (error) => {
             console.error("tiger-pay daily vouchers", error);
+            return [];
+          }
+        ),
+        getTigerPayCloudQrForWindow(supabase, { fromIso: from, toIso: to }).catch(
+          (error) => {
+            console.error("tiger-pay daily cloud qr", error);
             return [];
           }
         ),
@@ -86,6 +93,7 @@ export async function GET(req: Request) {
       transactions,
       attempts,
       vouchers,
+      cloudQrRows,
     });
     const previous = rollupTigerPayDay({
       date: prevDate,
@@ -93,6 +101,7 @@ export async function GET(req: Request) {
       transactions,
       attempts,
       vouchers,
+      cloudQrRows,
     });
 
     return NextResponse.json({

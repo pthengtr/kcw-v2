@@ -288,6 +288,63 @@ export async function getTigerPayAttemptsForWindow(
   }>;
 }
 
+export async function getTigerPayCloudQrForWindow(
+  supabase: SupabaseClient,
+  input: { fromIso: string; toIso: string }
+): Promise<
+  Array<{
+    id: string | null;
+    pos_bill_number: string | null;
+    amount: number | string | null;
+    paid_amount: number | string | null;
+    status: string | null;
+    ref1: string | null;
+    ref2: string | null;
+    submitted_by_name: string | null;
+    created_at: string | null;
+    paid_at: string | null;
+  }>
+> {
+  const columns =
+    "id,pos_bill_number,amount,paid_amount,status,ref1,ref2,submitted_by_name,created_at,paid_at";
+  const [created, paid] = await Promise.all([
+    tigerPay(supabase)
+      .from("cloud_qr_payment")
+      .select(columns)
+      .eq("status", "C")
+      .gte("created_at", input.fromIso)
+      .lt("created_at", input.toIso)
+      .limit(500),
+    tigerPay(supabase)
+      .from("cloud_qr_payment")
+      .select(columns)
+      .eq("status", "C")
+      .not("paid_at", "is", null)
+      .gte("paid_at", input.fromIso)
+      .lt("paid_at", input.toIso)
+      .limit(500),
+  ]);
+  if (created.error) throw new Error(created.error.message);
+  if (paid.error) throw new Error(paid.error.message);
+  const byId = new Map<string, (typeof created.data)[number]>();
+  for (const row of [...(created.data ?? []), ...(paid.data ?? [])]) {
+    const id = (row as { id?: string | null }).id;
+    if (id) byId.set(id, row);
+  }
+  return [...byId.values()] as Array<{
+    id: string | null;
+    pos_bill_number: string | null;
+    amount: number | string | null;
+    paid_amount: number | string | null;
+    status: string | null;
+    ref1: string | null;
+    ref2: string | null;
+    submitted_by_name: string | null;
+    created_at: string | null;
+    paid_at: string | null;
+  }>;
+}
+
 export async function getTigerPayVouchersForWindow(
   supabase: SupabaseClient,
   input: { fromIso: string; toIso: string }
