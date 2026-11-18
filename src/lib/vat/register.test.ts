@@ -15,6 +15,7 @@ import {
   vatBillDrill,
   vatLineKey,
   vatDocumentsComplete,
+  vatRegisterInDateRange,
   vatRegisterKpiMatch,
   vatRegisterMatchesQuery,
   vatReportingMonth,
@@ -546,5 +547,22 @@ describe("vat register search and accounting use", () => {
     expect(filterVatRegisterRows(rows, { query: "ไม่ใช้", kpi: null })).toEqual([unused]);
     expect(filterVatRegisterRows(rows, { query: "", kpi: "complete" })).toEqual([line]);
     expect(filterVatRegisterRows(rows, { query: "B2607", kpi: "unpaid" })).toEqual([unused]);
+  });
+
+  it("filters by inclusive bill_date range", () => {
+    const early = { ...line, bill_date: "2026-11-01", bill_no: "A1" };
+    const mid = { ...line, bill_date: "2026-11-15", bill_no: "A2" };
+    const late = { ...line, bill_date: "2026-11-30", bill_no: "A3" };
+    const rows = [early, mid, late];
+    expect(vatRegisterInDateRange(mid, "2026-11-01", "2026-11-15")).toBe(true);
+    expect(vatRegisterInDateRange(late, "2026-11-01", "2026-11-15")).toBe(false);
+    expect(
+      filterVatRegisterRows(rows, {
+        query: "",
+        kpi: null,
+        dateFrom: "2026-11-01",
+        dateTo: "2026-11-15",
+      }).map((row) => row.bill_no)
+    ).toEqual(["A1", "A2"]);
   });
 });

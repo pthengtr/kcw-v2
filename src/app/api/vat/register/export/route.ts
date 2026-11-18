@@ -4,16 +4,20 @@ import { z } from "zod";
 import { requireVatRegisterRead } from "@/lib/vat/access";
 import { buildVatRegisterDownload } from "@/lib/vat/register-workbook";
 import { fetchVatRegister } from "@/lib/vat/register-queries";
-import { monthStartIso } from "@/lib/vat/register";
+import { monthStartIso, vatRegisterInDateRange } from "@/lib/vat/register";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
+
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const QuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/),
   branch: z.enum(["HQ", "SYP"]).optional(),
   side: z.enum(["sales", "purchase"]).optional(),
   view: z.enum(["book", "doc"]).optional(),
+  from: isoDate.optional(),
+  to: isoDate.optional(),
 });
 
 export async function GET(req: Request) {
@@ -28,6 +32,8 @@ export async function GET(req: Request) {
     branch: url.searchParams.get("branch") || undefined,
     side: url.searchParams.get("side") || undefined,
     view: url.searchParams.get("view") || undefined,
+    from: url.searchParams.get("from") || undefined,
+    to: url.searchParams.get("to") || undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid query" }, { status: 400 });
@@ -36,19 +42,22 @@ export async function GET(req: Request) {
   try {
     const supabase = createAdminClient();
     const basis = parsed.data.view === "doc" ? "accounting" : "bill";
-    const rows = await fetchVatRegister(supabase, {
+    const loaded = await fetchVatRegister(supabase, {
       monthStart: monthStartIso(parsed.data.month),
       branch: parsed.data.branch ?? null,
       side: parsed.data.side ?? null,
       basis,
     });
+    const rows = loaded.filter((row) =>
+      vatRegisterInDateRange(row, parsed.data.from, parsed.data.to)
+    );
     const download = await buildVatRegisterDownload(rows, {
       month: parsed.data.month,
       branch: parsed.data.branch ?? "ALL",
       side: parsed.data.side ?? "ALL",
     });
     if (!download) {
-      return NextResponse.json({ error: "ไม่มีรายการในเดือนนี้" }, { status: 404 });
+      return NextResponse.json({ error: "ไม่มีรายการในช่วงวันที่ที่เลือก" }, { status: 404 });
     }
     return new NextResponse(new Uint8Array(download.body), {
       headers: {
