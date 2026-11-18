@@ -103,7 +103,11 @@ export async function fetchVatRegister(
         ? asString(row.first_uploaded_at)
         : null,
       last_uploaded_at: row.last_uploaded_at ? asString(row.last_uploaded_at) : null,
-      invoice_count: displayInvoiceCount(asString(row.sheet), asNumber(row.invoice_count)),
+      invoice_count: displayInvoiceCount(
+        asString(row.sheet),
+        asNumber(row.invoice_count),
+        asString(row.bill_date)
+      ),
       receipt_count: asNumber(row.receipt_count),
       accounting_unused: row.accounting_unused === true,
       full_invoice_docno: null,

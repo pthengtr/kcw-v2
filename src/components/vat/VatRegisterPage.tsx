@@ -436,7 +436,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
           <p className="text-sm text-slate-600">
             {readOnly
               ? "ดูได้อย่างเดียว"
-              : "เล่มเดียวกับรายงาน Excel แนบใบกำกับได้ ส่วน TO ใช้ใบเต็มจากระบบ ไม่ต้องอัปโหลด ขาย TD กับซื้อเครดิตแนบใบเสร็จด้วย ติ๊กรายการที่บัญชีไม่ใช้ ยอดรวมจะนับเฉพาะรายการที่ใช้งาน"}
+              : "เล่มเดียวกับรายงาน Excel แนบใบกำกับได้ ส่วน TO / TAR และ TAD·CNTAD (ตั้งแต่ 1 พ.ย. 2569) ใช้เอกสารจากระบบ ไม่ต้องอัปโหลด ขาย TD กับซื้อเครดิตแนบใบเสร็จด้วย ติ๊กรายการที่บัญชีไม่ใช้ ยอดรวมจะนับเฉพาะรายการที่ใช้งาน"}
           </p>
         </div>
         <Button
@@ -1414,7 +1414,7 @@ function LineDialog({
     <Dialog open={row != null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className={
-          row && isGeneratedVatBill(row.sheet)
+          row && isGeneratedVatBill(row.sheet, row.bill_date)
             ? "max-h-[90vh] w-[calc(100vw-1.5rem)] overflow-y-auto p-4 sm:max-w-4xl sm:p-6"
             : "max-h-[90vh] w-[calc(100vw-1.5rem)] overflow-y-auto p-4 sm:max-w-xl sm:p-6"
         }
@@ -1431,7 +1431,11 @@ function LineDialog({
       >
         {row ? (
           <>
-            <div className={isGeneratedVatBill(row.sheet) ? "print:hidden" : undefined}>
+            <div
+              className={
+                isGeneratedVatBill(row.sheet, row.bill_date) ? "print:hidden" : undefined
+              }
+            >
             <DialogHeader className="text-left">
               <DialogTitle>
                 {row.sheet} · {row.display_bill_no}
@@ -1485,7 +1489,7 @@ function LineDialog({
               </button>
             ) : null}
 
-            {drill && !isGeneratedVatBill(row.sheet) ? (
+            {drill && !isGeneratedVatBill(row.sheet, row.bill_date) ? (
               <button
                 type="button"
                 className="text-left text-sm font-medium text-sky-800 underline"
@@ -1656,7 +1660,7 @@ function LineDialog({
               <p className="text-sm text-slate-600">
                 ใบกำกับมาจากใบเต็มในระบบ — ไม่ต้องอัปโหลด
               </p>
-            ) : isGeneratedVatBill(row.sheet) ? (
+            ) : isGeneratedVatBill(row.sheet, row.bill_date) ? (
               <>
                 <VatReceiptSheet row={row} />
                 {files.some((file) => file.kind === "invoice") ? (
@@ -1697,7 +1701,9 @@ function LineDialog({
             {expenseFiles.length > 0 ? (
               <section
                 className={
-                  isGeneratedVatBill(row.sheet) ? "grid gap-2 print:hidden" : "grid gap-2"
+                  isGeneratedVatBill(row.sheet, row.bill_date)
+                    ? "grid gap-2 print:hidden"
+                    : "grid gap-2"
                 }
               >
                 <h3 className="text-sm font-medium">รูปค่าใช้จ่ายเดิม</h3>
@@ -1719,7 +1725,7 @@ function LineDialog({
             {message ? (
               <p
                 className={
-                  isGeneratedVatBill(row.sheet)
+                  isGeneratedVatBill(row.sheet, row.bill_date)
                     ? "text-sm text-slate-600 print:hidden"
                     : "text-sm text-slate-600"
                 }
