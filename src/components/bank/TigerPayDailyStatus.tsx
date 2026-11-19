@@ -471,10 +471,11 @@ export default function TigerPayDailyStatus({
                       key={bill.tigerPaymentId}
                       className="border-t cursor-pointer hover:bg-slate-50"
                       onClick={() => {
+                        if (bill.tigerPaymentId == null) return;
                         const at = bill.at ?? "";
                         setSelected({
                           tiger_payment_id: bill.tigerPaymentId,
-                          payment_no: bill.paymentNo,
+                          payment_no: bill.paymentNo ?? "",
                           payment_type: bill.paymentType,
                           status: bill.status,
                           amount: bill.amount,
