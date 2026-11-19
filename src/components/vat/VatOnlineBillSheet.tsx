@@ -19,11 +19,13 @@ export default function VatOnlineBillSheet({ row }: { row: VatRegisterRow }) {
     const params = new URLSearchParams({
       billno: row.bill_no,
       sheet: row.sheet,
+      // Bust browser/CDN cache after online-sale sheet format changes.
+      t: String(Date.now()),
     });
     setLoading(true);
     setError(null);
     setSrc(null);
-    void fetch(`/api/vat/online-bill?${params.toString()}`)
+    void fetch(`/api/vat/online-bill?${params.toString()}`, { cache: "no-store" })
       .then(async (res) => {
         if (!res.ok) {
           const json = (await res.json().catch(() => null)) as {

@@ -76,6 +76,8 @@ export async function GET(req: Request) {
   }
   let html = typeof data === "string" && data.trim() ? data : null;
 
+  // Live fallback when the snapshot is missing (Vercel normally has no LAN
+  // reach to :8796 — keep this after the RPC so production stays fast).
   if (!html) {
     html = await fetchLivePrint(billno, kind);
   }
@@ -94,7 +96,7 @@ export async function GET(req: Request) {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "private, max-age=60",
+      "Cache-Control": "private, no-store",
     },
   });
 }
