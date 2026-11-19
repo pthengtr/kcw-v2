@@ -24,7 +24,9 @@ function isStatementReadApi(pathname: string): boolean {
 function isVatRegisterReadApi(pathname: string): boolean {
   return (
     pathname === "/api/vat/register" ||
-    pathname.startsWith("/api/vat/register/")
+    pathname.startsWith("/api/vat/register/") ||
+    // TAD/CNTAD print HTML embedded in the portal VAT register.
+    pathname === "/api/vat/online-bill"
   );
 }
 
