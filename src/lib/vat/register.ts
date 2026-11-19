@@ -484,6 +484,7 @@ type VatRegisterListRow = Pick<
   VatRegisterRow,
   | "bill_no"
   | "display_bill_no"
+  | "bill_date"
   | "party_name"
   | "party_code"
   | "tax_id"
