@@ -498,6 +498,7 @@ describe("issued full invoice in the tax book", () => {
 
 describe("vat register search and accounting use", () => {
   const line = {
+    bill_date: "2026-10-02",
     bill_no: "TD6901001",
     display_bill_no: "TD6901001",
     party_name: "บริษัท ทดสอบ",
