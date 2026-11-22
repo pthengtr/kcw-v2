@@ -11,8 +11,8 @@ import { createClient } from "@/lib/supabase/server";
 
 const CreateSchema = z.object({
   id: z.string().uuid().optional(),
-  kind: z.enum(["bug", "improvement"]),
-  targetSource: z.enum(["kcw-api", "kcw-v2"]),
+  kind: z.enum(["bug", "improvement", "data_query"]),
+  targetSource: z.enum(["kcw-api", "kcw-v2", "hq-data"]),
   targetId: z.string().min(1),
   title: z.string().trim().min(1).max(200),
   body: z.string().trim().max(20000).default(""),
@@ -88,7 +88,21 @@ export async function POST(req: Request) {
   );
   if (!target) {
     return NextResponse.json(
-      { error: "Unknown target — pick a catalog service or page" },
+      { error: "Unknown target — pick a catalog service, page, or data domain" },
+      { status: 400 }
+    );
+  }
+
+  const isDataQuery = parsed.data.kind === "data_query";
+  if (isDataQuery && target.source !== "hq-data") {
+    return NextResponse.json(
+      { error: "data_query must use an HQ data target" },
+      { status: 400 }
+    );
+  }
+  if (!isDataQuery && target.source === "hq-data") {
+    return NextResponse.json(
+      { error: "HQ data targets are only for data_query" },
       { status: 400 }
     );
   }

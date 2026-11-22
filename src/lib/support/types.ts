@@ -1,12 +1,18 @@
 import type { SupportTargetMeta, SupportTargetSource } from "./catalog";
 
-export type SupportTicketKind = "bug" | "improvement";
+export type SupportTicketKind = "bug" | "improvement" | "data_query";
 export type SupportTicketStatus =
   | "pending"
   | "running"
   | "waiting"
   | "done"
   | "failed";
+
+export const SUPPORT_KIND_LABEL: Record<SupportTicketKind, string> = {
+  bug: "Bug",
+  improvement: "Improvement",
+  data_query: "ถามข้อมูล (HQ agent)",
+};
 
 export type SupportTicket = {
   id: string;

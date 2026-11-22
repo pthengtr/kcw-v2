@@ -28,6 +28,7 @@ import {
 } from "@/lib/support/catalog";
 import {
   SUPPORT_BUCKET,
+  SUPPORT_KIND_LABEL,
   SUPPORT_STATUS_LABEL,
   type SupportTicket,
   type SupportTicketEvent,
@@ -57,7 +58,8 @@ function groupTargets(targets: SupportTarget[]) {
   const api = targets.filter((t) => t.group === "kcw-api");
   const pages = targets.filter((t) => t.group === "kcw-v2");
   const bi = targets.filter((t) => t.group === "kcw-v2-bi");
-  return { api, pages, bi };
+  const data = targets.filter((t) => t.group === "hq-data");
+  return { api, pages, bi, data };
 }
 
 export function SupportPage() {
@@ -80,11 +82,26 @@ export function SupportPage() {
   const [attachmentPaths, setAttachmentPaths] = useState<string[]>([]);
   const [verifyComment, setVerifyComment] = useState("");
 
+  const isDataQuery = kind === "data_query";
+
   const selectedTarget = useMemo(() => {
     const parsed = parseSupportTargetKey(targetKey);
     if (!parsed) return null;
     return getSupportTarget(parsed.source, parsed.id) ?? null;
   }, [targetKey]);
+
+  useEffect(() => {
+    // Keep target in sync with kind: data_query ↔ hq-data only.
+    if (isDataQuery) {
+      if (!selectedTarget || selectedTarget.source !== "hq-data") {
+        setTargetKey("hq-data:all");
+      }
+      return;
+    }
+    if (selectedTarget?.source === "hq-data") {
+      setTargetKey("");
+    }
+  }, [isDataQuery, selectedTarget]);
 
   const loadTickets = useCallback(async () => {
     setLoading(true);
@@ -208,8 +225,9 @@ export function SupportPage() {
             Support / แจ้งปัญหา
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            เลือกบริการหรือหน้าให้ชัดเจน แนบตัวอย่าง/ดีไซน์ได้ ระบบจะให้ agent
-            บน HQ ทำ PR และ merge แล้วรอคุณตรวจ
+            Bug / Improvement: เลือกบริการหรือหน้า — agent ที่ HQ จะทำ PR ให้
+            · ถามข้อมูล: ส่งคำถามไป agent บน HQ ที่เข้าถึง Supabase, KSS,
+            kss-pc PARTS9 และผล kcw-analytic บน Google Drive
           </p>
         </div>
         <Button
@@ -249,57 +267,115 @@ export function SupportPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="bug">Bug</SelectItem>
-                      <SelectItem value="improvement">Improvement</SelectItem>
+                      <SelectItem value="bug">
+                        {SUPPORT_KIND_LABEL.bug}
+                      </SelectItem>
+                      <SelectItem value="improvement">
+                        {SUPPORT_KIND_LABEL.improvement}
+                      </SelectItem>
+                      <SelectItem value="data_query">
+                        {SUPPORT_KIND_LABEL.data_query}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label>บริการ / หน้า (ต้องเลือก)</Label>
+                  <Label>
+                    {isDataQuery
+                      ? "แหล่งข้อมูล (แนะนำให้ระบุ)"
+                      : "บริการ / หน้า (ต้องเลือก)"}
+                  </Label>
                   <Select value={targetKey} onValueChange={setTargetKey}>
                     <SelectTrigger>
-                      <SelectValue placeholder="เลือกเป้าหมายให้ตรงที่สุด" />
+                      <SelectValue
+                        placeholder={
+                          isDataQuery
+                            ? "เลือกแหล่งข้อมูลบน HQ"
+                            : "เลือกเป้าหมายให้ตรงที่สุด"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent className="max-h-80">
-                      <SelectGroup>
-                        <SelectLabel>kcw-api services</SelectLabel>
-                        {groups.api.map((t) => (
-                          <SelectItem key={supportTargetKey(t)} value={supportTargetKey(t)}>
-                            {t.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                      <SelectGroup>
-                        <SelectLabel>kcw-v2 pages</SelectLabel>
-                        {groups.pages.map((t) => (
-                          <SelectItem key={supportTargetKey(t)} value={supportTargetKey(t)}>
-                            {t.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                      <SelectGroup>
-                        <SelectLabel>kcw-v2 BI reports</SelectLabel>
-                        {groups.bi.map((t) => (
-                          <SelectItem key={supportTargetKey(t)} value={supportTargetKey(t)}>
-                            {t.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
+                      {isDataQuery ? (
+                        <SelectGroup>
+                          <SelectLabel>HQ data (hq-ubuntu-server)</SelectLabel>
+                          {groups.data.map((t) => (
+                            <SelectItem
+                              key={supportTargetKey(t)}
+                              value={supportTargetKey(t)}
+                            >
+                              {t.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ) : (
+                        <>
+                          <SelectGroup>
+                            <SelectLabel>kcw-api services</SelectLabel>
+                            {groups.api.map((t) => (
+                              <SelectItem
+                                key={supportTargetKey(t)}
+                                value={supportTargetKey(t)}
+                              >
+                                {t.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                          <SelectGroup>
+                            <SelectLabel>kcw-v2 pages</SelectLabel>
+                            {groups.pages.map((t) => (
+                              <SelectItem
+                                key={supportTargetKey(t)}
+                                value={supportTargetKey(t)}
+                              >
+                                {t.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                          <SelectGroup>
+                            <SelectLabel>kcw-v2 BI reports</SelectLabel>
+                            {groups.bi.map((t) => (
+                              <SelectItem
+                                key={supportTargetKey(t)}
+                                value={supportTargetKey(t)}
+                              >
+                                {t.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                   {selectedTarget ? (
                     <p className="text-xs text-slate-500">
-                      Agent จะเปิด repo{" "}
-                      <span className="font-medium text-slate-700">
-                        {selectedTarget.repo}
-                      </span>
-                      {selectedTarget.codeRoots[0]
-                        ? ` · เริ่มที่ ${selectedTarget.codeRoots[0]}`
-                        : null}
+                      {isDataQuery ? (
+                        <>
+                          Agent บน HQ จะตอบคำถามโดยใช้{" "}
+                          <span className="font-medium text-slate-700">
+                            {selectedTarget.label}
+                          </span>
+                          {selectedTarget.notes
+                            ? ` — ${selectedTarget.notes}`
+                            : null}
+                        </>
+                      ) : (
+                        <>
+                          Agent จะเปิด repo{" "}
+                          <span className="font-medium text-slate-700">
+                            {selectedTarget.repo}
+                          </span>
+                          {selectedTarget.codeRoots[0]
+                            ? ` · เริ่มที่ ${selectedTarget.codeRoots[0]}`
+                            : null}
+                        </>
+                      )}
                     </p>
                   ) : (
                     <p className="text-xs text-amber-700">
-                      ยังไม่ได้เลือกเป้าหมาย — agent จะไม่รู้ว่าจะแก้ที่ไหน
+                      {isDataQuery
+                        ? "ยังไม่ได้เลือกแหล่งข้อมูล"
+                        : "ยังไม่ได้เลือกเป้าหมาย — agent จะไม่รู้ว่าจะแก้ที่ไหน"}
                     </p>
                   )}
                 </div>
@@ -311,24 +387,36 @@ export function SupportPage() {
                   id="support-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="สรุปสั้นๆ"
+                  placeholder={
+                    isDataQuery ? "สรุปคำถามสั้นๆ" : "สรุปสั้นๆ"
+                  }
                   maxLength={200}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="support-body">รายละเอียด</Label>
+                <Label htmlFor="support-body">
+                  {isDataQuery ? "คำถาม / รายละเอียด" : "รายละเอียด"}
+                </Label>
                 <Textarea
                   id="support-body"
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="อธิบาย bug / improvement ที่ต้องการ"
+                  placeholder={
+                    isDataQuery
+                      ? "ถามข้อมูลที่ต้องการ เช่น ยอดขาย, สต็อก PARTS9, ไฟล์ analytic บน Drive…"
+                      : "อธิบาย bug / improvement ที่ต้องการ"
+                  }
                   rows={5}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label>ไฟล์แนบ (ภาพ / PDF ตัวอย่างผลลัพธ์หรือดีไซน์)</Label>
+                <Label>
+                  {isDataQuery
+                    ? "ไฟล์แนบ (ถ้ามี — ภาพ/PDF ที่ช่วยอธิบายคำถาม)"
+                    : "ไฟล์แนบ (ภาพ / PDF ตัวอย่างผลลัพธ์หรือดีไซน์)"}
+                </Label>
                 <CommonImageDropzone
                   folder="public/support"
                   receiptUuid={draftId}
@@ -395,7 +483,8 @@ export function SupportPage() {
                       </Badge>
                     </div>
                     <p className="mt-0.5 truncate text-xs text-slate-500">
-                      {t.target_label} · {t.kind} ·{" "}
+                      {t.target_label} ·{" "}
+                      {SUPPORT_KIND_LABEL[t.kind] ?? t.kind} ·{" "}
                       {new Date(t.created_at).toLocaleString("th-TH")}
                     </p>
                   </button>
@@ -431,7 +520,9 @@ export function SupportPage() {
                   </div>
                   <p className="text-sm text-slate-600">
                     {detail.ticket.target_label} ({detail.ticket.target_source}/
-                    {detail.ticket.target_id}) · {detail.ticket.kind}
+                    {detail.ticket.target_id}) ·{" "}
+                    {SUPPORT_KIND_LABEL[detail.ticket.kind] ??
+                      detail.ticket.kind}
                   </p>
                   {detail.ticket.pr_url ? (
                     <a
@@ -453,6 +544,23 @@ export function SupportPage() {
                 <div className="whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-sm text-slate-800">
                   {detail.ticket.body || "(ไม่มีรายละเอียด)"}
                 </div>
+
+                {(() => {
+                  const answer = [...detail.events]
+                    .reverse()
+                    .find((ev) => ev.event_type === "answered" && ev.comment);
+                  if (!answer?.comment) return null;
+                  return (
+                    <div className="space-y-1.5">
+                      <h3 className="text-sm font-medium text-slate-800">
+                        คำตอบจาก HQ agent
+                      </h3>
+                      <div className="whitespace-pre-wrap rounded-md border border-emerald-200 bg-emerald-50/60 p-3 text-sm text-slate-800">
+                        {answer.comment}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {(detail.ticket.status === "waiting" ||
                   detail.ticket.status === "failed" ||
