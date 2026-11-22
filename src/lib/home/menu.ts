@@ -169,7 +169,8 @@ export const HOME_MENU_ITEMS = {
     key: "support",
     href: "/support",
     label: "Support",
-    description: "แจ้ง bug หรือปรับปรุง — agent ที่ HQ จะทำ PR ให้",
+    description:
+      "แจ้ง bug / ปรับปรุง (PR) หรือถามข้อมูลกับ agent บน HQ",
     icon: LifeBuoy,
     iconClassName: "text-slate-700",
     iconSurfaceClassName: "bg-slate-50 ring-slate-200",

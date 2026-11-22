@@ -1,8 +1,8 @@
 import { BI_REPORTS } from "@/lib/bi/reports";
 import { HOME_MENU_ITEMS } from "@/lib/home/menu";
 
-export type SupportTargetSource = "kcw-api" | "kcw-v2";
-export type SupportRepo = "kcw-api" | "kcw-v2";
+export type SupportTargetSource = "kcw-api" | "kcw-v2" | "hq-data";
+export type SupportRepo = "kcw-api" | "kcw-v2" | "hq-data";
 
 export type SupportTarget = {
   source: SupportTargetSource;
@@ -14,6 +14,57 @@ export type SupportTarget = {
   notes?: string;
   group: string;
 };
+
+/** HQ data-agent domains (no code PR — answer-only on hq-ubuntu-server). */
+const HQ_DATA_TARGETS: SupportTarget[] = [
+  {
+    source: "hq-data",
+    id: "all",
+    label: "HQ Data Agent (ทุกแหล่ง)",
+    repo: "hq-data",
+    codeRoots: [],
+    notes:
+      "Ask agent on hq-ubuntu-server with access to Supabase, KSS PARTS9, kss-pc PARTS9, and kcw-analytic GDrive outputs.",
+    group: "hq-data",
+  },
+  {
+    source: "hq-data",
+    id: "supabase",
+    label: "Supabase",
+    repo: "hq-data",
+    codeRoots: [],
+    notes: "Supabase Postgres / Storage / RPCs on project kcw.",
+    group: "hq-data",
+  },
+  {
+    source: "hq-data",
+    id: "kss",
+    label: "KSS · PARTS9 (HQ)",
+    repo: "hq-data",
+    codeRoots: [],
+    notes: "HQ SQL Server PARTS9 via KSS (PARTS9_HQ_* / python_reader).",
+    group: "hq-data",
+  },
+  {
+    source: "hq-data",
+    id: "kss-pc",
+    label: "kss-pc · PARTS9 (SYP)",
+    repo: "hq-data",
+    codeRoots: [],
+    notes: "SYP SQL Server PARTS9 via kss-pc (PARTS9_SYP_*).",
+    group: "hq-data",
+  },
+  {
+    source: "hq-data",
+    id: "analytics-gdrive",
+    label: "kcw-analytic · Google Drive",
+    repo: "hq-data",
+    codeRoots: ["/home/hqadmin/mnt/gdrive/KCW-Data/kcw_analytics"],
+    notes:
+      "Mounted analytic tree: 01_raw / 03_curated / 04_outputs under KCW-Data/kcw_analytics.",
+    group: "hq-data",
+  },
+];
 
 /** Mirror of kcw-api `src/staff_shell/catalog.py` WEB_SERVICES + codeRoots. */
 const KCW_API_TARGETS: SupportTarget[] = [
@@ -275,6 +326,7 @@ function kcwV2PageTargets(): SupportTarget[] {
 export const SUPPORT_TARGETS: SupportTarget[] = [
   ...KCW_API_TARGETS,
   ...kcwV2PageTargets(),
+  ...HQ_DATA_TARGETS,
 ];
 
 export function getSupportTarget(
@@ -295,7 +347,9 @@ export function parseSupportTargetKey(
   if (idx <= 0) return null;
   const source = key.slice(0, idx);
   const id = key.slice(idx + 1);
-  if (source !== "kcw-api" && source !== "kcw-v2") return null;
+  if (source !== "kcw-api" && source !== "kcw-v2" && source !== "hq-data") {
+    return null;
+  }
   if (!id) return null;
   return { source, id };
 }
