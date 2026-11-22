@@ -7,6 +7,7 @@ import {
   Handshake,
   ImageUp,
   Images,
+  LifeBuoy,
   Link2,
   Receipt,
   Wallet,
@@ -26,7 +27,8 @@ export type HomeMenuKey =
   | "relatedProducts"
   | "productImages"
   | "faq"
-  | "bi";
+  | "bi"
+  | "support";
 
 export type HomeMenuItem = {
   key: HomeMenuKey;
@@ -163,6 +165,15 @@ export const HOME_MENU_ITEMS = {
     iconClassName: "text-blue-600",
     iconSurfaceClassName: "bg-blue-50 ring-blue-100",
   },
+  support: {
+    key: "support",
+    href: "/support",
+    label: "Support",
+    description: "แจ้ง bug หรือปรับปรุง — agent ที่ HQ จะทำ PR ให้",
+    icon: LifeBuoy,
+    iconClassName: "text-slate-700",
+    iconSurfaceClassName: "bg-slate-50 ring-slate-200",
+  },
 } satisfies Record<HomeMenuKey, HomeMenuItem>;
 
 export const HOME_MENU_KEYS = Object.keys(HOME_MENU_ITEMS) as HomeMenuKey[];
@@ -205,7 +216,7 @@ export const HOME_MENU_GROUPS: HomeMenuGroup[] = [
   },
   {
     title: "รายงานและความรู้",
-    items: [HOME_MENU_ITEMS.bi, HOME_MENU_ITEMS.faq],
+    items: [HOME_MENU_ITEMS.bi, HOME_MENU_ITEMS.faq, HOME_MENU_ITEMS.support],
   },
 ];
 
