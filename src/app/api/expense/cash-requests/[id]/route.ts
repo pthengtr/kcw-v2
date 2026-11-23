@@ -1,0 +1,109 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+
+import {
+  callExpenseCashApi,
+  requireExpenseCashAdmin,
+} from "@/lib/expense/cash-request-api";
+
+const ActionSchema = z.object({
+  action: z.enum(["approve", "needs_info", "reject"]),
+  note: z.string().trim().max(2000).optional(),
+});
+
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(_req: Request, ctx: Ctx) {
+  const auth = await requireExpenseCashAdmin();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+  const { id } = await ctx.params;
+
+  const { data, error } = await auth.supabase
+    .from("expense_cash_request")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("expense cash get", error);
+    return NextResponse.json({ error: "Unable to load request" }, { status: 500 });
+  }
+  if (!data) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  return NextResponse.json({ request: data });
+}
+
+export async function POST(req: Request, ctx: Ctx) {
+  const auth = await requireExpenseCashAdmin();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+  const { id } = await ctx.params;
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const parsed = ActionSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid body", details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const { action, note } = parsed.data;
+  if ((action === "needs_info" || action === "reject") && !(note || "").trim()) {
+    return NextResponse.json({ error: "note required" }, { status: 400 });
+  }
+
+  const path =
+    action === "approve"
+      ? `/expense-cash/requests/${id}/approve`
+      : action === "needs_info"
+        ? `/expense-cash/requests/${id}/needs-info`
+        : `/expense-cash/requests/${id}/reject`;
+
+  try {
+    const res = await callExpenseCashApi(path, {
+      method: "POST",
+      body: JSON.stringify({
+        note: note || null,
+        reviewer_name: auth.userEmail,
+        reviewer_id: auth.userId,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return NextResponse.json(
+        {
+          error:
+            (json as { detail?: { message?: string } | string })?.detail &&
+            typeof (json as { detail: unknown }).detail === "object"
+              ? ((json as { detail: { message?: string } }).detail.message ??
+                "Upstream error")
+              : typeof (json as { detail?: string }).detail === "string"
+                ? (json as { detail: string }).detail
+                : "Upstream error",
+          upstream: json,
+        },
+        { status: res.status }
+      );
+    }
+    return NextResponse.json(json);
+  } catch (err) {
+    console.error("expense cash action", err);
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error ? err.message : "Failed to call expense-cash API",
+      },
+      { status: 502 }
+    );
+  }
+}

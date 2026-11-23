@@ -52,6 +52,11 @@ export default function Branch() {
               icon="Users"
             />
             <CardIcon
+              href="/expense/cash-requests"
+              label="คำขอเบิกเงินสด"
+              icon="Banknote"
+            />
+            <CardIcon
               href="/expense/item"
               label="ประเภทค่าใช้จ่าย"
               icon="SquareMenu"
