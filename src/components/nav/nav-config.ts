@@ -65,6 +65,7 @@ export function expenseMobileLinks(branches: BranchType[]) {
       label: `ค่าใช้จ่ายบริษัท · ${branch.branch_name}`,
     })),
     { href: "/expense/general", label: "ค่าใช้จ่ายทั่วไป" },
+    { href: "/expense/cash-requests", label: "คำขอเบิกเงินสด" },
     { href: "/expense/item", label: "ประเภทค่าใช้จ่าย" },
   ];
 }
