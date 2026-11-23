@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   EXPENSE_DROPDOWN_AFTER_INDEX,
+  expenseMobileLinks,
   isExpenseActive,
   isNavActive,
   primaryNavLinks,
@@ -31,6 +32,11 @@ describe("Navbar menu order and design", () => {
     expect(isNavActive("/party", bi!)).toBe(false);
     expect(isExpenseActive("/expense/general")).toBe(true);
     expect(isExpenseActive("/party")).toBe(false);
+  });
+
+  it("includes cash-requests in the expense dropdown", () => {
+    const hrefs = expenseMobileLinks([]).map((link) => link.href);
+    expect(hrefs).toContain("/expense/cash-requests");
   });
 
   it("uses a sticky logo-only navbar and a simple mobile sheet", () => {
