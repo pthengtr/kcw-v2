@@ -28,10 +28,27 @@ export type ExpenseCashRequest = {
 export const EXPENSE_CASH_STATUS_LABEL: Record<ExpenseCashStatus, string> = {
   pending: "รออนุมัติ",
   needs_info: "รอข้อมูลเพิ่ม",
-  approved: "อนุมัติแล้ว",
+  approved: "อนุมัติแล้ว (รอถอน)",
   rejected: "ปฏิเสธ",
   cancelled: "ยกเลิก",
   paid: "ถอนแล้ว",
+};
+
+export type ExpenseCashVoucher = {
+  attempt_id: string | null;
+  status: string | null;
+  voucher_num: string | null;
+  amount: number | null;
+  raw_status: string | null;
+};
+
+export const EXPENSE_CASH_VOUCHER_STATUS_LABEL: Record<string, string> = {
+  creating: "กำลังสร้าง",
+  pending: "รอสแกนถอน",
+  used: "ถอนแล้ว",
+  cancelled: "ยกเลิก voucher",
+  expired: "หมดอายุ",
+  failed: "สร้างไม่สำเร็จ",
 };
 
 export function formatBaht(amount: number): string {

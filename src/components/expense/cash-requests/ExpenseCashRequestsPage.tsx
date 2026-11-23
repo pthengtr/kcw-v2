@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   EXPENSE_CASH_STATUS_LABEL,
+  EXPENSE_CASH_VOUCHER_STATUS_LABEL,
   formatBaht,
   type ExpenseCashRequest,
   type ExpenseCashStatus,
+  type ExpenseCashVoucher,
 } from "@/lib/expense/cash-request";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +28,7 @@ function statusClass(status: ExpenseCashStatus) {
     case "paid":
       return "bg-teal-50 text-teal-800 ring-teal-200";
     case "rejected":
+    case "cancelled":
       return "bg-rose-50 text-rose-800 ring-rose-200";
     default:
       return "bg-slate-50 text-slate-700 ring-slate-200";
@@ -35,7 +38,9 @@ function statusClass(status: ExpenseCashStatus) {
 export default function ExpenseCashRequestsPage() {
   const [rows, setRows] = useState<ExpenseCashRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [voucher, setVoucher] = useState<ExpenseCashVoucher | null>(null);
   const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [acting, setActing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -64,15 +69,60 @@ export default function ExpenseCashRequestsPage() {
     }
   }, []);
 
+  const loadDetail = useCallback(async (id: string) => {
+    setDetailLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/expense/cash-requests/${id}`);
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || "โหลดรายละเอียดไม่สำเร็จ");
+        setVoucher(null);
+        return;
+      }
+      if (json.request) {
+        setRows((prev) => {
+          const next = prev.filter((r) => r.id !== json.request.id);
+          return [json.request, ...next].sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        });
+      }
+      setVoucher(json.voucher ?? null);
+    } catch {
+      setError("โหลดรายละเอียดไม่สำเร็จ");
+      setVoucher(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void load();
   }, [load]);
 
-  async function act(action: "approve" | "needs_info" | "reject") {
+  useEffect(() => {
+    if (!selectedId) {
+      setVoucher(null);
+      return;
+    }
+    void loadDetail(selectedId);
+  }, [selectedId, loadDetail]);
+
+  async function act(
+    action: "approve" | "needs_info" | "reject" | "cancel" | "refresh"
+  ) {
     if (!selected) return;
     if ((action === "needs_info" || action === "reject") && !note.trim()) {
       setError("กรุณาใส่หมายเหตุ");
       return;
+    }
+    if (action === "cancel") {
+      const ok = window.confirm(
+        `ยกเลิก QR ของคำขอ #${selected.short_code}? ผู้ขอจะสแกนไม่ได้แล้ว`
+      );
+      if (!ok) return;
     }
     setActing(true);
     setError(null);
@@ -88,8 +138,24 @@ export default function ExpenseCashRequestsPage() {
         return;
       }
       setNote("");
-      await load();
-      if (json.request?.id) setSelectedId(json.request.id);
+      if (json.request) {
+        setRows((prev) => {
+          const next = prev.filter((r) => r.id !== json.request.id);
+          return [json.request, ...next].sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        });
+        setSelectedId(json.request.id);
+      }
+      if ("voucher" in json) {
+        setVoucher(json.voucher ?? null);
+      } else if (action !== "refresh") {
+        await loadDetail(selected.id);
+      }
+      if (action !== "refresh") {
+        await load();
+      }
     } catch {
       setError("ทำรายการไม่สำเร็จ");
     } finally {
@@ -97,7 +163,14 @@ export default function ExpenseCashRequestsPage() {
     }
   }
 
-  const open = rows.filter((r) => r.status === "pending" || r.status === "needs_info");
+  const open = rows.filter(
+    (r) => r.status === "pending" || r.status === "needs_info"
+  );
+  const canCancel =
+    selected?.status === "approved" &&
+    (!voucher?.status ||
+      voucher.status === "pending" ||
+      voucher.status === "creating");
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 sm:p-8">
@@ -122,8 +195,8 @@ export default function ExpenseCashRequestsPage() {
       </div>
 
       <p className="text-sm text-slate-600">
-        อนุมัติแล้วระบบสร้าง QR ตู้ Tiger ให้ผู้ขอทาง LINE (ยังไม่ลงบัญชี
-        expense)
+        อนุมัติแล้วระบบสร้าง QR ตู้ Tiger ให้ผู้ขอทาง LINE — เช็กสถานะถอน /
+        ยกเลิก QR ได้ที่นี่
       </p>
 
       {error ? (
@@ -194,11 +267,16 @@ export default function ExpenseCashRequestsPage() {
                 >
                   {EXPENSE_CASH_STATUS_LABEL[selected.status]}
                 </Badge>
+                {detailLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                ) : null}
               </div>
               <dl className="grid gap-2 text-sm">
                 <div>
                   <dt className="text-slate-500">ผู้ขอ</dt>
-                  <dd>{selected.requester_name || selected.requester_line_user_id}</dd>
+                  <dd>
+                    {selected.requester_name || selected.requester_line_user_id}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-slate-500">จำนวน</dt>
@@ -222,7 +300,28 @@ export default function ExpenseCashRequestsPage() {
                     <dd className="whitespace-pre-wrap">{selected.admin_note}</dd>
                   </div>
                 ) : null}
-                {selected.qr_image_url ? (
+                {selected.voucher_attempt_id || voucher ? (
+                  <div>
+                    <dt className="text-slate-500">Voucher Tiger</dt>
+                    <dd className="space-y-1">
+                      <div>
+                        สถานะ:{" "}
+                        <span className="font-medium">
+                          {voucher?.status
+                            ? EXPENSE_CASH_VOUCHER_STATUS_LABEL[voucher.status] ??
+                              voucher.status
+                            : "—"}
+                        </span>
+                      </div>
+                      {voucher?.voucher_num ? (
+                        <div className="font-mono text-xs">
+                          รหัส: {voucher.voucher_num}
+                        </div>
+                      ) : null}
+                    </dd>
+                  </div>
+                ) : null}
+                {selected.qr_image_url && selected.status === "approved" ? (
                   <div>
                     <dt className="text-slate-500">QR</dt>
                     <dd>
@@ -272,6 +371,31 @@ export default function ExpenseCashRequestsPage() {
                     </Button>
                   </div>
                 </>
+              )}
+
+              {(selected.status === "approved" ||
+                selected.status === "paid" ||
+                selected.voucher_attempt_id) && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={acting || detailLoading}
+                    onClick={() => void act("refresh")}
+                  >
+                    เช็กสถานะ voucher
+                  </Button>
+                  {canCancel ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={acting}
+                      onClick={() => void act("cancel")}
+                    >
+                      ยกเลิก QR
+                    </Button>
+                  ) : null}
+                </div>
               )}
             </div>
           )}
