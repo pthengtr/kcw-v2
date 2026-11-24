@@ -198,11 +198,28 @@ describe("purchase sheet tabs", () => {
       "สด",
       "ลดหนี้ซื้อ",
       "เพิ่มหนี้ซื้อ",
-      "Unknown",
       "ค่าใช้จ่าย",
       "ลดหนี้ค่าใช้จ่าย",
       "Expense Receipt",
     ]);
+  });
+
+  it("omits Unknown and expense credit-note chips when the month has no rows", () => {
+    expect(
+      vatRegisterSheetTabs({
+        sheets: ["ค่าใช้จ่าย"],
+        side: "purchase",
+        branch: "HQ",
+      })
+    ).toEqual(["เครดิต", "สด", "ลดหนี้ซื้อ", "เพิ่มหนี้ซื้อ", "ค่าใช้จ่าย"]);
+
+    expect(
+      vatRegisterSheetTabs({
+        sheets: ["Expense Receipt"],
+        side: "purchase",
+        branch: "SYP",
+      })
+    ).toEqual(["Expense Receipt"]);
   });
 
   it("labels purchase inventory books the way ops name them", () => {

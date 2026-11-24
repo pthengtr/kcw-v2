@@ -31,22 +31,23 @@ export const VAT_SHEET_ORDER = [
 
 export type VatRegisterSide = "sales" | "purchase";
 
-/** HQ purchase books that must stay on the sheet strip even when a month is empty. */
+/**
+ * HQ purchase books that must stay on the sheet strip even when a month is empty.
+ * Catch-all / sparse books (Unknown, ลดหนี้ค่าใช้จ่าย) only appear when the month has rows.
+ */
 export const VAT_PURCHASE_HQ_SHEETS = [
   "เครดิต",
   "สด",
   "ลดหนี้ซื้อ",
   "เพิ่มหนี้ซื้อ",
-  "Unknown",
-  "ลดหนี้ค่าใช้จ่าย",
   "ค่าใช้จ่าย",
 ] as const;
 
-/** SYP purchase books (expense app only — no Parts9 purchase tax books). */
-export const VAT_PURCHASE_SYP_SHEETS = [
-  "Expense Credit Note",
-  "Expense Receipt",
-] as const;
+/**
+ * SYP purchase books (expense app only — no Parts9 purchase tax books).
+ * Expense Credit Note only appears when the month has rows.
+ */
+export const VAT_PURCHASE_SYP_SHEETS = ["Expense Receipt"] as const;
 
 const VAT_SHEET_LABELS: Record<string, string> = {
   เครดิต: "ซื้อเครดิต",
