@@ -12,7 +12,7 @@ export async function GET() {
     .from("expense_cash_request")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(500);
 
   if (error) {
     console.error("expense cash list", error);
