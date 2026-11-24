@@ -1,16 +1,48 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Download, Loader2, RefreshCw, X } from "lucide-react";
 
 import BackButton from "@/components/common/BackButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import { downloadExpenseCashExcel } from "@/lib/expense/cash-request-excel";
+import {
+  canUpdateExpenseCashAccounting,
+  EMPTY_EXPENSE_CASH_FILTERS,
+  filterExpenseCashRequests,
+  formatExpenseCashDate,
+  formatExpenseCashDateTime,
+  summarizeExpenseCashRequests,
+  type ExpenseCashFilters,
+} from "@/lib/expense/cash-request-filter";
+import {
+  EXPENSE_CASH_ACCOUNTING_LABEL,
   EXPENSE_CASH_STATUS_LABEL,
   EXPENSE_CASH_VOUCHER_STATUS_LABEL,
+  expenseCashDetailText,
   formatBaht,
+  formatBahtNumber,
+  normalizeExpenseCashRequest,
+  type ExpenseCashAccountingStatus,
+  type ExpenseCashBranch,
   type ExpenseCashRequest,
   type ExpenseCashStatus,
   type ExpenseCashVoucher,
@@ -35,6 +67,258 @@ function statusClass(status: ExpenseCashStatus) {
   }
 }
 
+function accountingClass(status: ExpenseCashAccountingStatus) {
+  return status === "recorded"
+    ? "bg-indigo-50 text-indigo-800 ring-indigo-200"
+    : "bg-orange-50 text-orange-800 ring-orange-200";
+}
+
+function StatusBadge({ status }: { status: ExpenseCashStatus }) {
+  return (
+    <Badge
+      className={cn("font-normal ring-1 ring-inset", statusClass(status))}
+    >
+      {EXPENSE_CASH_STATUS_LABEL[status] ?? status}
+    </Badge>
+  );
+}
+
+function AccountingBadge({
+  status,
+}: {
+  status: ExpenseCashAccountingStatus;
+}) {
+  return (
+    <Badge
+      className={cn("font-normal ring-1 ring-inset", accountingClass(status))}
+    >
+      {EXPENSE_CASH_ACCOUNTING_LABEL[status]}
+    </Badge>
+  );
+}
+
+function mergeRequest(
+  prev: ExpenseCashRequest[],
+  next: ExpenseCashRequest
+): ExpenseCashRequest[] {
+  const rest = prev.filter((r) => r.id !== next.id);
+  return [next, ...rest].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
+function DetailPanel({
+  selected,
+  voucher,
+  detailLoading,
+  acting,
+  note,
+  setNote,
+  error,
+  onAct,
+  onClose,
+}: {
+  selected: ExpenseCashRequest | null;
+  voucher: ExpenseCashVoucher | null;
+  detailLoading: boolean;
+  acting: boolean;
+  note: string;
+  setNote: (v: string) => void;
+  error: string | null;
+  onAct: (
+    action: "approve" | "needs_info" | "reject" | "cancel" | "refresh"
+  ) => void;
+  onClose?: () => void;
+}) {
+  if (!selected) {
+    return (
+      <p className="text-sm text-slate-500">เลือกคำขอจากรายการเพื่อดูรายละเอียด</p>
+    );
+  }
+
+  const canCancel =
+    selected.status === "approved" &&
+    (!voucher?.status ||
+      voucher.status === "pending" ||
+      voucher.status === "creating");
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-semibold">#{selected.short_code}</h2>
+        <StatusBadge status={selected.status} />
+        <AccountingBadge status={selected.accounting_status} />
+        {detailLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+        ) : null}
+        {onClose ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="ml-auto"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+            ปิด
+          </Button>
+        ) : null}
+      </div>
+
+      {error ? (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          {error}
+        </div>
+      ) : null}
+
+      <dl className="grid gap-2 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-slate-500">วันที่</dt>
+          <dd>{formatExpenseCashDate(selected.created_at)}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">วันที่ถอนเงิน</dt>
+          <dd>{formatExpenseCashDate(selected.paid_at)}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">สาขา</dt>
+          <dd>{selected.branch ?? "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">ผู้ขอ</dt>
+          <dd>{selected.requester_name || selected.requester_line_user_id}</dd>
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-slate-500">จำนวน</dt>
+          <dd className="text-lg font-semibold tabular-nums">
+            {formatBaht(selected.amount)}
+          </dd>
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-slate-500">รายละเอียดค่าใช้จ่าย</dt>
+          <dd className="whitespace-pre-wrap">
+            {expenseCashDetailText(selected) || "—"}
+          </dd>
+        </div>
+        {selected.admin_note ? (
+          <div className="sm:col-span-2">
+            <dt className="text-slate-500">หมายเหตุแอดมิน</dt>
+            <dd className="whitespace-pre-wrap">{selected.admin_note}</dd>
+          </div>
+        ) : null}
+        <div className="sm:col-span-2">
+          <dt className="text-slate-500">สถานะการลงค่าใช้จ่าย</dt>
+          <dd className="space-y-1">
+            <AccountingBadge status={selected.accounting_status} />
+            {selected.accounting_at ? (
+              <div className="text-xs text-slate-500">
+                โดย {selected.accounting_by_name || "—"} ·{" "}
+                {formatExpenseCashDateTime(selected.accounting_at)}
+              </div>
+            ) : null}
+          </dd>
+        </div>
+        {selected.voucher_attempt_id || voucher ? (
+          <div className="sm:col-span-2">
+            <dt className="text-slate-500">Voucher Tiger</dt>
+            <dd className="space-y-1">
+              <div>
+                สถานะ:{" "}
+                <span className="font-medium">
+                  {voucher?.status
+                    ? EXPENSE_CASH_VOUCHER_STATUS_LABEL[voucher.status] ??
+                      voucher.status
+                    : "—"}
+                </span>
+              </div>
+              {voucher?.voucher_num ? (
+                <div className="font-mono text-xs">
+                  รหัส: {voucher.voucher_num}
+                </div>
+              ) : null}
+            </dd>
+          </div>
+        ) : null}
+        {selected.qr_image_url && selected.status === "approved" ? (
+          <div className="sm:col-span-2">
+            <dt className="text-slate-500">QR</dt>
+            <dd>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={selected.qr_image_url}
+                alt="Tiger voucher QR"
+                className="mt-1 h-48 w-48 rounded border border-slate-200 bg-white p-2"
+              />
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+
+      {(selected.status === "pending" || selected.status === "needs_info") && (
+        <>
+          <Textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="หมายเหตุสำหรับ ส่งกลับ / ปฏิเสธ"
+            rows={3}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              disabled={acting}
+              onClick={() => onAct("approve")}
+            >
+              อนุมัติ + สร้าง QR
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={acting}
+              onClick={() => onAct("needs_info")}
+            >
+              ส่งกลับขอข้อมูล
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={acting}
+              onClick={() => onAct("reject")}
+            >
+              ปฏิเสธ
+            </Button>
+          </div>
+        </>
+      )}
+
+      {(selected.status === "approved" ||
+        selected.status === "paid" ||
+        selected.voucher_attempt_id) && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={acting || detailLoading}
+            onClick={() => onAct("refresh")}
+          >
+            เช็กสถานะ voucher
+          </Button>
+          {canCancel ? (
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={acting}
+              onClick={() => onAct("cancel")}
+            >
+              ยกเลิก QR
+            </Button>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ExpenseCashRequestsPage() {
   const [rows, setRows] = useState<ExpenseCashRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -42,12 +326,36 @@ export default function ExpenseCashRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [acting, setActing] = useState(false);
+  const [accountingActing, setAccountingActing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [filters, setFilters] = useState<ExpenseCashFilters>(
+    EMPTY_EXPENSE_CASH_FILTERS
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [batchBranch, setBatchBranch] = useState<"keep" | ExpenseCashBranch>(
+    "keep"
+  );
 
   const selected = useMemo(
     () => rows.find((r) => r.id === selectedId) ?? null,
     [rows, selectedId]
+  );
+
+  const filtered = useMemo(
+    () => filterExpenseCashRequests(rows, filters),
+    [rows, filters]
+  );
+
+  const summary = useMemo(
+    () => summarizeExpenseCashRequests(filtered),
+    [filtered]
+  );
+
+  const selectableFiltered = useMemo(
+    () => filtered.filter(canUpdateExpenseCashAccounting),
+    [filtered]
   );
 
   const load = useCallback(async () => {
@@ -61,7 +369,14 @@ export default function ExpenseCashRequestsPage() {
         setRows([]);
         return;
       }
-      setRows(json.requests ?? []);
+      const next = ((json.requests ?? []) as ExpenseCashRequest[]).map((r) =>
+        normalizeExpenseCashRequest(r)
+      );
+      setRows(next);
+      setSelectedIds((prev) => {
+        const ids = new Set(next.map((r) => r.id));
+        return new Set([...prev].filter((id) => ids.has(id)));
+      });
     } catch {
       setError("โหลดไม่สำเร็จ");
     } finally {
@@ -81,13 +396,8 @@ export default function ExpenseCashRequestsPage() {
         return;
       }
       if (json.request) {
-        setRows((prev) => {
-          const next = prev.filter((r) => r.id !== json.request.id);
-          return [json.request, ...next].sort(
-            (a, b) =>
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-        });
+        const normalized = normalizeExpenseCashRequest(json.request);
+        setRows((prev) => mergeRequest(prev, normalized));
       }
       setVoucher(json.voucher ?? null);
     } catch {
@@ -109,6 +419,11 @@ export default function ExpenseCashRequestsPage() {
     }
     void loadDetail(selectedId);
   }, [selectedId, loadDetail]);
+
+  function openDetail(id: string) {
+    setSelectedId(id);
+    setMobileDetailOpen(true);
+  }
 
   async function act(
     action: "approve" | "needs_info" | "reject" | "cancel" | "refresh"
@@ -139,14 +454,9 @@ export default function ExpenseCashRequestsPage() {
       }
       setNote("");
       if (json.request) {
-        setRows((prev) => {
-          const next = prev.filter((r) => r.id !== json.request.id);
-          return [json.request, ...next].sort(
-            (a, b) =>
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-        });
-        setSelectedId(json.request.id);
+        const normalized = normalizeExpenseCashRequest(json.request);
+        setRows((prev) => mergeRequest(prev, normalized));
+        setSelectedId(normalized.id);
       }
       if ("voucher" in json) {
         setVoucher(json.voucher ?? null);
@@ -163,244 +473,510 @@ export default function ExpenseCashRequestsPage() {
     }
   }
 
-  const open = rows.filter(
-    (r) => r.status === "pending" || r.status === "needs_info"
+  function toggleSelect(id: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllFiltered(checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const row of selectableFiltered) {
+        if (checked) next.add(row.id);
+        else next.delete(row.id);
+      }
+      return next;
+    });
+  }
+
+  const selectedPaidIds = useMemo(
+    () =>
+      [...selectedIds].filter((id) => {
+        const row = rows.find((r) => r.id === id);
+        return row ? canUpdateExpenseCashAccounting(row) : false;
+      }),
+    [selectedIds, rows]
   );
-  const canCancel =
-    selected?.status === "approved" &&
-    (!voucher?.status ||
-      voucher.status === "pending" ||
-      voucher.status === "creating");
+
+  const allSelectableChecked =
+    selectableFiltered.length > 0 &&
+    selectableFiltered.every((r) => selectedIds.has(r.id));
+
+  async function updateAccounting(accounting_status: ExpenseCashAccountingStatus) {
+    if (selectedPaidIds.length === 0) {
+      setError("เลือกรายการที่ถอนเงินแล้วอย่างน้อย 1 รายการ");
+      return;
+    }
+    setAccountingActing(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/expense/cash-requests/accounting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: selectedPaidIds,
+          accounting_status,
+          ...(batchBranch === "keep" ? {} : { branch: batchBranch }),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || "อัปเดตสถานะบัญชีไม่สำเร็จ");
+        return;
+      }
+      const updated = ((json.requests ?? []) as ExpenseCashRequest[]).map((r) =>
+        normalizeExpenseCashRequest(r)
+      );
+      setRows((prev) => {
+        let next = prev;
+        for (const row of updated) next = mergeRequest(next, row);
+        return next;
+      });
+      setSelectedIds(new Set());
+    } catch {
+      setError("อัปเดตสถานะบัญชีไม่สำเร็จ");
+    } finally {
+      setAccountingActing(false);
+    }
+  }
+
+  const openCount = rows.filter(
+    (r) => r.status === "pending" || r.status === "needs_info"
+  ).length;
+
+  const detailProps = {
+    selected,
+    voucher,
+    detailLoading,
+    acting,
+    note,
+    setNote,
+    error,
+    onAct: (action: "approve" | "needs_info" | "reject" | "cancel" | "refresh") => {
+      void act(action);
+    },
+  };
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 sm:p-8">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-3 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-center gap-3">
         <BackButton href="/expense" />
         <h1 className="text-2xl font-semibold sm:text-3xl">คำขอเบิกเงินสด</h1>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="ml-auto"
-          onClick={() => void load()}
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-          รีเฟรช
-        </Button>
+        <div className="ml-auto flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => downloadExpenseCashExcel(filtered)}
+            disabled={loading || filtered.length === 0}
+          >
+            <Download className="h-4 w-4" />
+            Export Excel
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            รีเฟรช
+          </Button>
+        </div>
       </div>
 
       <p className="text-sm text-slate-600">
         อนุมัติแล้วระบบสร้าง QR ตู้ Tiger ให้ผู้ขอทาง LINE — เช็กสถานะถอน /
-        ยกเลิก QR ได้ที่นี่
+        ยกเลิก QR ได้ที่นี่ และบัญชีสามารถทำเครื่องหมายลงค่าใช้จ่ายเป็นชุดได้
       </p>
 
-      {error ? (
+      <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="sm:col-span-2 xl:col-span-2">
+            <Label htmlFor="cash-q" className="text-xs text-slate-500">
+              ค้นหา
+            </Label>
+            <Input
+              id="cash-q"
+              value={filters.query}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, query: e.target.value }))
+              }
+              placeholder="เลขที่คำขอ / ผู้เบิก / รายละเอียด"
+            />
+          </div>
+          <div>
+            <Label htmlFor="cash-from" className="text-xs text-slate-500">
+              ถอนเงินตั้งแต่
+            </Label>
+            <Input
+              id="cash-from"
+              type="date"
+              value={filters.paidFrom}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, paidFrom: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <Label htmlFor="cash-to" className="text-xs text-slate-500">
+              ถอนเงินถึง
+            </Label>
+            <Input
+              id="cash-to"
+              type="date"
+              value={filters.paidTo}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, paidTo: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-500">สาขา</Label>
+            <Select
+              value={filters.branch}
+              onValueChange={(value) =>
+                setFilters((f) => ({
+                  ...f,
+                  branch: value as ExpenseCashFilters["branch"],
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทั้งหมด</SelectItem>
+                <SelectItem value="HQ">HQ</SelectItem>
+                <SelectItem value="SYP">SYP</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs text-slate-500">สถานะการเบิก</Label>
+            <Select
+              value={filters.status}
+              onValueChange={(value) =>
+                setFilters((f) => ({
+                  ...f,
+                  status: value as ExpenseCashFilters["status"],
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทั้งหมด</SelectItem>
+                {(
+                  Object.keys(EXPENSE_CASH_STATUS_LABEL) as ExpenseCashStatus[]
+                ).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {EXPENSE_CASH_STATUS_LABEL[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs text-slate-500">สถานะลงค่าใช้จ่าย</Label>
+            <Select
+              value={filters.accountingStatus}
+              onValueChange={(value) =>
+                setFilters((f) => ({
+                  ...f,
+                  accountingStatus:
+                    value as ExpenseCashFilters["accountingStatus"],
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทั้งหมด</SelectItem>
+                <SelectItem value="pending">รอลงค่าใช้จ่าย</SelectItem>
+                <SelectItem value="recorded">ลงค่าใช้จ่ายแล้ว</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setFilters(EMPTY_EXPENSE_CASH_FILTERS)}
+          >
+            ล้างตัวกรอง
+          </Button>
+          <span className="text-sm text-slate-600">
+            แสดง {summary.count.toLocaleString("th-TH")} รายการ · รวม{" "}
+            <span className="font-semibold tabular-nums">
+              {formatBaht(summary.totalAmount)}
+            </span>
+            {rows.length ? ` · รอทำ ${openCount}` : null}
+          </span>
+        </div>
+      </div>
+
+      {selectedPaidIds.length > 0 ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="text-sm font-medium text-indigo-900">
+            เลือกแล้ว {selectedPaidIds.length} รายการ (ถอนแล้ว)
+          </div>
+          <div className="sm:w-40">
+            <Label className="text-xs text-slate-600">ตั้งสาขา (ถ้าต้องการ)</Label>
+            <Select
+              value={batchBranch}
+              onValueChange={(v) =>
+                setBatchBranch(v as "keep" | ExpenseCashBranch)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="keep">ไม่เปลี่ยน</SelectItem>
+                <SelectItem value="HQ">HQ</SelectItem>
+                <SelectItem value="SYP">SYP</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={accountingActing}
+              onClick={() => void updateAccounting("recorded")}
+            >
+              ลงค่าใช้จ่ายแล้ว
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={accountingActing}
+              onClick={() => void updateAccounting("pending")}
+            >
+              รอลงค่าใช้จ่าย
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              ยกเลิกการเลือก
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {error && !selectedId ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
           {error}
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-        <div className="rounded-xl border border-slate-200 bg-white">
-          <div className="border-b border-slate-100 px-4 py-3 text-sm font-medium">
-            รายการ ({rows.length}) · รอทำ {open.length}
-          </div>
-          <ul className="max-h-[70vh] divide-y divide-slate-100 overflow-auto">
-            {rows.map((row) => (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(row.id)}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.9fr)]">
+        {/* Mobile cards */}
+        <div className="lg:hidden">
+          <ul className="flex flex-col gap-2">
+            {filtered.map((row) => {
+              const selectable = canUpdateExpenseCashAccounting(row);
+              return (
+                <li
+                  key={row.id}
                   className={cn(
-                    "flex w-full flex-col gap-1 px-4 py-3 text-left hover:bg-slate-50",
-                    selectedId === row.id && "bg-emerald-50/60"
+                    "rounded-xl border border-slate-200 bg-white p-3",
+                    selectedId === row.id && "ring-2 ring-emerald-300"
                   )}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">#{row.short_code}</span>
-                    <Badge
-                      className={cn(
-                        "font-normal ring-1 ring-inset",
-                        statusClass(row.status)
-                      )}
+                  <div className="flex items-start gap-3">
+                    {selectable ? (
+                      <Checkbox
+                        checked={selectedIds.has(row.id)}
+                        onCheckedChange={(v) =>
+                          toggleSelect(row.id, v === true)
+                        }
+                        aria-label={`เลือก #${row.short_code}`}
+                        className="mt-1"
+                      />
+                    ) : (
+                      <span className="mt-1 h-4 w-4" />
+                    )}
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => openDetail(row.id)}
                     >
-                      {EXPENSE_CASH_STATUS_LABEL[row.status] ?? row.status}
-                    </Badge>
-                    <span className="ml-auto text-sm font-medium tabular-nums">
-                      {formatBaht(row.amount)}
-                    </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold">#{row.short_code}</span>
+                        <span className="text-xs text-slate-500">
+                          {formatExpenseCashDate(
+                            row.paid_at || row.created_at
+                          )}
+                        </span>
+                        <span className="ml-auto text-sm font-semibold tabular-nums">
+                          {formatBahtNumber(row.amount)}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-sm text-slate-700">
+                        {row.requester_name || row.requester_line_user_id}
+                        {row.branch ? ` · ${row.branch}` : ""}
+                      </div>
+                      <div className="mt-1 line-clamp-2 text-xs text-slate-500">
+                        {expenseCashDetailText(row)}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        <StatusBadge status={row.status} />
+                        <AccountingBadge status={row.accounting_status} />
+                      </div>
+                    </button>
                   </div>
-                  <div className="text-sm text-slate-700">
-                    {row.requester_name || row.requester_line_user_id}
-                  </div>
-                  <div className="line-clamp-2 text-xs text-slate-500">
-                    {row.reason}
-                  </div>
-                </button>
-              </li>
-            ))}
-            {!loading && rows.length === 0 ? (
-              <li className="px-4 py-8 text-center text-sm text-slate-500">
-                ยังไม่มีคำขอ
+                </li>
+              );
+            })}
+            {!loading && filtered.length === 0 ? (
+              <li className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                ไม่พบรายการตามตัวกรอง
               </li>
             ) : null}
           </ul>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          {!selected ? (
-            <p className="text-sm text-slate-500">เลือกคำขอจากรายการทางซ้าย</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold">#{selected.short_code}</h2>
-                <Badge
-                  className={cn(
-                    "font-normal ring-1 ring-inset",
-                    statusClass(selected.status)
-                  )}
-                >
-                  {EXPENSE_CASH_STATUS_LABEL[selected.status]}
-                </Badge>
-                {detailLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-                ) : null}
-              </div>
-              <dl className="grid gap-2 text-sm">
-                <div>
-                  <dt className="text-slate-500">ผู้ขอ</dt>
-                  <dd>
-                    {selected.requester_name || selected.requester_line_user_id}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500">จำนวน</dt>
-                  <dd className="text-lg font-semibold tabular-nums">
-                    {formatBaht(selected.amount)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500">เหตุผล</dt>
-                  <dd className="whitespace-pre-wrap">{selected.reason}</dd>
-                </div>
-                {selected.extra_reason ? (
-                  <div>
-                    <dt className="text-slate-500">รายละเอียดเพิ่ม</dt>
-                    <dd className="whitespace-pre-wrap">{selected.extra_reason}</dd>
-                  </div>
-                ) : null}
-                {selected.admin_note ? (
-                  <div>
-                    <dt className="text-slate-500">หมายเหตุแอดมิน</dt>
-                    <dd className="whitespace-pre-wrap">{selected.admin_note}</dd>
-                  </div>
-                ) : null}
-                {selected.voucher_attempt_id || voucher ? (
-                  <div>
-                    <dt className="text-slate-500">Voucher Tiger</dt>
-                    <dd className="space-y-1">
-                      <div>
-                        สถานะ:{" "}
-                        <span className="font-medium">
-                          {voucher?.status
-                            ? EXPENSE_CASH_VOUCHER_STATUS_LABEL[voucher.status] ??
-                              voucher.status
-                            : "—"}
-                        </span>
-                      </div>
-                      {voucher?.voucher_num ? (
-                        <div className="font-mono text-xs">
-                          รหัส: {voucher.voucher_num}
+        {/* Desktop table */}
+        <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white lg:block">
+          <div className="max-h-[70vh] overflow-auto">
+            <table className="w-full min-w-[52rem] text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-slate-50 text-xs text-slate-600">
+                <tr>
+                  <th className="w-10 px-3 py-2">
+                    <Checkbox
+                      checked={allSelectableChecked}
+                      onCheckedChange={(v) =>
+                        toggleSelectAllFiltered(v === true)
+                      }
+                      aria-label="เลือกทั้งหมดที่ถอนแล้ว"
+                      disabled={selectableFiltered.length === 0}
+                    />
+                  </th>
+                  <th className="px-3 py-2 font-medium">เลขที่</th>
+                  <th className="px-3 py-2 font-medium">วันที่</th>
+                  <th className="px-3 py-2 font-medium">สาขา</th>
+                  <th className="px-3 py-2 font-medium">รายละเอียด</th>
+                  <th className="px-3 py-2 text-right font-medium">จำนวนเงิน</th>
+                  <th className="px-3 py-2 font-medium">สถานะเบิก</th>
+                  <th className="px-3 py-2 font-medium">ลงค่าใช้จ่าย</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((row) => {
+                  const selectable = canUpdateExpenseCashAccounting(row);
+                  return (
+                    <tr
+                      key={row.id}
+                      className={cn(
+                        "cursor-pointer border-t border-slate-100 hover:bg-slate-50",
+                        selectedId === row.id && "bg-emerald-50/70"
+                      )}
+                      onClick={() => setSelectedId(row.id)}
+                    >
+                      <td
+                        className="px-3 py-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {selectable ? (
+                          <Checkbox
+                            checked={selectedIds.has(row.id)}
+                            onCheckedChange={(v) =>
+                              toggleSelect(row.id, v === true)
+                            }
+                            aria-label={`เลือก #${row.short_code}`}
+                          />
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 font-semibold tabular-nums">
+                        #{row.short_code}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-600">
+                        {formatExpenseCashDate(row.paid_at || row.created_at)}
+                      </td>
+                      <td className="px-3 py-2">{row.branch ?? "—"}</td>
+                      <td className="max-w-[18rem] px-3 py-2">
+                        <div className="truncate font-medium text-slate-800">
+                          {row.requester_name || row.requester_line_user_id}
                         </div>
-                      ) : null}
-                    </dd>
-                  </div>
+                        <div className="truncate text-xs text-slate-500">
+                          {expenseCashDetailText(row)}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium tabular-nums">
+                        {formatBahtNumber(row.amount)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <StatusBadge status={row.status} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <AccountingBadge status={row.accounting_status} />
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!loading && filtered.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-4 py-10 text-center text-slate-500"
+                    >
+                      ไม่พบรายการตามตัวกรอง
+                    </td>
+                  </tr>
                 ) : null}
-                {selected.qr_image_url && selected.status === "approved" ? (
-                  <div>
-                    <dt className="text-slate-500">QR</dt>
-                    <dd>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={selected.qr_image_url}
-                        alt="Tiger voucher QR"
-                        className="mt-1 h-48 w-48 rounded border border-slate-200 bg-white p-2"
-                      />
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-              {(selected.status === "pending" ||
-                selected.status === "needs_info") && (
-                <>
-                  <Textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="หมายเหตุสำหรับ ส่งกลับ / ปฏิเสธ"
-                    rows={3}
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      disabled={acting}
-                      onClick={() => void act("approve")}
-                    >
-                      อนุมัติ + สร้าง QR
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={acting}
-                      onClick={() => void act("needs_info")}
-                    >
-                      ส่งกลับขอข้อมูล
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      disabled={acting}
-                      onClick={() => void act("reject")}
-                    >
-                      ปฏิเสธ
-                    </Button>
-                  </div>
-                </>
-              )}
-
-              {(selected.status === "approved" ||
-                selected.status === "paid" ||
-                selected.voucher_attempt_id) && (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={acting || detailLoading}
-                    onClick={() => void act("refresh")}
-                  >
-                    เช็กสถานะ voucher
-                  </Button>
-                  {canCancel ? (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      disabled={acting}
-                      onClick={() => void act("cancel")}
-                    >
-                      ยกเลิก QR
-                    </Button>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          )}
+        {/* Desktop side detail */}
+        <div className="hidden rounded-xl border border-slate-200 bg-white p-4 lg:block">
+          <DetailPanel {...detailProps} />
         </div>
       </div>
+
+      {/* Mobile detail sheet */}
+      <Sheet
+        open={mobileDetailOpen && !!selected}
+        onOpenChange={(open) => {
+          setMobileDetailOpen(open);
+          if (!open) setError(null);
+        }}
+      >
+        <SheetContent
+          side="bottom"
+          className="flex max-h-[90vh] flex-col gap-0 overflow-y-auto rounded-t-2xl p-0 lg:hidden"
+        >
+          <SheetHeader className="border-b border-slate-100 px-4 py-3 text-left">
+            <SheetTitle>รายละเอียดคำขอ</SheetTitle>
+          </SheetHeader>
+          <div className="p-4">
+            <DetailPanel
+              {...detailProps}
+              onClose={() => setMobileDetailOpen(false)}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
