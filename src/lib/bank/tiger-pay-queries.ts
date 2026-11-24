@@ -351,6 +351,7 @@ export async function getTigerPayVouchersForWindow(
 ): Promise<
   Array<{
     id: string | null;
+    pos_bill_id: string | null;
     pos_bill_number: string | null;
     voucher_num: string | null;
     amount: number | string | null;
@@ -363,7 +364,7 @@ export async function getTigerPayVouchersForWindow(
   }>
 > {
   const columns =
-    "id,pos_bill_number,voucher_num,amount,status,raw_status,raw_last_show,submitted_by_name,created_at,updated_at";
+    "id,pos_bill_id,pos_bill_number,voucher_num,amount,status,raw_status,raw_last_show,submitted_by_name,created_at,updated_at";
   const [created, updated] = await Promise.all([
     tigerPay(supabase)
       .from("voucher_attempt")
@@ -388,6 +389,7 @@ export async function getTigerPayVouchersForWindow(
   const data = [...byId.values()];
   return data as Array<{
     id: string | null;
+    pos_bill_id: string | null;
     pos_bill_number: string | null;
     voucher_num: string | null;
     amount: number | string | null;
@@ -397,6 +399,49 @@ export async function getTigerPayVouchersForWindow(
     submitted_by_name: string | null;
     created_at: string | null;
     updated_at: string | null;
+  }>;
+}
+
+export async function getExpenseCashRequestsForAttempts(
+  supabase: SupabaseClient,
+  attemptIds: string[]
+): Promise<
+  Array<{
+    id: string;
+    short_code: number | null;
+    reason: string | null;
+    extra_reason: string | null;
+    requester_name: string | null;
+    amount: number | string | null;
+    status: string | null;
+    reviewed_by_name: string | null;
+    voucher_attempt_id: string | null;
+    updated_at: string | null;
+    created_at: string | null;
+  }>
+> {
+  const ids = [...new Set(attemptIds.map((id) => id.trim()).filter(Boolean))];
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from("expense_cash_request")
+    .select(
+      "id,short_code,reason,extra_reason,requester_name,amount,status,reviewed_by_name,voucher_attempt_id,updated_at,created_at"
+    )
+    .in("voucher_attempt_id", ids)
+    .limit(200);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{
+    id: string;
+    short_code: number | null;
+    reason: string | null;
+    extra_reason: string | null;
+    requester_name: string | null;
+    amount: number | string | null;
+    status: string | null;
+    reviewed_by_name: string | null;
+    voucher_attempt_id: string | null;
+    updated_at: string | null;
+    created_at: string | null;
   }>;
 }
 

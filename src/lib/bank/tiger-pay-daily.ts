@@ -45,6 +45,7 @@ type DailyAttempt = {
 
 type DailyVoucher = {
   id?: string | null;
+  pos_bill_id?: string | null;
   pos_bill_number?: string | null;
   voucher_num?: string | null;
   amount: number | string | null;
@@ -56,21 +57,65 @@ type DailyVoucher = {
   updated_at?: string | null;
 };
 
+export type DailyExpenseCashRequest = {
+  id: string;
+  short_code?: number | null;
+  reason?: string | null;
+  extra_reason?: string | null;
+  requester_name?: string | null;
+  amount?: number | string | null;
+  status?: string | null;
+  reviewed_by_name?: string | null;
+  voucher_attempt_id?: string | null;
+  updated_at?: string | null;
+  created_at?: string | null;
+};
+
 export type VoucherCashDirection = "out" | "none";
+export type TigerPayVoucherKind = "cn" | "expense_cash";
 
 export type TigerPayDailyVoucher = {
   id: string;
+  kind: TigerPayVoucherKind;
   posBillNumber: string | null;
   voucherNum: string | null;
   status: string;
   amount: number;
-  /** Baht the cashbox paid out (CN redeem). Cancelled / unused codes are 0. */
+  /** Baht the cashbox paid out (CN / expense redeem). Cancelled / unused codes are 0. */
   cashMoved: number;
   cashDirection: VoucherCashDirection;
   submittedByName: string | null;
   at: string | null;
   superseded: boolean;
 };
+
+export type TigerPayDailyExpenseCash = {
+  id: string;
+  requestId: string | null;
+  shortCode: number | null;
+  reason: string;
+  requesterName: string | null;
+  reviewedByName: string | null;
+  posBillNumber: string | null;
+  voucherNum: string | null;
+  status: string;
+  amount: number;
+  cashMoved: number;
+  cashDirection: VoucherCashDirection;
+  at: string | null;
+  superseded: boolean;
+};
+
+/** Chatbot เบิกเงิน vouchers use pos_bill_id expense-cash:{uuid} and EXC{n} bill numbers. */
+export function isExpenseCashVoucher(row: {
+  pos_bill_id?: string | null;
+  pos_bill_number?: string | null;
+}): boolean {
+  const billId = (row.pos_bill_id ?? "").trim().toLowerCase();
+  if (billId.startsWith("expense-cash:")) return true;
+  const billNo = (row.pos_bill_number ?? "").trim().toUpperCase();
+  return billNo.startsWith("EXC");
+}
 
 export type TigerPayDailyException = {
   paymentNo: string;
@@ -90,10 +135,15 @@ export type TigerPayDailyRollup = {
   flooredBills: TigerPayDailyFloor[];
   cashIn: number;
   changeOut: number;
+  /** cashIn − change − paid CN (POS-comparable; excludes chatbot expense). */
   cashNet: number;
   qrPromptpayIn: number;
-  /** cashIn + QR − change − paid CN */
+  /** cashIn + QR − change − paid CN (POS-comparable; excludes chatbot expense). */
   settledNet: number;
+  /** cashNet − expense cash (actual cash left in the Tiger machine). */
+  cashNetAfterExpense: number;
+  /** settledNet − expense cash (machine truth after chatbot withdrawals). */
+  settledNetAfterExpense: number;
   cashSuccessCount: number;
   qrSuccessCount: number;
   successCount: number;
@@ -109,11 +159,16 @@ export type TigerPayDailyRollup = {
   hourly: { hour: number; billed: number; count: number }[];
   bills: TigerPayDailyBill[];
   exceptions: TigerPayDailyException[];
+  /** Customer refund (CN) vouchers only — expense-cash is in expenseCash. */
   vouchers: TigerPayDailyVoucher[];
   voucherUsedCount: number;
   voucherUsedAmount: number;
   voucherCancelledCount: number;
   voucherPendingCount: number;
+  /** Chatbot เบิกเงิน / expense cash withdrawn from the Tiger cashbox. */
+  expenseCash: TigerPayDailyExpenseCash[];
+  expenseCashOutCount: number;
+  expenseCashOutAmount: number;
 };
 
 export type TigerPayCashSnapshot = {
@@ -381,6 +436,7 @@ export function rollupTigerPayDay(input: {
   attempts?: DailyAttempt[];
   vouchers?: DailyVoucher[];
   cloudQrRows?: TigerPayCloudQrRow[];
+  expenseCashRequests?: DailyExpenseCashRequest[];
 }): TigerPayDailyRollup {
   const rows = input.transactions.filter((row) => {
     if (input.shopCode && row.shop_code && row.shop_code !== input.shopCode) {
@@ -572,7 +628,12 @@ export function rollupTigerPayDay(input: {
       bizDayOf({ created_at: row.updated_at ?? null }) === input.date
     );
   });
-  const voucherRows: TigerPayDailyVoucher[] = markSupersededVouchers(
+  const requestByAttempt = new Map<string, DailyExpenseCashRequest>();
+  for (const request of input.expenseCashRequests ?? []) {
+    const attemptId = (request.voucher_attempt_id ?? "").trim();
+    if (attemptId) requestByAttempt.set(attemptId, request);
+  }
+  const allVoucherRows: TigerPayDailyVoucher[] = markSupersededVouchers(
     vouchersForDay.map((row, index) => {
       const status = (row.status ?? "").trim().toLowerCase() || "unknown";
       const amount = money(row.amount);
@@ -582,8 +643,12 @@ export function rollupTigerPayDay(input: {
         raw_status: row.raw_status,
         raw_last_show: row.raw_last_show,
       });
+      const kind: TigerPayVoucherKind = isExpenseCashVoucher(row)
+        ? "expense_cash"
+        : "cn";
       return {
         id: row.id ?? `voucher-${index}`,
+        kind,
         posBillNumber: row.pos_bill_number ?? null,
         voucherNum: row.voucher_num ?? null,
         status,
@@ -596,6 +661,37 @@ export function rollupTigerPayDay(input: {
       };
     })
   );
+  const voucherRows = allVoucherRows.filter((row) => row.kind === "cn");
+  const expenseVoucherRows = allVoucherRows.filter(
+    (row) => row.kind === "expense_cash"
+  );
+  const expenseCash: TigerPayDailyExpenseCash[] = expenseVoucherRows.map(
+    (row) => {
+      const request = requestByAttempt.get(row.id);
+      const reasonParts = [
+        (request?.reason ?? "").trim(),
+        (request?.extra_reason ?? "").trim(),
+      ].filter(Boolean);
+      return {
+        id: row.id,
+        requestId: request?.id ?? null,
+        shortCode:
+          request?.short_code != null ? Number(request.short_code) : null,
+        reason: reasonParts.join(" · ") || "เบิกเงิน",
+        requesterName: request?.requester_name ?? null,
+        reviewedByName:
+          request?.reviewed_by_name ?? row.submittedByName ?? null,
+        posBillNumber: row.posBillNumber,
+        voucherNum: row.voucherNum,
+        status: row.status,
+        amount: row.amount,
+        cashMoved: row.cashMoved,
+        cashDirection: row.cashDirection,
+        at: row.at,
+        superseded: row.superseded,
+      };
+    }
+  );
   const voucherUsed = voucherRows.filter((row) => row.cashMoved > 0);
   const voucherPending = voucherRows.filter((row) => row.status === "pending");
   const voucherCancelled = voucherRows.filter(
@@ -604,11 +700,19 @@ export function rollupTigerPayDay(input: {
   const voucherUsedAmount = roundMoney(
     voucherUsed.reduce((sum, row) => sum + row.cashMoved, 0)
   );
+  const expenseCashOut = expenseCash.filter((row) => row.cashMoved > 0);
+  const expenseCashOutAmount = roundMoney(
+    expenseCashOut.reduce((sum, row) => sum + row.cashMoved, 0)
+  );
   // Cashbox confirmed in (success payments) minus cashbox confirmed CN out.
   // Cancelled CN is always pre-redeem — never cash in.
+  // Expense cash is not a sales / POS credit note — keep cashNet/settledNet
+  // POS-comparable, and expose after-expense totals for machine truth.
   const billedNet = roundMoney(billed - voucherUsedAmount);
   const cashNet = roundMoney(cashIn - changeOut - voucherUsedAmount);
   const settledNet = roundMoney(cashNet + qrPromptpayIn);
+  const cashNetAfterExpense = roundMoney(cashNet - expenseCashOutAmount);
+  const settledNetAfterExpense = roundMoney(settledNet - expenseCashOutAmount);
 
   return {
     date: input.date,
@@ -622,6 +726,8 @@ export function rollupTigerPayDay(input: {
     cashNet,
     qrPromptpayIn,
     settledNet,
+    cashNetAfterExpense,
+    settledNetAfterExpense,
     cashSuccessCount,
     qrSuccessCount,
     successCount,
@@ -645,6 +751,11 @@ export function rollupTigerPayDay(input: {
     voucherUsedAmount,
     voucherCancelledCount: voucherCancelled.length,
     voucherPendingCount: voucherPending.length,
+    expenseCash: expenseCash.sort((a, b) =>
+      (b.at ?? "").localeCompare(a.at ?? "")
+    ),
+    expenseCashOutCount: expenseCashOut.length,
+    expenseCashOutAmount,
   };
 }
 

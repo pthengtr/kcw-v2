@@ -6,10 +6,12 @@ import { BANK_PAGE_KEYS } from "@/lib/auth/rbac-pages";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   addIsoDays,
+  isExpenseCashVoucher,
   rollupTigerPayDay,
 } from "@/lib/bank/tiger-pay-daily";
 import {
   getDailyClose,
+  getExpenseCashRequestsForAttempts,
   getLatestCashSnapshot,
   getTigerPayAttemptsForWindow,
   getTigerPayCloudQrForWindow,
@@ -87,6 +89,18 @@ export async function GET(req: Request) {
         }),
       ]);
 
+    const expenseAttemptIds = vouchers
+      .filter((row) => isExpenseCashVoucher(row))
+      .map((row) => row.id)
+      .filter((id): id is string => Boolean(id));
+    const expenseCashRequests = await getExpenseCashRequestsForAttempts(
+      supabase,
+      expenseAttemptIds
+    ).catch((error) => {
+      console.error("tiger-pay daily expense cash", error);
+      return [];
+    });
+
     const today = rollupTigerPayDay({
       date,
       shopCode: shop,
@@ -94,6 +108,7 @@ export async function GET(req: Request) {
       attempts,
       vouchers,
       cloudQrRows,
+      expenseCashRequests,
     });
     const previous = rollupTigerPayDay({
       date: prevDate,
@@ -102,6 +117,7 @@ export async function GET(req: Request) {
       attempts,
       vouchers,
       cloudQrRows,
+      expenseCashRequests,
     });
 
     return NextResponse.json({

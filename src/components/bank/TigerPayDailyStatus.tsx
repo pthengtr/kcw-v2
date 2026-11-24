@@ -292,10 +292,16 @@ export default function TigerPayDailyStatus({
               <div className="text-sm font-semibold">
                 ใบเงินรับเข้า / ทอนออก / ในเครื่อง
               </div>
-              {today.voucherUsedAmount > 0 ? (
+              {today.voucherUsedAmount > 0 || today.expenseCashOutAmount > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  รายใบมาจากบิลเงินสดเท่านั้น — จ่าย CN{" "}
-                  {formatBahtBi(today.voucherUsedAmount, true)} ไม่แยกรายใบ
+                  รายใบมาจากบิลเงินสดเท่านั้น
+                  {today.voucherUsedAmount > 0
+                    ? ` — จ่าย CN ${formatBahtBi(today.voucherUsedAmount, true)}`
+                    : ""}
+                  {today.expenseCashOutAmount > 0
+                    ? ` — เบิกเงิน ${formatBahtBi(today.expenseCashOutAmount, true)}`
+                    : ""}{" "}
+                  ไม่แยกรายใบ
                 </p>
               ) : null}
             </div>
@@ -424,6 +430,76 @@ export default function TigerPayDailyStatus({
                           {moved ? formatBaht(movedBaht) : "฿0"}
                         </td>
                         <td className="px-3 py-1.5">{row.submittedByName ?? "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </section>
+          ) : null}
+
+          {(today.expenseCash ?? []).length > 0 ? (
+            <section className="rounded-md border overflow-x-auto">
+              <div className="border-b px-3 py-2">
+                <div className="text-sm font-semibold">เบิกเงิน (แชทบอท)</div>
+                <p className="text-xs text-muted-foreground">
+                  ถอนแล้ว = เงินออกจากเครื่อง Tiger ตามคำขอเบิกเงิน · รวม{" "}
+                  {formatBahtBi(today.expenseCashOutAmount, true)} (
+                  {formatCount(today.expenseCashOutCount)} รายการ)
+                </p>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted-foreground">
+                    <th className="px-3 py-2">สถานะ</th>
+                    <th className="px-3 py-2">เวลา</th>
+                    <th className="px-3 py-2">รหัส</th>
+                    <th className="px-3 py-2">เหตุผล</th>
+                    <th className="px-3 py-2">ผู้ขอ</th>
+                    <th className="px-3 py-2">Voucher</th>
+                    <th className="px-3 py-2 text-right">มูลค่า</th>
+                    <th className="px-3 py-2 text-right">เงินขยับ</th>
+                    <th className="px-3 py-2">ผู้อนุมัติ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {today.expenseCash.map((row) => {
+                    const moved = row.cashMoved > 0;
+                    const label =
+                      row.cashMoved > 0
+                        ? "ถอนแล้ว · เงินออก"
+                        : row.status === "pending"
+                          ? "ค้าง · ยังไม่ถอน"
+                          : row.superseded
+                            ? "ยกเลิกก่อนถอน (มีใบใหม่)"
+                            : row.status === "cancelled" || row.status === "cancel"
+                              ? "ยกเลิกก่อนถอน"
+                              : row.status;
+                    const movedBaht = row.cashMoved > 0 ? -row.cashMoved : 0;
+                    const code =
+                      row.shortCode != null
+                        ? `#${row.shortCode}`
+                        : row.posBillNumber ?? "—";
+                    return (
+                      <tr
+                        key={row.id}
+                        className={cn("border-t", !moved && "text-muted-foreground")}
+                      >
+                        <td className="px-3 py-1.5">{label}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap">
+                          {formatBangkokDateTime(row.at)}
+                        </td>
+                        <td className="px-3 py-1.5">{code}</td>
+                        <td className="px-3 py-1.5 max-w-[14rem] truncate" title={row.reason}>
+                          {row.reason}
+                        </td>
+                        <td className="px-3 py-1.5">{row.requesterName ?? "—"}</td>
+                        <td className="px-3 py-1.5">{row.voucherNum ?? "—"}</td>
+                        <td className="px-3 py-1.5 text-right">{formatBaht(row.amount)}</td>
+                        <td className="px-3 py-1.5 text-right">
+                          {moved ? formatBaht(movedBaht) : "฿0"}
+                        </td>
+                        <td className="px-3 py-1.5">{row.reviewedByName ?? "—"}</td>
                       </tr>
                     );
                   })}

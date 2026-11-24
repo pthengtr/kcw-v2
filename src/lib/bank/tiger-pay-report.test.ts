@@ -97,35 +97,47 @@ describe("Tiger Pay report formula", () => {
     expect(rollup.qrPromptpayIn).toBe(31430);
     expect(rollup.changeOut).toBe(10011);
     expect(rollup.voucherUsedAmount).toBe(770);
+    expect(rollup.expenseCashOutAmount).toBe(0);
     expect(rollup.cashNet).toBe(27199);
     expect(rollup.settledNet).toBe(58629);
+    expect(rollup.cashNetAfterExpense).toBe(27199);
+    expect(rollup.settledNetAfterExpense).toBe(58629);
     expect(rollup.cashSuccessCount).toBe(1);
     expect(rollup.qrSuccessCount).toBe(1);
     expect(rollup.settledNet).toBe(
-      rollup.cashIn + rollup.qrPromptpayIn - rollup.changeOut - rollup.voucherUsedAmount
+      rollup.cashIn +
+        rollup.qrPromptpayIn -
+        rollup.changeOut -
+        rollup.voucherUsedAmount
+    );
+    expect(rollup.settledNetAfterExpense).toBe(
+      rollup.settledNet - rollup.expenseCashOutAmount
     );
     expect(formatReportBaht(rollup.settledNet)).toBe("฿58,629.00");
     expect(formatReportBaht(rollup.cashNet, false)).toBe("฿27,199");
   });
 
-  it("builds chart rows in mock order: cash, change, QR, CN", () => {
+  it("builds chart rows in mock order: cash, change, QR, CN, expense", () => {
     const rows = tigerPayReportChartRows({
       cashIn: 37980,
       changeOut: 10011,
       qrPromptpayIn: 31430,
       voucherUsedAmount: 770,
+      expenseCashOutAmount: 500,
     });
     expect(rows.map((row) => row.key)).toEqual([
       "cashIn",
       "changeOut",
       "qr",
       "cn",
+      "expense",
     ]);
     expect(rows.map((row) => row.label)).toEqual([
       "เงินสดรับเข้า",
       "เงินถอนออก",
       "QR / PromptPay",
       "จ่ายคืนลูกค้า (CN)",
+      "เบิกเงิน (แชทบอท)",
     ]);
   });
 });
@@ -163,8 +175,20 @@ describe("Tiger Pay report page layout", () => {
       "QR / PromptPay",
       "เงินถอนออก",
       "จ่ายคืนลูกค้า (CN)",
+      "เบิกเงิน (แชทบอท)",
       "เงินสดรับสุทธิวันนี้",
       "ยอดรับชำระสุทธิ",
+      "หลังหักเบิกเงิน",
     ]);
+  });
+
+  it("shows expense cash on the daily report without mixing into POS net", () => {
+    const report = read("src/components/bank/TigerPayDailyReport.tsx");
+    expect(report).toContain("เบิกเงิน (แชทบอท)");
+    expect(report).toContain("expenseCashOutAmount");
+    expect(report).toContain("settledNetAfterExpense");
+    expect(report).toContain("เทียบ POS");
+    const daily = read("src/components/bank/TigerPayDailyStatus.tsx");
+    expect(daily).toContain("expenseCash");
   });
 });

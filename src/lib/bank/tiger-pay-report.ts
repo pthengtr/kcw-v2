@@ -21,12 +21,20 @@ export const TIGER_PAY_REPORT_NOTES = [
     meaning: "เงินที่จ่ายออกจากเครื่อง เพื่อคืนลูกค้า (ยกเลิก / คืนสินค้า)",
   },
   {
+    term: "เบิกเงิน (แชทบอท)",
+    meaning: "เงินที่จ่ายออกจากเครื่องตามคำขอเบิกเงินจากแชทบอท (ไม่ใช่รายการ POS)",
+  },
+  {
     term: "เงินสดรับสุทธิวันนี้",
-    meaning: "เงินสดจากการขายวันนี้ หักเงินถอนและที่จ่ายคืนในเครื่อง",
+    meaning: "เงินสดจากการขายวันนี้ หักเงินถอนและที่จ่ายคืนในเครื่อง (เทียบ POS ไม่หักเบิกเงิน)",
   },
   {
     term: "ยอดรับชำระสุทธิ",
-    meaning: "ยอดเงินที่รับเข้าทั้งหมด หักถอนและจ่ายคืนลูกค้า",
+    meaning: "ยอดเงินที่รับเข้าทั้งหมด หักถอนและจ่ายคืนลูกค้า (เทียบ POS ไม่หักเบิกเงิน)",
+  },
+  {
+    term: "หลังหักเบิกเงิน",
+    meaning: "ยอดสุทธิในเครื่องจริง หลังหักเงินที่เบิกออกผ่านแชทบอท",
   },
 ] as const;
 
@@ -54,7 +62,7 @@ export function formatReportBaht(value: number, precise = true): string {
 }
 
 export type TigerPayReportChartRow = {
-  key: "cashIn" | "changeOut" | "qr" | "cn";
+  key: "cashIn" | "changeOut" | "qr" | "cn" | "expense";
   label: string;
   value: number;
   fill: string;
@@ -63,7 +71,11 @@ export type TigerPayReportChartRow = {
 export function tigerPayReportChartRows(
   today: Pick<
     TigerPayDailyRollup,
-    "cashIn" | "changeOut" | "qrPromptpayIn" | "voucherUsedAmount"
+    | "cashIn"
+    | "changeOut"
+    | "qrPromptpayIn"
+    | "voucherUsedAmount"
+    | "expenseCashOutAmount"
   >
 ): TigerPayReportChartRow[] {
   return [
@@ -90,6 +102,12 @@ export function tigerPayReportChartRows(
       label: "จ่ายคืนลูกค้า (CN)",
       value: today.voucherUsedAmount,
       fill: "#6366f1",
+    },
+    {
+      key: "expense",
+      label: "เบิกเงิน (แชทบอท)",
+      value: today.expenseCashOutAmount,
+      fill: "#f59e0b",
     },
   ];
 }

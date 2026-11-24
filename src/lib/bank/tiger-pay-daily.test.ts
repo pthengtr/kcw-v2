@@ -11,6 +11,7 @@ import {
   classifyVoucherCash,
   formatThaiMonth,
   hopperItemCounts,
+  isExpenseCashVoucher,
   mapCashSnapshot,
   rollupTigerPayDay,
   sumKbankQrPaid,
@@ -591,6 +592,97 @@ describe("voucher cashbox payout", () => {
         },
       })
     ).toEqual({ direction: "none", amount: 0 });
+  });
+});
+
+describe("expense cash vouchers", () => {
+  it("detects chatbot expense vouchers by bill id or EXC number", () => {
+    expect(
+      isExpenseCashVoucher({
+        pos_bill_id: "expense-cash:abc",
+        pos_bill_number: "EXC12",
+      })
+    ).toBe(true);
+    expect(isExpenseCashVoucher({ pos_bill_number: "EXC3" })).toBe(true);
+    expect(isExpenseCashVoucher({ pos_bill_number: "KCN6908-0280" })).toBe(
+      false
+    );
+  });
+
+  it("splits expense cash out of CN and subtracts both from cash net", () => {
+    const rollup = rollupTigerPayDay({
+      date: "2026-09-20",
+      shopCode: "1",
+      transactions: [
+        txn({
+          tiger_payment_id: 1,
+          payment_no: "PA1",
+          payment_type: "cash",
+          status: "success",
+          amount: 5000,
+          total_pay: 5000,
+          change_amount: 0,
+          tiger_created_at: "2026-09-20T10:00:00+07:00",
+          tiger_updated_at: "2026-09-20T10:00:00+07:00",
+          payload: {},
+        }),
+      ],
+      vouchers: [
+        {
+          id: "cn-1",
+          pos_bill_number: "KCN6908-0282",
+          voucher_num: "111",
+          amount: 200,
+          status: "used",
+          created_at: "2026-09-20T11:00:00+07:00",
+          updated_at: "2026-09-20T11:05:00+07:00",
+        },
+        {
+          id: "exc-1",
+          pos_bill_id: "expense-cash:req-1",
+          pos_bill_number: "EXC7",
+          voucher_num: "222",
+          amount: 500,
+          status: "used",
+          created_at: "2026-09-20T12:00:00+07:00",
+          updated_at: "2026-09-20T12:10:00+07:00",
+        },
+      ],
+      expenseCashRequests: [
+        {
+          id: "req-1",
+          short_code: 7,
+          reason: "ค่าน้ำมัน",
+          requester_name: "สมชาย",
+          reviewed_by_name: "Peung",
+          voucher_attempt_id: "exc-1",
+          amount: 500,
+          status: "paid",
+        },
+      ],
+    });
+
+    expect(rollup.voucherUsedCount).toBe(1);
+    expect(rollup.voucherUsedAmount).toBe(200);
+    expect(rollup.expenseCashOutCount).toBe(1);
+    expect(rollup.expenseCashOutAmount).toBe(500);
+    expect(rollup.cashNet).toBe(4800);
+    expect(rollup.cashNetAfterExpense).toBe(4300);
+    expect(rollup.settledNet).toBe(4800);
+    expect(rollup.settledNetAfterExpense).toBe(4300);
+    expect(rollup.billedNet).toBe(4800);
+    expect(rollup.vouchers).toHaveLength(1);
+    expect(rollup.expenseCash).toEqual([
+      expect.objectContaining({
+        id: "exc-1",
+        shortCode: 7,
+        reason: "ค่าน้ำมัน",
+        requesterName: "สมชาย",
+        reviewedByName: "Peung",
+        cashMoved: 500,
+        posBillNumber: "EXC7",
+      }),
+    ]);
   });
 });
 
