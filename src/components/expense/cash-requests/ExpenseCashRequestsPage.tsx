@@ -7,8 +7,16 @@ import BackButton from "@/components/common/BackButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -35,12 +43,15 @@ import {
 } from "@/lib/expense/cash-request-filter";
 import {
   EXPENSE_CASH_ACCOUNTING_LABEL,
+  EXPENSE_CASH_ACCOUNTING_SKIP_REASON_LABEL,
   EXPENSE_CASH_STATUS_LABEL,
   EXPENSE_CASH_VOUCHER_STATUS_LABEL,
+  expenseCashAccountingSkipText,
   expenseCashDetailText,
   formatBaht,
   formatBahtNumber,
   normalizeExpenseCashRequest,
+  type ExpenseCashAccountingSkipReason,
   type ExpenseCashAccountingStatus,
   type ExpenseCashBranch,
   type ExpenseCashRequest,
@@ -48,6 +59,10 @@ import {
   type ExpenseCashVoucher,
 } from "@/lib/expense/cash-request";
 import { cn } from "@/lib/utils";
+
+const SKIP_REASON_OPTIONS = Object.keys(
+  EXPENSE_CASH_ACCOUNTING_SKIP_REASON_LABEL
+) as ExpenseCashAccountingSkipReason[];
 
 function statusClass(status: ExpenseCashStatus) {
   switch (status) {
@@ -68,9 +83,14 @@ function statusClass(status: ExpenseCashStatus) {
 }
 
 function accountingClass(status: ExpenseCashAccountingStatus) {
-  return status === "recorded"
-    ? "bg-indigo-50 text-indigo-800 ring-indigo-200"
-    : "bg-orange-50 text-orange-800 ring-orange-200";
+  switch (status) {
+    case "recorded":
+      return "bg-indigo-50 text-indigo-800 ring-indigo-200";
+    case "skipped":
+      return "bg-slate-100 text-slate-700 ring-slate-300";
+    default:
+      return "bg-orange-50 text-orange-800 ring-orange-200";
+  }
 }
 
 function StatusBadge({ status }: { status: ExpenseCashStatus }) {
@@ -143,6 +163,7 @@ function DetailPanel({
     (!voucher?.status ||
       voucher.status === "pending" ||
       voucher.status === "creating");
+  const skipText = expenseCashAccountingSkipText(selected);
 
   return (
     <div className="flex flex-col gap-3">
@@ -200,6 +221,9 @@ function DetailPanel({
           <dt className="text-slate-500">สถานะการลงค่าใช้จ่าย</dt>
           <dd className="space-y-1">
             <AccountingBadge status={selected.accounting_status} />
+            {skipText ? (
+              <div className="text-xs text-slate-600">เหตุผล: {skipText}</div>
+            ) : null}
             {selected.accounting_at ? (
               <div className="text-xs text-slate-500">
                 โดย {selected.accounting_by_name || "—"} ·{" "}
@@ -333,6 +357,10 @@ export default function ExpenseCashRequestsPage({
   const [batchBranch, setBatchBranch] = useState<"keep" | ExpenseCashBranch>(
     "keep"
   );
+  const [skipDialogOpen, setSkipDialogOpen] = useState(false);
+  const [skipReason, setSkipReason] =
+    useState<ExpenseCashAccountingSkipReason>("system_test");
+  const [skipNote, setSkipNote] = useState("");
 
   const selected = useMemo(
     () => rows.find((r) => r.id === selectedId) ?? null,
@@ -515,7 +543,13 @@ export default function ExpenseCashRequestsPage({
     selectableFiltered.length > 0 &&
     selectableFiltered.every((r) => selectedIds.has(r.id));
 
-  async function updateAccounting(accounting_status: ExpenseCashAccountingStatus) {
+  async function updateAccounting(
+    accounting_status: ExpenseCashAccountingStatus,
+    extra?: {
+      accounting_skip_reason?: ExpenseCashAccountingSkipReason;
+      accounting_skip_note?: string;
+    }
+  ) {
     if (!canManage) return;
     if (selectedPaidIds.length === 0) {
       setError("เลือกรายการที่ถอนเงินแล้วอย่างน้อย 1 รายการ");
@@ -531,6 +565,12 @@ export default function ExpenseCashRequestsPage({
           ids: selectedPaidIds,
           accounting_status,
           ...(batchBranch === "keep" ? {} : { branch: batchBranch }),
+          ...(extra?.accounting_skip_reason
+            ? { accounting_skip_reason: extra.accounting_skip_reason }
+            : {}),
+          ...(extra?.accounting_skip_note
+            ? { accounting_skip_note: extra.accounting_skip_note }
+            : {}),
         }),
       });
       const json = await res.json();
@@ -547,11 +587,26 @@ export default function ExpenseCashRequestsPage({
         return next;
       });
       setSelectedIds(new Set());
+      setSkipDialogOpen(false);
+      setSkipNote("");
+      setSkipReason("system_test");
     } catch {
       setError("อัปเดตสถานะบัญชีไม่สำเร็จ");
     } finally {
       setAccountingActing(false);
     }
+  }
+
+  function confirmSkipAccounting() {
+    if (skipReason === "other" && !skipNote.trim()) {
+      setError("กรุณาระบุเหตุผลเมื่อเลือกอื่น ๆ");
+      return;
+    }
+    void updateAccounting("skipped", {
+      accounting_skip_reason: skipReason,
+      accounting_skip_note:
+        skipReason === "other" ? skipNote.trim() : skipNote.trim() || undefined,
+    });
   }
 
   const openCount = rows.filter(
@@ -718,6 +773,7 @@ export default function ExpenseCashRequestsPage({
                 <SelectItem value="all">ทั้งหมด</SelectItem>
                 <SelectItem value="pending">รอลงค่าใช้จ่าย</SelectItem>
                 <SelectItem value="recorded">ลงค่าใช้จ่ายแล้ว</SelectItem>
+                <SelectItem value="skipped">ไม่ลงค่าใช้จ่าย</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -736,6 +792,12 @@ export default function ExpenseCashRequestsPage({
             <span className="font-semibold tabular-nums">
               {formatBaht(summary.totalAmount)}
             </span>
+            {" · รอลงค่าใช้จ่าย "}
+            {summary.pendingAccountingCount.toLocaleString("th-TH")} รายการ (
+            <span className="font-semibold tabular-nums">
+              {formatBaht(summary.pendingAccountingAmount)}
+            </span>
+            )
             {rows.length ? ` · รอทำ ${openCount}` : null}
           </span>
         </div>
@@ -785,6 +847,18 @@ export default function ExpenseCashRequestsPage({
             <Button
               type="button"
               size="sm"
+              variant="secondary"
+              disabled={accountingActing}
+              onClick={() => {
+                setError(null);
+                setSkipDialogOpen(true);
+              }}
+            >
+              ไม่ลงค่าใช้จ่าย
+            </Button>
+            <Button
+              type="button"
+              size="sm"
               variant="ghost"
               onClick={() => setSelectedIds(new Set())}
             >
@@ -793,6 +867,75 @@ export default function ExpenseCashRequestsPage({
           </div>
         </div>
       ) : null}
+
+      <Dialog
+        open={skipDialogOpen}
+        onOpenChange={(open) => {
+          setSkipDialogOpen(open);
+          if (!open) {
+            setSkipNote("");
+            setSkipReason("system_test");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>ไม่ลงค่าใช้จ่าย</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-600">
+            เลือกเหตุผลสำหรับ {selectedPaidIds.length} รายการที่ถอนแล้ว
+            (ไม่กระทบยอดถอนเงินจริงผ่าน Tiger)
+          </p>
+          <RadioGroup
+            value={skipReason}
+            onValueChange={(v) =>
+              setSkipReason(v as ExpenseCashAccountingSkipReason)
+            }
+            className="gap-3"
+          >
+            {SKIP_REASON_OPTIONS.map((key) => (
+              <div key={key} className="flex items-center gap-2">
+                <RadioGroupItem value={key} id={`skip-reason-${key}`} />
+                <Label htmlFor={`skip-reason-${key}`} className="font-normal">
+                  {EXPENSE_CASH_ACCOUNTING_SKIP_REASON_LABEL[key]}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+          {skipReason === "other" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="skip-note">ระบุเหตุผล</Label>
+              <Textarea
+                id="skip-note"
+                value={skipNote}
+                onChange={(e) => setSkipNote(e.target.value)}
+                placeholder="เช่น รายการซ้ำ / ยกเลิกหลังถอน"
+                rows={3}
+              />
+            </div>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSkipDialogOpen(false)}
+              disabled={accountingActing}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              type="button"
+              disabled={accountingActing}
+              onClick={confirmSkipAccounting}
+            >
+              {accountingActing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
+              บันทึก
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {error && !selectedId ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">

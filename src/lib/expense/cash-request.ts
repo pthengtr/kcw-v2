@@ -6,7 +6,15 @@ export type ExpenseCashStatus =
   | "cancelled"
   | "paid";
 
-export type ExpenseCashAccountingStatus = "pending" | "recorded";
+export type ExpenseCashAccountingStatus =
+  | "pending"
+  | "recorded"
+  | "skipped";
+
+export type ExpenseCashAccountingSkipReason =
+  | "system_test"
+  | "refunded"
+  | "other";
 
 export type ExpenseCashBranch = "HQ" | "SYP";
 
@@ -31,6 +39,8 @@ export type ExpenseCashRequest = {
   accounting_by: string | null;
   accounting_by_name: string | null;
   accounting_at: string | null;
+  accounting_skip_reason: ExpenseCashAccountingSkipReason | null;
+  accounting_skip_note: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -50,7 +60,54 @@ export const EXPENSE_CASH_ACCOUNTING_LABEL: Record<
 > = {
   pending: "รอลงค่าใช้จ่าย",
   recorded: "ลงค่าใช้จ่ายแล้ว",
+  skipped: "ไม่ลงค่าใช้จ่าย",
 };
+
+export const EXPENSE_CASH_ACCOUNTING_SKIP_REASON_LABEL: Record<
+  ExpenseCashAccountingSkipReason,
+  string
+> = {
+  system_test: "ทดสอบระบบ",
+  refunded: "คืนเงินแล้ว",
+  other: "อื่น ๆ",
+};
+
+export function normalizeExpenseCashAccountingStatus(
+  value: unknown
+): ExpenseCashAccountingStatus {
+  if (value === "recorded" || value === "skipped") return value;
+  return "pending";
+}
+
+export function normalizeExpenseCashAccountingSkipReason(
+  value: unknown
+): ExpenseCashAccountingSkipReason | null {
+  if (
+    value === "system_test" ||
+    value === "refunded" ||
+    value === "other"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+export function expenseCashAccountingSkipText(
+  row: Pick<
+    ExpenseCashRequest,
+    "accounting_status" | "accounting_skip_reason" | "accounting_skip_note"
+  >
+): string | null {
+  if (row.accounting_status !== "skipped" || !row.accounting_skip_reason) {
+    return null;
+  }
+  const label =
+    EXPENSE_CASH_ACCOUNTING_SKIP_REASON_LABEL[row.accounting_skip_reason];
+  if (row.accounting_skip_reason === "other" && row.accounting_skip_note) {
+    return `${label}: ${row.accounting_skip_note}`;
+  }
+  return label;
+}
 
 export const EXPENSE_CASH_BRANCH_LABEL: Record<ExpenseCashBranch, string> = {
   HQ: "HQ",
@@ -117,11 +174,16 @@ export function normalizeExpenseCashRequest(
     qr_image_url: row.qr_image_url ?? null,
     branch: row.branch === "HQ" || row.branch === "SYP" ? row.branch : null,
     paid_at: row.paid_at ?? null,
-    accounting_status:
-      row.accounting_status === "recorded" ? "recorded" : "pending",
+    accounting_status: normalizeExpenseCashAccountingStatus(
+      row.accounting_status
+    ),
     accounting_by: row.accounting_by ?? null,
     accounting_by_name: row.accounting_by_name ?? null,
     accounting_at: row.accounting_at ?? null,
+    accounting_skip_reason: normalizeExpenseCashAccountingSkipReason(
+      row.accounting_skip_reason
+    ),
+    accounting_skip_note: row.accounting_skip_note ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };

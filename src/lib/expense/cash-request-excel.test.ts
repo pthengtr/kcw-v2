@@ -28,6 +28,8 @@ const sample: ExpenseCashRequest = {
   accounting_by: null,
   accounting_by_name: null,
   accounting_at: null,
+  accounting_skip_reason: null,
+  accounting_skip_note: null,
   created_at: "2026-11-23T10:00:00.000Z",
   updated_at: "2026-11-24T03:00:00.000Z",
 };

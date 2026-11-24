@@ -114,10 +114,27 @@ export function filterExpenseCashRequests(
 export function summarizeExpenseCashRequests(rows: ExpenseCashRequest[]): {
   count: number;
   totalAmount: number;
+  /** Paid rows still waiting to be booked — excludes recorded + skipped. */
+  pendingAccountingCount: number;
+  pendingAccountingAmount: number;
 } {
   let totalAmount = 0;
-  for (const row of rows) totalAmount += Number(row.amount) || 0;
-  return { count: rows.length, totalAmount };
+  let pendingAccountingCount = 0;
+  let pendingAccountingAmount = 0;
+  for (const row of rows) {
+    const amount = Number(row.amount) || 0;
+    totalAmount += amount;
+    if (row.status === "paid" && row.accounting_status === "pending") {
+      pendingAccountingCount += 1;
+      pendingAccountingAmount += amount;
+    }
+  }
+  return {
+    count: rows.length,
+    totalAmount,
+    pendingAccountingCount,
+    pendingAccountingAmount,
+  };
 }
 
 export function canUpdateExpenseCashAccounting(
