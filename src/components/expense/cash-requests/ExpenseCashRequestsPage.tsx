@@ -116,6 +116,7 @@ function DetailPanel({
   note,
   setNote,
   error,
+  canManage,
   onAct,
 }: {
   selected: ExpenseCashRequest | null;
@@ -125,6 +126,7 @@ function DetailPanel({
   note: string;
   setNote: (v: string) => void;
   error: string | null;
+  canManage: boolean;
   onAct: (
     action: "approve" | "needs_info" | "reject" | "cancel" | "refresh"
   ) => void;
@@ -136,6 +138,7 @@ function DetailPanel({
   }
 
   const canCancel =
+    canManage &&
     selected.status === "approved" &&
     (!voucher?.status ||
       voucher.status === "pending" ||
@@ -241,7 +244,8 @@ function DetailPanel({
         ) : null}
       </dl>
 
-      {(selected.status === "pending" || selected.status === "needs_info") && (
+      {canManage &&
+        (selected.status === "pending" || selected.status === "needs_info") && (
         <>
           <Textarea
             value={note}
@@ -277,9 +281,10 @@ function DetailPanel({
         </>
       )}
 
-      {(selected.status === "approved" ||
-        selected.status === "paid" ||
-        selected.voucher_attempt_id) && (
+      {canManage &&
+        (selected.status === "approved" ||
+          selected.status === "paid" ||
+          selected.voucher_attempt_id) && (
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -305,7 +310,11 @@ function DetailPanel({
   );
 }
 
-export default function ExpenseCashRequestsPage() {
+export default function ExpenseCashRequestsPage({
+  canManage = false,
+}: {
+  canManage?: boolean;
+}) {
   const [rows, setRows] = useState<ExpenseCashRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [voucher, setVoucher] = useState<ExpenseCashVoucher | null>(null);
@@ -341,8 +350,9 @@ export default function ExpenseCashRequestsPage() {
   );
 
   const selectableFiltered = useMemo(
-    () => filtered.filter(canUpdateExpenseCashAccounting),
-    [filtered]
+    () =>
+      canManage ? filtered.filter(canUpdateExpenseCashAccounting) : [],
+    [filtered, canManage]
   );
 
   const load = useCallback(async () => {
@@ -427,7 +437,7 @@ export default function ExpenseCashRequestsPage() {
   async function act(
     action: "approve" | "needs_info" | "reject" | "cancel" | "refresh"
   ) {
-    if (!selected) return;
+    if (!canManage || !selected) return;
     if ((action === "needs_info" || action === "reject") && !note.trim()) {
       setError("กรุณาใส่หมายเหตุ");
       return;
@@ -506,6 +516,7 @@ export default function ExpenseCashRequestsPage() {
     selectableFiltered.every((r) => selectedIds.has(r.id));
 
   async function updateAccounting(accounting_status: ExpenseCashAccountingStatus) {
+    if (!canManage) return;
     if (selectedPaidIds.length === 0) {
       setError("เลือกรายการที่ถอนเงินแล้วอย่างน้อย 1 รายการ");
       return;
@@ -555,6 +566,7 @@ export default function ExpenseCashRequestsPage() {
     note,
     setNote,
     error,
+    canManage,
     onAct: (action: "approve" | "needs_info" | "reject" | "cancel" | "refresh") => {
       void act(action);
     },
@@ -594,8 +606,9 @@ export default function ExpenseCashRequestsPage() {
       </div>
 
       <p className="text-sm text-slate-600">
-        อนุมัติแล้วระบบสร้าง QR ตู้ Tiger ให้ผู้ขอทาง LINE — เช็กสถานะถอน /
-        ยกเลิก QR ได้ที่นี่ และบัญชีสามารถทำเครื่องหมายลงค่าใช้จ่ายเป็นชุดได้
+        {canManage
+          ? "อนุมัติแล้วระบบสร้าง QR ตู้ Tiger ให้ผู้ขอทาง LINE — เช็กสถานะถอน / ยกเลิก QR ได้ที่นี่ และบัญชีสามารถทำเครื่องหมายลงค่าใช้จ่ายเป็นชุดได้"
+          : "ดูรายการคำขอเบิกเงินสดและสถานะได้ — การอนุมัติ / ส่งกลับ / ปฏิเสธ และการลงค่าใช้จ่ายสงวนไว้สำหรับแอดมิน"}
       </p>
 
       <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
@@ -728,7 +741,7 @@ export default function ExpenseCashRequestsPage() {
         </div>
       </div>
 
-      {selectedPaidIds.length > 0 ? (
+      {canManage && selectedPaidIds.length > 0 ? (
         <div className="flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 sm:flex-row sm:flex-wrap sm:items-end">
           <div className="text-sm font-medium text-indigo-900">
             เลือกแล้ว {selectedPaidIds.length} รายการ (ถอนแล้ว)
@@ -791,7 +804,8 @@ export default function ExpenseCashRequestsPage() {
       <div className="lg:hidden">
         <ul className="flex flex-col gap-2">
           {filtered.map((row) => {
-            const selectable = canUpdateExpenseCashAccounting(row);
+            const selectable =
+              canManage && canUpdateExpenseCashAccounting(row);
             return (
               <li
                 key={row.id}
@@ -803,18 +817,20 @@ export default function ExpenseCashRequestsPage() {
                 )}
               >
                 <div className="flex items-start gap-3">
-                  {selectable ? (
-                    <Checkbox
-                      checked={selectedIds.has(row.id)}
-                      onCheckedChange={(v) =>
-                        toggleSelect(row.id, v === true)
-                      }
-                      aria-label={`เลือก #${row.short_code}`}
-                      className="mt-1"
-                    />
-                  ) : (
-                    <span className="mt-1 h-4 w-4" />
-                  )}
+                  {canManage ? (
+                    selectable ? (
+                      <Checkbox
+                        checked={selectedIds.has(row.id)}
+                        onCheckedChange={(v) =>
+                          toggleSelect(row.id, v === true)
+                        }
+                        aria-label={`เลือก #${row.short_code}`}
+                        className="mt-1"
+                      />
+                    ) : (
+                      <span className="mt-1 h-4 w-4" />
+                    )
+                  ) : null}
                   <button
                     type="button"
                     className="min-w-0 flex-1 text-left"
@@ -861,16 +877,18 @@ export default function ExpenseCashRequestsPage() {
           <table className="w-full min-w-[52rem] text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50 text-xs text-slate-600">
               <tr>
-                <th className="w-10 px-3 py-2">
-                  <Checkbox
-                    checked={allSelectableChecked}
-                    onCheckedChange={(v) =>
-                      toggleSelectAllFiltered(v === true)
-                    }
-                    aria-label="เลือกทั้งหมดที่ถอนแล้ว"
-                    disabled={selectableFiltered.length === 0}
-                  />
-                </th>
+                {canManage ? (
+                  <th className="w-10 px-3 py-2">
+                    <Checkbox
+                      checked={allSelectableChecked}
+                      onCheckedChange={(v) =>
+                        toggleSelectAllFiltered(v === true)
+                      }
+                      aria-label="เลือกทั้งหมดที่ถอนแล้ว"
+                      disabled={selectableFiltered.length === 0}
+                    />
+                  </th>
+                ) : null}
                 <th className="px-3 py-2 font-medium">เลขที่</th>
                 <th className="px-3 py-2 font-medium">วันที่</th>
                 <th className="px-3 py-2 font-medium">สาขา</th>
@@ -882,7 +900,8 @@ export default function ExpenseCashRequestsPage() {
             </thead>
             <tbody>
               {filtered.map((row) => {
-                const selectable = canUpdateExpenseCashAccounting(row);
+                const selectable =
+                  canManage && canUpdateExpenseCashAccounting(row);
                 return (
                   <tr
                     key={row.id}
@@ -894,20 +913,22 @@ export default function ExpenseCashRequestsPage() {
                     )}
                     onClick={() => openDetail(row.id, "desktop")}
                   >
-                    <td
-                      className="px-3 py-2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {selectable ? (
-                        <Checkbox
-                          checked={selectedIds.has(row.id)}
-                          onCheckedChange={(v) =>
-                            toggleSelect(row.id, v === true)
-                          }
-                          aria-label={`เลือก #${row.short_code}`}
-                        />
-                      ) : null}
-                    </td>
+                    {canManage ? (
+                      <td
+                        className="px-3 py-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {selectable ? (
+                          <Checkbox
+                            checked={selectedIds.has(row.id)}
+                            onCheckedChange={(v) =>
+                              toggleSelect(row.id, v === true)
+                            }
+                            aria-label={`เลือก #${row.short_code}`}
+                          />
+                        ) : null}
+                      </td>
+                    ) : null}
                     <td className="px-3 py-2 font-semibold tabular-nums">
                       #{row.short_code}
                     </td>
@@ -938,7 +959,7 @@ export default function ExpenseCashRequestsPage() {
               {!loading && filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={canManage ? 8 : 7}
                     className="px-4 py-10 text-center text-slate-500"
                   >
                     ไม่พบรายการตามตัวกรอง

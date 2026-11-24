@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   callExpenseCashApi,
   requireExpenseCashAdmin,
+  requireExpenseCashViewer,
 } from "@/lib/expense/cash-request-api";
 
 const ActionSchema = z.object({
@@ -23,7 +24,7 @@ function upstreamError(json: unknown, fallback: string) {
 }
 
 export async function GET(_req: Request, ctx: Ctx) {
-  const auth = await requireExpenseCashAdmin();
+  const auth = await requireExpenseCashViewer();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
@@ -34,7 +35,7 @@ export async function GET(_req: Request, ctx: Ctx) {
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       // Fallback to Supabase read if Railway refresh unavailable.
-      const { data, error } = await auth.supabase
+      const { data, error } = await auth.admin
         .from("expense_cash_request")
         .select("*")
         .eq("id", id)
@@ -45,11 +46,15 @@ export async function GET(_req: Request, ctx: Ctx) {
           { status: res.status }
         );
       }
-      return NextResponse.json({ request: data, voucher: null });
+      return NextResponse.json({
+        request: data,
+        voucher: null,
+        canManage: auth.isAdmin,
+      });
     }
-    return NextResponse.json(json);
+    return NextResponse.json({ ...json, canManage: auth.isAdmin });
   } catch (err) {
-    const { data, error } = await auth.supabase
+    const { data, error } = await auth.admin
       .from("expense_cash_request")
       .select("*")
       .eq("id", id)
@@ -58,7 +63,11 @@ export async function GET(_req: Request, ctx: Ctx) {
       console.error("expense cash get", err, error);
       return NextResponse.json({ error: "Unable to load request" }, { status: 502 });
     }
-    return NextResponse.json({ request: data, voucher: null });
+    return NextResponse.json({
+      request: data,
+      voucher: null,
+      canManage: auth.isAdmin,
+    });
   }
 }
 
