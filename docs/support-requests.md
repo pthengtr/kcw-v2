@@ -4,7 +4,7 @@ Staff open `/support` in kcw-v2 and choose a **kind**:
 
 | Kind | What happens |
 |------|----------------|
-| `bug` / `improvement` | Pick an exact **kcw-api service** or **kcw-v2 page**, describe the change, optionally attach images/PDFs. HQ agent opens a PR and merges; status → `waiting`. |
+| `bug` / `improvement` | Pick an exact **kcw-api service** (incl. **LINE แชทบอท**), **kcw-v2 page**, or BI report; describe the change, optionally attach images/PDFs. HQ agent opens a PR and merges; status → `waiting`. |
 | `data_query` | Ask a data question. Pick an **HQ data** domain (Supabase / KSS / kss-pc PARTS9 / kcw-analytic GDrive, or all). HQ agent investigates and posts an `answered` event; status → `waiting` (no PR). |
 
 ## Flow (code tickets)

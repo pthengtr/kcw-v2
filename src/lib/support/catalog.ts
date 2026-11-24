@@ -66,8 +66,25 @@ const HQ_DATA_TARGETS: SupportTarget[] = [
   },
 ];
 
-/** Mirror of kcw-api `src/staff_shell/catalog.py` WEB_SERVICES + codeRoots. */
+/**
+ * Mirror of kcw-api `src/staff_shell/catalog.py` WEB_SERVICES + codeRoots,
+ * plus LINE-only surfaces (bot / rich menu) that are not waffle web apps.
+ */
 const KCW_API_TARGETS: SupportTarget[] = [
+  {
+    source: "kcw-api",
+    id: "line-bot",
+    label: "LINE แชทบอท",
+    repo: "kcw-api",
+    codeRoots: [
+      "src/bot/",
+      "scripts/line_rich_menu/",
+      "src/staff_shell/",
+    ],
+    notes:
+      "KCW LINE OA chatbot: message handlers, Flex/staff shell menus, and rich-menu layout/deploy.",
+    group: "kcw-api",
+  },
   {
     source: "kcw-api",
     id: "stock-check",
