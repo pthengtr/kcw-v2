@@ -31,6 +31,8 @@ function row(
     accounting_by: null,
     accounting_by_name: null,
     accounting_at: null,
+    accounting_skip_reason: null,
+    accounting_skip_note: null,
     created_at: "2026-11-23T10:00:00.000Z",
     updated_at: "2026-11-24T03:00:00.000Z",
     ...patch,
@@ -131,7 +133,51 @@ describe("summarizeExpenseCashRequests", () => {
         row({ id: "a", short_code: 1, amount: 100 }),
         row({ id: "b", short_code: 2, amount: 250.4 }),
       ])
-    ).toEqual({ count: 2, totalAmount: 350.4 });
+    ).toEqual({
+      count: 2,
+      totalAmount: 350.4,
+      pendingAccountingCount: 2,
+      pendingAccountingAmount: 350.4,
+    });
+  });
+
+  it("excludes skipped and recorded from pending accounting totals", () => {
+    expect(
+      summarizeExpenseCashRequests([
+        row({
+          id: "a",
+          short_code: 1,
+          amount: 100,
+          accounting_status: "pending",
+        }),
+        row({
+          id: "b",
+          short_code: 2,
+          amount: 200,
+          accounting_status: "recorded",
+        }),
+        row({
+          id: "c",
+          short_code: 3,
+          amount: 300,
+          accounting_status: "skipped",
+          accounting_skip_reason: "system_test",
+        }),
+        row({
+          id: "d",
+          short_code: 4,
+          amount: 50,
+          status: "approved",
+          paid_at: null,
+          accounting_status: "pending",
+        }),
+      ])
+    ).toEqual({
+      count: 4,
+      totalAmount: 650,
+      pendingAccountingCount: 1,
+      pendingAccountingAmount: 100,
+    });
   });
 });
 

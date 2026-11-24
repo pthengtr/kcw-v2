@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import {
   EXPENSE_CASH_ACCOUNTING_LABEL,
   EXPENSE_CASH_STATUS_LABEL,
+  expenseCashAccountingSkipText,
   expenseCashDetailText,
   type ExpenseCashRequest,
 } from "@/lib/expense/cash-request";
@@ -20,6 +21,7 @@ function excelRows(rows: ExpenseCashRequest[]) {
       "จำนวนเงิน",
       "สถานะการเบิกเงิน",
       "สถานะการลงค่าใช้จ่าย",
+      "เหตุผลไม่ลงค่าใช้จ่าย",
       "ผู้ลงค่าใช้จ่าย",
       "วันเวลาที่ลงค่าใช้จ่าย",
     ],
@@ -34,6 +36,7 @@ function excelRows(rows: ExpenseCashRequest[]) {
       EXPENSE_CASH_STATUS_LABEL[row.status] ?? row.status,
       EXPENSE_CASH_ACCOUNTING_LABEL[row.accounting_status] ??
         row.accounting_status,
+      expenseCashAccountingSkipText(row) ?? "",
       row.accounting_by_name ?? "",
       formatExpenseCashDateTime(row.accounting_at),
     ]),
