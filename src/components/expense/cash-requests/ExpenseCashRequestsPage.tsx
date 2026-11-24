@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, Loader2, RefreshCw, X } from "lucide-react";
+import { Download, Loader2, RefreshCw } from "lucide-react";
 
 import BackButton from "@/components/common/BackButton";
 import { Badge } from "@/components/ui/badge";
@@ -117,7 +117,6 @@ function DetailPanel({
   setNote,
   error,
   onAct,
-  onClose,
 }: {
   selected: ExpenseCashRequest | null;
   voucher: ExpenseCashVoucher | null;
@@ -129,7 +128,6 @@ function DetailPanel({
   onAct: (
     action: "approve" | "needs_info" | "reject" | "cancel" | "refresh"
   ) => void;
-  onClose?: () => void;
 }) {
   if (!selected) {
     return (
@@ -151,18 +149,6 @@ function DetailPanel({
         <AccountingBadge status={selected.accounting_status} />
         {detailLoading ? (
           <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-        ) : null}
-        {onClose ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="ml-auto"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-            ปิด
-          </Button>
         ) : null}
       </div>
 
@@ -334,6 +320,7 @@ export default function ExpenseCashRequestsPage() {
   );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [desktopDetailOpen, setDesktopDetailOpen] = useState(false);
   const [batchBranch, setBatchBranch] = useState<"keep" | ExpenseCashBranch>(
     "keep"
   );
@@ -420,9 +407,21 @@ export default function ExpenseCashRequestsPage() {
     void loadDetail(selectedId);
   }, [selectedId, loadDetail]);
 
-  function openDetail(id: string) {
+  function openDetail(id: string, mode: "mobile" | "desktop") {
     setSelectedId(id);
-    setMobileDetailOpen(true);
+    if (mode === "mobile") {
+      setMobileDetailOpen(true);
+      setDesktopDetailOpen(false);
+    } else {
+      setDesktopDetailOpen(true);
+      setMobileDetailOpen(false);
+    }
+  }
+
+  function closeDetail() {
+    setMobileDetailOpen(false);
+    setDesktopDetailOpen(false);
+    setError(null);
   }
 
   async function act(
@@ -788,169 +787,166 @@ export default function ExpenseCashRequestsPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.9fr)]">
-        {/* Mobile cards */}
-        <div className="lg:hidden">
-          <ul className="flex flex-col gap-2">
-            {filtered.map((row) => {
-              const selectable = canUpdateExpenseCashAccounting(row);
-              return (
-                <li
-                  key={row.id}
-                  className={cn(
-                    "rounded-xl border border-slate-200 bg-white p-3",
-                    selectedId === row.id && "ring-2 ring-emerald-300"
+      {/* Mobile cards */}
+      <div className="lg:hidden">
+        <ul className="flex flex-col gap-2">
+          {filtered.map((row) => {
+            const selectable = canUpdateExpenseCashAccounting(row);
+            return (
+              <li
+                key={row.id}
+                className={cn(
+                  "rounded-xl border border-slate-200 bg-white p-3",
+                  selectedId === row.id &&
+                    mobileDetailOpen &&
+                    "ring-2 ring-emerald-300"
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  {selectable ? (
+                    <Checkbox
+                      checked={selectedIds.has(row.id)}
+                      onCheckedChange={(v) =>
+                        toggleSelect(row.id, v === true)
+                      }
+                      aria-label={`เลือก #${row.short_code}`}
+                      className="mt-1"
+                    />
+                  ) : (
+                    <span className="mt-1 h-4 w-4" />
                   )}
-                >
-                  <div className="flex items-start gap-3">
-                    {selectable ? (
-                      <Checkbox
-                        checked={selectedIds.has(row.id)}
-                        onCheckedChange={(v) =>
-                          toggleSelect(row.id, v === true)
-                        }
-                        aria-label={`เลือก #${row.short_code}`}
-                        className="mt-1"
-                      />
-                    ) : (
-                      <span className="mt-1 h-4 w-4" />
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => openDetail(row.id, "mobile")}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">#{row.short_code}</span>
+                      <span className="text-xs text-slate-500">
+                        {formatExpenseCashDate(
+                          row.paid_at || row.created_at
+                        )}
+                      </span>
+                      <span className="ml-auto text-sm font-semibold tabular-nums">
+                        {formatBahtNumber(row.amount)}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm text-slate-700">
+                      {row.requester_name || row.requester_line_user_id}
+                      {row.branch ? ` · ${row.branch}` : ""}
+                    </div>
+                    <div className="mt-1 line-clamp-2 text-xs text-slate-500">
+                      {expenseCashDetailText(row)}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      <StatusBadge status={row.status} />
+                      <AccountingBadge status={row.accounting_status} />
+                    </div>
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+          {!loading && filtered.length === 0 ? (
+            <li className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+              ไม่พบรายการตามตัวกรอง
+            </li>
+          ) : null}
+        </ul>
+      </div>
+
+      {/* Desktop table — full width; detail opens as right drawer */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white lg:block">
+        <div className="max-h-[70vh] overflow-auto">
+          <table className="w-full min-w-[52rem] text-left text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-50 text-xs text-slate-600">
+              <tr>
+                <th className="w-10 px-3 py-2">
+                  <Checkbox
+                    checked={allSelectableChecked}
+                    onCheckedChange={(v) =>
+                      toggleSelectAllFiltered(v === true)
+                    }
+                    aria-label="เลือกทั้งหมดที่ถอนแล้ว"
+                    disabled={selectableFiltered.length === 0}
+                  />
+                </th>
+                <th className="px-3 py-2 font-medium">เลขที่</th>
+                <th className="px-3 py-2 font-medium">วันที่</th>
+                <th className="px-3 py-2 font-medium">สาขา</th>
+                <th className="px-3 py-2 font-medium">รายละเอียด</th>
+                <th className="px-3 py-2 text-right font-medium">จำนวนเงิน</th>
+                <th className="px-3 py-2 font-medium">สถานะเบิก</th>
+                <th className="px-3 py-2 font-medium">ลงค่าใช้จ่าย</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((row) => {
+                const selectable = canUpdateExpenseCashAccounting(row);
+                return (
+                  <tr
+                    key={row.id}
+                    className={cn(
+                      "cursor-pointer border-t border-slate-100 hover:bg-slate-50",
+                      selectedId === row.id &&
+                        desktopDetailOpen &&
+                        "bg-emerald-50/70"
                     )}
-                    <button
-                      type="button"
-                      className="min-w-0 flex-1 text-left"
-                      onClick={() => openDetail(row.id)}
+                    onClick={() => openDetail(row.id, "desktop")}
+                  >
+                    <td
+                      className="px-3 py-2"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold">#{row.short_code}</span>
-                        <span className="text-xs text-slate-500">
-                          {formatExpenseCashDate(
-                            row.paid_at || row.created_at
-                          )}
-                        </span>
-                        <span className="ml-auto text-sm font-semibold tabular-nums">
-                          {formatBahtNumber(row.amount)}
-                        </span>
-                      </div>
-                      <div className="mt-1 text-sm text-slate-700">
+                      {selectable ? (
+                        <Checkbox
+                          checked={selectedIds.has(row.id)}
+                          onCheckedChange={(v) =>
+                            toggleSelect(row.id, v === true)
+                          }
+                          aria-label={`เลือก #${row.short_code}`}
+                        />
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2 font-semibold tabular-nums">
+                      #{row.short_code}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-600">
+                      {formatExpenseCashDate(row.paid_at || row.created_at)}
+                    </td>
+                    <td className="px-3 py-2">{row.branch ?? "—"}</td>
+                    <td className="max-w-[18rem] px-3 py-2">
+                      <div className="truncate font-medium text-slate-800">
                         {row.requester_name || row.requester_line_user_id}
-                        {row.branch ? ` · ${row.branch}` : ""}
                       </div>
-                      <div className="mt-1 line-clamp-2 text-xs text-slate-500">
+                      <div className="truncate text-xs text-slate-500">
                         {expenseCashDetailText(row)}
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        <StatusBadge status={row.status} />
-                        <AccountingBadge status={row.accounting_status} />
-                      </div>
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-            {!loading && filtered.length === 0 ? (
-              <li className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
-                ไม่พบรายการตามตัวกรอง
-              </li>
-            ) : null}
-          </ul>
-        </div>
-
-        {/* Desktop table */}
-        <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white lg:block">
-          <div className="max-h-[70vh] overflow-auto">
-            <table className="w-full min-w-[52rem] text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-slate-50 text-xs text-slate-600">
-                <tr>
-                  <th className="w-10 px-3 py-2">
-                    <Checkbox
-                      checked={allSelectableChecked}
-                      onCheckedChange={(v) =>
-                        toggleSelectAllFiltered(v === true)
-                      }
-                      aria-label="เลือกทั้งหมดที่ถอนแล้ว"
-                      disabled={selectableFiltered.length === 0}
-                    />
-                  </th>
-                  <th className="px-3 py-2 font-medium">เลขที่</th>
-                  <th className="px-3 py-2 font-medium">วันที่</th>
-                  <th className="px-3 py-2 font-medium">สาขา</th>
-                  <th className="px-3 py-2 font-medium">รายละเอียด</th>
-                  <th className="px-3 py-2 text-right font-medium">จำนวนเงิน</th>
-                  <th className="px-3 py-2 font-medium">สถานะเบิก</th>
-                  <th className="px-3 py-2 font-medium">ลงค่าใช้จ่าย</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((row) => {
-                  const selectable = canUpdateExpenseCashAccounting(row);
-                  return (
-                    <tr
-                      key={row.id}
-                      className={cn(
-                        "cursor-pointer border-t border-slate-100 hover:bg-slate-50",
-                        selectedId === row.id && "bg-emerald-50/70"
-                      )}
-                      onClick={() => setSelectedId(row.id)}
-                    >
-                      <td
-                        className="px-3 py-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {selectable ? (
-                          <Checkbox
-                            checked={selectedIds.has(row.id)}
-                            onCheckedChange={(v) =>
-                              toggleSelect(row.id, v === true)
-                            }
-                            aria-label={`เลือก #${row.short_code}`}
-                          />
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-2 font-semibold tabular-nums">
-                        #{row.short_code}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-slate-600">
-                        {formatExpenseCashDate(row.paid_at || row.created_at)}
-                      </td>
-                      <td className="px-3 py-2">{row.branch ?? "—"}</td>
-                      <td className="max-w-[18rem] px-3 py-2">
-                        <div className="truncate font-medium text-slate-800">
-                          {row.requester_name || row.requester_line_user_id}
-                        </div>
-                        <div className="truncate text-xs text-slate-500">
-                          {expenseCashDetailText(row)}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-right font-medium tabular-nums">
-                        {formatBahtNumber(row.amount)}
-                      </td>
-                      <td className="px-3 py-2">
-                        <StatusBadge status={row.status} />
-                      </td>
-                      <td className="px-3 py-2">
-                        <AccountingBadge status={row.accounting_status} />
-                      </td>
-                    </tr>
-                  );
-                })}
-                {!loading && filtered.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-4 py-10 text-center text-slate-500"
-                    >
-                      ไม่พบรายการตามตัวกรอง
+                    </td>
+                    <td className="px-3 py-2 text-right font-medium tabular-nums">
+                      {formatBahtNumber(row.amount)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <StatusBadge status={row.status} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <AccountingBadge status={row.accounting_status} />
                     </td>
                   </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Desktop side detail */}
-        <div className="hidden rounded-xl border border-slate-200 bg-white p-4 lg:block">
-          <DetailPanel {...detailProps} />
+                );
+              })}
+              {!loading && filtered.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-10 text-center text-slate-500"
+                  >
+                    ไม่พบรายการตามตัวกรอง
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -958,22 +954,40 @@ export default function ExpenseCashRequestsPage() {
       <Sheet
         open={mobileDetailOpen && !!selected}
         onOpenChange={(open) => {
-          setMobileDetailOpen(open);
-          if (!open) setError(null);
+          if (!open) closeDetail();
+          else setMobileDetailOpen(true);
         }}
       >
         <SheetContent
           side="bottom"
-          className="flex max-h-[90vh] flex-col gap-0 overflow-y-auto rounded-t-2xl p-0 lg:hidden"
+          className="flex max-h-[90vh] flex-col gap-0 overflow-y-auto rounded-t-2xl p-0"
         >
-          <SheetHeader className="border-b border-slate-100 px-4 py-3 text-left">
+          <SheetHeader className="border-b border-slate-100 px-4 py-3 pr-12 text-left">
             <SheetTitle>รายละเอียดคำขอ</SheetTitle>
           </SheetHeader>
           <div className="p-4">
-            <DetailPanel
-              {...detailProps}
-              onClose={() => setMobileDetailOpen(false)}
-            />
+            <DetailPanel {...detailProps} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop detail drawer — overlays without shrinking the table */}
+      <Sheet
+        open={desktopDetailOpen && !!selected}
+        onOpenChange={(open) => {
+          if (!open) closeDetail();
+          else setDesktopDetailOpen(true);
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-md"
+        >
+          <SheetHeader className="border-b border-slate-100 px-4 py-3 pr-12 text-left">
+            <SheetTitle>รายละเอียดคำขอ</SheetTitle>
+          </SheetHeader>
+          <div className="p-4">
+            <DetailPanel {...detailProps} />
           </div>
         </SheetContent>
       </Sheet>
