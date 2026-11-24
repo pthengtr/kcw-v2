@@ -10,6 +10,9 @@
 !.yarn/releases
 !.yarn/versions
 
+# Cursor agent sandbox toolchain (downloaded into worktrees; never commit)
+.tools/
+
 # testing
 /coverage
 
