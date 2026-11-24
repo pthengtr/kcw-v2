@@ -36,7 +36,6 @@ import VatReceiptSheet from "@/components/vat/VatReceiptSheet";
 import { isGeneratedVatBill } from "@/lib/vat/generated-bill";
 import { isOnlineTaxVatBill } from "@/lib/vat/online-bill";
 import {
-  compareSheets,
   compareVatRegisterRows,
   filterVatRegisterRows,
   isIssuedToBill,
@@ -51,8 +50,10 @@ import {
   vatBillDrill,
   vatLineKey,
   vatRegisterInDateRange,
+  vatRegisterSheetTabs,
   vatReportingMonth,
   vatRequiresReceipt,
+  vatSheetLabel,
   vatTracksPayment,
   type VatExpenseImage,
   type VatFileKind,
@@ -290,10 +291,9 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
   }, [columnsHydrated, hiddenColumns]);
 
   const sheets = useMemo(() => {
-    const names = Array.from(new Set(rows.map((row) => row.sheet)));
-    names.sort(compareSheets);
-    return names;
-  }, [rows]);
+    const observed = Array.from(new Set(rows.map((row) => row.sheet)));
+    return vatRegisterSheetTabs({ sheets: observed, side, branch });
+  }, [rows, side, branch]);
 
   useEffect(() => {
     if (sheet !== "ALL" && !sheets.includes(sheet)) setSheet("ALL");
@@ -615,7 +615,7 @@ export default function VatRegisterPage({ readOnly = false }: { readOnly?: boole
         </SheetButton>
         {sheets.map((name) => (
           <SheetButton key={name} active={sheet === name} onClick={() => setSheet(name)}>
-            {name}
+            {vatSheetLabel(name)}
           </SheetButton>
         ))}
       </div>

@@ -30,6 +30,59 @@ export const VAT_SHEET_ORDER = [
 ] as const;
 
 export type VatRegisterSide = "sales" | "purchase";
+
+/** HQ purchase books that must stay on the sheet strip even when a month is empty. */
+export const VAT_PURCHASE_HQ_SHEETS = [
+  "เครดิต",
+  "สด",
+  "ลดหนี้ซื้อ",
+  "เพิ่มหนี้ซื้อ",
+  "Unknown",
+  "ลดหนี้ค่าใช้จ่าย",
+  "ค่าใช้จ่าย",
+] as const;
+
+/** SYP purchase books (expense app only — no Parts9 purchase tax books). */
+export const VAT_PURCHASE_SYP_SHEETS = [
+  "Expense Credit Note",
+  "Expense Receipt",
+] as const;
+
+const VAT_SHEET_LABELS: Record<string, string> = {
+  เครดิต: "ซื้อเครดิต",
+  สด: "ซื้อสด",
+  ลดหนี้ซื้อ: "ลดหนี้ภาษีซื้อ",
+  เพิ่มหนี้ซื้อ: "เพิ่มหนี้ภาษีซื้อ",
+};
+
+/** Ops wording for the sheet chips; unknown sheets keep their raw name. */
+export function vatSheetLabel(sheet: string): string {
+  return VAT_SHEET_LABELS[sheet] ?? sheet;
+}
+
+/**
+ * Sheet chips for the register strip. Purchase inventory books stay visible
+ * even when the month has no rows, matching the Excel books.
+ */
+export function vatRegisterSheetTabs(input: {
+  sheets: readonly string[];
+  side: "ALL" | VatRegisterSide;
+  branch: "ALL" | "HQ" | "SYP";
+}): string[] {
+  const names = new Set(input.sheets);
+  if (input.side === "purchase" || input.side === "ALL") {
+    const includeHq = input.branch === "ALL" || input.branch === "HQ";
+    const includeSyp = input.branch === "ALL" || input.branch === "SYP";
+    if (includeHq) {
+      for (const sheet of VAT_PURCHASE_HQ_SHEETS) names.add(sheet);
+    }
+    if (includeSyp) {
+      for (const sheet of VAT_PURCHASE_SYP_SHEETS) names.add(sheet);
+    }
+  }
+  return Array.from(names).sort(compareSheets);
+}
+
 export type VatPaidStatus = "unpaid" | "paid";
 export type VatFileKind = "invoice" | "receipt";
 

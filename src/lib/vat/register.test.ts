@@ -19,7 +19,9 @@ import {
   vatRegisterKpiMatch,
   vatRegisterMatchesQuery,
   vatReportingMonth,
+  vatRegisterSheetTabs,
   vatRequiresReceipt,
+  vatSheetLabel,
   vatTracksPayment,
   vatUploadDocMonth,
   splitInclusiveVat,
@@ -181,6 +183,33 @@ describe("sheet order", () => {
   it("puts TAR before TD and credit purchases before cash", () => {
     expect(compareSheets("TD", "TAR")).toBeGreaterThan(0);
     expect(compareSheets("เครดิต", "สด")).toBeLessThan(0);
+  });
+});
+
+describe("purchase sheet tabs", () => {
+  it("keeps HQ purchase books on the strip when the month only has expenses", () => {
+    const tabs = vatRegisterSheetTabs({
+      sheets: ["ค่าใช้จ่าย", "ลดหนี้ค่าใช้จ่าย", "Expense Receipt"],
+      side: "purchase",
+      branch: "HQ",
+    });
+    expect(tabs).toEqual([
+      "เครดิต",
+      "สด",
+      "ลดหนี้ซื้อ",
+      "เพิ่มหนี้ซื้อ",
+      "Unknown",
+      "ค่าใช้จ่าย",
+      "ลดหนี้ค่าใช้จ่าย",
+      "Expense Receipt",
+    ]);
+  });
+
+  it("labels purchase inventory books the way ops name them", () => {
+    expect(vatSheetLabel("เครดิต")).toBe("ซื้อเครดิต");
+    expect(vatSheetLabel("สด")).toBe("ซื้อสด");
+    expect(vatSheetLabel("ลดหนี้ซื้อ")).toBe("ลดหนี้ภาษีซื้อ");
+    expect(vatSheetLabel("ค่าใช้จ่าย")).toBe("ค่าใช้จ่าย");
   });
 });
 
