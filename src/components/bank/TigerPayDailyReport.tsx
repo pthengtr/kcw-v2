@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-type FormulaTone = "cash" | "qr" | "out" | "cn" | "net";
+type FormulaTone = "cash" | "qr" | "out" | "cn" | "expense" | "net";
 
 const TONE: Record<
   FormulaTone,
@@ -66,6 +66,12 @@ const TONE: Record<
     iconWrap: "bg-violet-100 text-violet-600",
     icon: "text-violet-600",
     amount: "text-violet-600",
+  },
+  expense: {
+    card: "border-amber-100 bg-amber-50/90",
+    iconWrap: "bg-amber-100 text-amber-700",
+    icon: "text-amber-700",
+    amount: "text-amber-700",
   },
   net: {
     card: "border-amber-100 bg-amber-50/90",
@@ -253,7 +259,25 @@ export default function TigerPayDailyReport({
             icon={<Coins className="h-5 w-5" />}
             title="ยอดรับชำระสุทธิ"
             amount={today.settledNet}
-            hint="ยอดเงินที่รับเข้าทั้งหมด หักถอนและจ่ายคืนลูกค้า"
+            hint="เทียบ POS — ไม่หักเบิกเงินแชทบอท"
+          />
+        </div>
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-stretch">
+          <FormulaCard
+            tone="expense"
+            icon={<Wallet className="h-5 w-5" />}
+            title="เบิกเงิน (แชทบอท)"
+            amount={today.expenseCashOutAmount}
+            count={today.expenseCashOutCount}
+            hint="เงินออกจากเครื่อง — ไม่ใช่รายการ POS"
+          />
+          <Operator>=</Operator>
+          <FormulaCard
+            tone="net"
+            icon={<Coins className="h-5 w-5" />}
+            title="หลังหักเบิกเงิน"
+            amount={today.settledNetAfterExpense}
+            hint="ยอดในเครื่องจริงหลังเบิกเงินแชทบอท"
           />
         </div>
       </section>
@@ -350,6 +374,12 @@ export default function TigerPayDailyReport({
               count={today.voucherUsedCount}
             />
             <CountRow
+              icon={<Wallet className="h-4 w-4" />}
+              iconClass="bg-amber-50 text-amber-700"
+              label="เบิกเงิน (แชทบอท)"
+              count={today.expenseCashOutCount}
+            />
+            <CountRow
               icon={<Ban className="h-4 w-4" />}
               iconClass="bg-slate-100 text-slate-500"
               label="ยกเลิกรายการ"
@@ -388,7 +418,7 @@ export default function TigerPayDailyReport({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs bg-slate-800 text-xs font-normal">
-                    รับเข้า − ถอน − จ่าย CN ไม่รวมเงินทอนที่คงเหลือในเครื่อง
+                    รับเข้า − ถอน − จ่าย CN (เทียบ POS ไม่หักเบิกเงิน) ไม่รวมเงินทอนที่คงเหลือในเครื่อง
                   </TooltipContent>
                 </UiTooltip>
               </TooltipProvider>
@@ -401,8 +431,14 @@ export default function TigerPayDailyReport({
               {formatReportBaht(today.changeOut, false)} − จ่าย CN{" "}
               {formatReportBaht(today.voucherUsedAmount, false)}
             </p>
+            {today.expenseCashOutAmount > 0 ? (
+              <p className="mt-1 text-xs text-amber-800/90">
+                หลังหักเบิกเงิน {formatReportBaht(today.cashNetAfterExpense, false)}{" "}
+                (เบิก {formatReportBaht(today.expenseCashOutAmount, false)})
+              </p>
+            ) : null}
             <p className="mt-0.5 text-[11px] text-emerald-700/70">
-              (ไม่รวมเงินทอนที่คงเหลือในเครื่อง)
+              (ไม่รวมเงินทอนที่คงเหลือในเครื่อง · เทียบ POS)
             </p>
           </div>
         </section>
