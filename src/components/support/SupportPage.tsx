@@ -27,6 +27,12 @@ import {
   type SupportTarget,
 } from "@/lib/support/catalog";
 import {
+  TICKET_LIST_FILTERS,
+  TICKET_PAGE_SIZE,
+  filterSupportTickets,
+  type TicketListFilter,
+} from "@/lib/support/list-filters";
+import {
   SUPPORT_BUCKET,
   SUPPORT_KIND_LABEL,
   SUPPORT_STATUS_LABEL,
@@ -81,6 +87,9 @@ export function SupportPage() {
   const [draftId, setDraftId] = useState(() => crypto.randomUUID());
   const [attachmentPaths, setAttachmentPaths] = useState<string[]>([]);
   const [verifyComment, setVerifyComment] = useState("");
+  const [listFilter, setListFilter] = useState<TicketListFilter>("open");
+  const [titleQuery, setTitleQuery] = useState("");
+  const [listPage, setListPage] = useState(1);
 
   const isDataQuery = kind === "data_query";
 
@@ -89,6 +98,30 @@ export function SupportPage() {
     if (!parsed) return null;
     return getSupportTarget(parsed.source, parsed.id) ?? null;
   }, [targetKey]);
+
+  const filteredTickets = useMemo(
+    () => filterSupportTickets(tickets, listFilter, titleQuery),
+    [tickets, listFilter, titleQuery]
+  );
+
+  const listPageCount = Math.max(
+    1,
+    Math.ceil(filteredTickets.length / TICKET_PAGE_SIZE)
+  );
+
+  const pagedTickets = useMemo(() => {
+    const page = Math.min(listPage, listPageCount);
+    const start = (page - 1) * TICKET_PAGE_SIZE;
+    return filteredTickets.slice(start, start + TICKET_PAGE_SIZE);
+  }, [filteredTickets, listPage, listPageCount]);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [listFilter, titleQuery]);
+
+  useEffect(() => {
+    if (listPage > listPageCount) setListPage(listPageCount);
+  }, [listPage, listPageCount]);
 
   useEffect(() => {
     // Keep target in sync with kind: data_query ↔ hq-data only.
@@ -450,45 +483,110 @@ export function SupportPage() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <CardTitle className="text-base">คำขอของฉัน</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-1">
+                  {TICKET_LIST_FILTERS.map((f) => (
+                    <Button
+                      key={f.value}
+                      type="button"
+                      size="sm"
+                      variant={listFilter === f.value ? "default" : "outline"}
+                      className="h-7 px-2.5 text-xs"
+                      onClick={() => setListFilter(f.value)}
+                    >
+                      {f.label}
+                    </Button>
+                  ))}
+                </div>
+                <Input
+                  value={titleQuery}
+                  onChange={(e) => setTitleQuery(e.target.value)}
+                  placeholder="ค้นหาจากหัวข้อคำขอ"
+                  className="h-8 text-sm"
+                  aria-label="ค้นหาจากหัวข้อคำขอ"
+                />
+              </div>
+
               {loading ? (
                 <p className="text-sm text-slate-500">กำลังโหลด…</p>
               ) : tickets.length === 0 ? (
                 <p className="text-sm text-slate-500">ยังไม่มีคำขอ</p>
+              ) : filteredTickets.length === 0 ? (
+                <p className="text-sm text-slate-500">ไม่พบคำขอตามตัวกรอง</p>
               ) : (
-                tickets.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => void loadDetail(t.id)}
-                    className={cn(
-                      "rounded-md border px-3 py-2 text-left transition",
-                      selectedId === t.id
-                        ? "border-slate-400 bg-slate-50"
-                        : "border-slate-200 hover:bg-slate-50"
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium text-slate-900">
-                        {t.title}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={cn("shrink-0 ring-1", statusBadgeClass(t.status))}
+                <>
+                  <div className="flex flex-col gap-1">
+                    {pagedTickets.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => void loadDetail(t.id)}
+                        className={cn(
+                          "rounded-md border px-2.5 py-1.5 text-left transition",
+                          selectedId === t.id
+                            ? "border-slate-400 bg-slate-50"
+                            : "border-slate-200 hover:bg-slate-50"
+                        )}
                       >
-                        {SUPPORT_STATUS_LABEL[t.status]}
-                      </Badge>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-sm font-medium leading-snug text-slate-900">
+                            {t.title}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "h-5 shrink-0 px-1.5 text-[10px] ring-1",
+                              statusBadgeClass(t.status)
+                            )}
+                          >
+                            {SUPPORT_STATUS_LABEL[t.status]}
+                          </Badge>
+                        </div>
+                        <p className="truncate text-[11px] leading-tight text-slate-500">
+                          {t.target_label} ·{" "}
+                          {SUPPORT_KIND_LABEL[t.kind] ?? t.kind} ·{" "}
+                          {new Date(t.created_at).toLocaleString("th-TH")}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-1 text-xs text-slate-600">
+                    <span>
+                      หน้า {Math.min(listPage, listPageCount)} / {listPageCount} ·{" "}
+                      {filteredTickets.length.toLocaleString("th-TH")} รายการ
+                    </span>
+                    <div className="flex gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        disabled={listPage <= 1}
+                        onClick={() =>
+                          setListPage((p) => Math.max(1, p - 1))
+                        }
+                      >
+                        ก่อนหน้า
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        disabled={listPage >= listPageCount}
+                        onClick={() =>
+                          setListPage((p) => Math.min(listPageCount, p + 1))
+                        }
+                      >
+                        ถัดไป
+                      </Button>
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-slate-500">
-                      {t.target_label} ·{" "}
-                      {SUPPORT_KIND_LABEL[t.kind] ?? t.kind} ·{" "}
-                      {new Date(t.created_at).toLocaleString("th-TH")}
-                    </p>
-                  </button>
-                ))
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
