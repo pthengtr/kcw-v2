@@ -496,7 +496,13 @@ export function SupportPage() {
                       size="sm"
                       variant={listFilter === f.value ? "default" : "outline"}
                       className="h-7 px-2.5 text-xs"
-                      onClick={() => setListFilter(f.value)}
+                      onClick={() =>
+                        // No "ยังไม่ปิด" chip — click active filter again to
+                        // return to default open (non-closed) list.
+                        setListFilter(
+                          listFilter === f.value ? "open" : f.value
+                        )
+                      }
                     >
                       {f.label}
                     </Button>

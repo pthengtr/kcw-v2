@@ -4,9 +4,9 @@ export type TicketListFilter = "open" | "running" | "waiting" | "done" | "all";
 
 export const TICKET_PAGE_SIZE = 10;
 
+/** Visible chips — default list still uses "open" (non-closed) with no chip. */
 export const TICKET_LIST_FILTERS: { value: TicketListFilter; label: string }[] =
   [
-    { value: "open", label: "ยังไม่ปิด" },
     { value: "running", label: "กำลังทำ" },
     { value: "waiting", label: "รอตรวจ" },
     { value: "done", label: "ปิดแล้ว" },
