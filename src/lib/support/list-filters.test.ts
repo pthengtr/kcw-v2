@@ -1,11 +1,29 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  TICKET_LIST_FILTERS,
   TICKET_PAGE_SIZE,
   filterSupportTickets,
   matchesTicketListFilter,
 } from "./list-filters";
 import type { SupportTicketStatus } from "./types";
+
+describe("TICKET_LIST_FILTERS", () => {
+  it("omits ยังไม่ปิด so it does not overlap รอตรวจ", () => {
+    expect(TICKET_LIST_FILTERS.map((f) => f.value)).toEqual([
+      "running",
+      "waiting",
+      "done",
+      "all",
+    ]);
+    expect(TICKET_LIST_FILTERS.map((f) => f.label)).toEqual([
+      "กำลังทำ",
+      "รอตรวจ",
+      "ปิดแล้ว",
+      "ทั้งหมด",
+    ]);
+  });
+});
 
 describe("matchesTicketListFilter", () => {
   const statuses: SupportTicketStatus[] = [
