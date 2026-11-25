@@ -336,8 +336,11 @@ function DetailPanel({
 
 export default function ExpenseCashRequestsPage({
   canManage = false,
+  canUpdateAccounting = false,
 }: {
   canManage?: boolean;
+  /** Staff (non-admin) may mark accounting status; approve/reject stays admin. */
+  canUpdateAccounting?: boolean;
 }) {
   const [rows, setRows] = useState<ExpenseCashRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -379,8 +382,10 @@ export default function ExpenseCashRequestsPage({
 
   const selectableFiltered = useMemo(
     () =>
-      canManage ? filtered.filter(canUpdateExpenseCashAccounting) : [],
-    [filtered, canManage]
+      canUpdateAccounting
+        ? filtered.filter(canUpdateExpenseCashAccounting)
+        : [],
+    [filtered, canUpdateAccounting]
   );
 
   const load = useCallback(async () => {
@@ -550,7 +555,7 @@ export default function ExpenseCashRequestsPage({
       accounting_skip_note?: string;
     }
   ) {
-    if (!canManage) return;
+    if (!canUpdateAccounting) return;
     if (selectedPaidIds.length === 0) {
       setError("เลือกรายการที่ถอนเงินแล้วอย่างน้อย 1 รายการ");
       return;
@@ -663,7 +668,9 @@ export default function ExpenseCashRequestsPage({
       <p className="text-sm text-slate-600">
         {canManage
           ? "อนุมัติแล้วระบบสร้าง QR ตู้ Tiger ให้ผู้ขอทาง LINE — เช็กสถานะถอน / ยกเลิก QR ได้ที่นี่ และบัญชีสามารถทำเครื่องหมายลงค่าใช้จ่ายเป็นชุดได้"
-          : "ดูรายการคำขอเบิกเงินสดและสถานะได้ — การอนุมัติ / ส่งกลับ / ปฏิเสธ และการลงค่าใช้จ่ายสงวนไว้สำหรับแอดมิน"}
+          : canUpdateAccounting
+            ? "ดูรายการและทำเครื่องหมายลงค่าใช้จ่ายได้ — การอนุมัติ / ส่งกลับ / ปฏิเสธ / ยกเลิก QR สงวนไว้สำหรับแอดมิน"
+            : "ดูรายการคำขอเบิกเงินสดและสถานะได้ — การอนุมัติ / ส่งกลับ / ปฏิเสธ และการลงค่าใช้จ่ายสงวนไว้สำหรับแอดมิน"}
       </p>
 
       <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
@@ -803,7 +810,7 @@ export default function ExpenseCashRequestsPage({
         </div>
       </div>
 
-      {canManage && selectedPaidIds.length > 0 ? (
+      {canUpdateAccounting && selectedPaidIds.length > 0 ? (
         <div className="flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 sm:flex-row sm:flex-wrap sm:items-end">
           <div className="text-sm font-medium text-indigo-900">
             เลือกแล้ว {selectedPaidIds.length} รายการ (ถอนแล้ว)
@@ -948,7 +955,7 @@ export default function ExpenseCashRequestsPage({
         <ul className="flex flex-col gap-2">
           {filtered.map((row) => {
             const selectable =
-              canManage && canUpdateExpenseCashAccounting(row);
+              canUpdateAccounting && canUpdateExpenseCashAccounting(row);
             return (
               <li
                 key={row.id}
@@ -960,7 +967,7 @@ export default function ExpenseCashRequestsPage({
                 )}
               >
                 <div className="flex items-start gap-3">
-                  {canManage ? (
+                  {canUpdateAccounting ? (
                     selectable ? (
                       <Checkbox
                         checked={selectedIds.has(row.id)}
@@ -1020,7 +1027,7 @@ export default function ExpenseCashRequestsPage({
           <table className="w-full min-w-[52rem] text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50 text-xs text-slate-600">
               <tr>
-                {canManage ? (
+                {canUpdateAccounting ? (
                   <th className="w-10 px-3 py-2">
                     <Checkbox
                       checked={allSelectableChecked}
@@ -1044,7 +1051,7 @@ export default function ExpenseCashRequestsPage({
             <tbody>
               {filtered.map((row) => {
                 const selectable =
-                  canManage && canUpdateExpenseCashAccounting(row);
+                  canUpdateAccounting && canUpdateExpenseCashAccounting(row);
                 return (
                   <tr
                     key={row.id}
@@ -1056,7 +1063,7 @@ export default function ExpenseCashRequestsPage({
                     )}
                     onClick={() => openDetail(row.id, "desktop")}
                   >
-                    {canManage ? (
+                    {canUpdateAccounting ? (
                       <td
                         className="px-3 py-2"
                         onClick={(e) => e.stopPropagation()}
@@ -1102,7 +1109,7 @@ export default function ExpenseCashRequestsPage({
               {!loading && filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={canManage ? 8 : 7}
+                    colSpan={canUpdateAccounting ? 8 : 7}
                     className="px-4 py-10 text-center text-slate-500"
                   >
                     ไม่พบรายการตามตัวกรอง

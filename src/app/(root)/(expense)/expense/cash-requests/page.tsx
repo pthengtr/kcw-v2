@@ -5,5 +5,11 @@ import { getMyPageAccess } from "@/lib/auth/page-access";
 export default async function Page() {
   const { roleKeys } = await getMyPageAccess();
   const canManage = roleKeys.includes(ROLE_ADMIN);
-  return <ExpenseCashRequestsPage canManage={canManage} />;
+  // Any staff with page access may mark accounting status; approve/reject stays admin.
+  return (
+    <ExpenseCashRequestsPage
+      canManage={canManage}
+      canUpdateAccounting
+    />
+  );
 }
