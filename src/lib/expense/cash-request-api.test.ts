@@ -16,7 +16,7 @@ describe("expense cash request access split", () => {
     expect(api).toContain("isAdmin");
   });
 
-  it("allows staff to list/get but keeps mutations admin-only", () => {
+  it("allows staff to list/get and mark accounting; keeps approve admin-only", () => {
     const list = readSrc("app/api/expense/cash-requests/route.ts");
     const byId = readSrc("app/api/expense/cash-requests/[id]/route.ts");
     const accounting = readSrc(
@@ -31,11 +31,12 @@ describe("expense cash request access split", () => {
       /export async function POST[\s\S]*requireExpenseCashAdmin/
     );
 
-    expect(accounting).toContain("requireExpenseCashAdmin");
-    expect(accounting).not.toContain("requireExpenseCashViewer");
+    expect(accounting).toContain("requireExpenseCashViewer");
+    expect(accounting).not.toContain("requireExpenseCashAdmin");
+    expect(accounting).toContain("auth.admin");
   });
 
-  it("passes canManage from the page into the client UI", () => {
+  it("passes canManage and canUpdateAccounting into the client UI", () => {
     const page = readSrc(
       "app/(root)/(expense)/expense/cash-requests/page.tsx"
     );
@@ -44,7 +45,9 @@ describe("expense cash request access split", () => {
     );
     expect(page).toContain("ROLE_ADMIN");
     expect(page).toContain("canManage");
+    expect(page).toContain("canUpdateAccounting");
     expect(ui).toContain("canManage");
-    expect(ui).toContain("canManage &&");
+    expect(ui).toContain("canUpdateAccounting");
+    expect(ui).toContain("canUpdateAccounting &&");
   });
 });

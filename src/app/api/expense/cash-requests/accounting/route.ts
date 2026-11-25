@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireExpenseCashAdmin } from "@/lib/expense/cash-request-api";
+import { requireExpenseCashViewer } from "@/lib/expense/cash-request-api";
 
 const BodySchema = z
   .object({
@@ -36,7 +36,9 @@ const BodySchema = z
   });
 
 export async function POST(req: Request) {
-  const auth = await requireExpenseCashAdmin();
+  // Accounting mark is open to any signed-in staff; approve/reject stays admin-only.
+  // RLS only allows admin UPDATE — use service role after auth.
+  const auth = await requireExpenseCashViewer();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
@@ -69,7 +71,7 @@ export async function POST(req: Request) {
   } = parsed.data;
   const uniqueIds = [...new Set(ids)];
 
-  const { data: existing, error: loadError } = await auth.supabase
+  const { data: existing, error: loadError } = await auth.admin
     .from("expense_cash_request")
     .select("id,status")
     .in("id", uniqueIds);
@@ -122,7 +124,7 @@ export async function POST(req: Request) {
     patch.accounting_skip_note = null;
   }
 
-  const { data: updated, error: updateError } = await auth.supabase
+  const { data: updated, error: updateError } = await auth.admin
     .from("expense_cash_request")
     .update(patch)
     .in("id", uniqueIds)
