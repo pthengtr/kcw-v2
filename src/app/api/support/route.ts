@@ -47,9 +47,11 @@ export async function GET() {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
+  // "คำขอของฉัน" — always the caller's tickets (admins otherwise see everyone via RLS).
   const { data, error } = await auth.supabase
     .from("support_tickets")
     .select("*")
+    .eq("created_by", auth.userId)
     .order("created_at", { ascending: false })
     .limit(100);
 

@@ -140,7 +140,7 @@ export function SupportPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/support");
+      const res = await fetch("/api/support", { cache: "no-store" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "โหลดรายการไม่สำเร็จ");
       setTickets(json.tickets ?? []);
@@ -283,8 +283,8 @@ export function SupportPage() {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <div className="flex flex-col gap-6">
-          <Card>
+        <div className="flex flex-col gap-4">
+          <Card className="order-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">สร้างคำขอใหม่</CardTitle>
             </CardHeader>
@@ -482,12 +482,12 @@ export function SupportPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="order-1">
+            <CardHeader className="py-2.5 pb-1.5">
               <CardTitle className="text-base">คำขอของฉัน</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <div className="flex flex-col gap-2">
+            <CardContent className="flex flex-col gap-1.5 pt-0">
+              <div className="flex flex-col gap-1.5">
                 <div className="flex flex-wrap gap-1">
                   {TICKET_LIST_FILTERS.map((f) => (
                     <Button
@@ -519,34 +519,34 @@ export function SupportPage() {
                 <p className="text-sm text-slate-500">ไม่พบคำขอตามตัวกรอง</p>
               ) : (
                 <>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-0.5">
                     {pagedTickets.map((t) => (
                       <button
                         key={t.id}
                         type="button"
                         onClick={() => void loadDetail(t.id)}
                         className={cn(
-                          "rounded-md border px-2.5 py-1.5 text-left transition",
+                          "rounded border px-2 py-1 text-left transition",
                           selectedId === t.id
                             ? "border-slate-400 bg-slate-50"
                             : "border-slate-200 hover:bg-slate-50"
                         )}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate text-sm font-medium leading-snug text-slate-900">
+                        <div className="flex items-center gap-2">
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium leading-tight text-slate-900">
                             {t.title}
                           </span>
                           <Badge
                             variant="outline"
                             className={cn(
-                              "h-5 shrink-0 px-1.5 text-[10px] ring-1",
+                              "h-5 shrink-0 px-1.5 text-[10px] leading-none ring-1",
                               statusBadgeClass(t.status)
                             )}
                           >
                             {SUPPORT_STATUS_LABEL[t.status]}
                           </Badge>
                         </div>
-                        <p className="truncate text-[11px] leading-tight text-slate-500">
+                        <p className="truncate text-[10px] leading-tight text-slate-500">
                           {t.target_label} ·{" "}
                           {SUPPORT_KIND_LABEL[t.kind] ?? t.kind} ·{" "}
                           {new Date(t.created_at).toLocaleString("th-TH")}
@@ -554,38 +554,45 @@ export function SupportPage() {
                       </button>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between gap-2 pt-1 text-xs text-slate-600">
-                    <span>
-                      หน้า {Math.min(listPage, listPageCount)} / {listPageCount} ·{" "}
-                      {filteredTickets.length.toLocaleString("th-TH")} รายการ
-                    </span>
-                    <div className="flex gap-1.5">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs"
-                        disabled={listPage <= 1}
-                        onClick={() =>
-                          setListPage((p) => Math.max(1, p - 1))
-                        }
-                      >
-                        ก่อนหน้า
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs"
-                        disabled={listPage >= listPageCount}
-                        onClick={() =>
-                          setListPage((p) => Math.min(listPageCount, p + 1))
-                        }
-                      >
-                        ถัดไป
-                      </Button>
+                  {filteredTickets.length > TICKET_PAGE_SIZE ? (
+                    <div className="flex items-center justify-between gap-2 pt-0.5 text-xs text-slate-600">
+                      <span>
+                        หน้า {Math.min(listPage, listPageCount)} /{" "}
+                        {listPageCount} ·{" "}
+                        {filteredTickets.length.toLocaleString("th-TH")} รายการ
+                      </span>
+                      <div className="flex gap-1.5">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs"
+                          disabled={listPage <= 1}
+                          onClick={() =>
+                            setListPage((p) => Math.max(1, p - 1))
+                          }
+                        >
+                          ก่อนหน้า
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs"
+                          disabled={listPage >= listPageCount}
+                          onClick={() =>
+                            setListPage((p) => Math.min(listPageCount, p + 1))
+                          }
+                        >
+                          ถัดไป
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-500">
+                      {filteredTickets.length.toLocaleString("th-TH")} รายการ
+                    </p>
+                  )}
                 </>
               )}
             </CardContent>
