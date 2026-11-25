@@ -264,6 +264,7 @@ const KCW_V2_PAGE_ROOTS: Record<string, { codeRoots: string[]; notes?: string }>
     support: {
       codeRoots: [
         "src/app/(root)/support/",
+        "src/components/support/",
         "src/lib/support/",
         "src/app/api/support/",
       ],
