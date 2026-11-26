@@ -34,3 +34,14 @@ systemctl --user enable --now kcw-support-worker.service
 ```
 
 Needs in `kcw-api/.env`: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, DB engine vars, `CURSOR_API_KEY`, and `gh` auth for GitHub (code tickets). Optional: `SUPPORT_DATA_QUERY_CWD`.
+
+### Hang / stuck `running` prevention
+
+Tickets only get claimed from `pending`. If the worker is killed mid-ticket (deploy bounce, SIGTERM), the row used to sit in `running` forever.
+
+Guards now in place:
+
+1. **Startup reclaim** — on boot, every leftover `running` ticket is moved back to `pending` (`requeued` event).
+2. **Stale reclaim** — poll loop also requeues `running` older than `SUPPORT_STALE_RUNNING_MINUTES` (default ~50m, above agent timeout).
+3. **Graceful stop** — SIGTERM/SIGINT requeues the in-flight ticket before exit.
+4. **Deploy** — `hq-linux-deploy.sh` no longer restarts the support worker by default. Use `RESTART_SUPPORT_WORKER=1` only when support-worker code itself changed.
