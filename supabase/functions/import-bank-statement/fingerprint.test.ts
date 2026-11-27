@@ -107,7 +107,7 @@ describe("buildTransactionFingerprint", () => {
   it("Test 5 — 3557 monthly re-import matches earlier April file on stable detail", async () => {
     // 04_3557.xlsx vs 3557 ด.4.xlsx: same bank txn; display รายการ may be
     // "โอนเงิน" in one export and a time string in another. Identity uses
-    // รายละเอียด + balance_after, not the display label.
+    // balance_after (auto_v3), not the display label or truncated detail.
     const fromAprilFile = await buildTransactionFingerprint({
       account_no: "141-1-72355-7",
       txn_date: "2026-04-01",
@@ -137,5 +137,49 @@ describe("buildTransactionFingerprint", () => {
       v1LikeDifferentDescriptions.map((s) => sha256HexAsync(s)),
     );
     expect(v1Hashes[0]).not.toBe(v1Hashes[1]);
+  });
+
+  it("Test 6 — KBANK truncated รายละเอียด still shares fingerprint when balance_after matches", async () => {
+    // Overlapping weekly exports truncate detail at different lengths (++ vs +).
+    const shorter = await buildTransactionFingerprint({
+      account_no: "064-8-91723-6",
+      txn_date: "2026-11-03",
+      direction: "in",
+      amount: 112746.1,
+      balance_after: 328755.79,
+      bank_reference: null,
+      transaction_detail: "จาก KTB X2446 NARUMON WITHAYAPAL++",
+    });
+    const longer = await buildTransactionFingerprint({
+      account_no: "064-8-91723-6",
+      txn_date: "2026-11-03",
+      direction: "in",
+      amount: 112746.1,
+      balance_after: 328755.79,
+      bank_reference: null,
+      transaction_detail: "จาก KTB X2446 NARUMON WITHAYAPALOTH+",
+    });
+    expect(shorter).toBe(longer);
+
+    // Without balance, different detail must still differ.
+    const noBalA = await buildTransactionFingerprint({
+      account_no: "064-8-91723-6",
+      txn_date: "2026-11-03",
+      direction: "in",
+      amount: 112746.1,
+      balance_after: null,
+      bank_reference: null,
+      transaction_detail: "จาก KTB X2446 NARUMON WITHAYAPAL++",
+    });
+    const noBalB = await buildTransactionFingerprint({
+      account_no: "064-8-91723-6",
+      txn_date: "2026-11-03",
+      direction: "in",
+      amount: 112746.1,
+      balance_after: null,
+      bank_reference: null,
+      transaction_detail: "จาก KTB X2446 NARUMON WITHAYAPALOTH+",
+    });
+    expect(noBalA).not.toBe(noBalB);
   });
 });

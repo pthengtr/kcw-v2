@@ -111,23 +111,30 @@ const RAW_DETAIL_KEY_PATTERNS = [
  * `description` (parsed display label / time) is intentionally excluded so overlapping
  * KBANK exports that swap รายการ vs เวลา do not create duplicate rows.
  *
- * `balance_after` disambiguates legitimate same-day same-amount sequences.
- * `transaction_detail` and `bank_reference` add stability when present.
+ * When `balance_after` is present (normal KBANK/KTB ledger exports), identity is the
+ * running-balance position only — detail/bank_reference are omitted. Overlapping
+ * cumulative statements truncate รายละเอียด differently (`++` vs `+`, different cut
+ * lengths), so hashing detail created false-unique fingerprints for the same txn.
+ *
+ * When `balance_after` is missing, fall back to normalized detail + bank_reference.
  */
 export async function buildTransactionFingerprint(
   input: TransactionFingerprintInput,
 ): Promise<string> {
-  const stableDetail = normalizeStableTransactionDetail(input.transaction_detail);
+  const hasBalance =
+    input.balance_after !== null && input.balance_after !== undefined;
+  const stableDetail = hasBalance
+    ? null
+    : normalizeStableTransactionDetail(input.transaction_detail);
+  const bankReference = hasBalance ? null : input.bank_reference;
   const fpInput = [
     normText(input.account_no),
     input.txn_date,
     normMoney(input.amount),
     normText(input.direction),
     normText(stableDetail),
-    normText(input.bank_reference),
-    input.balance_after === null || input.balance_after === undefined
-      ? ""
-      : normMoney(input.balance_after),
+    normText(bankReference),
+    hasBalance ? normMoney(input.balance_after) : "",
   ].join("|");
   return sha256HexAsync(fpInput);
 }

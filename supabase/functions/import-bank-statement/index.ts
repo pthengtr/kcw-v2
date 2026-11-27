@@ -411,10 +411,19 @@ async function insertStatementLines(
     match_status: "pending",
   }));
 
+  // Deduplicate within the file first (overlapping sheets / repeated rows).
+  const byFp = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) {
+    if (!byFp.has(row.transaction_fingerprint)) {
+      byFp.set(row.transaction_fingerprint, row);
+    }
+  }
+  const uniqueRows = [...byFp.values()];
+
   let inserted = 0;
   const pageSize = 500;
-  for (let i = 0; i < rows.length; i += pageSize) {
-    const chunk = rows.slice(i, i + pageSize);
+  for (let i = 0; i < uniqueRows.length; i += pageSize) {
+    const chunk = uniqueRows.slice(i, i + pageSize);
     const { data, error } = await bank
       .from("statement_lines")
       .upsert(chunk, {
@@ -422,12 +431,38 @@ async function insertStatementLines(
         ignoreDuplicates: true,
       })
       .select("transaction_fingerprint");
-    if (error) throw error;
+    if (error) {
+      // Ledger unique index (account/date/direction/amount/balance) is a
+      // second guard when an older fingerprint formula left a row behind.
+      const msg = String(error.message ?? error);
+      if (/statement_lines_ledger_uidx|duplicate key/i.test(msg)) {
+        for (const row of chunk) {
+          const { data: one, error: oneErr } = await bank
+            .from("statement_lines")
+            .upsert([row], {
+              onConflict: "transaction_fingerprint",
+              ignoreDuplicates: true,
+            })
+            .select("transaction_fingerprint");
+          if (oneErr) {
+            const oneMsg = String(oneErr.message ?? oneErr);
+            if (/statement_lines_ledger_uidx|duplicate key/i.test(oneMsg)) {
+              continue;
+            }
+            throw oneErr;
+          }
+          inserted += one?.length ?? 0;
+        }
+        continue;
+      }
+      throw error;
+    }
     inserted += data?.length ?? 0;
   }
 
   return {
     inserted_count: inserted,
+    // Include intra-file collapses so duplicate_count + inserted_count = row_count.
     duplicate_count: rows.length - inserted,
   };
 }
