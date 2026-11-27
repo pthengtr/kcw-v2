@@ -2,15 +2,15 @@
 
 Thin UI for KBANK / KTB Excel statements and the monthly match report. Privileged `bank.*` / Storage work lives in Supabase Edge Functions — do not reimplement parsers or Excel layout here.
 
-**Import Edge Function (source of truth in this repo):** [`supabase/functions/import-bank-statement/`](../supabase/functions/import-bank-statement/) — `parser_version: auto_v2`.
+**Import Edge Function (source of truth in this repo):** [`supabase/functions/import-bank-statement/`](../supabase/functions/import-bank-statement/) — `parser_version: auto_v3`.
 
 Fingerprint identity:
 
 ```
-account | date | amount | direction | normalized_stable_detail | bank_reference | balance_after
+account | date | amount | direction | detail? | bank_reference? | balance_after
 ```
 
-Display description is excluded. KTB detail is normalized (strip trailing online transfer ids / `Tran:` / `Future Amount` noise) so old `DownLoadService` and new Thai Corporate Online exports of the same txn share one fingerprint.
+When `balance_after` is present (normal ledger exports), detail and bank_reference are omitted — the running balance uniquely identifies the txn. That stops overlapping KBANK cumulative files from inserting duplicates when `รายละเอียด` truncates differently (`++` vs `+`). When balance is missing, fall back to normalized stable detail + bank_reference (KTB strips trailing online transfer ids / `Tran:` / `Future Amount` noise). Display description is always excluded. DB also enforces `statement_lines_ledger_uidx` on `(account_no, txn_date, direction, amount, balance_after)`.
 
 **Auth**
 

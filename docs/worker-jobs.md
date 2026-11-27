@@ -128,7 +128,7 @@ New features almost never need new queue tables — only new `job_type` values a
 ### Bank statement upload from `/bank-statement-sync` (kcw-v2) — **not** a PC worker job
 
 - UI **อัปโหลด Statement** → browser calls Supabase Edge Function `import-bank-statement` with `FormData` (`file` + `bank_name` = `KBANK`|`KTB`).
-- Parse + insert into `bank.statement_*` and Storage `bank-statements` live in this repo: [`supabase/functions/import-bank-statement/`](../supabase/functions/import-bank-statement/) (`parser_version: auto_v2` — stable detail + KTB cross-format normalize; display description excluded). Docs: [bank-statement-upload.md](./bank-statement-upload.md).
+- Parse + insert into `bank.statement_*` and Storage `bank-statements` live in this repo: [`supabase/functions/import-bank-statement/`](../supabase/functions/import-bank-statement/) (`parser_version: auto_v3` — balance-after ledger identity; detail only when balance missing). Docs: [bank-statement-upload.md](./bank-statement-upload.md).
 - Caller: signed-in user with RBAC page `bank_statement_sync` (or `admin`), **or** HQ Drive bulk with **service-role** bearer.
 - Daily HQ BAT [`run_bank_statement_import.bat`](https://github.com/pthengtr/kcw-analytics/blob/main/worker_tasks/run_bank_statement_import.bat) still runs BRDET/BPDET, then a **thin Drive uploader** that POSTs each Excel to the same Edge Function (no local Python parse). Web uploads no longer enqueue `ops.job_queue`.
 - Data dictionary: [BRDET/BPDET](https://github.com/pthengtr/kcw-docs/blob/main/dictionaries/kcw-brdet-bpdet-cheque-transfers-data-dictionary.md).

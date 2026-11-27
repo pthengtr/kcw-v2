@@ -1,6 +1,6 @@
 /**
  * Port of notebooks/02_bank_statement_import_test.ipynb + src/kcw/bank_statement.py
- * parser_version: auto_v2 (canonical transaction fingerprints; display description excluded)
+ * parser_version: auto_v3 (balance-after identity; display description / truncated detail excluded)
  *
  * Supports KBANK Thai exports and both KTB layouts, including multi-tab workbooks
  * (one sheet per account, e.g. `248-0-42113-9` + `248-6-00618-4`).

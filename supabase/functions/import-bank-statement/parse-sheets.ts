@@ -20,7 +20,7 @@ import {
   type SheetParseSummary,
 } from "./sheet-account.ts";
 
-export const PARSER_VERSION = "auto_v2";
+export const PARSER_VERSION = "auto_v3";
 
 export type { SheetParseSummary };
 

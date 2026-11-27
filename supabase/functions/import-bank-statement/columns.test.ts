@@ -94,6 +94,27 @@ describe("buildTransactionFingerprint KTB cross-format", () => {
       transaction_detail:
         "TR to 2486006184 KIATCHAI AUTO PART 2007 20260505004000000014",
     });
+    // auto_v3: balance_after present → detail ignored; same ledger position.
     expect(fpOld).toBe(fpNew);
+  });
+
+  it("matches when balance_after present even if detail truncations differ", async () => {
+    const base = {
+      account_no: "064-8-91723-6",
+      txn_date: "2026-11-01",
+      direction: "in" as const,
+      amount: 100771.5,
+      balance_after: 131254.88,
+      bank_reference: null,
+    };
+    const fpA = await buildTransactionFingerprint({
+      ...base,
+      transaction_detail: "จาก X5605 น.ส. นฤมล วิทยผโลท++",
+    });
+    const fpB = await buildTransactionFingerprint({
+      ...base,
+      transaction_detail: "จาก X5605 น.ส. นฤมล วิทยผโลท+",
+    });
+    expect(fpA).toBe(fpB);
   });
 });
